@@ -374,7 +374,31 @@ impl Doc {
 pub fn parser_events(src: &str) -> impl Iterator<Item = (Event<'_>, Range<usize>)> {
     let options =
         Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
-    Parser::new_ext(src, options).into_offset_iter()
+    let fm_end = front_matter_end(src);
+    Parser::new_ext(src, options)
+        .into_offset_iter()
+        .filter(move |(_, range)| range.start >= fm_end)
+}
+
+/// Byte offset just past a leading YAML front matter block (`---` ... `---` or `...`), or 0
+/// when the document has none. Without this, the parser reads the closing `---` as a setext
+/// underline and the front matter as a heading.
+#[must_use]
+pub fn front_matter_end(src: &str) -> usize {
+    let mut lines = src.split_inclusive('\n');
+    let Some(first) = lines.next() else { return 0 };
+    if first.trim_end() != "---" {
+        return 0;
+    }
+    let mut offset = first.len();
+    for line in lines {
+        offset += line.len();
+        let t = line.trim_end();
+        if t == "---" || t == "..." {
+            return offset;
+        }
+    }
+    0
 }
 
 fn level_number(level: HeadingLevel) -> usize {
@@ -451,6 +475,12 @@ pub fn is_table_delimiter(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn front_matter_is_not_parsed_as_a_heading() {
+        assert_eq!(front_matter_end("---\ntitle: x\n---\n# H\n"), 17);
+        assert_eq!(front_matter_end("# H\n"), 0);
+    }
 
     #[test]
     fn front_matter_and_fences_are_masked() {
