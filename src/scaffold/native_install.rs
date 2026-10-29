@@ -13,8 +13,38 @@ pub struct InstallPlan {
     pub manual_steps: Vec<String>,
 }
 
+/// Where the spec-kit plugin is published. Installs use this URL, not a local path.
+pub const DEFAULT_SOURCE: &str = "https://github.com/plaesy/spec-kit";
+
 /// Plugin name and marketplace name that the spec-kit repository publishes.
 pub const PLUGIN: &str = "spec-kit@spec-kit";
+
+/// Renders a plan as text for a person to read or run: one command per line, quoted where
+/// an argument has spaces, then the manual steps.
+#[must_use]
+pub fn render(plan: &InstallPlan) -> String {
+    let mut out = String::new();
+    for command in &plan.commands {
+        let line: Vec<String> = command
+            .iter()
+            .map(|arg| {
+                if arg.contains(' ') {
+                    format!("\"{arg}\"")
+                } else {
+                    arg.clone()
+                }
+            })
+            .collect();
+        out.push_str(&line.join(" "));
+        out.push('\n');
+    }
+    for step in &plan.manual_steps {
+        out.push_str("then: ");
+        out.push_str(step);
+        out.push('\n');
+    }
+    out
+}
 
 fn argv(parts: &[&str]) -> Vec<String> {
     parts.iter().map(|p| (*p).to_owned()).collect()
@@ -63,6 +93,14 @@ mod tests {
         assert_eq!(p.commands[0], argv(&["claude", "plugin", "marketplace", "add", "/src/spec-kit"]));
         assert_eq!(p.commands[1], argv(&["claude", "plugin", "install", PLUGIN]));
         assert!(p.manual_steps.is_empty());
+    }
+
+    #[test]
+    fn render_prints_one_command_per_line_and_the_manual_steps() {
+        let p = plan("cursor_ai", DEFAULT_SOURCE).unwrap();
+        let text = render(&p);
+        assert!(text.starts_with("cursor-agent plugin marketplace add https://github.com/plaesy/spec-kit\n"));
+        assert!(text.contains("then: In Cursor Agent chat"));
     }
 
     #[test]
