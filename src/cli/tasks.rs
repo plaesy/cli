@@ -59,7 +59,7 @@ pub enum TasksCommand {
         task: String,
         status: Option<String>,
     },
-    /// Report missing paths and links in spec.md and plan.md
+    /// Report missing paths and links in the spec.md and plan.md of the task's topic
     Check { task: String },
     /// Hand todo tasks of the current spec to a delegate provider or chain
     Run(super::tasks_run::Args),

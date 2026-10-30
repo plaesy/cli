@@ -29,7 +29,7 @@ pub mod trimmer;
 pub mod validate;
 
 /// Release version, read from the repository-root `VERSION` file at build time.
-pub const VERSION: &str = include_str!("../../../../spec-kit/VERSION");
+pub const VERSION: &str = include_str!("../../spec-kit/VERSION");
 
 /// Returns the version string, normalized to strict semver.
 #[must_use]

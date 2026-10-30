@@ -126,29 +126,25 @@ pub fn install_platform_hooks(
         "claude" => {
             let mut desired = claude_post_tool(&sh_command("$CLAUDE_PROJECT_DIR"));
             desired.extend(claude_stop());
-            merge_hook_manifest(&dst, "claude", &desired, policy, log)?;
+            merge_hook_manifest(&dst, &desired, policy, log)?;
         }
         "codex" => {
             let desired =
                 codex_post_tool(&sh_command("$(git rev-parse --show-toplevel)"), &ps_command);
-            merge_hook_manifest(&dst, "codex", &desired, policy, log)?;
+            merge_hook_manifest(&dst, &desired, policy, log)?;
         }
         "gemini" => {
             let desired = gemini_after_tool(&sh_command("$GEMINI_PROJECT_DIR"));
-            merge_hook_manifest(&dst, "gemini", &desired, policy, log)?;
+            merge_hook_manifest(&dst, &desired, policy, log)?;
         }
         "windsurf" => {
             let desired = windsurf_post_write(&sh_script, &ps_command);
-            merge_hook_manifest(&dst, "windsurf", &desired, policy, log)?;
+            merge_hook_manifest(&dst, &desired, policy, log)?;
         }
         "codewhale" => write_codewhale_hooks(&dst, &sh_script, policy, log)?,
         "qoder" => {
             let desired = claude_post_tool(&sh_command("${QODER_PROJECT_DIR}"));
-            merge_hook_manifest(&dst, "qoder", &desired, policy, log)?;
-        }
-        "cursor" => {
-            let desired = cursor_after_edit(&sh_script);
-            merge_hook_manifest(&dst, "cursor", &desired, policy, log)?;
+            merge_hook_manifest(&dst, &desired, policy, log)?;
         }
         "copilot" => {
             write_copilot_hooks(
@@ -252,19 +248,11 @@ fn windsurf_post_write(sh_command: &str, ps_command: &str) -> Hooks {
     )])
 }
 
-fn cursor_after_edit(command: &str) -> Hooks {
-    BTreeMap::from([(
-        "afterFileEdit".to_owned(),
-        vec![json!({ "command": command, "matcher": "Write", "timeout": 20 })],
-    )])
-}
-
 /// Merges `desired` into a JSON settings file. Entries plaesy owned on an earlier
 /// install are dropped and the current ones appended. Every other key and entry is
 /// kept. A file that is not valid JSON is left alone.
 fn merge_hook_manifest(
     path: &Path,
-    format: &str,
     desired: &Hooks,
     policy: &Policy,
     log: &Logger,
@@ -284,9 +272,6 @@ fn merge_hook_manifest(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Map::new(),
         Err(e) => return Err(ScaffoldError::io(format!("reading {}", path.display()), e)),
     };
-    if format == "cursor" {
-        root.entry("version").or_insert(json!(1));
-    }
 
     if policy.dry_run {
         return Ok(());
@@ -408,7 +393,6 @@ mod tests {
 
         merge_hook_manifest(
             &path,
-            "claude",
             &claude_post_tool("sh new/design-lint.sh"),
             &Policy::default(),
             &Logger::new("t"),
@@ -431,14 +415,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         fs::write(&path, "{ broken").unwrap();
-        merge_hook_manifest(
-            &path,
-            "claude",
-            &claude_stop(),
-            &Policy::default(),
-            &Logger::new("t"),
-        )
-        .unwrap();
+        merge_hook_manifest(&path, &claude_stop(), &Policy::default(), &Logger::new("t")).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(), "{ broken");
     }
 

@@ -4,11 +4,16 @@
 //!
 //! ```text
 //! .plaesy/tasks/<status>/<priority>_<category>-<title>/
-//!   spec.md          what the task is for
+//!   task.md          status, grouping, and the topic the task belongs to
 //!   contracts.json   the checklist that says when it is done
+//!
+//! .plaesy/spec/<topic>/spec.md   what the topic is for (requirements R1..Rn)
+//! .plaesy/plan/<topic>/plan.md   how the topic is met and verified
 //! ```
 //!
 //! The status is the folder the task sits in. Moving a task moves its folder.
+//! Spec and plan live under `.plaesy/spec/` and `.plaesy/plan/`, one folder per
+//! topic, so several tasks can share one topic.
 //! Port of `scripts/internal/tasks` (Go).
 
 pub mod check;
@@ -25,11 +30,17 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-/// Description file every task folder holds.
-pub const TASK_FILE: &str = "spec.md";
+/// File every task folder holds: status, grouping, and its topic.
+pub const TASK_FILE: &str = "task.md";
 /// Checklist file every task folder may hold.
 pub const CONTRACT_FILE: &str = "contracts.json";
-/// Plan file a task folder may hold.
+/// Folder under the project's `.plaesy/` that holds one spec per topic.
+pub const SPEC_DIR: &str = "spec";
+/// Folder under the project's `.plaesy/` that holds one plan per topic.
+pub const PLAN_DIR: &str = "plan";
+/// Spec document inside a topic folder.
+pub const SPEC_FILE: &str = "spec.md";
+/// Plan document inside a topic folder.
 pub const PLAN_FILE: &str = "plan.md";
 
 /// Errors from task operations.
@@ -56,6 +67,8 @@ pub enum TasksError {
     AlreadyExists { status: Status, task: String },
     #[error("task already exists: {0}")]
     Duplicate(String),
+    #[error("task {0} has no topic; every task needs one (topic: in task.md)")]
+    NoTopic(String),
     #[error("{0} missing reference(s)")]
     MissingReferences(usize),
     #[error("project root not found (.plaesy directory not found)")]
@@ -249,12 +262,41 @@ pub fn list_tasks(tasks_dir: &Path, status: Status) -> Result<Option<Vec<String>
     Ok(Some(names))
 }
 
-/// Spec a task belongs to, from its `spec.md` frontmatter.
+/// Spec a task belongs to, from its `task.md` frontmatter.
 #[must_use]
 pub fn spec_of(tasks_dir: &Path, status: Status, task: &str) -> String {
     read_frontmatter(&tasks_dir.join(status.as_str()).join(task).join(TASK_FILE))
         .remove("spec")
         .unwrap_or_default()
+}
+
+/// Topic a task belongs to, from its `topic:` frontmatter. `None` when the task has
+/// no topic: such a task needs no spec and no plan.
+#[must_use]
+pub fn topic_of(tasks_dir: &Path, status: Status, task: &str) -> Option<String> {
+    read_frontmatter(&tasks_dir.join(status.as_str()).join(task).join(TASK_FILE))
+        .remove("topic")
+        .filter(|topic| !topic.is_empty())
+}
+
+/// `<root>/.plaesy/spec/<topic>/spec.md`.
+#[must_use]
+pub fn spec_doc(project_root: &Path, topic: &str) -> PathBuf {
+    project_root
+        .join(".plaesy")
+        .join(SPEC_DIR)
+        .join(topic)
+        .join(SPEC_FILE)
+}
+
+/// `<root>/.plaesy/plan/<topic>/plan.md`.
+#[must_use]
+pub fn plan_doc(project_root: &Path, topic: &str) -> PathBuf {
+    project_root
+        .join(".plaesy")
+        .join(PLAN_DIR)
+        .join(topic)
+        .join(PLAN_FILE)
 }
 
 /// Keeps the names that belong to `spec`. An empty spec keeps all of them.
@@ -304,7 +346,7 @@ pub fn list_all_tasks(tasks_dir: &Path) -> Result<Vec<TaskRef>, TasksError> {
     Ok(refs)
 }
 
-/// Reports inconsistencies: a folder without `spec.md`, a frontmatter status that
+/// Reports inconsistencies: a folder without `task.md`, a frontmatter status that
 /// differs from its folder, a missing status, and a name that appears in two
 /// status folders.
 ///
@@ -328,9 +370,15 @@ pub fn check_integrity(tasks_dir: &Path) -> Result<Vec<Problem>, TasksError> {
             if !doc.exists() {
                 problems.push(Problem {
                     task: name,
-                    message: "no spec.md in the task folder".into(),
+                    message: "no task.md in the task folder".into(),
                 });
                 continue;
+            }
+            if topic_of(tasks_dir, status, &name).is_none() {
+                problems.push(Problem {
+                    task: name.clone(),
+                    message: "no topic in task.md; every task needs one".into(),
+                });
             }
             match read_frontmatter(&doc).get("status") {
                 None => problems.push(Problem {
@@ -350,50 +398,60 @@ pub fn check_integrity(tasks_dir: &Path) -> Result<Vec<Problem>, TasksError> {
 
 const TASK_TEMPLATE: &str = "---
 spec: {spec}
+topic: {topic}
 title: {title}
 phase: implement
 status: backlog
 ---
 
-## Goal
-
-## Scope
-
-## Context
-
-## Description
-
-## Decision
-
-## KPI
-
-## Verification
-
-## Reference
-
-## Dependencies
-
-## Notes
+{title}
 ";
 
-/// Creates a task in `backlog` named `<priority>_<slug>`, with a `spec.md` and an
-/// empty `contracts.json`. Returns the folder name.
+/// Topic slug from a task's category and title: `<category>-<title>` in kebab-case.
+/// Only ASCII letters and digits are kept; every other run of characters becomes one
+/// hyphen.
 ///
 /// # Errors
 ///
-/// Invalid priority or slug, a name that already exists in any status, or I/O failures.
+/// [`TasksError::InvalidSlug`] when nothing is left after normalizing.
+pub fn topic_slug(category: &str, title: &str) -> Result<String, TasksError> {
+    let joined = format!("{category} {title}");
+    let mut slug = String::new();
+    for ch in joined.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+        } else if !slug.ends_with('-') && !slug.is_empty() {
+            slug.push('-');
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    if slug.is_empty() {
+        return Err(TasksError::InvalidSlug(joined));
+    }
+    Ok(slug)
+}
+
+/// Creates a task in `backlog` named `<priority>_<topic>` with a `task.md` and an
+/// empty `contracts.json`. The task's topic is `topic`, and the topic holds its spec
+/// and plan under `.plaesy/spec/` and `.plaesy/plan/`.
+///
+/// # Errors
+///
+/// Invalid priority or topic, a name that already exists in any status, or I/O failures.
 pub fn add_task(
     tasks_dir: &Path,
     spec: &str,
     priority: &str,
-    slug: &str,
+    topic: &str,
     title: &str,
 ) -> Result<String, TasksError> {
     validate_priority(priority)?;
-    if slug.is_empty() || slug.contains(['/', '\\']) {
-        return Err(TasksError::InvalidSlug(slug.to_owned()));
+    if topic.is_empty() || topic.contains(['/', '\\']) {
+        return Err(TasksError::InvalidSlug(topic.to_owned()));
     }
-    let name = format!("{priority}_{slug}");
+    let name = format!("{priority}_{topic}");
     if find_task(tasks_dir, &name).is_some() {
         return Err(TasksError::Duplicate(name));
     }
@@ -402,6 +460,7 @@ pub fn add_task(
         .map_err(|e| TasksError::io(format!("creating {}", dir.display()), e))?;
     let body = TASK_TEMPLATE
         .replace("{spec}", spec)
+        .replace("{topic}", topic)
         .replace("{title}", title);
     write_file(&dir.join(TASK_FILE), &body)?;
     let contract = format!("{{\n  \"id\": {name:?},\n  \"checklist\": []\n}}\n");
@@ -530,7 +589,7 @@ pub fn complete_task(tasks_dir: &Path, task: &str) -> Result<(), TasksError> {
     move_task_as(tasks_dir, "complete", task, Status::Doing, Status::Done)
 }
 
-/// `doing` → `blocked`, appending the reason to `spec.md`.
+/// `doing` → `blocked`, appending the reason to `task.md`.
 ///
 /// # Errors
 ///
@@ -576,6 +635,18 @@ mod tests {
         assert!(matches!(
             "later".parse::<Status>(),
             Err(TasksError::InvalidStatus(_))
+        ));
+    }
+
+    #[test]
+    fn topic_slug_joins_category_and_title_in_kebab_case() {
+        assert_eq!(
+            topic_slug("Feature", "Login form!!").unwrap(),
+            "feature-login-form"
+        );
+        assert!(matches!(
+            topic_slug("---", "  "),
+            Err(TasksError::InvalidSlug(_))
         ));
     }
 
@@ -634,7 +705,7 @@ mod tests {
         move_task(&tasks, "medium_y", Status::Backlog, Status::Todo).unwrap();
         start_task(&tasks, "medium_y").unwrap();
         block_task(&tasks, "medium_y", "waiting on API").unwrap();
-        let text = fs::read_to_string(tasks.join("blocked/medium_y/spec.md")).unwrap();
+        let text = fs::read_to_string(tasks.join("blocked/medium_y/task.md")).unwrap();
         assert!(text.contains("## Blocked Reason\nwaiting on API"));
         unblock_task(&tasks, "medium_y").unwrap();
         assert_eq!(find_task(&tasks, "medium_y").unwrap().0, Status::Todo);

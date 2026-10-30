@@ -392,8 +392,8 @@ mod tests {
 
     #[test]
     fn shipped_contract_template_loads() {
-        let template =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../spec-kit/skills/plaesy/assets/contract.json");
+        let template = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../spec-kit/skills/plaesy/assets/contract.json");
         load(&template).expect("contract.json template loads");
     }
 }

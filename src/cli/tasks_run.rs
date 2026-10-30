@@ -113,7 +113,10 @@ fn run_claimed_task(
     timeout: Duration,
 ) -> Result<(), String> {
     let task_dir = tasks_dir.join("doing").join(file);
-    let body = fs::read_to_string(task_dir.join("spec.md")).map_err(|e| e.to_string())?;
+    // The prompt is the task's topic spec.
+    let topic = crate::tasks::topic_of(tasks_dir, crate::tasks::Status::Doing, file)
+        .ok_or_else(|| format!("{file} has no topic; every task needs one"))?;
+    let body = fs::read_to_string(crate::tasks::spec_doc(root, &topic)).map_err(|e| e.to_string())?;
     let prompt = build_task_prompt(file, &body);
 
     let usage_path = usage::usage_path(&root.join(".plaesy").join("analysis"));

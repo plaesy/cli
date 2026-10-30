@@ -8,6 +8,7 @@ pub mod config;
 pub mod delegate;
 pub mod doctor;
 pub mod images;
+pub mod memory;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
@@ -77,6 +78,8 @@ pub enum Command {
     Trim(trim::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
+    /// Offline memory index (runs the `memory` binary from the memory submodule)
+    Memory(memory::Args),
     /// Task lifecycle under .plaesy/tasks/ (backlog/todo/doing/done/blocked)
     Tasks(tasks::Args),
     /// Validate a constitution, memory, Markdown, or an OOXML document
@@ -125,6 +128,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
+        Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),
     }

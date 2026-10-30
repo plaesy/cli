@@ -20,7 +20,9 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use super::{find_task, project_root_of, TasksError, PLAN_FILE, TASK_FILE};
+use super::{
+    find_task, plan_doc, project_root_of, spec_doc, topic_of, TasksError, PLAN_FILE, SPEC_FILE,
+};
 
 const PLACEHOLDER_CHARS: &[char] = &[
     ' ', '\t', '@', '*', '?', '<', '>', '{', '}', '|', '$', '"', '\'', ',', ';', '=',
@@ -46,8 +48,8 @@ pub enum FileReport {
     },
 }
 
-/// Checks `spec.md` and `plan.md` of `task`, writes a report to `out`, and
-/// returns the per-file reports.
+/// Checks the `spec.md` and `plan.md` of the task's topic, writes a report to `out`,
+/// and returns the per-file reports.
 ///
 /// # Errors
 ///
@@ -59,15 +61,21 @@ pub fn check_task(
     task: &str,
     out: &mut impl Write,
 ) -> Result<Vec<(String, FileReport)>, TasksError> {
-    let (_, task_dir) =
+    let (status, _) =
         find_task(tasks_dir, task).ok_or_else(|| TasksError::NotFound(task.to_owned()))?;
     let root = project_root_of(tasks_dir);
+    let topic = topic_of(tasks_dir, status, task)
+        .ok_or_else(|| TasksError::NoTopic(task.to_owned()))?;
+    let docs = [
+        (SPEC_FILE, spec_doc(&root, &topic)),
+        (PLAN_FILE, plan_doc(&root, &topic)),
+    ];
 
     let mut reports = Vec::new();
     let mut missing_total = 0;
     let mut skipped = 0;
-    for name in [TASK_FILE, PLAN_FILE] {
-        let path = task_dir.join(name);
+    for (name, path) in docs {
+        let doc_dir = path.parent().unwrap_or(&root).to_path_buf();
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
@@ -84,7 +92,7 @@ pub fn check_task(
             .into_iter()
             .filter(|r| {
                 let base = if r.is_link {
-                    task_dir.as_path()
+                    doc_dir.as_path()
                 } else {
                     root.as_path()
                 };
@@ -258,6 +266,22 @@ mod tests {
     }
 
     #[test]
+    fn task_without_topic_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
+        let tasks = tasks_dir(dir.path());
+        let name = add_task(&tasks, "s", "low", "bare", "Bare").unwrap();
+        std::fs::write(
+            tasks.join("backlog").join(&name).join(crate::tasks::TASK_FILE),
+            "---\nspec: s\ntopic:\n---\n",
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        let err = check_task(&tasks, &name, &mut out).unwrap_err();
+        assert!(matches!(err, TasksError::NoTopic(_)));
+    }
+
+    #[test]
     fn check_reports_missing_and_passes_when_present() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
@@ -265,18 +289,17 @@ mod tests {
         std::fs::write(dir.path().join("src/real.rs"), "").unwrap();
         let tasks = tasks_dir(dir.path());
         let name = add_task(&tasks, "s", "low", "chk", "Chk").unwrap();
-        let spec = tasks.join("backlog").join(&name).join(TASK_FILE);
-        std::fs::write(
-            &spec,
-            "---\nspec: s\n---\n`src/real.rs` and `src/gone.rs`\n",
-        )
-        .unwrap();
+        let task_file = tasks.join("backlog").join(&name).join(crate::tasks::TASK_FILE);
+        std::fs::write(&task_file, "---\nspec: s\ntopic: chk\n---\n").unwrap();
+        let spec = super::spec_doc(dir.path(), "chk");
+        std::fs::create_dir_all(spec.parent().unwrap()).unwrap();
+        std::fs::write(&spec, "`src/real.rs` and `src/gone.rs`\n").unwrap();
 
         let mut out = Vec::new();
         let err = check_task(&tasks, &name, &mut out).unwrap_err();
         assert!(matches!(err, TasksError::MissingReferences(1)));
         let text = String::from_utf8(out).unwrap();
-        assert!(text.contains("spec.md:4: missing src/gone.rs"));
+        assert!(text.contains("spec.md:1: missing src/gone.rs"));
 
         std::fs::write(&spec, "`src/real.rs`\n").unwrap();
         let mut ok_out = Vec::new();

@@ -55,6 +55,9 @@ pub fn setup_platform_config(
     if let Some(prompts) = entry.mapping.get("prompts").filter(|p| !p.is_empty()) {
         copy_platform_prompts(home, target_dir, prompts, platform, cfg, policy, log)?;
     }
+    if let Some(skills) = entry.mapping.get("skills").filter(|s| !s.is_empty()) {
+        copy_platform_skills(home, target_dir, skills, policy, log)?;
+    }
 
     install_platform_hooks(target_dir, platform, cfg, policy, log)?;
     log.success("AI-specific configuration completed based on platform.json mapping");
@@ -208,6 +211,80 @@ pub fn copy_platform_prompts(
     Ok(())
 }
 
+/// Copies every skill folder under `home/skills` (a folder that holds `SKILL.md`,
+/// one or two levels deep) into `target/dest_rel/<name>/`, with all its files.
+///
+/// # Errors
+///
+/// I/O errors creating destination folders.
+pub fn copy_platform_skills(
+    home: &Path,
+    target_dir: &Path,
+    dest_rel: &str,
+    policy: &mut Policy,
+    log: &Logger,
+) -> Result<(), ScaffoldError> {
+    let dest_dir = target_dir.join(dest_rel);
+    let mut skill_dirs = Vec::new();
+    collect_skill_dirs(&home.join("skills"), 2, &mut skill_dirs);
+    for skill in skill_dirs {
+        let Some(name) = skill.file_name() else {
+            continue;
+        };
+        let mut files = Vec::new();
+        collect_files(&skill, &mut files);
+        for file in files {
+            let Ok(rel) = file.strip_prefix(&skill) else {
+                continue;
+            };
+            let dst = dest_dir.join(name).join(rel);
+            if let Some(parent) = dst.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| ScaffoldError::io(format!("creating {}", parent.display()), e))?;
+            }
+            if let Err(e) = copy_file(&file, &dst, policy, log) {
+                log.warning(&format!("  ✗ {} (failed to copy)", rel.display()));
+                return Err(e);
+            }
+        }
+    }
+    log.success(&format!("Skills copied to {dest_rel}"));
+    Ok(())
+}
+
+/// Collects folders that contain `SKILL.md`, searching `depth` levels below `dir`.
+fn collect_skill_dirs(dir: &Path, depth: u8, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    let mut paths: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+    paths.sort();
+    for path in paths.into_iter().filter(|p| p.is_dir()) {
+        if path.join("SKILL.md").is_file() {
+            out.push(path);
+        } else if depth > 1 {
+            collect_skill_dirs(&path, depth - 1, out);
+        }
+    }
+}
+
+/// Lists every file under `dir`, recursively, in sorted order. Unreadable
+/// entries are skipped.
+fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    let mut paths: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+    paths.sort();
+    for path in paths {
+        if path.is_dir() {
+            collect_files(&path, out);
+        } else {
+            out.push(path);
+        }
+    }
+}
+
 /// Lists markdown files under `dir`, recursively, in sorted order. Unreadable
 /// entries are skipped.
 fn collect_markdown(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -253,5 +330,40 @@ mod tests {
         assert_eq!(agent_extension("github_copilot"), ".agent.md");
         assert_eq!(prompt_extension("claude"), ".md");
         assert_eq!(agent_extension(""), ".md");
+    }
+
+    fn quiet() -> Logger {
+        Logger::new("test")
+    }
+
+    #[test]
+    fn copy_skills_keeps_folder_tree_and_skips_non_skills() {
+        let home = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let skills = home.path().join("skills");
+        fs::create_dir_all(skills.join("go/references")).unwrap();
+        fs::write(skills.join("go/SKILL.md"), "go").unwrap();
+        fs::write(skills.join("go/references/a.md"), "a").unwrap();
+        fs::create_dir_all(skills.join("dart-flutter/riverpod")).unwrap();
+        fs::write(skills.join("dart-flutter/riverpod/SKILL.md"), "r").unwrap();
+        fs::create_dir_all(skills.join("notes")).unwrap();
+        fs::write(skills.join("notes/readme.md"), "n").unwrap();
+
+        let mut policy = Policy::default();
+        copy_platform_skills(
+            home.path(),
+            target.path(),
+            ".cursor/skills",
+            &mut policy,
+            &quiet(),
+        )
+        .unwrap();
+
+        let dest = target.path().join(".cursor/skills");
+        assert!(dest.join("go/SKILL.md").is_file());
+        assert!(dest.join("go/references/a.md").is_file());
+        assert!(dest.join("riverpod/SKILL.md").is_file());
+        assert!(!dest.join("notes").exists());
+        assert!(!dest.join("dart-flutter").exists());
     }
 }

@@ -16,8 +16,8 @@ pub struct InstallPlan {
 /// Where the spec-kit plugin is published. Installs use this URL, not a local path.
 pub const DEFAULT_SOURCE: &str = "https://github.com/plaesy/spec-kit";
 
-/// Plugin name and marketplace name that the spec-kit repository publishes.
-pub const PLUGIN: &str = "spec-kit@spec-kit";
+/// Plugin `spec-kit` from marketplace `plaesy` (marketplace = publisher, plugin = repo name).
+pub const PLUGIN: &str = "spec-kit@plaesy";
 
 /// Renders a plan as text for a person to read or run: one command per line, quoted where
 /// an argument has spaces, then the manual steps.
