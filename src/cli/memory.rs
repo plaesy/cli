@@ -1,12 +1,13 @@
-//! `plaesy memory`: passes the arguments to the `memory` binary built from the `memory` submodule.
+//! `plaesy memory`: delegates arguments to the standalone `plaesy/memory` binary.
 //!
-//! The binary is found through `PLAESY_MEMORY_BIN`, then on `PATH`. Build it with
-//! `cargo build --release` inside `memory/`.
+//! The binary is found through `PLAESY_MEMORY_BIN`, then `PATH`. The memory engine is an
+//! independent repository and release lifecycle; this umbrella CLI only owns the subcommand.
 
 use std::path::{Path, PathBuf};
 use std::process::Command as Process;
 
 use clap::Parser;
+use sha2::{Digest, Sha256};
 
 use super::CliResult;
 use crate::common::validate;
@@ -30,9 +31,8 @@ pub struct Args {
 
 /// Finds the `memory` binary.
 ///
-/// Resolution is explicit and profile-safe: an override wins, then the binary built from
-/// Plaesy's checked-out `memory` submodule, then `PATH`. The submodule lookup makes a fresh
-/// Plaesy checkout usable without installing a second global binary.
+/// Resolution is explicit and profile-safe: an override wins, then the standalone `memory`
+/// executable on `PATH`. The umbrella CLI does not couple its build to the memory repository.
 fn binary() -> Option<PathBuf> {
     let override_path = std::env::var_os(BIN_ENV)
         .map(PathBuf::from)
@@ -41,18 +41,7 @@ fn binary() -> Option<PathBuf> {
         return override_path;
     }
 
-    let repo_root = crate::common::git::repo_root().ok();
-    let submodule_binary = repo_root
-        .into_iter()
-        .map(|root| {
-            root.join("memory")
-                .join("target")
-                .join("release")
-                .join("memory")
-        })
-        .find(|path| path.is_file());
-
-    submodule_binary.or_else(|| validate::find_command("memory"))
+    validate::find_command("memory")
 }
 
 /// Runs `memory` with the given arguments and exits with its status code.
@@ -68,7 +57,7 @@ fn binary() -> Option<PathBuf> {
 pub fn run(args: &Args) -> CliResult {
     let Some(bin) = binary() else {
         return Err(format!(
-            "memory binary not found: run `cargo build --release` in memory/, set {BIN_ENV}, or install `memory` on PATH"
+            "memory binary not found: install `plaesy/memory` with `cargo install --git https://github.com/plaesy/memory.git --bin memory`, set {BIN_ENV}, or install `memory` on PATH"
         )
         .into());
     };
@@ -80,19 +69,50 @@ pub fn run(args: &Args) -> CliResult {
         command.env("MEMORY_WATCH_DIR", &vault);
     }
     if std::env::var_os("MEMORY_DB_PATH").is_none() {
-        let db_dir = vault.join(".memory");
-        std::fs::create_dir_all(&db_dir).map_err(|e| {
-            format!(
-                "cannot create memory index directory {}: {e}",
-                db_dir.display()
-            )
-        })?;
-        command.env("MEMORY_DB_PATH", db_dir.join("index.db"));
+        let db_path = default_db_path(&vault)?;
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!(
+                    "cannot create memory data directory {}: {e}",
+                    parent.display()
+                )
+            })?;
+        }
+        command.env("MEMORY_DB_PATH", db_path);
     }
     let status = command
         .status()
         .map_err(|e| format!("cannot start {}: {e}", bin.display()))?;
     std::process::exit(status.code().unwrap_or(1));
+}
+
+fn default_db_path(vault: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let data_root = if cfg!(target_os = "windows") {
+        std::env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .ok_or("LOCALAPPDATA is not set")?
+    } else if cfg!(target_os = "macos") {
+        std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or("HOME is not set")?
+            .join("Library")
+            .join("Application Support")
+    } else {
+        std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
+            .ok_or("XDG_DATA_HOME or HOME is not set")?
+    };
+    let canonical = std::fs::canonicalize(vault).unwrap_or_else(|_| vault.to_path_buf());
+    let digest = Sha256::digest(canonical.to_string_lossy().as_bytes());
+    let vault_id = digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    Ok(data_root
+        .join("plaesy")
+        .join("memory")
+        .join(format!("{vault_id}.db")))
 }
 
 fn selected_vault(args: &Args) -> Result<PathBuf, Box<dyn std::error::Error>> {
@@ -139,6 +159,15 @@ mod tests {
             args: Vec::new(),
         };
         assert_eq!(selected_vault(&args).unwrap(), dir.path());
+    }
+
+    #[test]
+    fn default_database_is_outside_the_vault() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = default_db_path(dir.path()).expect("database path");
+        assert!(!db.starts_with(dir.path()));
+        assert!(db.to_string_lossy().contains("plaesy"));
+        assert!(db.extension().is_some_and(|ext| ext == "db"));
     }
 
     #[test]

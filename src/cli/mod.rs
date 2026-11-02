@@ -8,14 +8,15 @@ pub mod config;
 pub mod delegate;
 pub mod doctor;
 pub mod images;
-pub mod memory;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
+pub mod memory;
 pub mod platforms;
 pub mod reach;
 pub mod reload;
+pub mod spec_kit;
 pub mod stack;
 pub mod status;
 pub mod tasks;
@@ -78,8 +79,11 @@ pub enum Command {
     Trim(trim::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
-    /// Offline memory index (runs the `memory` binary from the memory submodule)
+    /// Memory engine from the standalone `plaesy/memory` repository
     Memory(memory::Args),
+    /// Spec-kit project workflows (the built-in Plaesy Constitution Kit commands)
+    #[command(name = "spec-kit", visible_alias = "specify")]
+    SpecKit(spec_kit::Args),
     /// Task lifecycle under .plaesy/tasks/ (backlog/todo/doing/done/blocked)
     Tasks(tasks::Args),
     /// Validate a constitution, memory, Markdown, or an OOXML document
@@ -129,6 +133,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Memory(args) => memory::run(&args),
+        Command::SpecKit(args) => spec_kit::run(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),
     }
