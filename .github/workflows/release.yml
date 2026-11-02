@@ -1,0 +1,77 @@
+name: Release Plaesy
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  MEMORY_REF: c889908da0155d06179593224ca0bd1f876b5e35
+
+jobs:
+  build:
+    name: ${{ matrix.os }} ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            suffix: linux-arm64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            suffix: macos-x86_64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            suffix: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: windows-x86_64
+            exe: .exe
+    steps:
+      - name: Checkout CLI
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Checkout memory engine
+        uses: actions/checkout@v4
+        with:
+          repository: plaesy/memory
+          ref: ${{ env.MEMORY_REF }}
+          path: memory-engine
+      - name: Build Plaesy and memory
+        shell: bash
+        run: |
+          cargo build --release --locked --target "${{ matrix.target }}"
+          cargo build --release --locked --manifest-path memory-engine/Cargo.toml --target "${{ matrix.target }}"
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/plaesy${{ matrix.exe }}" "dist/plaesy-${{ matrix.suffix }}${{ matrix.exe }}"
+          cp "memory-engine/target/${{ matrix.target }}/release/memory${{ matrix.exe }}" "dist/memory-${{ matrix.suffix }}${{ matrix.exe }}"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.suffix }}
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
