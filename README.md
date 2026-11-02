@@ -1,6 +1,6 @@
 # Plaesy
 
-Plaesy is an umbrella CLI for the Plaesy product family:
+Plaesy is an umbrella CLI for the independent Plaesy products:
 
 ```text
 plaesy memory ...
@@ -10,7 +10,8 @@ plaesy desktop ...
 
 ## Install for normal users
 
-The installers download prebuilt release binaries. Rust, Cargo, and Git are not required.
+The installer downloads one verified release bundle containing both `plaesy` and the standalone
+`memory` engine. Rust, Cargo, and Git are not required.
 
 ### macOS / Linux
 
@@ -18,9 +19,12 @@ The installers download prebuilt release binaries. Rust, Cargo, and Git are not 
 curl -fsSL https://raw.githubusercontent.com/plaesy/cli/main/scripts/install.sh | sh
 ```
 
-The installer installs `plaesy` and the standalone `memory` engine into `~/.local/bin`.
-If the directory is not already on PATH, it prints the one-line fix and the user only needs to
-open a new terminal.
+For a pinned version:
+
+```sh
+export PLAESY_VERSION=v0.1.0
+curl -fsSL https://raw.githubusercontent.com/plaesy/cli/main/scripts/install.sh | sh
+```
 
 ### Windows PowerShell
 
@@ -28,8 +32,8 @@ open a new terminal.
 irm https://raw.githubusercontent.com/plaesy/cli/main/scripts/install.ps1 | iex
 ```
 
-The installer uses `%LOCALAPPDATA%\Plaesy\bin`, updates the user PATH, and installs both
-`plaesy.exe` and `memory.exe`.
+The installer verifies `SHA256SUMS` before installing. It installs into `~/.local/bin` on macOS/Linux
+or `%LOCALAPPDATA%\Plaesy\bin` on Windows and updates the user PATH.
 
 ## Verify
 
@@ -41,37 +45,63 @@ plaesy memory --help
 
 ## Developer installation
 
-Developers can build from source:
-
 ```sh
 cargo install --git https://github.com/plaesy/cli.git --locked --bin plaesy
 cargo install --git https://github.com/plaesy/memory.git --locked --bin memory
 ```
 
-## Release contract
+## Manual release without CI
 
-Before publishing the installer URL, each matching GitHub release must contain these assets:
+Build from a maintainer machine that has the CLI and memory repositories checked out:
 
 ```text
-plaesy-linux-x86_64
-plaesy-linux-arm64
-plaesy-macos-x86_64
-plaesy-macos-arm64
-plaesy-windows-x86_64.exe
-
-memory-linux-x86_64
-memory-linux-arm64
-memory-macos-x86_64
-memory-macos-arm64
-memory-windows-x86_64.exe
+projects/
+├── cli/
+└── memory/
 ```
 
-The CLI and memory repositories remain independent; the installer is the single-product user
-experience that combines their release artifacts.
+Build and verify one platform:
 
-## Publishing without CI
+```sh
+cd projects/cli
+./release/build-and-publish.sh v0.1.0 ../memory
+./release/verify.sh dist/v0.1.0
+```
 
-CI is not required. Build and publish releases from a trusted maintainer machine using the
-repository scripts in `release/`. The scripts build both repositories locally, verify the expected
-artifacts, and upload them with `gh release create`. Users only download release files; they never
-need Rust, Cargo, Git, or CI.
+For another Rust target:
+
+```sh
+./release/build-and-publish.sh v0.1.0 ../memory aarch64-apple-darwin
+```
+
+After all platform builds are collected under the same `dist/v0.1.0/` directory, publish them:
+
+```sh
+./release/publish.sh v0.1.0
+```
+
+The publish script creates or reuses one draft GitHub Release, uploads every verified platform
+bundle, and stops on any upload failure. Inspect the draft, then publish it explicitly:
+
+```sh
+gh release edit v0.1.0 --repo plaesy/cli --draft=false
+```
+
+The build script produces a platform archive, `SHA256SUMS`, and `manifest.json`. It does not
+silently ignore build failures. Build each platform separately, collect the artifacts, verify them,
+then publish once.
+
+Release assets:
+
+```text
+plaesy-linux-x86_64.tar.gz
+plaesy-linux-arm64.tar.gz
+plaesy-macos-x86_64.tar.gz
+plaesy-macos-arm64.tar.gz
+plaesy-windows-x86_64.zip
+SHA256SUMS
+manifest.json
+```
+
+The CLI and memory source repositories remain independent. Distribution combines their binaries
+only at release packaging time.
