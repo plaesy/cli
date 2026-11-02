@@ -68,3 +68,10 @@ memory-windows-x86_64.exe
 
 The CLI and memory repositories remain independent; the installer is the single-product user
 experience that combines their release artifacts.
+
+## Publishing without CI
+
+CI is not required. Build and publish releases from a trusted maintainer machine using the
+repository scripts in `release/`. The scripts build both repositories locally, verify the expected
+artifacts, and upload them with `gh release create`. Users only download release files; they never
+need Rust, Cargo, Git, or CI.
