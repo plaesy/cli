@@ -31,6 +31,6 @@ NAME="plaesy-${PLATFORM}.${ARCHIVE}"
 if [ "$ARCHIVE" = tar.gz ]; then tar -czf "$DIST/$NAME" -C "$WORK" .
 else (cd "$WORK" && zip -q -r "$DIST/$NAME" .); fi
 (cd "$DIST" && sha256sum "$NAME" > SHA256SUMS)
-printf '{"version":"%s","platform":"%s","target":"%s","memory_ref":"%s","bundle":"%s"}\n' "$VERSION" "$PLATFORM" "$TARGET" "$MEMORY_REF" "$NAME" > "$DIST/manifest.json"
+printf '{"version":"%s","platform":"%s","target":"%s","memory_ref":"%s","bundle":"%s","bundles":["%s"]}\n' "$VERSION" "$PLATFORM" "$TARGET" "$MEMORY_REF" "$NAME" "$NAME" > "$DIST/manifest.json"
 printf 'Built %s\nChecksum: %s\nManifest: %s\n' "$DIST/$NAME" "$DIST/SHA256SUMS" "$DIST/manifest.json"
 printf 'Run release/publish.sh after all platform builds are collected.\n'
