@@ -19,15 +19,17 @@ case "$TARGET" in
   x86_64-pc-windows-msvc) PLATFORM=windows-x86_64; EXT=.exe; ARCHIVE=zip ;;
   *) echo "unsupported target: $TARGET" >&2; exit 1 ;;
 esac
-rm -rf "$DIST"; mkdir -p "$DIST/work"
+mkdir -p "$DIST"
+WORK="$DIST/work-$PLATFORM"
+rm -rf "$WORK"; mkdir -p "$WORK"
 cargo build --release --locked --target "$TARGET"
 cargo build --release --locked --manifest-path "$MEMORY_DIR/Cargo.toml" --target "$TARGET"
-cp "$ROOT/target/$TARGET/release/plaesy$EXT" "$DIST/work/plaesy$EXT"
-cp "$MEMORY_DIR/target/$TARGET/release/memory$EXT" "$DIST/work/memory$EXT"
-cp "$ROOT/LICENSE" "$DIST/work/" 2>/dev/null || true
+cp "$ROOT/target/$TARGET/release/plaesy$EXT" "$WORK/plaesy$EXT"
+cp "$MEMORY_DIR/target/$TARGET/release/memory$EXT" "$WORK/memory$EXT"
+cp "$ROOT/LICENSE" "$WORK/" 2>/dev/null || true
 NAME="plaesy-${PLATFORM}.${ARCHIVE}"
-if [ "$ARCHIVE" = tar.gz ]; then tar -czf "$DIST/$NAME" -C "$DIST/work" .
-else (cd "$DIST/work" && zip -q -r "$DIST/$NAME" .); fi
+if [ "$ARCHIVE" = tar.gz ]; then tar -czf "$DIST/$NAME" -C "$WORK" .
+else (cd "$WORK" && zip -q -r "$DIST/$NAME" .); fi
 (cd "$DIST" && sha256sum "$NAME" > SHA256SUMS)
 printf '{"version":"%s","platform":"%s","target":"%s","memory_ref":"%s","bundle":"%s"}\n' "$VERSION" "$PLATFORM" "$TARGET" "$MEMORY_REF" "$NAME" > "$DIST/manifest.json"
 printf 'Built %s\nChecksum: %s\nManifest: %s\n' "$DIST/$NAME" "$DIST/SHA256SUMS" "$DIST/manifest.json"
