@@ -19,15 +19,15 @@ use crate::common::log::Logger;
 static TREE: [(&str, Dir<'static>); 4] = [
     (
         "agents",
-        include_dir!("$CARGO_MANIFEST_DIR/../spec-kit/agents"),
+        include_dir!("$CARGO_MANIFEST_DIR/../../spec-kit/agents"),
     ),
     (
         "checklists",
-        include_dir!("$CARGO_MANIFEST_DIR/../spec-kit/checklists"),
+        include_dir!("$CARGO_MANIFEST_DIR/../../spec-kit/checklists"),
     ),
     (
         "skills",
-        include_dir!("$CARGO_MANIFEST_DIR/../spec-kit/skills"),
+        include_dir!("$CARGO_MANIFEST_DIR/../../spec-kit/skills"),
     ),
     (
         "configs",

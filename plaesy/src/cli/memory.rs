@@ -41,7 +41,24 @@ fn binary() -> Option<PathBuf> {
         return override_path;
     }
 
+    // Workspace releases place the `memory` executable beside `plaesy`.
+    let bundled = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join(executable_name("memory"))))
+        .filter(|path| path.is_file());
+    if bundled.is_some() {
+        return bundled;
+    }
+
     validate::find_command("memory")
+}
+
+fn executable_name(name: &str) -> String {
+    if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.to_owned()
+    }
 }
 
 /// Runs `memory` with the given arguments and exits with its status code.

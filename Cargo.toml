@@ -1,23 +1,16 @@
-[package]
-name = "plaesy"
+[workspace]
+resolver = "2"
+members = ["plaesy", "plaesy-memory"]
+
+[workspace.package]
 version = "0.0.1"
 edition = "2021"
 rust-version = "1.85"
 authors = ["Plaesy Team"]
-description = "Plaesy Constitution Kit CLI (Rust port of the Go scripts/cmd/plaesy)"
 license = "MIT"
 repository = "https://github.com/plaesy/spec-kit"
-readme = "PORTING.md"
 
-[lib]
-name = "plaesy"
-path = "src/lib.rs"
-
-[[bin]]
-name = "plaesy"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
 indexmap = { version = "2", features = ["serde"] }
 notify = "8"
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
@@ -34,12 +27,10 @@ serde_json = { version = "1", features = ["preserve_order"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4.5", features = ["derive"] }
 thiserror = "2"
-
-[target.'cfg(unix)'.dependencies]
 libc = "0.2"
-
-[dev-dependencies]
 tempfile = "3"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
+winreg = "0.52"
 
 [profile.release]
 opt-level = 3
@@ -47,6 +38,8 @@ lto = true
 codegen-units = 1
 strip = true
 
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
-winreg = "0.52"
+[profile.bench]
+inherits = "release"
+
+[profile.dev]
+opt-level = 1
