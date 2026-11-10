@@ -222,6 +222,11 @@ fn archived_note_content(content: &str, document: &Document) -> Result<String> {
             "{bom}---{line_ending}status: archived{line_ending}---{line_ending}{body}"
         ));
     };
+    let bom = if content.starts_with('\u{feff}') {
+        "\u{feff}"
+    } else {
+        ""
+    };
 
     let mut lines: Vec<String> = frontmatter.split('\n').map(str::to_owned).collect();
     if lines.first().map(String::as_str) != Some("---")
@@ -259,7 +264,7 @@ fn archived_note_content(content: &str, document: &Document) -> Result<String> {
     }
     let normalized_frontmatter = lines.join(line_ending);
     let body = document.body.replace('\n', line_ending);
-    Ok(format!("{normalized_frontmatter}{line_ending}{body}"))
+    Ok(format!("{bom}{normalized_frontmatter}{line_ending}{body}"))
 }
 
 fn yaml_comment_suffix(line: &str) -> Option<&str> {
@@ -2737,7 +2742,7 @@ mod tests {
     async fn archive_marks_note_inactive_without_deleting_it_and_records_hash_only_event() {
         let dir = tempfile::tempdir().expect("tmp");
         let root = dir.path();
-        let original = "---\n# preserve top-level note comments\nid: stable-note-id\nstatus: active # preserve status note\nscope: [project-a]\n---\n\nArchiveMeadow.\n";
+        let original = "\u{feff}---\n# preserve top-level note comments\nid: stable-note-id\nstatus: \"active # scalar value\" # preserve status note\nscope: [project-a]\n---\n\nArchiveMeadow.\n";
         write(root, "notes/claim.md", original);
         let engine = engine(true).await;
         engine.set_watch_root(root.to_path_buf());
@@ -2752,6 +2757,7 @@ mod tests {
             .expect("archive");
         let archived_content =
             std::fs::read_to_string(root.join("notes/claim.md")).expect("archived source remains");
+        assert!(archived_content.starts_with("\u{feff}---"));
         assert!(archived_content.contains("status: archived"));
         assert!(archived_content.contains("# preserve top-level note comments"));
         assert!(archived_content.contains("status: archived # preserve status note"));
