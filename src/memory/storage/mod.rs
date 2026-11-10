@@ -1032,7 +1032,10 @@ impl Database {
             let (hash, path) = row.map_err(db_err)?;
             groups.entry(hash).or_default().push(path);
         }
-        Ok(groups.into_values().filter(|paths| paths.len() > 1).collect())
+        Ok(groups
+            .into_values()
+            .filter(|paths| paths.len() > 1)
+            .collect())
     }
 
     /// IDs of all chunks belonging to a document.

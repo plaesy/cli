@@ -1510,7 +1510,10 @@ fn print_curation_report(report: &CurationReport) {
         println!("  more query gaps omitted; increase --limit to show more");
     }
 
-    println!("Exact duplicate groups: {}", report.exact_duplicates.items.len());
+    println!(
+        "Exact duplicate groups: {}",
+        report.exact_duplicates.items.len()
+    );
     for group in &report.exact_duplicates.items {
         println!("  {}", group.files.items.join(" = "));
         if group.files.has_more {
@@ -1521,7 +1524,10 @@ fn print_curation_report(report: &CurationReport) {
         println!("  more duplicate groups omitted; increase --limit to show more");
     }
 
-    println!("Unlinked note candidates: {}", report.unlinked_notes.items.len());
+    println!(
+        "Unlinked note candidates: {}",
+        report.unlinked_notes.items.len()
+    );
     for path in &report.unlinked_notes.items {
         println!("  {path}");
     }
