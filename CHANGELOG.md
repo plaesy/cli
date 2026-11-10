@@ -11,6 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
+- Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
 
 ### Fixed
 

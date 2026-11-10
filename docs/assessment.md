@@ -23,7 +23,7 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 | Current MCP era | Support current discovery and stateless requests while retaining legacy clients | official `rmcp` SDK handles `2026-07-28` and handshake-era compatibility; HTTP remains loopback-only with host/origin validation | Met (2026-11-09) |
 | Pagination | Required when lists can grow | `tools/list` is a fixed list of eight; search and maintenance reports have explicit limits | Not needed |
 | Resources and prompts | Optional | `resources/list` answered; no resources exposed | Partial, by design |
-| Secrets | Keep credentials out of memory (JetBrains 2026 survey guidance) | `memory hygiene` checks credential assignments plus common AWS, GitHub, Slack, Stripe, Google, and OpenAI token formats; reports only kind/path/line. Coverage and false-positive rates have not been measured. | Partial |
+| Secrets | Keep credentials out of memory (JetBrains 2026 survey guidance) | `memory hygiene` checks credential assignments plus common AWS, GitHub, Slack, Stripe, Google, and OpenAI token formats; reports only kind/path/line. A synthetic unit corpus reports precision 1.00 (11/11) and recall 1.00 (11/11) against 7 negative examples; this is a narrow rule regression check, not real-world coverage evidence. | Partial |
 | Staleness | Mark unverified and obsolete facts | `last_verified`, STALE penalty, `status`, `valid_from`/`valid_to` | Met |
 | Lifecycle | Write, update, forget are measured (MemOps, arXiv 2607.12893) | create and resolve are supported; update/forget lifecycle and evaluation are absent | **Gap** |
 | Evaluation | Retrieval recall, end-to-end QA accuracy, and token cost reported separately | Recall@k on LongMemEval-S, 94 questions only; no QA accuracy; no token cost | **Gap** |
@@ -42,7 +42,7 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 
 ## Improvements, in order of value
 
-1. **Measure secret-scan coverage.** Provider-format detection is now present, but measure it against a safe synthetic corpus for false positives and false negatives; keep matched values out of reports. It is still not a replacement for a dedicated secret scanner.
+1. **Measure secret-scan coverage.** A safe synthetic regression corpus now checks 11 positive signatures and 7 negative examples (precision/recall both 1.00 on that corpus). Expand it with reviewed, provider-documented edge cases and measure on representative notes; it is still not a replacement for a dedicated secret scanner.
 2. **Evaluate end-to-end.** Add QA accuracy and token cost next to Recall@k on the same 94 questions, and run the full 470 set. Report all three.
 3. **Validate the current default embedder.** The code and onboarding default is now E5; existing evaluation supports it for multilingual use, but the Indonesian probe has only eight queries. See [embedder-decision](eval/embedder-decision.md).
 4. **Automate scheduled review.** The CLI can run curation in-process; OS task/service registration is still manual. See [operations](operations.md).

@@ -824,4 +824,55 @@ mod tests {
         );
         assert!(!format!("{findings:?}").contains("0123456789"));
     }
+
+    #[test]
+    fn secret_scanner_synthetic_corpus_precision_and_recall() {
+        // These are deliberately fake strings. The corpus measures our current rules; it is not
+        // evidence of provider-side validity or an exhaustive secret scan.
+        let positives = [
+            ("OPENAI_API_KEY=sk-example-secret-value", true),
+            ("password: correct-horse-battery", true),
+            ("Authorization: Bearer abcdEFGH0123456789xyz", true),
+            ("AKIA1234567890ABCDEF", true),
+            ("ghp_012345678901234567890123456789012345", true),
+            ("xoxb-123456789012345678901234", true),
+            ("sk_live_12345678901234567890", true),
+            ("sk_test_0123456789012345", true),
+            ("AIza01234567890123456789012345678901234", true),
+            ("sk-proj-012345678901234567890123456789012345", true),
+            ("-----BEGIN PRIVATE KEY-----", true),
+        ];
+        let negatives = [
+            "API_KEY=<your-key>",
+            "password: changeme",
+            "The word token appears in this documentation.",
+            "AIza0123456789012345678901234567890123",
+            "```text\nOPENAI_API_KEY=sk-example-secret-value\n```",
+            "client_secret is the field name, not a value",
+            "Bearer <access-token>",
+        ];
+
+        let tp = positives
+            .iter()
+            .filter(|(line, expected)| *expected && !secret_references(line).is_empty())
+            .count();
+        let fn_ = positives.len() - tp;
+        let fp = negatives
+            .iter()
+            .filter(|line| !secret_references(line).is_empty())
+            .count();
+        let tn = negatives.len() - fp;
+        let recall = tp as f64 / (tp + fn_) as f64;
+        let precision = tp as f64 / (tp + fp) as f64;
+
+        eprintln!(
+            "synthetic secret scan: TP={tp} FN={fn_} FP={fp} TN={tn}; precision={precision:.3}, recall={recall:.3}"
+        );
+        assert_eq!((tp, fn_, fp, tn), (11, 0, 0, 7));
+        for (line, _) in positives {
+            let findings = secret_references(line);
+            assert_eq!(findings.len(), 1);
+            assert!(!format!("{findings:?}").contains(line));
+        }
+    }
 }
