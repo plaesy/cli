@@ -3,8 +3,11 @@
 use crate::memory::{config::MemoryConfig, MemoryError, Result};
 use std::path::{Path, PathBuf};
 
+#[cfg(windows)]
 const TASK_NAME: &str = "Plaesy Memory Schedule";
+#[cfg(target_os = "linux")]
 const UNIT_NAME: &str = "plaesy-memory";
+#[cfg(target_os = "macos")]
 const LAUNCH_AGENT: &str = "com.plaesy.memory-schedule";
 
 fn config_file() -> Result<PathBuf> {
@@ -55,6 +58,7 @@ fn atomic_write(path: &Path, contents: &str) -> Result<()> {
 
 /// Register a user-level task that invokes `schedule once` every 30 minutes.
 pub fn install(config: &MemoryConfig) -> Result<()> {
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     let executable = std::env::current_exe().map_err(|source| MemoryError::IoError {
         path: "current executable".into(),
         source,
