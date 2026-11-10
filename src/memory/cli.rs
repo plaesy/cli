@@ -16,6 +16,7 @@
 //! memory serve [--mcp]            JSON service on stdin/stdout, or MCP server with --mcp
 //! memory serve --mcp --transport http --port 8080   MCP over Streamable HTTP
 //! memory remember "title" ["body"] [--template NAME] [--folder PATH]  write a note
+//! memory schedule install|uninstall register or remove the per-user OS schedule
 //! ```
 
 use crate::memory::config::MemoryConfig;
@@ -240,7 +241,7 @@ enum Command {
     /// Run scheduled jobs from the config: `once` runs what is due and exits (for Task Scheduler);
     /// `run` keeps going until Ctrl-C.
     Schedule {
-        /// `once` or `run`.
+        /// `once`, `run`, `install`, or `uninstall`.
         #[arg(value_enum)]
         mode: ScheduleMode,
     },
@@ -404,6 +405,8 @@ enum ConfigSubcommand {
 enum ScheduleMode {
     Once,
     Run,
+    Install,
+    Uninstall,
 }
 
 pub async fn run_args(args: Vec<String>) -> Result<()> {
@@ -504,6 +507,24 @@ async fn run(cli: Cli) -> Result<()> {
     } = cli.command
     {
         return serve::run(config, mcp, transport, port).await;
+    }
+
+    match &cli.command {
+        Command::Schedule {
+            mode: ScheduleMode::Install,
+        } => {
+            require_dir(&config.watch_dir)?;
+            crate::memory::schedule::jobs_from_config(&config.schedule)?;
+            crate::memory::schedule::registration::install(&config)?;
+            return Ok(());
+        }
+        Command::Schedule {
+            mode: ScheduleMode::Uninstall,
+        } => {
+            crate::memory::schedule::registration::uninstall()?;
+            return Ok(());
+        }
+        _ => {}
     }
 
     if let Command::CodeFind {
@@ -676,6 +697,9 @@ async fn run(cli: Cli) -> Result<()> {
                 ScheduleMode::Run => {
                     crate::memory::schedule::run_loop(&engine, &root, &jobs, log.as_deref())
                         .await?;
+                }
+                ScheduleMode::Install | ScheduleMode::Uninstall => {
+                    unreachable!("schedule registration modes are handled before engine creation")
                 }
             }
         }

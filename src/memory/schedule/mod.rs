@@ -1,4 +1,5 @@
 //! Scheduled memory jobs (`memory schedule once|run`).
+
 //!
 //! A job runs one existing engine method (`index`, `hygiene`, `missing` or `curate`) on the vault
 //! at a fixed interval. Last-run times live in the `schedule_runs` table of the same database, so
@@ -8,6 +9,8 @@
 //! Overlap: a job's `last_run` is written before it starts. A second `once` that begins meanwhile
 //! sees the job as not due, so Task Scheduler firing during a long index does not run it twice.
 //! If the process dies mid-run the job waits one full interval, then runs again.
+
+pub mod registration;
 
 use crate::memory::config::ScheduleConfig;
 use crate::memory::error::{MemoryError, Result};

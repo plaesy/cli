@@ -99,7 +99,16 @@ The server exposes eight tools: six read-only (`memory_search`, `memory_backlink
 - `hygiene`, `missing` and `curate` do not run unless listed. A vault with known findings would otherwise add a line to the log every hour.
 - Each run appends one line per job to `<root>\Plaesy\schedule.log`. A failing job is logged and the rest still run.
 - Last-run times are kept in the database (`schedule_runs`). A second `once` within the interval does nothing.
-The installer does not register OS scheduler jobs. Register a user-level task to call `schedule once`; internal job intervals decide what is due. Use the same OS account and vault configuration as the interactive CLI. These examples poll every 30 minutes, the shortest supported job interval.
+Install or remove a user-level OS task with the CLI. The command saves a private snapshot of the effective memory configuration, including the selected vault and database, so scheduled runs use the same settings even when the original terminal environment is gone:
+
+```sh
+plaesy memory --vault "<vault>" schedule install
+plaesy memory schedule uninstall
+```
+
+Run `plaesy memory --vault "<vault>" schedule once` manually before installation to check the jobs and inspect `<vault>/Plaesy/schedule.log`. The OS task runs every 30 minutes; internal job intervals decide what is due. No administrator/root privileges are used. On headless Linux servers, keep a systemd user manager alive after logout with `sudo loginctl enable-linger "$USER"` so the timer runs without an interactive session. Windows Task Scheduler and macOS LaunchAgents run in the user's logged-in session.
+
+Manual OS registration is also available if automatic setup fails. These examples poll every 30 minutes, the shortest supported job interval.
 
 **Windows PowerShell (current user, while signed in):**
 

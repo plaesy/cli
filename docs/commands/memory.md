@@ -55,6 +55,20 @@ or deletes Markdown files. Use `--project-root SLUG=PATH` to check code paths in
 The same report is available to MCP clients through the read-only `memory_curate` tool and can be
 scheduled with `action = "curate"`.
 
+## Schedule maintenance
+
+Register or remove a per-user OS schedule for the selected vault:
+
+```sh
+plaesy memory --vault <vault-path> schedule install
+plaesy memory schedule uninstall
+```
+
+Installation supports Windows Task Scheduler, Linux systemd user timers, and macOS LaunchAgents.
+The command saves a private configuration snapshot and runs due jobs every 30 minutes. On a
+headless Linux server, enable systemd user lingering for jobs to run after logout. See
+[`operations.md`](../operations.md#scheduled-jobs) for behavior and manual setup details.
+
 ## Remember a note
 
 Create a regular capture in the default inbox:

@@ -29,7 +29,7 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 | Evaluation | Retrieval recall, end-to-end QA accuracy, and token cost reported separately | Recall@k on LongMemEval-S, 94 questions only; no QA accuracy; no token cost | **Gap** |
 | Reproducibility | Others can rerun the numbers | `make lme`; full 470-question run not done | **Gap** |
 | Multilingual default | Non-English notes retrieve well | `multilingual-e5-small` is the code and onboarding default; MiniLM remains selectable; current evaluation is too small to establish broad superiority | Partial |
-| Maintenance | Hygiene is run regularly, not once | bounded `curate` report is available in CLI, MCP, and the in-process scheduler; cross-platform OS registration steps are documented, but still manual | Partial |
+| Maintenance | Hygiene is run regularly, not once | bounded `curate` report is available in CLI, MCP, and the in-process scheduler; `schedule install/uninstall` registers a per-user task on Windows, systemd Linux, and macOS | Partial: per-OS runtime coverage remains to verify |
 
 ## What the research says, and how it applies
 
@@ -38,14 +38,14 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 - **Secrets do not belong in agent memory.** The JetBrains 2026 guidance says so directly. plaesy indexes everything under the vault, so a pasted API key can still be returned to the model. The hygiene scan is a useful heuristic, not comprehensive secret protection. Source: [JetBrains, long-term memory in AI agents](https://www.jetbrains.com/pages/ai-agents/building/long-term-memory/).
 - **LongMemEval and LoCoMo numbers are not comparable across vendors.** Vendor numbers cluster in the 90s, but they measure different things (Recall@k versus LLM-judged accuracy), use different harnesses, and LoCoMo has disputed answer-key errors (one audit reports 6.4% wrong). Source: [Mem0, AI memory benchmarks](https://mem0.ai/library/agent-memory/ai-memory-benchmarks-in-2026) (vendor, unverified); [LoCoMo audit](https://penfieldlabs.substack.com/p/we-audited-locomo-64-of-the-answer) (competitor, unverified).
 - **Retrieval is measured far more than writing and forgetting.** Recommended reading: pair retrieval scores with token cost and lifecycle behaviour. plaesy reports only retrieval.
-- **Second-brain systems fail on maintenance.** Practitioner reports say capture without revisiting produces an archive. plaesy's hygiene audit and read-only curation report support review; operators still need to register the scheduler with their OS and act on candidates. Source: [Nexasphere, 2026 guide](https://nexasphere.io/blog/ai-personal-knowledge-management-system-2026) (vendor opinion, unverified).
+- **Second-brain systems fail on maintenance.** Practitioner reports say capture without revisiting produces an archive. plaesy's hygiene audit and read-only curation report support review; the CLI can register a per-user schedule, while operators still need to act on candidates. Source: [Nexasphere, 2026 guide](https://nexasphere.io/blog/ai-personal-knowledge-management-system-2026) (vendor opinion, unverified).
 
 ## Improvements, in order of value
 
 1. **Measure secret-scan coverage.** A safe synthetic regression corpus now checks 11 positive signatures and 7 negative examples (precision/recall both 1.00 on that corpus). Expand it with reviewed, provider-documented edge cases and measure on representative notes; it is still not a replacement for a dedicated secret scanner.
 2. **Evaluate end-to-end.** Add QA accuracy and token cost next to Recall@k on the same 94 questions, and run the full 470 set. Report all three.
 3. **Validate the current default embedder.** The code and onboarding default is now E5; existing evaluation supports it for multilingual use, but the Indonesian probe has only eight queries. See [embedder-decision](eval/embedder-decision.md).
-4. **Automate scheduled review setup.** Windows, systemd user timers, and macOS LaunchAgents now have documented registration steps. A native `schedule install`/`uninstall` flow is still absent. See [operations](operations.md).
+4. **Verify scheduled review setup on each OS.** Native `schedule install/uninstall` now registers Windows Task Scheduler, systemd user timers, and macOS LaunchAgents, with a saved snapshot of the effective vault configuration. Validate install, repeated install, run, and uninstall on all three operating systems. Headless Linux also requires systemd user lingering. See [operations](operations.md).
 5. **Lifecycle operations.** Add safe, auditable update and archive/forget workflows before claiming full memory lifecycle coverage. `remember` is create-only.
 
 ## Not planned
