@@ -1,0 +1,125 @@
+# Operations: running the second brain day to day
+
+Examples use `<vault>` for the folder that holds your notes. Replace it with your own path. Commands are shown for Windows PowerShell; memory operations use `plaesy memory`.
+
+## 1. What is where
+
+| Item | Location | Set by |
+|---|---|---|
+| Vault (your notes, source of truth) | `<vault>`, any folder you choose | `MEMORY_WATCH_DIR` |
+| Index database | `%LOCALAPPDATA%\plaesy\memory\<vault-id>.db` (+ `.hnsw` snapshot) | `plaesy memory` selects a per-vault file based on vault path; `MEMORY_DB_PATH` overrides |
+| Embedding model | `%LOCALAPPDATA%\plaesy\models\<name>\` | default; `MEMORY_MODEL_DIR` overrides |
+| Datasets (evaluation only) | `%LOCALAPPDATA%\plaesy\datasets\` | convention |
+| Exclusions | folders or file names that are never indexed | `MEMORY_EXCLUDE_DIRS` |
+
+The index is a derived local store: deleting the selected database and re-indexing rebuilds it from the notes. The database lives outside the vault, so it is not synced between devices; each device builds its own local index. The notes remain the canonical source.
+
+## 2. Writing notes so they can be trusted
+
+The engine reads optional frontmatter. Notes without it still work, but cannot declare themselves.
+
+```yaml
+---
+tier: semantic            # core | episodic | semantic | procedural | archive (inferred from folder if omitted)
+confidence: high         # high | medium | low: how sure you are of the claims
+last_verified: 2026-10-26
+status: active           # superseded | deprecated | archived are hidden unless asked for
+valid_from: 2026-01-01   # optional: the period the facts hold
+valid_to:                # optional
+---
+```
+
+Rules that match the engine's behaviour:
+
+- Keep credentials out of notes. The index stores the text, and `memory_search` can return it to a model. `plaesy memory hygiene` also reports likely API keys, passwords, bearer/access tokens, client secrets, and private-key headers by file and line, but never includes the matched value. It looks for credential assignments and private-key headers, ignores known placeholder values and fenced code examples, and remains a heuristic rather than proof or a complete secret scanner. See the secret-scan item in [assessment](assessment.md).
+
+To inspect only likely credential findings in JSON:
+
+```powershell
+plaesy memory --vault "<vault>" hygiene "<vault>" --json | ConvertFrom-Json | Select-Object -ExpandProperty findings | Where-Object kind -eq possible_secret
+```
+
+The scanner is read-only and heuristic. Remove or rotate a credential outside the memory tool; do not paste the value into bug reports or agent prompts.
+
+- A note older than 180 days (`last_verified`) is flagged STALE and its score is multiplied by 0.85. It is down-weighted, not hidden.
+- Use `[[wikilinks]]` for relations. They power `plaesy memory links` and dangling-link checks.
+- Folder names are tiers by default: put episodic logs in an `episodic` folder, not in `semantic`.
+
+## 3. Index and search
+
+```powershell
+plaesy memory --vault "<vault>" index "<vault>"                 # first run, or after large restructures
+plaesy memory --vault "<vault>" search "how do we deploy"       # hybrid by default
+plaesy memory --vault "<vault>" search "deploy" --mode keyword # exact terms
+plaesy memory --vault "<vault>" search "deploy" --tier procedural --min-trust high
+plaesy memory --vault "<vault>" links runbook                   # who links to it
+plaesy memory --vault "<vault>" stats                           # documents, chunks, vector search on/off
+```
+
+Select the vault before the memory command. A positional directory passed to `index` or `hygiene`
+sets the files to scan; it does not select which vault's local database to use. `index` picks up
+changes on the next run. The watch mode keeps the index current while the machine is on.
+
+## 4. Changing the embedding model
+
+The index records the model it was built with. Changing `MEMORY_MODEL_NAME` (for example to `multilingual-e5-small`) re-embeds every document on the next sync. Expect about an hour for a large vault with e5. Keyword search keeps working during the rebuild; semantic results are incomplete until it finishes.
+
+Do not mix models in one database. To compare, use a separate `MEMORY_DB_PATH` per model.
+
+## 5. Connecting an AI
+
+**Claude Code (MCP):**
+
+```powershell
+claude mcp add plaesy-memory -e MEMORY_WATCH_DIR=<vault> -- plaesy memory serve --mcp
+```
+
+Add `-e MEMORY_MODEL_NAME=multilingual-e5-small` only after the model switch in section 4. The server exposes seven tools: five read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_stats`) and two bounded write tools (`memory_remember`, `memory_resolve_gap`). One creates a new note and the other closes a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
+
+**Hermes:** connect through its MCP client support using the generated configuration from `plaesy memory --vault "<vault>" config mcp --app hermes`. The same `plaesy memory serve` command is used; there is no separate `memory` executable or plugin binary.
+
+## 6. Routine maintenance
+
+| When | Command | What to look at |
+|---|---|---|
+| Weekly | `plaesy memory --vault "<vault>" hygiene "<vault>" --strict` | STALE notes, missing `last_verified`, broken Wikilinks and Markdown links/anchors, machine-specific links, backticked paths that no longer exist |
+| Monthly | review `confidence: low` and STALE notes | update, demote to `archive`, or delete |
+| After restructuring the vault | `plaesy memory --vault "<vault>" index "<vault>"` | the index holds the old paths otherwise |
+| After a model change | `plaesy memory --vault "<vault>" stats` shows the new model | see section 4 |
+
+`hygiene --strict` exits with a non-zero code when it finds problems, so it can gate a pre-commit hook or a scheduled task.
+
+### Scheduled jobs
+
+`plaesy memory --vault "<vault>" schedule once` runs the selected vault's due jobs and exits.
+`plaesy memory --vault "<vault>" schedule run` keeps running until Ctrl-C.
+
+- Jobs are set in the config under `[[schedule.jobs]]`: `name`, `every` (`30m`, `6h`, `1d`), `action` (`index`, `hygiene` or `missing`). With no jobs configured, `index` runs every hour.
+- `hygiene` and `missing` do not run unless listed. A vault with known broken links would otherwise add a line to the log every hour.
+- Each run appends one line per job to `<root>\Plaesy\schedule.log`. A failing job is logged and the rest still run.
+- Last-run times are kept in the database (`schedule_runs`). A second `once` within the interval does nothing.
+- The installer does not register a scheduled task. To automate `once`, create a task in your operating system's scheduler that runs `plaesy memory --vault "<vault>" schedule once` at the interval you want, using the same user account and vault configuration as your interactive CLI. Run it manually first to check the config and output.
+
+## 7. Backup and recovery
+
+- The notes are the backup. Keep the vault in git or in a sync folder with history.
+- The index is rebuildable. Back it up only if re-indexing a large vault is slow for you.
+- Models are a cache. `scripts/install-model.sh` downloads them again.
+
+## 8. Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `stats` shows `documents: 0` | database is new or points to the wrong file | check `MEMORY_DB_PATH`, run `plaesy memory --vault "<vault>" index "<vault>"` |
+| `vector search: off` | model not found in the models folder | run `scripts/install-model.sh`, or set `PLAESY_MODEL_DIR` |
+| Results cite old paths | notes moved after indexing | `plaesy memory --vault "<vault>" index "<vault>"` again |
+| Hermes uses an unexpected database | process was started before the path change | restart the MCP client and check `plaesy memory --vault "<vault>" stats` |
+| Search is slow on first run | model load and first embedding pass | normal; later runs use the embedding cache |
+
+## 9. Checklist for a new machine
+
+1. Install: use the Windows PowerShell or macOS/Linux release installer in the README.
+2. Models: run `bash scripts/install-model.sh` on macOS/Linux (add `--rerank` for optional reranking).
+3. Index: `plaesy memory --vault "<vault>" index "<vault>"`.
+4. Connect: configure an MCP client as in section 5.
+5. Check: `plaesy memory --vault "<vault>" stats` shows `vector search: on` and the expected document count.

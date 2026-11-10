@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-install-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x86_64
+          - runner: macos-15
+            platform: macos-arm64
+          - runner: windows-latest
+            platform: windows-x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out CLI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run CLI test suite
+        run: cargo test --locked
+      - name: Build release binary
+        run: cargo build --release --locked --bin plaesy
+      - name: Package Unix release bundle and checksum
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/plaesy-e2e-bundle"
+          extracted="$RUNNER_TEMP/plaesy-e2e-extracted"
+          mkdir -p "$bundle" "$extracted"
+          cp target/release/plaesy "$bundle/plaesy"
+          cp LICENSE "$bundle/LICENSE"
+          archive="plaesy-$PLATFORM.tar.gz"
+          tar -czf "$bundle/$archive" -C "$bundle" plaesy LICENSE
+          (cd "$bundle" && sha256sum "$archive" > SHA256SUMS)
+          tar -xzf "$bundle/$archive" -C "$extracted"
+          echo "PLAESY_BUNDLE_PATH=$bundle/$archive" >> "$GITHUB_ENV"
+          echo "PLAESY_SHA256SUMS_PATH=$bundle/SHA256SUMS" >> "$GITHUB_ENV"
+          echo "PLAESY_E2E_BINARY=$extracted/plaesy" >> "$GITHUB_ENV"
+      - name: Package Windows release bundle and checksum
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bundle = Join-Path $env:RUNNER_TEMP 'plaesy-e2e-bundle'
+          $extracted = Join-Path $env:RUNNER_TEMP 'plaesy-e2e-extracted'
+          New-Item -ItemType Directory -Force $bundle, $extracted | Out-Null
+          Copy-Item 'target/release/plaesy.exe' (Join-Path $bundle 'plaesy.exe')
+          Copy-Item 'LICENSE' (Join-Path $bundle 'LICENSE')
+          $archiveName = "plaesy-$env:PLATFORM.zip"
+          $archive = Join-Path $bundle $archiveName
+          Compress-Archive -Path (Join-Path $bundle '*') -DestinationPath $archive
+          $checksum = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$checksum  $archiveName" | Set-Content -LiteralPath (Join-Path $bundle 'SHA256SUMS') -Encoding ascii
+          Expand-Archive -Path $archive -DestinationPath $extracted
+          "PLAESY_BUNDLE_PATH=$archive" >> $env:GITHUB_ENV
+          "PLAESY_SHA256SUMS_PATH=$(Join-Path $bundle 'SHA256SUMS')" >> $env:GITHUB_ENV
+          "PLAESY_E2E_BINARY=$(Join-Path $extracted 'plaesy.exe')" >> $env:GITHUB_ENV
+      - name: Confirm the runner starts without Plaesy
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if command -v plaesy >/dev/null 2>&1; then
+            echo 'Runner unexpectedly has plaesy on PATH' >&2
+            exit 1
+          fi
+      - name: Confirm the runner starts without Plaesy
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command plaesy -ErrorAction SilentlyContinue) {
+            throw 'Runner unexpectedly has plaesy on PATH'
+          }
+      - name: Run the platform installer script
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          PLAESY_INSTALL_E2E: '1'
+        run: sh scripts/install.sh
+      - name: Run the platform installer script
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLAESY_INSTALL_E2E: '1'
+        run: ./scripts/install.ps1
+      - name: Test install, memory, repair, upgrade, and uninstall lifecycle
+        env:
+          PLAESY_INSTALL_E2E: '1'
+        run: cargo test --locked --test install_e2e -- --ignored --nocapture

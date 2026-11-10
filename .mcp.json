@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "plaesy": {
+      "command": "plaesy",
+      "args": ["mcp"]
+    }
+  }
+}

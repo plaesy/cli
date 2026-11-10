@@ -1,0 +1,250 @@
+name: Release Plaesy CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out CLI version metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cli
+          persist-credentials: false
+      - name: Validate release tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, tomllib
+          version = tomllib.loads(pathlib.Path("cli/Cargo.toml").read_text())["package"]["version"]
+          if os.environ["TAG"].removeprefix("v") != version:
+              raise SystemExit(f"release tag {os.environ['TAG']} must match Cargo.toml version {version}")
+          PY
+  test:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out CLI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cli
+          persist-credentials: false
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - name: Run CLI test suite
+        working-directory: cli
+        run: cargo test --locked
+
+  build:
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            platform: linux-arm64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            platform: macos-x86_64
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            platform: macos-arm64
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out CLI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cli
+          persist-credentials: false
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build CLI
+        working-directory: cli
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package Unix binary
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: cli
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          install -m 0755 "target/$TARGET/release/plaesy" dist/plaesy
+          install -m 0644 LICENSE dist/LICENSE
+          tar -czf "dist/plaesy-$PLATFORM.tar.gz" -C dist plaesy LICENSE
+          (cd dist && sha256sum "plaesy-$PLATFORM.tar.gz" > SHA256SUMS)
+      - name: Prepare Unix release bundle for E2E
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: cli
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          PLAESY_INSTALL_E2E: '1'
+        run: |
+          set -euo pipefail
+          extracted="$RUNNER_TEMP/plaesy-e2e-extracted"
+          mkdir -p "$extracted"
+          tar -xzf "dist/plaesy-$PLATFORM.tar.gz" -C "$extracted"
+          echo "PLAESY_BUNDLE_PATH=$PWD/dist/plaesy-$PLATFORM.tar.gz" >> "$GITHUB_ENV"
+          echo "PLAESY_SHA256SUMS_PATH=$PWD/dist/SHA256SUMS" >> "$GITHUB_ENV"
+          echo "PLAESY_E2E_BINARY=$extracted/plaesy" >> "$GITHUB_ENV"
+      - name: Confirm Unix runner starts without Plaesy
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if command -v plaesy >/dev/null 2>&1; then
+            echo 'Runner unexpectedly has plaesy on PATH' >&2
+            exit 1
+          fi
+      - name: Install using the Unix platform installer
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: cli
+        run: sh scripts/install.sh
+      - name: Test Unix install lifecycle
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: cli
+        env:
+          PLAESY_INSTALL_E2E: '1'
+        run: |
+          cargo test --locked --test install_e2e -- --ignored --nocapture
+      - name: Attest Unix release bundle
+        if: runner.os != 'Windows'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: cli/dist/plaesy-${{ matrix.platform }}.tar.gz
+      - name: Package Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: cli
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/$env:TARGET/release/plaesy.exe" dist/plaesy.exe
+          Copy-Item LICENSE dist/LICENSE
+          Compress-Archive -Path dist/plaesy.exe,dist/LICENSE -DestinationPath "dist/plaesy-$env:PLATFORM.zip"
+      - name: Prepare Windows release bundle for E2E
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: cli
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $extracted = Join-Path $env:RUNNER_TEMP 'plaesy-e2e-extracted'
+          New-Item -ItemType Directory -Force $extracted | Out-Null
+          Expand-Archive -Path "dist/plaesy-$env:PLATFORM.zip" -DestinationPath $extracted
+          $bundle = Join-Path $PWD "dist/plaesy-$env:PLATFORM.zip"
+          $sums = (Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sums  plaesy-$env:PLATFORM.zip" | Set-Content -LiteralPath 'dist/SHA256SUMS' -Encoding ascii
+          "PLAESY_BUNDLE_PATH=$bundle" >> $env:GITHUB_ENV
+          "PLAESY_SHA256SUMS_PATH=$(Join-Path $PWD 'dist/SHA256SUMS')" >> $env:GITHUB_ENV
+          $env:PLAESY_E2E_BINARY = Join-Path $extracted 'plaesy.exe'
+          "PLAESY_E2E_BINARY=$env:PLAESY_E2E_BINARY" >> $env:GITHUB_ENV
+      - name: Confirm Windows runner starts without Plaesy
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command plaesy -ErrorAction SilentlyContinue) {
+            throw 'Runner unexpectedly has plaesy on PATH'
+          }
+      - name: Install using the Windows platform installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: cli
+        run: ./scripts/install.ps1
+      - name: Test Windows install lifecycle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: cli
+        env:
+          PLAESY_INSTALL_E2E: '1'
+        run: cargo test --locked --test install_e2e -- --ignored --nocapture
+      - name: Attest Windows release bundle
+        if: runner.os == 'Windows'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: cli/dist/plaesy-${{ matrix.platform }}.zip
+      - name: Upload platform bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: cli/dist/plaesy-${{ matrix.platform }}.*
+          if-no-files-found: error
+          retention-days: 2
+
+  draft-release:
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: bundle-*
+          path: dist
+          merge-multiple: true
+      - name: Verify bundles and create checksums
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd dist
+          shopt -s nullglob
+          bundles=(plaesy-*.tar.gz plaesy-*.zip)
+          expected=(plaesy-linux-x86_64.tar.gz plaesy-linux-arm64.tar.gz plaesy-macos-x86_64.tar.gz plaesy-macos-arm64.tar.gz plaesy-windows-x86_64.zip)
+          test "${#bundles[@]}" -eq "${#expected[@]}"
+          for name in "${expected[@]}"; do test -f "$name"; done
+          python3 - "${bundles[@]}" <<'PY'
+          import pathlib, sys, tarfile, zipfile
+          for name in sys.argv[1:]:
+              path = pathlib.Path(name)
+              entries = tarfile.open(path, "r:gz").getnames() if path.suffixes == [".tar", ".gz"] else zipfile.ZipFile(path).namelist()
+              names = {pathlib.PurePosixPath(entry.rstrip("/")).name for entry in entries}
+              if path.suffix == ".zip":
+                  names = {item.removesuffix(".exe") for item in names}
+              missing = {"plaesy", "LICENSE"} - names
+              if missing:
+                  raise SystemExit(f"{name}: missing {sorted(missing)}")
+          PY
+          sha256sum "${bundles[@]}" > SHA256SUMS
+          python3 - "$TAG" "${bundles[@]}" <<'PY'
+          import json, pathlib, sys
+          tag, *bundles = sys.argv[1:]
+          pathlib.Path("manifest.json").write_text(json.dumps({
+              "version": tag,
+              "bundles": sorted(bundles),
+          }, indent=2) + "\n")
+          PY
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --draft --verify-tag --title "Plaesy $TAG" --generate-notes

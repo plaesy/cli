@@ -1,36 +1,92 @@
-[workspace]
-resolver = "2"
-members = ["plaesy", "plaesy-memory"]
-
-[workspace.package]
+[package]
+name = "plaesy"
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.85"
-authors = ["Plaesy Team"]
+rust-version = "1.92"
+authors = ["Mahbub Zulkarnain"]
+description = "Plaesy CLI for agent workflows and offline-first memory"
 license = "MIT"
-repository = "https://github.com/plaesy/spec-kit"
+repository = "https://github.com/plaesy/cli"
+readme = "README.md"
+keywords = ["memory", "vector-search", "hermes", "embeddings", "semantic-search", "mcp"]
+categories = ["database", "embedded-systems"]
+autobins = false
 
-[workspace.dependencies]
+[features]
+default = []
+
+[[bin]]
+name = "plaesy"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Vector search
+usearch = { version = "2.15", default-features = false }
+
+# ONNX Runtime (embeddings)
+ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
+
+# SQLite storage
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# File watching
+notify = { version = "8", features = ["macos_fsevent"] }
+walkdir = "2.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
 indexmap = { version = "2", features = ["serde"] }
-notify = "8"
-ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
-keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
-serde = { version = "1", features = ["derive"] }
 regex = "1"
-include_dir = "0.7"
-sha2 = "0.10"
 quick-xml = "0.37"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 base64 = "0.22"
 pulldown-cmark = "0.12"
-serde_json = { version = "1", features = ["preserve_order"] }
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+
+# Concurrency
+parking_lot = "0.12"
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
-thiserror = "2"
-libc = "0.2"
-tempfile = "3"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+
+# Per-OS standard directories (cache, data, home) for model and database defaults
+dirs = "5"
+
+# Memory efficiency
+lru = "0.12"
+serde_yaml = "0.9"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+toml = "0.8"
+tokenizers = { version = "0.23.2", default-features = false, features = ["fancy-regex"] }
+
+# HTTP server for MCP Streamable HTTP transport (n8n, Dify, Kilo Code, Paperclip, etc.)
+axum = { version = "0.8", features = ["json"] }
+tokio-util = { version = "0.7", features = ["io-util"] }
+futures-util = { version = "0.3", default-features = false, features = ["std", "io", "sink"] }
+libc = "0.2.191"
+rmcp = { version = "3.9", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_System_JobObjects"] }
 winreg = "0.52"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+tempfile = "3.8"
+tokio = { version = "1.40", features = ["full"] }
+futures = "0.3"
+filetime = "0.2.29"
 
 [profile.release]
 opt-level = 3
@@ -43,3 +99,15 @@ inherits = "release"
 
 [profile.dev]
 opt-level = 1
+
+[[bench]]
+name = "hnsw_search"
+harness = false
+
+[[bench]]
+name = "embedding"
+harness = false
+
+[[bench]]
+name = "end_to_end"
+harness = false

@@ -1,0 +1,121 @@
+# Projects, Decisions, Contexts — the cross-agent memory graph
+
+This is how every agent (any session, any chat, any tool) reads and writes the
+*same* projects, decisions, contexts, and knowledge, instead of each agent
+re-learning things the user already explained, and without the character-limit
+problem of stuffing everything into one `MEMORY.md`.
+
+No new database, no migration: a note becomes part of the graph purely by
+declaring `type` in its frontmatter. Notes without `type` are unaffected and
+still searchable as before — this is a strict opt-in addition on top of the
+existing storage.
+
+## Frontmatter contract
+
+```yaml
+---
+type: project            # project | decision | context | knowledge | capture | preference
+id: studio-a              # stable id, referenced by `project` / `scope` / `supersedes`
+status: active            # see "Status values" below — per type
+project: studio-a         # decision/context: the project it mainly belongs to
+scope: [studio-a, studio-b]   # optional: also relevant to these projects, without being "owned" by them
+supersedes: [old-decision-id] # decision only: ids of decisions this one replaces
+title: Human readable title
+---
+```
+
+- `id` is required for graph types. A graph note with no `id` is
+  **skipped from every listing** (never crashes a command) and is reported by
+  `plaesy memory hygiene` as `malformed_graph_note`.
+- `project` is singular ownership. `scope` is a list for "also relevant to,
+  without being owned by" — a decision reached via `scope` only (not
+  `project`) is shown tagged `(shared)` when listed under that project.
+- `supersedes` only applies to decisions and enables a reverse
+  `superseded by: <title>` lookup on the decision it replaces.
+
+Only the six graph types shown in the example participate in graph listings and relationship
+checks. Vault metadata types such as `idea`, `company`, `task`, `notes`, `memory`, `proposal`, and
+`validation-report` remain searchable but are not graph records. Files under a `templates/` folder
+and files named `*.template.md` are excluded from the graph because their IDs and statuses are
+placeholders.
+
+### Status values
+
+| type     | values                                   | hidden by default            |
+|----------|-------------------------------------------|-------------------------------|
+| project  | active, paused, completed, archived       | completed, archived          |
+| decision | proposed, active, superseded, revoked     | superseded, revoked          |
+| context  | active, archived                          | archived                     |
+
+Missing `status` defaults to `active`. Pass `--include-inactive` or an
+explicit `--status` to see hidden ones; `--status` always wins and shows
+exactly what you asked for.
+
+## Commands
+
+```
+memory projects [<id>] [--include-inactive] [--format text|json]
+memory projects <id|*> decisions [--include-inactive] [--status ...] [-n N]
+memory projects <id|*> contexts  [--include-inactive] [--status ...] [-n N]
+memory decisions [--project <id>]... [--status ...] [--include-inactive] [-n N]
+memory contexts  [--project <id>]... [--status ...] [--include-inactive] [-n N]
+plaesy memory hygiene <vault>   # also reports broken_project_reference, broken_scope_reference,
+                          # conflicting_supersession, and malformed_graph_note
+plaesy memory remember <title> [<body>] [--folder F] [--tier T] [--confidence C]
+                [--type project|decision|context|knowledge|capture|preference]
+                [--id ID] [--status S] [--project P] [--scope S]... [--supersedes ID]...
+                [--json]
+```
+
+`plaesy memory remember` is the command-line door into the same write path MCP
+clients use (`memory_remember`): it writes one new Markdown file (never
+overwrites), indexes it immediately, and — when `--type` is given — tags it
+straight into the graph with the frontmatter contract above, validated the
+same way (unknown `--type`, missing `--id`, or a `--status` invalid for that
+type are all rejected before anything is written). Body is read from stdin
+when omitted, so a script or cron job can pipe text in without quoting it on
+the command line. This exists so anything that can shell out — not only
+agents that speak MCP — can add a project, decision, or context: still a
+manual call today, this is the integration point a future auto-capture layer
+(an agent writing a frontmatter note after each turn) would call into.
+
+### Id resolution
+
+`<id>` accepts an exact id, a unique id prefix (git-style — e.g. `8f3a` for
+`8f3a9c21-...`), or a case-insensitive title match.
+
+- Ambiguous prefix → error listing every candidate, exit 1.
+- No match → error with Levenshtein-based fuzzy title suggestions, exit 1.
+- `*` means "every project", but **only directly before a subcommand**
+  (`projects * decisions`). Used alone (`projects *`) it is an explicit
+  error — never silently treated as a literal id, so scripts fail loudly
+  instead of silently returning nothing.
+
+### Filters vs. direct targets (important distinction)
+
+- `projects <id>` (direct target): an unknown id is an **error**, exit 1.
+- `--project <id>` (filter, on `decisions`/`contexts`): an unknown id
+  **filters to an empty result**, exit 0, with a `note:` on stderr. This
+  matches the existing `--tier` filter behavior and keeps scripts from
+  breaking when a project is renamed or removed.
+- Multiple `--project` flags are a union, not an intersection — consistent
+  with `--tier`.
+
+### Data integrity is availability-first
+
+Two decisions both claiming to supersede the same decision, or a `supersedes`
+id pointing nowhere, do **not** block the listing — both are shown with a
+`⚠ conflicting supersession — run 'plaesy memory hygiene --strict'` warning instead.
+Corruption is surfaced, never hidden, but a dirty vault still answers queries.
+Run `plaesy memory hygiene` for the full detail and exact file paths.
+
+## Why this makes agents share memory
+
+Any agent (Hermes, Claude Code, an MCP client, a cron job) that already
+indexes this vault automatically sees `type: decision`/`type: project`
+notes the moment they're written by *any other* agent — no separate sync
+step, no re-teaching, no per-agent memory file, no character budget. The
+`graph` module (`src/memory/graph/mod.rs`) builds this view by reading the
+same `documents.metadata` JSON column the search index already populates,
+so it requires no schema migration and stays in sync with whatever is on
+disk at query time.
