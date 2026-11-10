@@ -503,7 +503,7 @@ pub fn md007_offender(
     } else {
         indent
     };
-    if lead % indent == 0 || lead % want == 0 {
+    if lead.is_multiple_of(indent) || lead.is_multiple_of(want) {
         return (lead, false);
     }
     (lead, true)

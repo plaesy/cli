@@ -566,16 +566,14 @@ async fn run(cli: Cli) -> Result<()> {
         return serve::run(config, mcp, transport, port).await;
     }
 
-    match &cli.command {
-        Command::Schedule {
-            mode: ScheduleMode::Install,
-        } => {
-            require_dir(&config.watch_dir)?;
-            crate::memory::schedule::jobs_from_config(&config.schedule)?;
-            crate::memory::schedule::registration::install(&config)?;
-            return Ok(());
-        }
-        _ => {}
+    if let Command::Schedule {
+        mode: ScheduleMode::Install,
+    } = &cli.command
+    {
+        require_dir(&config.watch_dir)?;
+        crate::memory::schedule::jobs_from_config(&config.schedule)?;
+        crate::memory::schedule::registration::install(&config)?;
+        return Ok(());
     }
 
     if let Command::CodeFind {
@@ -1207,13 +1205,15 @@ async fn run(cli: Cli) -> Result<()> {
                     &template_name,
                     &title,
                     &body,
-                    folder.as_deref(),
-                    &values,
-                    id.as_deref(),
-                    status.as_deref(),
-                    project.as_deref(),
-                    &scope,
-                    &supersedes,
+                    crate::memory::notes::TemplateOverrides {
+                        folder: folder.as_deref(),
+                        values: &values,
+                        id: id.as_deref(),
+                        status: status.as_deref(),
+                        project: project.as_deref(),
+                        scope: &scope,
+                        supersedes: &supersedes,
+                    },
                 )?;
                 if let Some(requested_type) = note_type {
                     if graph.as_ref().map(|g| g.note_type.as_str()) != Some(requested_type.as_str())
@@ -1256,17 +1256,16 @@ async fn run(cli: Cli) -> Result<()> {
             if !values.is_empty() {
                 return Err(MemoryError::ConfigError("--set requires --template".into()));
             }
-            let graph = match &note_type {
-                Some(note_type) => Some(crate::memory::notes::GraphFields {
+            let graph = note_type
+                .as_ref()
+                .map(|note_type| crate::memory::notes::GraphFields {
                     note_type: note_type.clone(),
                     id: id.clone().unwrap_or_default(),
                     status,
                     project,
                     scope,
                     supersedes,
-                }),
-                None => None,
-            };
+                });
             let note = crate::memory::notes::NewNote {
                 folder: folder.unwrap_or_default(),
                 title,
@@ -1565,12 +1564,11 @@ fn print_decision_list(
             }
             for d in &items {
                 let owner = d.project.as_deref().unwrap_or("[global]");
-                let shared = filter
-                    .projects
-                    .iter()
-                    .any(|p| d.is_shared_only(p))
-                    .then(|| " (shared)")
-                    .unwrap_or("");
+                let shared = if filter.projects.iter().any(|p| d.is_shared_only(p)) {
+                    " (shared)"
+                } else {
+                    ""
+                };
                 print!("[{owner}]{shared}  {}  {}", d.title, d.effective_status());
                 if let Some(by) = superseded_by.get(&d.id) {
                     print!("  superseded by: {}", by.join(", "));

@@ -633,29 +633,23 @@ impl ServerHandler for PlaesyMcpServer {
             .find(|tool| tool.name == name)
     }
 
-    fn call_tool(
+    async fn call_tool(
         &self,
         request: CallToolRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<CallToolResponse, McpError>> + Send + '_
-    {
-        async move {
-            let args = request
-                .arguments
-                .map(Value::Object)
-                .unwrap_or_else(|| json!({}));
-            let result = match run_tool(&self.engine, &request.name, &args).await {
-                Ok(result) => result,
-                Err(ToolError::Invalid(message)) => {
-                    tool_error(format!("invalid arguments: {message}"))
-                }
-                Err(ToolError::Engine(error)) => tool_error(error.to_string()),
-            };
-            let result: CallToolResult = serde_json::from_value(result).map_err(|e| {
-                McpError::internal_error(format!("invalid MCP tool result: {e}"), None)
-            })?;
-            Ok(CallToolResponse::Complete(result))
-        }
+    ) -> std::result::Result<CallToolResponse, McpError> {
+        let args = request
+            .arguments
+            .map(Value::Object)
+            .unwrap_or_else(|| json!({}));
+        let result = match run_tool(&self.engine, &request.name, &args).await {
+            Ok(result) => result,
+            Err(ToolError::Invalid(message)) => tool_error(format!("invalid arguments: {message}")),
+            Err(ToolError::Engine(error)) => tool_error(error.to_string()),
+        };
+        let result: CallToolResult = serde_json::from_value(result)
+            .map_err(|e| McpError::internal_error(format!("invalid MCP tool result: {e}"), None))?;
+        Ok(CallToolResponse::Complete(result))
     }
 }
 

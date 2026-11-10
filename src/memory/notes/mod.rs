@@ -61,6 +61,17 @@ pub struct GraphFields {
     pub supersedes: Vec<String>,
 }
 
+/// Optional values used to fill managed template front matter.
+pub(crate) struct TemplateOverrides<'a> {
+    pub folder: Option<&'a str>,
+    pub values: &'a [String],
+    pub id: Option<&'a str>,
+    pub status: Option<&'a str>,
+    pub project: Option<&'a str>,
+    pub scope: &'a [String],
+    pub supersedes: &'a [String],
+}
+
 /// File-name slug of a title: lower-case ASCII words joined by `-`, at most 80 characters.
 pub fn slugify(title: &str) -> String {
     let mut out = String::new();
@@ -110,14 +121,17 @@ pub(crate) fn render_template(
     template: &str,
     title: &str,
     body: &str,
-    folder: Option<&str>,
-    values: &[String],
-    id: Option<&str>,
-    status: Option<&str>,
-    project: Option<&str>,
-    scope: &[String],
-    supersedes: &[String],
+    overrides: TemplateOverrides<'_>,
 ) -> Result<(String, String, Option<GraphFields>)> {
+    let TemplateOverrides {
+        folder,
+        values,
+        id,
+        status,
+        project,
+        scope,
+        supersedes,
+    } = overrides;
     if template.is_empty()
         || template.contains('\\')
         || template.split('/').any(|part| {
@@ -932,13 +946,15 @@ mod tests {
             "knowledge",
             "Useful knowledge",
             "A concise explanation.",
-            Some("knowledges/testing"),
-            &[],
-            None,
-            None,
-            None,
-            &[],
-            &[],
+            TemplateOverrides {
+                folder: Some("knowledges/testing"),
+                values: &[],
+                id: None,
+                status: None,
+                project: None,
+                scope: &[],
+                supersedes: &[],
+            },
         )
         .expect("rendered template");
 

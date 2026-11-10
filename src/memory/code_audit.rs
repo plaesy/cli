@@ -136,9 +136,10 @@ pub fn find(
             .then(a.file.cmp(&b.file))
             .then(a.line.cmp(&b.line))
     });
-    let decision = if candidates.iter().any(|c| c.match_kind == "exact_signature") {
-        "reuse_exact"
-    } else if candidates.iter().any(|c| c.match_kind == "exact_name") {
+    let decision = if candidates
+        .iter()
+        .any(|c| matches!(c.match_kind.as_str(), "exact_signature" | "exact_name"))
+    {
         "reuse_exact"
     } else if !candidates.is_empty() || !canonical_records.is_empty() {
         "reuse_candidate"
