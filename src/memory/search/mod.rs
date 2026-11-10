@@ -2768,8 +2768,10 @@ mod tests {
             .expect("default retrieval")
             .is_empty());
 
-        let mut include_inactive = SearchFilter::default();
-        include_inactive.include_inactive = true;
+        let include_inactive = SearchFilter {
+            include_inactive: true,
+            ..SearchFilter::default()
+        };
         assert_eq!(
             engine
                 .search_with("ArchiveMeadow", 5, SearchMode::Keyword, &include_inactive,)

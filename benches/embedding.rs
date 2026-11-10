@@ -2,11 +2,11 @@
 //!
 //! Always measures the hashing backend; additionally measures the ONNX model
 //! (single text and batch of 32) when `model.onnx` + `vocab.txt` are installed
-//! (see `plaesy_memory::memory::embeddings` docs). Target: ONNX p95 < 150 ms/text.
+//! (see `plaesy::memory::embeddings` docs). Target: ONNX p95 < 150 ms/text.
 //! Run: `cargo bench --bench embedding`
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use plaesy_memory::memory::embeddings::{EmbeddingConfig, EmbeddingEngine};
+use plaesy::memory::embeddings::{EmbeddingConfig, EmbeddingEngine};
 use tokio::runtime::Runtime;
 
 const SENTENCE: &str = "Hierarchical navigable small world graphs give approximate nearest neighbor search \

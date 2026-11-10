@@ -3,10 +3,10 @@
 //! Run: `cargo bench --bench end_to_end`
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use plaesy_memory::memory::config::SearchConfig;
-use plaesy_memory::memory::embeddings::EmbeddingEngine;
-use plaesy_memory::memory::search::SearchEngine;
-use plaesy_memory::memory::storage::{Database, DatabaseConfig};
+use plaesy::memory::config::SearchConfig;
+use plaesy::memory::embeddings::EmbeddingEngine;
+use plaesy::memory::search::SearchEngine;
+use plaesy::memory::storage::{Database, DatabaseConfig};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;

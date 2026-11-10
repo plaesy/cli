@@ -417,7 +417,7 @@ fn normalized_path(path: &str) -> String {
     let path = Path::new(path).components().collect::<PathBuf>();
     let normalized = path
         .to_string_lossy()
-        .trim_end_matches(|character| character == '\\' || character == '/')
+        .trim_end_matches(['\\', '/'])
         .to_owned();
     if cfg!(windows) {
         normalized.to_lowercase()

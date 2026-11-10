@@ -18,18 +18,6 @@ use crate::memory::error::{MemoryError, Result};
 use crate::memory::hygiene::HygieneOptions;
 use crate::memory::search::{SearchEngine, SearchMode};
 use crate::memory::service::{parse_filter, SearchHit};
-#[cfg(test)]
-use axum::body::Body;
-#[cfg(test)]
-use axum::http::header::{HOST, ORIGIN};
-#[cfg(test)]
-use axum::http::uri::{Authority, Uri};
-#[cfg(test)]
-use axum::http::{Request, StatusCode};
-#[cfg(test)]
-use axum::middleware::{self, Next};
-#[cfg(test)]
-use axum::response::{IntoResponse, Response};
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, Implementation, ListToolsResult,
     PaginatedRequestParams, ServerCapabilities, ServerConfig, Tool,
@@ -531,13 +519,6 @@ where
     Ok(())
 }
 
-/// Shared state for HTTP transport.
-#[cfg(test)]
-#[derive(Clone)]
-pub struct McpHttpState {
-    pub engine: Arc<SearchEngine>,
-}
-
 /// Serve MCP over HTTP Streamable transport (POST /mcp for JSON-RPC).
 /// This supports n8n, Dify, Kilo Code, Paperclip, and other HTTP-based MCP clients.
 pub async fn serve_stdio(engine: Arc<SearchEngine>) -> Result<()> {
@@ -650,93 +631,6 @@ impl ServerHandler for PlaesyMcpServer {
         let result: CallToolResult = serde_json::from_value(result)
             .map_err(|e| McpError::internal_error(format!("invalid MCP tool result: {e}"), None))?;
         Ok(CallToolResponse::Complete(result))
-    }
-}
-
-#[cfg(test)]
-fn create_router(state: McpHttpState) -> axum::Router {
-    use axum::routing::post;
-    axum::Router::new()
-        .route("/mcp", post(handle_mcp_post))
-        .layer(middleware::from_fn(validate_http_request))
-        .with_state(state)
-}
-
-/// Reject DNS-rebinding origins and Host headers that do not target a loopback name/address.
-#[cfg(test)]
-async fn validate_http_request(request: Request<Body>, next: Next) -> Response {
-    let host = request
-        .headers()
-        .get(HOST)
-        .and_then(|value| value.to_str().ok())
-        .or_else(|| request.uri().authority().map(Authority::as_str));
-    if !host.is_some_and(is_loopback_authority) {
-        return (StatusCode::FORBIDDEN, "MCP HTTP accepts local hosts only").into_response();
-    }
-
-    if request
-        .headers()
-        .get_all(ORIGIN)
-        .iter()
-        .any(|value| !value.to_str().is_ok_and(is_local_origin))
-    {
-        return (
-            StatusCode::FORBIDDEN,
-            "MCP HTTP rejected the request origin",
-        )
-            .into_response();
-    }
-
-    next.run(request).await
-}
-
-#[cfg(test)]
-fn is_loopback_authority(value: &str) -> bool {
-    value
-        .parse::<Authority>()
-        .ok()
-        .is_some_and(|authority| is_loopback_host(authority.host()))
-}
-
-#[cfg(test)]
-fn is_local_origin(value: &str) -> bool {
-    let Ok(uri) = value.parse::<Uri>() else {
-        return false;
-    };
-    let Some(scheme) = uri.scheme_str() else {
-        return false;
-    };
-    if !scheme.eq_ignore_ascii_case("http") && !scheme.eq_ignore_ascii_case("https") {
-        return false;
-    }
-    if uri
-        .path_and_query()
-        .is_some_and(|path| path.as_str() != "/")
-    {
-        return false;
-    }
-    uri.authority()
-        .is_some_and(|authority| is_loopback_host(authority.host()))
-}
-
-#[cfg(test)]
-fn is_loopback_host(host: &str) -> bool {
-    host.eq_ignore_ascii_case("localhost")
-        || host
-            .parse::<std::net::IpAddr>()
-            .is_ok_and(|address| address.is_loopback())
-}
-
-/// POST /mcp - handle JSON-RPC request, return JSON-RPC response
-#[cfg(test)]
-async fn handle_mcp_post(
-    axum::extract::State(state): axum::extract::State<McpHttpState>,
-    axum::Json(payload): axum::Json<Value>,
-) -> Response {
-    let reply = handle_message(&state.engine, &payload).await;
-    match reply {
-        Some(reply) => axum::Json(reply).into_response(),
-        None => StatusCode::ACCEPTED.into_response(),
     }
 }
 

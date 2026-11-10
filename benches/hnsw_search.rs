@@ -5,7 +5,7 @@
 //! Run: `cargo bench --bench hnsw_search`
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use plaesy_memory::memory::storage::{HnswConfig, HnswIndex};
+use plaesy::memory::storage::{HnswConfig, HnswIndex};
 
 const DIM: usize = 384;
 
