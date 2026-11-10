@@ -205,11 +205,20 @@ pub fn secret_references(body: &str) -> Vec<(String, usize)> {
 fn provider_credential_kind(line: &str) -> Option<&'static str> {
     const PATTERNS: &[(&str, &str)] = &[
         ("aws_access_key_id", r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-        ("github_token", r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"),
+        (
+            "github_token",
+            r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b",
+        ),
         ("slack_token", r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b"),
-        ("stripe_secret_key", r"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b"),
+        (
+            "stripe_secret_key",
+            r"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b",
+        ),
         ("google_api_key", r"\bAIza[0-9A-Za-z_-]{35}\b"),
-        ("openai_api_key", r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}\b"),
+        (
+            "openai_api_key",
+            r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}\b",
+        ),
     ];
     static COMPILED: std::sync::OnceLock<Vec<(&str, Regex)>> = std::sync::OnceLock::new();
     COMPILED
@@ -217,7 +226,10 @@ fn provider_credential_kind(line: &str) -> Option<&'static str> {
             PATTERNS
                 .iter()
                 .map(|(kind, pattern)| {
-                    (*kind, Regex::new(pattern).expect("static provider token pattern"))
+                    (
+                        *kind,
+                        Regex::new(pattern).expect("static provider token pattern"),
+                    )
                 })
                 .collect()
         })
@@ -797,7 +809,10 @@ mod tests {
         .join("\n");
         let findings = secret_references(&body);
         assert_eq!(
-            findings.iter().map(|(kind, _)| kind.as_str()).collect::<Vec<_>>(),
+            findings
+                .iter()
+                .map(|(kind, _)| kind.as_str())
+                .collect::<Vec<_>>(),
             [
                 "aws_access_key_id",
                 "github_token",
