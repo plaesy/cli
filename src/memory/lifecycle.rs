@@ -167,10 +167,15 @@ pub(crate) fn id_is_forgotten(root: &Path, note_id: Option<&str>) -> Result<bool
 
 /// Whether every stable identity currently carrying a forgotten note's content was forgotten.
 pub(crate) fn content_is_forgotten(root: &Path, content: &str) -> Result<bool> {
+    content_hash_is_forgotten(root, &sha256(content))
+}
+
+/// Whether a durable tombstone exists for an exact source-content hash.
+pub(crate) fn content_hash_is_forgotten(root: &Path, content_sha256: &str) -> Result<bool> {
     let Some(real_dir) = existing_state_dir(root, TOMBSTONES_DIR)? else {
         return Ok(false);
     };
-    is_marked(&real_dir, vec![format!("content-{}.json", sha256(content))])
+    is_marked(&real_dir, vec![format!("content-{content_sha256}.json")])
 }
 
 fn is_marked(real_dir: &Path, keys: Vec<String>) -> Result<bool> {
@@ -196,7 +201,7 @@ pub(crate) fn begin_forget(
     root: &Path,
     relative_path: &str,
     note_id: Option<&str>,
-    content: Option<&str>,
+    content_sha256: Option<&str>,
     scope: Vec<String>,
     reason: &str,
 ) -> Result<ForgetIntent> {
@@ -222,7 +227,7 @@ pub(crate) fn begin_forget(
         trigger: "plaesy memory forget".into(),
         target_id: note_id.map(str::to_owned),
         path_sha256: path_sha256.clone(),
-        content_sha256: content.map(sha256),
+        content_sha256: content_sha256.map(str::to_owned),
         scope,
         from_state: "active".into(),
         to_state: "forgotten".into(),
@@ -238,8 +243,8 @@ pub(crate) fn begin_forget(
 
     let (tombstones_dir, tombstones_handle) = ensure_state_dir(root, TOMBSTONES_DIR)?;
     let mut keys = tombstone_names(relative_path, note_id);
-    if let Some(content) = content {
-        keys.push(format!("content-{}", sha256(content)));
+    if let Some(content_hash) = content_sha256 {
+        keys.push(format!("content-{content_hash}"));
     }
     for key in keys {
         let marker = format!("{key}.json");
@@ -298,7 +303,7 @@ mod tests {
             root.path(),
             "notes/private.md",
             Some("note-uuid"),
-            Some("private note body"),
+            Some(&sha256("private note body")),
             vec!["project-a".into()],
             "owner-request",
         )
@@ -357,7 +362,7 @@ mod tests {
             root.path(),
             "notes/private.md",
             None,
-            Some(original),
+            Some(&sha256(original)),
             Vec::new(),
             "privacy",
         )

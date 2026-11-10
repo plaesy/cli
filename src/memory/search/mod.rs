@@ -643,17 +643,15 @@ impl SearchEngine {
                 path.display()
             )));
         }
-        let file_content =
-            std::fs::read_to_string(path).map_err(|source| MemoryError::IoError {
-                path: path.display().to_string(),
-                source,
-            })?;
         let mut doc = self.extractor.extract_file(path)?;
         doc.source_path = PathBuf::from(rel.to_string_lossy().replace('\\', "/"));
         let key = doc.source_path.to_string_lossy().to_string();
         let note_id = doc.metadata.get("id").and_then(serde_json::Value::as_str);
         let forgotten = crate::memory::lifecycle::is_forgotten(root, &key, note_id)?
-            || crate::memory::lifecycle::content_is_forgotten(root, &file_content)?;
+            || match doc.hash.as_deref() {
+                Some(hash) => crate::memory::lifecycle::content_hash_is_forgotten(root, hash)?,
+                None => false,
+            };
         if forgotten {
             if self.remove_path_locked(&key).await? {
                 return Ok(IndexOutcome::Forgotten);
@@ -826,7 +824,7 @@ impl SearchEngine {
             .ok_or_else(|| MemoryError::ConfigError("forget path must name a file".into()))?;
         let mut note_id = None;
         let mut scope = Vec::new();
-        let mut forgotten_content = None;
+        let mut forgotten_content_hash = None;
         match std::fs::symlink_metadata(&source) {
             Ok(meta) if meta.file_type().is_file() => {
                 let real_source =
@@ -841,12 +839,7 @@ impl SearchEngine {
                     )));
                 }
                 let document = self.extractor.extract_file(&source)?;
-                forgotten_content = Some(std::fs::read_to_string(&source).map_err(|error| {
-                    MemoryError::IoError {
-                        path: source.display().to_string(),
-                        source: error,
-                    }
-                })?);
+                forgotten_content_hash = document.hash;
                 note_id = document
                     .metadata
                     .get("id")
@@ -882,7 +875,7 @@ impl SearchEngine {
             &notes_root,
             &rel,
             note_id.as_deref(),
-            forgotten_content.as_deref(),
+            forgotten_content_hash.as_deref(),
             scope,
             reason,
         )?;
