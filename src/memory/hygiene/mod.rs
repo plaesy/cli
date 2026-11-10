@@ -38,6 +38,7 @@ use crate::memory::error::Result;
 use crate::memory::search::{age_days, build_meta, normalize_tier, SearchEngine};
 use crate::memory::storage::LinkRef;
 use chrono::{DateTime, Utc};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -190,13 +191,38 @@ pub fn secret_references(body: &str) -> Vec<(String, usize)> {
         ) {
             Some("client_secret")
         } else {
-            None
+            provider_credential_kind(line)
         };
         if let Some(kind) = kind {
             findings.push((kind.to_string(), index + 1));
         }
     }
     findings
+}
+
+/// Detect recognizable provider token formats without retaining or returning matched values.
+/// These signatures complement assignment-name heuristics; they are not a complete secret scan.
+fn provider_credential_kind(line: &str) -> Option<&'static str> {
+    const PATTERNS: &[(&str, &str)] = &[
+        ("aws_access_key_id", r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+        ("github_token", r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"),
+        ("slack_token", r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b"),
+        ("stripe_secret_key", r"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b"),
+        ("google_api_key", r"\bAIza[0-9A-Za-z_-]{35}\b"),
+        ("openai_api_key", r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}\b"),
+    ];
+    static COMPILED: std::sync::OnceLock<Vec<(&str, Regex)>> = std::sync::OnceLock::new();
+    COMPILED
+        .get_or_init(|| {
+            PATTERNS
+                .iter()
+                .map(|(kind, pattern)| {
+                    (*kind, Regex::new(pattern).expect("static provider token pattern"))
+                })
+                .collect()
+        })
+        .iter()
+        .find_map(|(kind, regex)| regex.is_match(line).then_some(*kind))
 }
 
 fn has_credential_assignment(line: &str, lower: &str, markers: &[&str]) -> bool {
@@ -756,5 +782,31 @@ mod tests {
         assert_eq!(findings[1], ("password".to_string(), 3));
         assert_eq!(findings[2], ("private_key".to_string(), 4));
         assert!(!format!("{findings:?}").contains("do-not-return"));
+    }
+
+    #[test]
+    fn secret_references_detect_provider_formats_without_returning_values() {
+        let body = [
+            "AKIAIOSFODNN7EXAMPLE",
+            "ghp_012345678901234567890123456789012345",
+            "xoxb-123456789012345678901234",
+            "sk_live_12345678901234567890",
+            "AIza012345678901234567890123456789012345",
+            "sk-proj-012345678901234567890123456789012345",
+        ]
+        .join("\n");
+        let findings = secret_references(&body);
+        assert_eq!(
+            findings.iter().map(|(kind, _)| kind.as_str()).collect::<Vec<_>>(),
+            [
+                "aws_access_key_id",
+                "github_token",
+                "slack_token",
+                "stripe_secret_key",
+                "google_api_key",
+                "openai_api_key",
+            ]
+        );
+        assert!(!format!("{findings:?}").contains("0123456789"));
     }
 }

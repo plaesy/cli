@@ -31,7 +31,7 @@ valid_to:                # optional
 
 Rules that match the engine's behaviour:
 
-- Keep credentials out of notes. The index stores the text, and `memory_search` can return it to a model. `plaesy memory hygiene` also reports likely API keys, passwords, bearer/access tokens, client secrets, and private-key headers by file and line, but never includes the matched value. It looks for credential assignments and private-key headers, ignores known placeholder values and fenced code examples, and remains a heuristic rather than proof or a complete secret scanner. See the secret-scan item in [assessment](assessment.md).
+- Keep credentials out of notes. The index stores the text, and `memory_search` can return it to a model. `plaesy memory hygiene` reports likely API keys, passwords, bearer/access tokens, client secrets, private-key headers, and recognizable AWS, GitHub, Slack, Stripe, Google, and OpenAI token formats by file and line; it never includes matched values. It ignores fenced code examples and remains a heuristic, not a complete secret scanner. See the secret-scan item in [assessment](assessment.md).
 
 To inspect only likely credential findings in JSON:
 
