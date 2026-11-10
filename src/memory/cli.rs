@@ -435,6 +435,16 @@ pub async fn run_args(args: Vec<String>) -> Result<()> {
 }
 
 async fn run(cli: Cli) -> Result<()> {
+    if matches!(
+        &cli.command,
+        Command::Schedule {
+            mode: ScheduleMode::Uninstall
+        }
+    ) {
+        crate::memory::schedule::registration::uninstall()?;
+        return Ok(());
+    }
+
     let mut config = match &cli.config {
         Some(p) => MemoryConfig::load_from_file(p).await?,
         None => MemoryConfig::load().await?,
@@ -516,12 +526,6 @@ async fn run(cli: Cli) -> Result<()> {
             require_dir(&config.watch_dir)?;
             crate::memory::schedule::jobs_from_config(&config.schedule)?;
             crate::memory::schedule::registration::install(&config)?;
-            return Ok(());
-        }
-        Command::Schedule {
-            mode: ScheduleMode::Uninstall,
-        } => {
-            crate::memory::schedule::registration::uninstall()?;
             return Ok(());
         }
         _ => {}
@@ -698,7 +702,10 @@ async fn run(cli: Cli) -> Result<()> {
                     crate::memory::schedule::run_loop(&engine, &root, &jobs, log.as_deref())
                         .await?;
                 }
-                ScheduleMode::Install | ScheduleMode::Uninstall => {
+                ScheduleMode::Uninstall => {
+                    unreachable!("schedule uninstall is handled before configuration load")
+                }
+                ScheduleMode::Install => {
                     unreachable!("schedule registration modes are handled before engine creation")
                 }
             }

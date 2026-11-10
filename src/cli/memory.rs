@@ -36,7 +36,10 @@ pub fn run(args: &Args) -> CliResult {
         .args
         .iter()
         .any(|arg| matches!(arg.as_str(), "-h" | "--help" | "-V" | "--version"));
-    if !displays_help_or_version && !is_onboard_command(&args.args) {
+    if !displays_help_or_version
+        && !is_onboard_command(&args.args)
+        && !is_schedule_uninstall(&args.args)
+    {
         let cli_selected_vault = args.vault.is_some() || args.project;
         let has_config = has_config_arg(&args.args);
         let config_path = config_path_arg(&args.args);
@@ -165,6 +168,11 @@ fn is_onboard_command(args: &[String]) -> bool {
         return arg == "onboard";
     }
     false
+}
+
+fn is_schedule_uninstall(args: &[String]) -> bool {
+    args.windows(2)
+        .any(|pair| pair[0] == "schedule" && pair[1] == "uninstall")
 }
 
 fn has_db_arg(args: &[String]) -> bool {
