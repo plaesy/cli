@@ -8,7 +8,7 @@ Embeddings are dense vector representations of text. For example:
 
 ```text
 "how do we deploy?"
-    ↓ [ONNX all-MiniLM-L6-v2]
+    ↓ [ONNX multilingual-e5-small by default]
 [0.123, -0.456, 0.789, …, 0.012]  ← 384-dimensional vector
 ```
 
@@ -241,7 +241,7 @@ plaesy memory onboard --vault C:/_
 Prompts for:
 
 1. Vault path (notes directory)
-2. Embedding model (default: all-MiniLM-L6-v2, option to choose multilingual)
+2. Embedding model (default: multilingual-e5-small; all-MiniLM-L6-v2 is available for English-focused vaults)
 3. Model download location (default: OS standard)
 
 Writes `settings.json` and downloads model.
@@ -404,7 +404,7 @@ keyword_weight = 0.4
 
 ## Known Limitations
 
-1. **English-default**: all-MiniLM-L6-v2 trained on English; non-ASCII scripts may degrade. Use multilingual-e5-small for international text.
+1. **English-focused option**: all-MiniLM-L6-v2 is trained on English; other languages may degrade. The default multilingual-e5-small is a better starting point for multilingual text.
 
 2. **No accent stripping in WordPiece**: `café` and `cafe` are different tokens. SentencePiece handles accents better.
 

@@ -7,6 +7,7 @@
 //!
 //! | kind | meaning | label |
 //! |------|---------|-------|
+//! | `missing_source` | a core/semantic/procedural note has no non-empty provenance source | FACT |
 //! | `missing_last_verified` / `missing_confidence` | a core/semantic/procedural note declares no verification date or trust | FACT |
 //! | `stale` | `last_verified` is older than the staleness window | FACT |
 //! | `bad_tier` | frontmatter `tier` is not one of the known tiers | FACT |
@@ -484,6 +485,19 @@ impl SearchEngine {
 
             // Verification metadata is only demanded of notes that make claims about the world.
             if matches!(tier, Some("core") | Some("semantic") | Some("procedural")) {
+                let has_source = md
+                    .get("source")
+                    .and_then(|value| value.as_str())
+                    .is_some_and(|source| !source.trim().is_empty());
+                if !has_source {
+                    findings.push(finding(
+                        "missing_source",
+                        path,
+                        None,
+                        format!("{} note has no non-empty `source`", tier.unwrap_or("?")),
+                        "FACT",
+                    ));
+                }
                 if meta.last_verified.is_none() {
                     findings.push(finding(
                         "missing_last_verified",

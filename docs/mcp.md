@@ -5,8 +5,10 @@
 - **stdio** (default): MCP over stdin/stdout.
 - **http**: Streamable HTTP at `/mcp`.
 
-Both transports sync/watch the notes directory in the background. Five tools are read-only; two
-bounded write tools create a new note or resolve a query gap. No tool replaces or deletes a note.
+Both transports sync/watch the notes directory in the background. Six tools are read-only; two
+bounded write tools create a new note or resolve a query gap. `memory_curate` combines health,
+unanswered-query, duplicate, unlinked-note, and topic-index candidates into one bounded review; it
+does not modify vault files. No tool replaces or deletes a note.
 The server uses the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). Both
 transports support the current `2026-07-28` protocol; stdio also supports handshake-era protocol
 versions through `2024-11-05`. HTTP supports Streamable HTTP clients, including handshake-era
@@ -68,20 +70,20 @@ kilo mcp add plaesy-memory \
 
 1. Start the memory server: `plaesy memory serve --mcp --transport http --port 8080`
 2. In n8n, add "MCP Server Trigger" node
-3. Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`,
+3. Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
    `memory_stats`, `memory_remember`, and `memory_resolve_gap`
 
 **Option B - MCP Client (n8n calls remote MCP server):**
 
 - Set "Server URL" to: `http://127.0.0.1:8080/mcp`
-- Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`,
+- Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
   `memory_stats`, `memory_remember`, and `memory_resolve_gap`
 
 ### Dify
 
 In Dify: Knowledge / MCP Server / Add MCP Server → select "Streamable HTTP".
 Server URL: `http://127.0.0.1:8080/mcp`
-Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`,
+Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
 `memory_stats`, `memory_remember`, and `memory_resolve_gap`
 
 ### Claude Code (quick reference)

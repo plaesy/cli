@@ -49,7 +49,7 @@ query
 | Module | Responsibility |
 |--------|----------------|
 | `indexer` | `Extractor` (YAML frontmatter + body, exact line offsets), `Chunker`, `Watcher` (debounced `notify` events), `scan_dir` |
-| `embeddings` | `EmbeddingEngine`: ONNX Runtime, mean pooling, L2 norm, LRU cache. Tokenizer is a hand-written WordPiece (`vocab.txt`, default all-MiniLM-L6-v2) or the Hugging Face tokenizer (`tokenizer.json`, multilingual E5 via the `tokenizers` crate). E5 prefixes (`query: ` / `passage: `) are applied per model. Process-wide ONNX environment. `Hashing` backend is an explicit lexical-only opt-in for tests |
+| `embeddings` | `EmbeddingEngine`: ONNX Runtime, mean pooling, L2 norm, LRU cache. The default `multilingual-e5-small` uses the Hugging Face tokenizer (`tokenizer.json`); `all-MiniLM-L6-v2` uses hand-written WordPiece (`vocab.txt`). E5 prefixes (`query: ` / `passage: `) are applied per model. Process-wide ONNX environment. `Hashing` backend is an explicit lexical-only opt-in |
 | `storage` | `Database` (single rusqlite connection behind a mutex; schema v2), `HnswIndex` (usearch), wikilink extraction/resolution |
 | `search` | `SearchEngine` (owns the write path so SQLite and HNSW change together), `filter.rs` (tiers, trust, staleness), `Ranker`, `CitationBuilder` |
 | `rerank` | Optional `CrossEncoder` (ms-marco-MiniLM-L-6-v2 ONNX) |
@@ -165,7 +165,7 @@ The label describes how the passage was found, not whether its claim is true. Wh
 | Undated sources pass an `as_of` filter | a note without `valid_from` / `valid_to` should not vanish under a date filter; a date filter only narrows dated sources | an undated note can answer a question about a period it did not cover; declare the dates to be exact |
 | Linked passages appended after direct hits, not merged | the direct hits keep their `limit`; a linked passage is context, not a competitor for the top slots | a linked passage can be less relevant than the direct hits; it is labelled and scored lower |
 | Index records the embedding model; a change re-embeds everything | vectors from different models are not comparable and have the same dimension, so nothing would fail; a silent mix would corrupt search | a model switch costs one full re-embed of the vault |
-| Default stays all-MiniLM-L6-v2 although E5 did better on the probe | the probe is 8 queries; the English side is unmeasured for E5 | Indonesian queries keep the weaker default until E5 is measured on English notes too |
+| Current default is multilingual-e5-small | E5 scored better on the Indonesian probe and was comparable on the 94-question English sample; both samples have limits | Multilingual vaults get the better-supported language coverage; MiniLM remains selectable for English-focused vaults |
 | Exclusion by folder run or file name, anywhere in the tree | a vault mixes notes with framework and template files (`.plaesy`, `.claude`, `CLAUDE.md`); the agent should see only the notes | a folder that should be indexed under a matching name is also excluded; the match is by name, not by path |
 | `cwd` for the provider process only when the directory exists | on Windows a missing directory makes `CreateProcess` fail with WinError 267, and the provider then never starts | none observed |
 
@@ -198,7 +198,7 @@ ONNX-dependent tests skip with a message when the model is not installed.
 - Consolidation of episodes into facts is a human/agent workflow documented in the `brain` repo, not an engine feature.
 - `ort` is a release candidate; `serde_yaml` is deprecated upstream.
 - HNSW target of p50 < 1 ms at 100 K vectors is not met on the reference CPU (3.9 ms at 50 K random vectors).
-- The default embedding model is English-only (all-MiniLM-L6-v2, WordPiece). `multilingual-e5-small` is supported and better on
-  the Indonesian probe, but is not the default: it has not been measured on the English side.
+- The default embedding model is `multilingual-e5-small` (384 dimensions) with query/passage prefixes. `all-MiniLM-L6-v2`
+  remains available for English-focused vaults. Evaluation details and limits are in [the embedder decision](eval/embedder-decision.md).
 - `stats` reports `coverage_percent` only when the watch root is known to the engine (set at startup by the CLI or service host).
 - No `index --force`; a chunking change needs the manual rebuild described in SETUP.

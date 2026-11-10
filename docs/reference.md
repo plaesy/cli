@@ -240,7 +240,7 @@ impl EmbeddingEngine {
 }
 ```
 
-Default model: `all-MiniLM-L6-v2` (384-dim). Alternative: set `MEMORY_MODEL_NAME=multilingual-e5-small`.
+Default model: `multilingual-e5-small` (384-dim). For an English-focused vault, set `MEMORY_MODEL_NAME=all-MiniLM-L6-v2`.
 
 Output: 384-dimensional f32 vector, L2-normalized.
 
@@ -450,7 +450,7 @@ and write settings to `<local app data>/Plaesy/settings.json` (Windows:
 
 ## MCP Server
 
-**Tools** (five read-only; two bounded write tools):
+**Tools** (six read-only; two bounded write tools):
 
 ### memory_search
 
@@ -499,6 +499,17 @@ Index size, coverage %, cold-start time, last sync.
 ```
 
 List unanswered search queries and structural gaps. It does not record queries.
+
+---
+
+### memory_curate
+
+```json
+{"method": "memory_curate", "params": {"limit": 20}}
+```
+
+Read-only curation report: hygiene findings, unanswered queries, exact duplicate files, unlinked
+note candidates, and knowledge folders that may need an index. No vault notes are changed.
 
 ---
 
@@ -651,6 +662,6 @@ Environment variable overrides: `PLAESY_*`, `MEMORY_*`.
 
 - **One SQLite connection per daemon** behind an async mutex: concurrent SQL readers within one daemon currently serialize. Use one daemon per vault; do not open SQLite/HNSW directly from multiple agents.
 - **Single writer boundary**: SQLite WAL permits concurrent reads but still has one writer. Multi-host or sustained high-write workloads should migrate the metadata store to a client/server database.
-- **English-default model**: all-MiniLM-L6-v2. Multilingual E5 is available as an alternative.
+- **Multilingual default model**: multilingual-e5-small. all-MiniLM-L6-v2 remains available for English-focused vaults.
 - **No network at runtime**: model download once by `make model` or `plaesy memory onboard`.
 - **ONNX RC version**: 2.0.0-rc.14 (stable release pending).

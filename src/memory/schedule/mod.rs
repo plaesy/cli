@@ -1,9 +1,9 @@
 //! Scheduled memory jobs (`memory schedule once|run`).
 //!
-//! A job runs one existing engine method (`index`, `hygiene` or `missing`) on the vault at a fixed
-//! interval. Last-run times live in the `schedule_runs` table of the same database, so no second
-//! store exists. Each run appends one line to `<root>\Plaesy\schedule.log`. A failing job is
-//! recorded and the next job still runs.
+//! A job runs one existing engine method (`index`, `hygiene`, `missing` or `curate`) on the vault
+//! at a fixed interval. Last-run times live in the `schedule_runs` table of the same database, so
+//! no second store exists. Each run appends one line to `<root>\Plaesy\schedule.log`. A failing
+//! job is recorded and the next job still runs.
 //!
 //! Overlap: a job's `last_run` is written before it starts. A second `once` that begins meanwhile
 //! sees the job as not due, so Task Scheduler firing during a long index does not run it twice.
@@ -37,6 +37,8 @@ pub enum Action {
     Hygiene,
     /// Report what the memory is missing (`memory missing`).
     Missing,
+    /// Prepare a read-only maintenance review (`memory curate`).
+    Curate,
 }
 
 impl Action {
@@ -44,14 +46,15 @@ impl Action {
     ///
     /// # Errors
     ///
-    /// - `ConfigError` for any name other than `index`, `hygiene` or `missing`
+    /// - `ConfigError` for any name other than `index`, `hygiene`, `missing` or `curate`
     pub fn parse(s: &str) -> Result<Self> {
         match s {
             "index" => Ok(Action::Index),
             "hygiene" => Ok(Action::Hygiene),
             "missing" => Ok(Action::Missing),
+            "curate" => Ok(Action::Curate),
             other => Err(MemoryError::ConfigError(format!(
-                "unknown schedule action '{other}' (use index, hygiene or missing)"
+                "unknown schedule action '{other}' (use index, hygiene, missing or curate)"
             ))),
         }
     }
@@ -241,6 +244,28 @@ async fn run_action(engine: &SearchEngine, root: &Path, action: Action) -> Resul
                 "query_gaps={} structural={}",
                 g.query_gaps.len(),
                 g.structural.len()
+            ))
+        }
+        Action::Curate => {
+            let indexed = engine.index_directory(root).await?;
+            let report = engine
+                .curate(
+                    &HygieneOptions {
+                        root: Some(root.to_path_buf()),
+                        ..HygieneOptions::default()
+                    },
+                    20,
+                )
+                .await?;
+            Ok(format!(
+                "indexed={} checked={} findings={} query_gaps={} duplicates={} unlinked={} topic_indexes={}",
+                indexed.indexed,
+                report.checked,
+                report.hygiene_findings_total,
+                report.query_gaps.items.len(),
+                report.exact_duplicates.items.len(),
+                report.unlinked_notes.items.len(),
+                report.missing_topic_indexes.items.len()
             ))
         }
     }

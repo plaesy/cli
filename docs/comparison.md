@@ -65,7 +65,7 @@ If closing the gap with Nexus Memory specifically is the goal, the missing piece
 | No automatic extraction or consolidation | **Not planned.** Extraction needs an LLM in the write path, which breaks the offline rule (NN-01). Writing stays a human or agent task. |
 | Single local user | **By design.** No multi-tenant ACLs. The optional HTTP transport binds to loopback; remote access requires an operator-managed tunnel or proxy. Vault sync is external. |
 | Evaluation is thin | **Open.** 94 LongMemEval questions on one machine. LoCoMo not run; no latency under concurrent load. Needs a measurement, not a feature. |
-| Weak on non-English queries | **Partly closed.** `multilingual-e5-small` is supported (`MEMORY_MODEL_NAME`) and did better on an 8-query Indonesian probe (semantic top-1 7/8 vs 4/8). Not the default: its English-side quality is unmeasured. |
+| Weak on non-English queries | **Partly closed.** `multilingual-e5-small` is now the default and did better on an 8-query Indonesian probe (semantic top-1 7/8 vs 4/8). The Indonesian sample remains small; see the [embedder decision](eval/embedder-decision.md). |
 | Preference-style questions | **Open.** R@5 0.83 on n = 6: too few questions to conclude anything. |
 
 Nothing here makes plaesy the best system. A gap is closed when the feature exists and has a test, not when the page says so.

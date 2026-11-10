@@ -225,6 +225,9 @@ pub mod hygiene;
 /// Memory gaps: questions the memory could not answer, and broken or stale notes (`memory missing`).
 pub mod gaps;
 
+/// Read-only curation reports for memory maintenance (`memory curate`).
+pub mod curation;
+
 /// Project-scoped source API duplicate audit.
 pub mod code_audit;
 
@@ -234,7 +237,7 @@ pub mod cli;
 /// Writing new notes on behalf of an agent (`memory_remember`); never overwrites.
 pub mod notes;
 
-/// Scheduled jobs (`memory schedule once|run`): index, hygiene and missing at fixed intervals.
+/// Scheduled jobs (`memory schedule once|run`): index, hygiene, missing and curation at intervals.
 pub mod schedule;
 
 // ============================================================================

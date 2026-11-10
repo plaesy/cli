@@ -74,7 +74,7 @@ Do not mix models in one database. To compare, use a separate `MEMORY_DB_PATH` p
 claude mcp add plaesy-memory -e MEMORY_WATCH_DIR=<vault> -- plaesy memory serve --mcp
 ```
 
-Add `-e MEMORY_MODEL_NAME=multilingual-e5-small` only after the model switch in section 4. The server exposes seven tools: five read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_stats`) and two bounded write tools (`memory_remember`, `memory_resolve_gap`). One creates a new note and the other closes a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
+The server exposes eight tools: six read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`, `memory_stats`) and two bounded write tools (`memory_remember`, `memory_resolve_gap`). `memory_curate` is a bounded review report; it does not edit notes. The write tools create a new note or close a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
 
 **Hermes:** connect through its MCP client support using the generated configuration from `plaesy memory --vault "<vault>" config mcp --app hermes`. The same `plaesy memory serve` command is used; there is no separate `memory` executable or plugin binary.
 
@@ -82,7 +82,8 @@ Add `-e MEMORY_MODEL_NAME=multilingual-e5-small` only after the model switch in 
 
 | When | Command | What to look at |
 |---|---|---|
-| Weekly | `plaesy memory --vault "<vault>" hygiene "<vault>" --strict` | STALE notes, missing `last_verified`, broken Wikilinks and Markdown links/anchors, machine-specific links, backticked paths that no longer exist |
+| Weekly | `plaesy memory --vault "<vault>" curate --limit 50` | confirmed and inferred hygiene findings, unanswered searches, exact duplicates, unlinked notes, topic folders that may need an index |
+| Before CI or a strict gate | `plaesy memory --vault "<vault>" hygiene "<vault>" --strict` | fail on any hygiene finding, including inferred findings |
 | Monthly | review `confidence: low` and STALE notes | update, demote to `archive`, or delete |
 | After restructuring the vault | `plaesy memory --vault "<vault>" index "<vault>"` | the index holds the old paths otherwise |
 | After a model change | `plaesy memory --vault "<vault>" stats` shows the new model | see section 4 |
@@ -94,8 +95,8 @@ Add `-e MEMORY_MODEL_NAME=multilingual-e5-small` only after the model switch in 
 `plaesy memory --vault "<vault>" schedule once` runs the selected vault's due jobs and exits.
 `plaesy memory --vault "<vault>" schedule run` keeps running until Ctrl-C.
 
-- Jobs are set in the config under `[[schedule.jobs]]`: `name`, `every` (`30m`, `6h`, `1d`), `action` (`index`, `hygiene` or `missing`). With no jobs configured, `index` runs every hour.
-- `hygiene` and `missing` do not run unless listed. A vault with known broken links would otherwise add a line to the log every hour.
+- Jobs are set in the config under `[[schedule.jobs]]`: `name`, `every` (`30m`, `6h`, `1d`), `action` (`index`, `hygiene`, `missing` or `curate`). With no jobs configured, `index` runs every hour.
+- `hygiene`, `missing` and `curate` do not run unless listed. A vault with known findings would otherwise add a line to the log every hour.
 - Each run appends one line per job to `<root>\Plaesy\schedule.log`. A failing job is logged and the rest still run.
 - Last-run times are kept in the database (`schedule_runs`). A second `once` within the interval does nothing.
 - The installer does not register a scheduled task. To automate `once`, create a task in your operating system's scheduler that runs `plaesy memory --vault "<vault>" schedule once` at the interval you want, using the same user account and vault configuration as your interactive CLI. Run it manually first to check the config and output.

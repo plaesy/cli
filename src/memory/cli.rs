@@ -5,6 +5,7 @@
 //! memory search "query" [-n 10]   hybrid/semantic/keyword search with citations
 //! memory links NOTE [--outgoing]  notes linking to NOTE (or linked from it)
 //! memory hygiene [DIR] [--project-root SLUG=PATH] [--json] stale notes, links, local paths
+//! memory curate [DIR] [--limit 20] [--project-root SLUG=PATH] [--json] read-only maintenance review
 //! memory code-find DIR --symbol NAME [--purpose TEXT] [--json]  find reusable Dart APIs
 //! memory code-audit DIR [--json]  secondary diagnostic for duplicate Dart APIs in a project tree
 //! memory missing [--resolve ID]   unanswered queries and broken or stale notes
@@ -18,6 +19,7 @@
 //! ```
 
 use crate::memory::config::MemoryConfig;
+use crate::memory::curation::CurationReport;
 use crate::memory::hygiene::{HygieneOptions, HygieneReport};
 use crate::memory::indexer::Watcher;
 use crate::memory::search::{
@@ -159,6 +161,20 @@ enum Command {
         /// Exit with status 1 only for confirmed (FACT) findings; still report inferred findings.
         #[arg(long, conflicts_with = "strict")]
         strict_facts: bool,
+    },
+    /// Prepare a read-only review of memory quality and maintenance candidates.
+    Curate {
+        /// Directory the notes live in (default: configured watch directory).
+        dir: Option<PathBuf>,
+        /// Local source repository for a vault project, in SLUG=PATH form (repeatable).
+        #[arg(long = "project-root", value_name = "SLUG=PATH", action = clap::ArgAction::Append)]
+        project_roots: Vec<String>,
+        /// Maximum examples per candidate category.
+        #[arg(short = 'n', long, default_value_t = 20)]
+        limit: usize,
+        /// Emit machine-readable JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// What the memory is missing: queries it could not answer, and broken or stale notes.
     Missing {
@@ -850,6 +866,37 @@ async fn run(cli: Cli) -> Result<()> {
                 std::process::exit(1);
             }
         }
+        Command::Curate {
+            dir,
+            project_roots,
+            limit,
+            json,
+        } => {
+            if let Some(root) = &dir {
+                require_dir(root)?;
+            }
+            let root = dir.unwrap_or_else(|| config.watch_dir.clone());
+            require_dir(&root)?;
+            let project_roots = parse_project_roots(&project_roots)?;
+            engine.index_directory(&root).await?;
+            let report = engine
+                .curate(
+                    &HygieneOptions {
+                        root: Some(root),
+                        project_roots,
+                        ..HygieneOptions::default()
+                    },
+                    limit,
+                )
+                .await?;
+            if json {
+                let out = serde_json::to_string_pretty(&report)
+                    .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
+                println!("{out}");
+            } else {
+                print_curation_report(&report);
+            }
+        }
         Command::Missing {
             resolve,
             limit,
@@ -1428,6 +1475,72 @@ fn print_context_list(
             }
         }
     }
+}
+
+fn print_curation_report(report: &CurationReport) {
+    println!(
+        "Memory curation review: {} notes checked (read-only)",
+        report.checked
+    );
+    println!(
+        "Hygiene findings: {} total ({} confirmed, {} inferred)",
+        report.hygiene_findings_total, report.confirmed_findings, report.inferred_findings
+    );
+    for (kind, count) in &report.hygiene.summary {
+        println!("  {kind}: {count}");
+        for finding in report
+            .hygiene
+            .findings
+            .iter()
+            .filter(|finding| &finding.kind == kind)
+            .take(3)
+        {
+            println!("    {} — {}", finding.path, finding.detail);
+        }
+    }
+    if report.hygiene_has_more {
+        println!("  more hygiene findings omitted; use `memory hygiene` or increase --limit");
+    }
+
+    println!("Unanswered searches: {}", report.query_gaps.items.len());
+    for gap in &report.query_gaps.items {
+        println!("  #{} ({} misses) {}", gap.id, gap.misses, gap.query);
+    }
+    if report.query_gaps.has_more {
+        println!("  more query gaps omitted; increase --limit to show more");
+    }
+
+    println!("Exact duplicate groups: {}", report.exact_duplicates.items.len());
+    for group in &report.exact_duplicates.items {
+        println!("  {}", group.files.items.join(" = "));
+        if group.files.has_more {
+            println!("    additional duplicate paths omitted");
+        }
+    }
+    if report.exact_duplicates.has_more {
+        println!("  more duplicate groups omitted; increase --limit to show more");
+    }
+
+    println!("Unlinked note candidates: {}", report.unlinked_notes.items.len());
+    for path in &report.unlinked_notes.items {
+        println!("  {path}");
+    }
+    if report.unlinked_notes.has_more {
+        println!("  more unlinked notes omitted; increase --limit to show more");
+    }
+
+    println!(
+        "Knowledge folders that may need an index ({} direct notes threshold): {}",
+        report.topic_index_threshold,
+        report.missing_topic_indexes.items.len()
+    );
+    for candidate in &report.missing_topic_indexes.items {
+        println!("  {} ({} notes)", candidate.folder, candidate.notes);
+    }
+    if report.missing_topic_indexes.has_more {
+        println!("  more folders omitted; increase --limit to show more");
+    }
+    println!("Review candidates manually; this command does not move, edit, or delete notes.");
 }
 
 fn print_json(v: &impl serde::Serialize) {

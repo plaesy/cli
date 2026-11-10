@@ -1014,6 +1014,27 @@ impl Database {
         rows.collect::<rusqlite::Result<Vec<_>>>().map_err(db_err)
     }
 
+    /// Group notes with identical content hashes for a read-only curation report.
+    pub async fn exact_duplicate_documents(&self) -> Result<Vec<Vec<String>>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn
+            .prepare(
+                "SELECT hash, source_path FROM documents
+                 WHERE hash IS NOT NULL ORDER BY hash, source_path",
+            )
+            .map_err(db_err)?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+            .map_err(db_err)?;
+        let mut groups: std::collections::BTreeMap<String, Vec<String>> =
+            std::collections::BTreeMap::new();
+        for row in rows {
+            let (hash, path) = row.map_err(db_err)?;
+            groups.entry(hash).or_default().push(path);
+        }
+        Ok(groups.into_values().filter(|paths| paths.len() > 1).collect())
+    }
+
     /// IDs of all chunks belonging to a document.
     pub async fn chunk_ids_for_document(&self, doc_id: u64) -> Result<Vec<u64>> {
         let conn = self.conn.lock();

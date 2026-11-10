@@ -21,7 +21,7 @@ vault, so each device builds its own index from synchronized Markdown files.
 ## Commands
 
 The command groups are shown by `plaesy memory --help`. They cover indexing (`index`, `watch`),
-retrieval (`search`, `links`), health (`hygiene`, `missing`, `stats`), configuration and service
+retrieval (`search`, `links`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
 setup (`config`, `onboard`, `serve`, `schedule`), source-code lookup (`code-find`, `code-audit`),
 and project graph views (`projects`, `decisions`, `contexts`).
 
@@ -30,8 +30,29 @@ Use the installed version's help for command-specific arguments:
 ```sh
 plaesy memory search --help
 plaesy memory hygiene --help
+plaesy memory curate --help
 plaesy memory remember --help
 ```
+
+## Curate memory
+
+Prepare a bounded maintenance report without changing vault notes:
+
+```sh
+plaesy memory --vault <vault-path> curate
+plaesy memory --vault <vault-path> curate --limit 50 --json
+```
+
+The report combines bounded hygiene findings, unanswered searches, exact duplicate files, notes with no
+incoming or outgoing Wikilinks, and knowledge folders with at least five direct Markdown notes but
+no `README.md`, `index.md`, or `MOC.md`. Unlinked notes and missing topic indexes are review
+candidates, not errors. Each category and each duplicate group is limited to `--limit` examples
+(1–100); hygiene totals remain complete, while `memory hygiene` provides the full finding list. The
+command refreshes the local index first; it never moves, edits, archives, or deletes Markdown files.
+Use `--project-root SLUG=PATH` to check code paths in local repositories.
+
+The same report is available to MCP clients through the read-only `memory_curate` tool and can be
+scheduled with `action = "curate"`.
 
 ## Remember a note
 
@@ -65,7 +86,8 @@ plaesy memory --vault <vault-path> hygiene <vault-path> --strict
 plaesy memory --vault <vault-path> stats
 ```
 
-`hygiene` reports stale or incomplete metadata, broken wikilinks and Markdown links, invalid link
+`hygiene` reports stale or incomplete provenance (`source`, `last_verified`, and `confidence` for
+claim-bearing tiers), broken wikilinks and Markdown links, invalid link
 anchors, likely credential assignments and private-key headers without printing matched values, and
 backticked path references that may be missing. `possible_secret` is inferred: the keyword and
 assignment heuristic can still flag examples or redacted values, and it is not a secret scanner.

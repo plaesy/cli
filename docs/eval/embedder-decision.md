@@ -1,12 +1,12 @@
 # Embedder decision: all-MiniLM-L6-v2 vs multilingual-e5-small
 
-Date: 2026-10-26. Owner scope: compare the two models only; the Indonesian-specific models are the owner's call.
+Evaluation date: 2026-10-26. Implementation status checked: 2026-11-10. Scope: compare these two models only; Indonesian-specific models are outside this decision.
 
-decision: keep all-MiniLM-L6-v2 as the default. multilingual-e5-small is recommended for Indonesian notes and is selected with `MEMORY_MODEL_NAME=multilingual-e5-small`. Switching the default needs owner confirmation and a full re-index.
+Current implementation: `multilingual-e5-small` is the default in `EmbeddingConfig` and onboarding. `all-MiniLM-L6-v2` remains selectable for English-focused vaults. The small benchmark below supports E5 as a practical multilingual default, but does not prove broad superiority. Changing the default requires an explicit decision and a full re-index.
 
-## Why this decision
+## Evidence and implementation history
 
-The rule in the spec: the default changes only if a model wins on both English and Indonesian beyond noise. e5 wins clearly on Indonesian and does not win on English, so the default stays.
+The earlier decision record kept MiniLM because the English and Indonesian samples were too small for a general claim. The implementation has since moved to E5; this document records the observed behavior and evidence limits rather than treating the old decision as current code.
 
 ## English: LongMemEval-S, every 5th question (94 questions), no reranker
 

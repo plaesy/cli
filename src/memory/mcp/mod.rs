@@ -136,6 +136,15 @@ fn tools() -> Value {
             "annotations": read_only
         },
         {
+            "name": "memory_curate",
+            "description": "Prepare a read-only memory maintenance review combining hygiene findings, unanswered searches, exact duplicates, unlinked-note candidates, and knowledge folders that may need an index. It never edits or deletes vault notes.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } }
+            },
+            "annotations": read_only
+        },
+        {
             "name": "memory_remember",
             "description": "Save a new note for the memory: a Markdown file under the notes root, indexed at once so it can be cited. Creates files only; an existing note is never overwritten, and folders must stay inside the notes root. Notes written here are marked source: agent, and a confidence of high is stored as medium: the owner raises it by hand.",
             "inputSchema": {
@@ -350,6 +359,32 @@ async fn run_tool(
                 .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
             Ok(tool_text(text, structured))
         }
+        "memory_curate" => {
+            let limit = args
+                .get("limit")
+                .and_then(Value::as_u64)
+                .unwrap_or(20)
+                .clamp(1, 100) as usize;
+            let options = HygieneOptions {
+                root: engine.watch_root().map(std::path::Path::to_path_buf),
+                ..HygieneOptions::default()
+            };
+            let report = engine.curate(&options, limit).await?;
+            let text = format!(
+                "Read-only curation: {} notes; {} hygiene findings ({} confirmed, {} inferred); {} query gaps; {} exact duplicate groups; {} unlinked candidates; {} topic-index candidates. No notes were changed.",
+                report.checked,
+                report.hygiene_findings_total,
+                report.confirmed_findings,
+                report.inferred_findings,
+                report.query_gaps.items.len(),
+                report.exact_duplicates.items.len(),
+                report.unlinked_notes.items.len(),
+                report.missing_topic_indexes.items.len()
+            );
+            let structured = serde_json::to_value(&report)
+                .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
+            Ok(tool_text(text, structured))
+        }
         "memory_remember" => {
             let text_arg = |key: &str| {
                 args.get(key)
@@ -441,7 +476,7 @@ pub async fn handle_message(engine: &SearchEngine, msg: &Value) -> Option<Value>
                     "protocolVersion": version,
                     "capabilities": { "tools": { "listChanged": false } },
                     "serverInfo": { "name": "plaesy-memory", "version": env!("CARGO_PKG_VERSION") },
-                    "instructions": "Memory over the project's notes. Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap."
+                    "instructions": "Memory over the project's notes. Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap."
                 }),
             )
         }
@@ -573,7 +608,7 @@ impl ServerHandler for PlaesyMcpServer {
                 "plaesy-memory",
                 env!("CARGO_PKG_VERSION"),
             ))
-            .with_instructions("Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap.")
+            .with_instructions("Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap.")
     }
 
     fn list_tools(
@@ -786,6 +821,7 @@ mod tests {
                 "memory_backlinks",
                 "memory_hygiene",
                 "memory_missing",
+                "memory_curate",
                 "memory_remember",
                 "memory_resolve_gap",
                 "memory_stats"

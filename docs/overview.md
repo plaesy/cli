@@ -6,7 +6,7 @@
 
 **Core features**:
 
-- **Hybrid retrieval**: ONNX embeddings (all-MiniLM-L6-v2, 384-dim) + SQLite FTS5/BM25 keyword search
+- **Hybrid retrieval**: ONNX embeddings (multilingual-e5-small by default, 384-dim) + SQLite FTS5/BM25 keyword search
 - **Evidence-based results**: Every hit carries file path, line range, git revision, confidence label (FACT/INFERRED), and staleness flag
 - **Metadata filtering**: Tier (core/episodic/semantic/procedural/archive), trust level, validity dates, status (active/superseded/deprecated)
 - **Wikilink indexing**: `[[backlink]]` discovery and dangling-link detection for vault hygiene
@@ -19,7 +19,7 @@
 
 - **Async runtime**: Tokio (1.40)
 - **Vector search**: HNSW via usearch (Qdrant engine, 2.15)
-- **Embeddings**: ONNX Runtime (2.0.0-rc.14) + all-MiniLM-L6-v2 or multilingual alternatives
+- **Embeddings**: ONNX Runtime (2.0.0-rc.14) + multilingual-e5-small by default, with all-MiniLM-L6-v2 available
 - **Full-text search**: SQLite (bundled) with FTS5 and BM25 ranking
 - **Storage**: SQLite WAL (write-ahead log) + crash recovery
 - **Observability**: tracing + Prometheus-compatible metrics
@@ -93,7 +93,7 @@ Query
 
 **Known limits**:
 
-- English-default embedding model (all-MiniLM-L6-v2); multilingual E5 available as alternative
+- Multilingual default embedding model (multilingual-e5-small); all-MiniLM-L6-v2 available for English-focused vaults
 - One SQLite connection (OK for one local agent, not concurrent readers)
 - `.md` / `.markdown` / `.txt` files only
 - Staleness based on declared `last_verified` date (engine cannot verify truth)
