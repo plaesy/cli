@@ -453,6 +453,26 @@ pub(crate) struct WriteLock {
 }
 
 impl WriteLock {
+    /// Whether a live memory daemon currently owns this vault's write boundary.
+    ///
+    /// The daemon refreshes the lock directory every second. Match `acquire`'s ten-minute stale
+    /// threshold so read-only commands can use its continuously maintained index without trying
+    /// to become a competing writer.
+    pub(crate) fn daemon_is_active(root: &Path) -> bool {
+        let daemon = root.join(".plaesy-memory-daemon.lock");
+        let Ok(meta) = std::fs::symlink_metadata(&daemon) else {
+            return false;
+        };
+        if !meta.file_type().is_dir() {
+            return false;
+        }
+        !meta
+            .modified()
+            .ok()
+            .and_then(|time| time.elapsed().ok())
+            .is_some_and(|age| age > Duration::from_secs(600))
+    }
+
     pub(crate) fn acquire(root: &Path) -> Result<Self> {
         let daemon = root.join(".plaesy-memory-daemon.lock");
         if let Ok(meta) = std::fs::symlink_metadata(&daemon) {

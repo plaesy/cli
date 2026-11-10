@@ -12,6 +12,7 @@
 use crate::memory::config::ScheduleConfig;
 use crate::memory::error::{MemoryError, Result};
 use crate::memory::hygiene::HygieneOptions;
+use crate::memory::notes::WriteLock;
 use crate::memory::search::SearchEngine;
 use crate::memory::settings;
 use chrono::{DateTime, Duration, Utc};
@@ -247,7 +248,11 @@ async fn run_action(engine: &SearchEngine, root: &Path, action: Action) -> Resul
             ))
         }
         Action::Curate => {
-            let indexed = engine.index_directory(root).await?;
+            let indexed = if WriteLock::daemon_is_active(root) {
+                None
+            } else {
+                Some(engine.index_directory(root).await?)
+            };
             let report = engine
                 .curate(
                     &HygieneOptions {
@@ -258,8 +263,11 @@ async fn run_action(engine: &SearchEngine, root: &Path, action: Action) -> Resul
                 )
                 .await?;
             Ok(format!(
-                "indexed={} checked={} findings={} query_gaps={} duplicates={} unlinked={} topic_indexes={}",
-                indexed.indexed,
+                "index={} checked={} findings={} query_gaps={} duplicates={} unlinked={} topic_indexes={}",
+                indexed
+                    .as_ref()
+                    .map(|stats| stats.indexed.to_string())
+                    .unwrap_or_else(|| "daemon".to_string()),
                 report.checked,
                 report.hygiene_findings_total,
                 report.query_gaps.items.len(),

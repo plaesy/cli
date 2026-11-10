@@ -48,8 +48,9 @@ incoming or outgoing Wikilinks, and knowledge folders with at least five direct 
 no `README.md`, `index.md`, or `MOC.md`. Unlinked notes and missing topic indexes are review
 candidates, not errors. Each category and each duplicate group is limited to `--limit` examples
 (1–100); hygiene totals remain complete, while `memory hygiene` provides the full finding list. The
-command refreshes the local index first; it never moves, edits, archives, or deletes Markdown files.
-Use `--project-root SLUG=PATH` to check code paths in local repositories.
+command refreshes the local index first, unless a live memory daemon owns the vault; then it reads
+the daemon-maintained index instead of competing for the write lock. It never moves, edits, archives,
+or deletes Markdown files. Use `--project-root SLUG=PATH` to check code paths in local repositories.
 
 The same report is available to MCP clients through the read-only `memory_curate` tool and can be
 scheduled with `action = "curate"`.

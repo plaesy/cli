@@ -22,6 +22,7 @@ use crate::memory::config::MemoryConfig;
 use crate::memory::curation::CurationReport;
 use crate::memory::hygiene::{HygieneOptions, HygieneReport};
 use crate::memory::indexer::Watcher;
+use crate::memory::notes::WriteLock;
 use crate::memory::search::{
     normalize_tier, CitationBuilder, SearchEngine, SearchFilter, SearchMode, Trust, TIERS,
 };
@@ -878,7 +879,11 @@ async fn run(cli: Cli) -> Result<()> {
             let root = dir.unwrap_or_else(|| config.watch_dir.clone());
             require_dir(&root)?;
             let project_roots = parse_project_roots(&project_roots)?;
-            engine.index_directory(&root).await?;
+            if WriteLock::daemon_is_active(&root) {
+                eprintln!("Using the index maintained by the active memory daemon.");
+            } else {
+                engine.index_directory(&root).await?;
+            }
             let report = engine
                 .curate(
                     &HygieneOptions {

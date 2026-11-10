@@ -12,6 +12,11 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 
+### Fixed
+
+- Allow `memory curate` and scheduled curation to read the daemon-maintained index without attempting
+  a conflicting vault sync.
+
 ### Removed
 
 - Remove the unused Spec-Kit commands and standalone Hermes Python plugin; Hermes can use the
