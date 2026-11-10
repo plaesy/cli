@@ -90,6 +90,16 @@ pub enum IndexOutcome {
     Forgotten,
 }
 
+enum NoteLifecycleOperation {
+    Update { reason: String },
+    Archive { reason: String, from_state: String },
+}
+
+enum NoteLifecycleIntent {
+    Update(crate::memory::lifecycle::UpdateIntent),
+    Archive(crate::memory::lifecycle::ArchiveIntent),
+}
+
 /// Summary of a directory sync.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct IndexSummary {
@@ -195,6 +205,91 @@ pub fn fingerprint_note_in_root(root: &Path, relative_path: &Path) -> Result<Str
             source: source_error,
         })?;
     Ok(crate::memory::indexer::content_hash(&content))
+}
+
+fn archived_note_content(content: &str, document: &Document) -> Result<String> {
+    let line_ending = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let Some(frontmatter) = document.frontmatter_raw.as_deref() else {
+        let (bom, body) = content
+            .strip_prefix('\u{feff}')
+            .map(|body| ("\u{feff}", body))
+            .unwrap_or(("", content));
+        return Ok(format!(
+            "{bom}---{line_ending}status: archived{line_ending}---{line_ending}{body}"
+        ));
+    };
+
+    let mut lines: Vec<String> = frontmatter.split('\n').map(str::to_owned).collect();
+    if lines.first().map(String::as_str) != Some("---")
+        || !matches!(lines.last().map(String::as_str), Some("---" | "..."))
+    {
+        return Err(MemoryError::ConfigError(
+            "cannot archive because front matter boundaries are invalid".into(),
+        ));
+    }
+    let closing = lines.len() - 1;
+    let status_lines: Vec<usize> = (1..closing)
+        .filter(|index| {
+            let line = &lines[*index];
+            if line.starts_with(char::is_whitespace) {
+                return false;
+            }
+            line.split_once(':')
+                .is_some_and(|(key, _)| key.trim().trim_matches(['"', '\'']) == "status")
+        })
+        .collect();
+    if status_lines.len() > 1 {
+        return Err(MemoryError::ConfigError(
+            "cannot archive because front matter has duplicate status fields".into(),
+        ));
+    }
+    if let Some(index) = status_lines.first().copied() {
+        let comment = yaml_comment_suffix(&lines[index]);
+        lines[index] = if let Some(comment) = comment {
+            format!("status: archived {comment}")
+        } else {
+            "status: archived".into()
+        };
+    } else {
+        lines.insert(closing, "status: archived".into());
+    }
+    let normalized_frontmatter = lines.join(line_ending);
+    let body = document.body.replace('\n', line_ending);
+    Ok(format!("{normalized_frontmatter}{line_ending}{body}"))
+}
+
+fn yaml_comment_suffix(line: &str) -> Option<&str> {
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, character) in line.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if character == '\\' && quote == Some('"') {
+            escaped = true;
+            continue;
+        }
+        if matches!(character, '"' | '\'') {
+            if quote == Some(character) {
+                quote = None;
+            } else if quote.is_none() {
+                quote = Some(character);
+            }
+            continue;
+        }
+        if character == '#'
+            && quote.is_none()
+            && (index == 0 || line[..index].ends_with(char::is_whitespace))
+        {
+            return Some(&line[index..]);
+        }
+    }
+    None
 }
 
 /// Crash/power-loss recovery (startup reconciliation): remove leftover note-publication
@@ -836,6 +931,79 @@ impl SearchEngine {
         updated_content: &str,
         reason: &str,
     ) -> Result<String> {
+        self.replace_note(
+            relative_path,
+            expected_sha256,
+            updated_content,
+            NoteLifecycleOperation::Update {
+                reason: reason.to_owned(),
+            },
+        )
+        .await
+    }
+
+    /// Mark a note archived without moving or deleting its source file.
+    ///
+    /// Its status is set to `archived`, so default retrieval hides it while `--include-inactive`
+    /// can still return it. The archive event stores hashes and a structured reason only.
+    pub async fn archive_note(
+        &self,
+        relative_path: &Path,
+        expected_sha256: &str,
+        reason: &str,
+    ) -> Result<String> {
+        let root = self
+            .watch_root()
+            .ok_or_else(|| MemoryError::ConfigError("no notes root is configured".into()))?
+            .to_path_buf();
+        let current_hash = fingerprint_note_in_root(&root, relative_path)?;
+        if current_hash != expected_sha256 {
+            return Err(MemoryError::ConfigError(format!(
+                "note changed since it was reviewed (current SHA-256: {current_hash}); fingerprint it again before archiving"
+            )));
+        }
+        let source = root.join(relative_path);
+        let content =
+            std::fs::read_to_string(&source).map_err(|source_error| MemoryError::IoError {
+                path: source.display().to_string(),
+                source: source_error,
+            })?;
+        if crate::memory::indexer::content_hash(&content) != current_hash {
+            return Err(MemoryError::ConfigError(
+                "note changed while it was being read; fingerprint it again before archiving"
+                    .into(),
+            ));
+        }
+        let document = self.extractor.extract(source.clone(), &content)?;
+        let from_state = document
+            .metadata
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("active")
+            .to_owned();
+        if from_state.eq_ignore_ascii_case("archived") {
+            return Err(MemoryError::ConfigError("note is already archived".into()));
+        }
+        let archived_content = archived_note_content(&content, &document)?;
+        self.replace_note(
+            relative_path,
+            expected_sha256,
+            &archived_content,
+            NoteLifecycleOperation::Archive {
+                reason: reason.to_owned(),
+                from_state,
+            },
+        )
+        .await
+    }
+
+    async fn replace_note(
+        &self,
+        relative_path: &Path,
+        expected_sha256: &str,
+        updated_content: &str,
+        operation: NoteLifecycleOperation,
+    ) -> Result<String> {
         use std::io::Write;
         use std::path::Component;
 
@@ -972,15 +1140,33 @@ impl SearchEngine {
                 .collect(),
             _ => Vec::new(),
         };
-        let intent = crate::memory::lifecycle::begin_update(
-            &notes_root,
-            &rel,
-            current_id,
-            scope,
-            current_hash,
-            updated_hash,
-            reason,
-        )?;
+        let intent = match operation {
+            NoteLifecycleOperation::Update { reason } => {
+                NoteLifecycleIntent::Update(crate::memory::lifecycle::begin_update(
+                    &notes_root,
+                    &rel,
+                    current_id,
+                    scope,
+                    current_hash,
+                    updated_hash,
+                    &reason,
+                )?)
+            }
+            NoteLifecycleOperation::Archive { reason, from_state } => {
+                NoteLifecycleIntent::Archive(crate::memory::lifecycle::begin_archive(
+                    &notes_root,
+                    crate::memory::lifecycle::ArchiveTransition {
+                        relative_path: &rel,
+                        note_id: current_id,
+                        scope,
+                        from_hash: current_hash,
+                        to_hash: updated_hash,
+                        from_state: &from_state,
+                        reason: &reason,
+                    },
+                )?)
+            }
+        };
         self.database().enqueue_index(&rel).await?;
 
         let file_name = source
@@ -1024,7 +1210,14 @@ impl SearchEngine {
             });
         }
         self.index_file_at(&notes_root, &real_source, None).await?;
-        crate::memory::lifecycle::complete_update(&notes_root, intent)?;
+        match intent {
+            NoteLifecycleIntent::Update(intent) => {
+                crate::memory::lifecycle::complete_update(&notes_root, intent)?;
+            }
+            NoteLifecycleIntent::Archive(intent) => {
+                crate::memory::lifecycle::complete_archive(&notes_root, intent)?;
+            }
+        }
         self.database().dequeue_index(&rel).await?;
         self.save_snapshot_locked().await;
         Ok(updated_hash.to_owned())
@@ -2537,6 +2730,85 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(root.join("claim.md")).unwrap(),
             "external concurrent edit\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn archive_marks_note_inactive_without_deleting_it_and_records_hash_only_event() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let root = dir.path();
+        let original = "---\n# preserve top-level note comments\nid: stable-note-id\nstatus: active # preserve status note\nscope: [project-a]\n---\n\nArchiveMeadow.\n";
+        write(root, "notes/claim.md", original);
+        let engine = engine(true).await;
+        engine.set_watch_root(root.to_path_buf());
+        engine.index_directory(root).await.expect("initial index");
+        let reviewed_hash = engine
+            .fingerprint_note(Path::new("notes/claim.md"))
+            .expect("fingerprint");
+
+        let archived_hash = engine
+            .archive_note(Path::new("notes/claim.md"), &reviewed_hash, "completed")
+            .await
+            .expect("archive");
+        let archived_content =
+            std::fs::read_to_string(root.join("notes/claim.md")).expect("archived source remains");
+        assert!(archived_content.contains("status: archived"));
+        assert!(archived_content.contains("# preserve top-level note comments"));
+        assert!(archived_content.contains("status: archived # preserve status note"));
+        assert_ne!(archived_hash, reviewed_hash);
+        assert!(engine
+            .keyword_search("ArchiveMeadow", 5)
+            .await
+            .expect("default retrieval")
+            .is_empty());
+
+        let mut include_inactive = SearchFilter::default();
+        include_inactive.include_inactive = true;
+        assert_eq!(
+            engine
+                .search_with("ArchiveMeadow", 5, SearchMode::Keyword, &include_inactive,)
+                .await
+                .expect("include archived")
+                .len(),
+            1
+        );
+
+        let event_dir = root.join(".plaesy-memory").join("events");
+        let trace = std::fs::read_dir(event_dir)
+            .expect("event directory")
+            .map(|entry| std::fs::read_to_string(entry.expect("event").path()).unwrap())
+            .collect::<String>();
+        assert!(trace.contains("\"operation\":\"archive\""));
+        assert!(trace.contains(&reviewed_hash));
+        assert!(trace.contains(&archived_hash));
+        assert!(trace.contains("completed-work"));
+        assert!(!trace.contains("ArchiveMeadow"));
+
+        let error = engine
+            .archive_note(Path::new("notes/claim.md"), &archived_hash, "completed")
+            .await
+            .expect_err("an archived note must not be archived twice");
+        assert!(error.to_string().contains("already archived"));
+
+        let restored_content =
+            "---\nid: stable-note-id\nstatus: active\nscope: [project-a]\n---\n\nArchiveMeadow.\n";
+        let restored_hash = engine
+            .update_note(
+                Path::new("notes/claim.md"),
+                &archived_hash,
+                restored_content,
+                "correction",
+            )
+            .await
+            .expect("restore through reviewed update");
+        assert_ne!(restored_hash, archived_hash);
+        assert_eq!(
+            engine
+                .keyword_search("ArchiveMeadow", 5)
+                .await
+                .expect("restored note search")
+                .len(),
+            1
         );
     }
 

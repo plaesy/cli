@@ -21,7 +21,7 @@ vault, so each device builds its own index from synchronized Markdown files.
 ## Commands
 
 The command groups are shown by `plaesy memory --help`. They cover indexing (`index`, `watch`),
-retrieval (`search`, `links`), lifecycle (`remember`, `fingerprint`, `update`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
+retrieval (`search`, `links`), lifecycle (`remember`, `fingerprint`, `update`, `archive`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
 setup (`config`, `onboard`, `serve`, `schedule`), source-code lookup (`code-find`, `code-audit`),
 and project graph views (`projects`, `decisions`, `contexts`).
 
@@ -33,6 +33,7 @@ plaesy memory hygiene --help
 plaesy memory curate --help
 plaesy memory remember --help
 plaesy memory update --help
+plaesy memory archive --help
 ```
 
 ## Curate memory
@@ -112,6 +113,22 @@ intent/completion event with old/new hashes, and refreshes the local index. The 
 outbox lets startup reconciliation finish if the process stops after the file replacement. The
 audit contains no note body. Keep the note's front matter in the replacement; invalid YAML is
 rejected before publication.
+
+### Archive a note
+
+Archive means changing the note's front-matter status to `archived`. The source file stays in place,
+so links remain valid; default retrieval hides it, and `--include-inactive` can still retrieve it.
+Review the fingerprint first because archiving edits the note and reindexes it:
+
+```sh
+plaesy memory --vault <vault-path> fingerprint knowledges/old-system-design.md
+plaesy memory --vault <vault-path> archive knowledges/old-system-design.md \
+  --if-match <sha256-from-fingerprint> --reason superseded --yes
+```
+
+Supported reasons are `completed`, `obsolete`, `superseded`, `consolidated`, and `other`. The
+archive event stores the note id, scope, state transition, and old/new hashes, never its body. To
+restore an archived note, use `update` with a reviewed replacement that sets `status: active`.
 
 ### Forget a note
 

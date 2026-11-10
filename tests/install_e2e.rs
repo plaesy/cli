@@ -311,6 +311,71 @@ fn release_bundle_installs_repairs_upgrades_and_uninstalls_with_the_real_os_path
     scenario.run_ok(&scenario.installed_path, &["--help"], b"");
     scenario.run_ok(&scenario.installed_path, &["memory", "--help"], b"");
 
+    let vault = tempfile::tempdir().expect("create isolated memory vault");
+    let memory_data = tempfile::tempdir().expect("create isolated memory database directory");
+    fs::create_dir_all(vault.path().join("notes")).expect("create note directory");
+    let note_path = vault.path().join("notes/archive-e2e.md");
+    fs::write(
+        &note_path,
+        "---\nid: install-e2e-note\nstatus: active\n---\n\nE2EArchiveNeedle.\n",
+    )
+    .expect("write lifecycle test note");
+    let config_path = vault.path().join("memory.toml");
+    fs::write(
+        &config_path,
+        "[search]\nenable_vector_search = false\nenable_keyword_search = true\n",
+    )
+    .expect("write keyword-only memory config");
+    let vault_arg = vault.path().to_string_lossy().into_owned();
+    let config_arg = config_path.to_string_lossy().into_owned();
+    let db_arg = memory_data
+        .path()
+        .join("memory.db")
+        .to_string_lossy()
+        .into_owned();
+    let fingerprint_args = [
+        "memory",
+        "--vault",
+        &vault_arg,
+        "--config",
+        &config_arg,
+        "--db",
+        &db_arg,
+        "fingerprint",
+        "notes/archive-e2e.md",
+    ];
+    let fingerprint_output = scenario.run_ok(&scenario.installed_path, &fingerprint_args, b"");
+    let fingerprint_text = String::from_utf8_lossy(&fingerprint_output.stdout);
+    let fingerprint = fingerprint_text
+        .split_whitespace()
+        .next()
+        .expect("fingerprint hash is printed")
+        .to_owned();
+    assert_eq!(fingerprint.len(), 64);
+    let archive_args = [
+        "memory",
+        "--vault",
+        &vault_arg,
+        "--config",
+        &config_arg,
+        "--db",
+        &db_arg,
+        "archive",
+        "notes/archive-e2e.md",
+        "--if-match",
+        &fingerprint,
+        "--reason",
+        "completed",
+        "--yes",
+    ];
+    scenario.run_ok(&scenario.installed_path, &archive_args, b"");
+    assert!(
+        fs::read_to_string(&note_path)
+            .expect("read archived note")
+            .contains("status: archived"),
+        "installed CLI did not archive the note"
+    );
+
     scenario.run_ok(&scenario.source_binary, &["install"], b"");
     scenario.assert_persisted_path(true);
     scenario.assert_single_persisted_path_entry();

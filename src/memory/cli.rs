@@ -18,6 +18,7 @@
 //! memory remember "title" ["body"] [--template NAME] [--folder PATH]  write a note
 //! memory fingerprint PATH       print the current note SHA-256 before update
 //! memory update PATH --if-match SHA256 --reason correction --yes  replace from stdin
+//! memory archive PATH --if-match SHA256 --reason completed --yes  mark a note inactive
 //! memory schedule install|uninstall register or remove the per-user OS schedule
 //! ```
 
@@ -354,6 +355,23 @@ enum Command {
         #[arg(long, value_parser = ["correction", "new-evidence", "clarification", "other"])]
         reason: String,
         /// Required confirmation for replacing the source file.
+        #[arg(long, required = true)]
+        yes: bool,
+    },
+    /// Mark a note archived; preserve the source file and hide it from default retrieval.
+    Archive {
+        /// File path relative to the notes root.
+        path: PathBuf,
+        /// SHA-256 printed by `memory fingerprint`.
+        #[arg(long = "if-match")]
+        expected_sha256: String,
+        /// Structured reason category; free-form reason text is not persisted.
+        #[arg(
+            long,
+            value_parser = ["completed", "obsolete", "superseded", "consolidated", "other"]
+        )]
+        reason: String,
+        /// Required confirmation for changing the note's status.
         #[arg(long, required = true)]
         yes: bool,
     },
@@ -1296,6 +1314,17 @@ async fn run(cli: Cli) -> Result<()> {
                 .await?;
             println!("updated: {} (sha256 {hash})", path.display());
         }
+        Command::Archive {
+            path,
+            expected_sha256,
+            reason,
+            yes: _,
+        } => {
+            let hash = engine
+                .archive_note(&path, &expected_sha256, &reason)
+                .await?;
+            println!("archived: {} (sha256 {hash})", path.display());
+        }
     }
     if engine.has_vector_search() {
         engine.save_snapshot().await;
@@ -1826,5 +1855,43 @@ mod remember_cli_tests {
                 .command,
             Command::Fingerprint { .. }
         ));
+    }
+
+    #[test]
+    fn archive_requires_expected_hash_reason_and_confirmation() {
+        let parsed = Cli::try_parse_from([
+            "plaesy memory",
+            "archive",
+            "knowledges/a.md",
+            "--if-match",
+            &"b".repeat(64),
+            "--reason",
+            "completed",
+            "--yes",
+        ])
+        .expect("well-formed archive parses");
+        assert!(matches!(parsed.command, Command::Archive { yes: true, .. }));
+
+        assert!(Cli::try_parse_from([
+            "plaesy memory",
+            "archive",
+            "knowledges/a.md",
+            "--if-match",
+            &"b".repeat(64),
+            "--reason",
+            "free-form",
+            "--yes",
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "plaesy memory",
+            "archive",
+            "knowledges/a.md",
+            "--if-match",
+            &"b".repeat(64),
+            "--reason",
+            "completed",
+        ])
+        .is_err());
     }
 }

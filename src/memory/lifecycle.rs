@@ -49,6 +49,21 @@ pub(crate) struct UpdateIntent {
     event: LifecycleEvent,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct ArchiveIntent {
+    event: LifecycleEvent,
+}
+
+pub(crate) struct ArchiveTransition<'a> {
+    pub relative_path: &'a str,
+    pub note_id: Option<&'a str>,
+    pub scope: Vec<String>,
+    pub from_hash: &'a str,
+    pub to_hash: &'a str,
+    pub from_state: &'a str,
+    pub reason: &'a str,
+}
+
 fn sha256(value: &str) -> String {
     Sha256::digest(value.as_bytes())
         .iter()
@@ -359,6 +374,66 @@ pub(crate) fn complete_update(root: &Path, intent: UpdateIntent) -> Result<()> {
     event.phase = "complete".into();
     event.occurred_at = Utc::now().to_rfc3339();
     event.evidence = format!("{}; source and index update completed", event.evidence);
+    let (dir, handle) = ensure_state_dir(root, EVENTS_DIR)?;
+    write_new_json(
+        &dir,
+        &handle,
+        &format!("{}.complete.json", event.event_id),
+        &event,
+    )
+}
+
+/// Persist an archive intent using hashes only; note content remains in the source vault file.
+pub(crate) fn begin_archive(
+    root: &Path,
+    transition: ArchiveTransition<'_>,
+) -> Result<ArchiveIntent> {
+    let evidence = match transition.reason {
+        "completed" => "completed-work",
+        "obsolete" => "obsolete-note",
+        "superseded" => "superseded-note",
+        "consolidated" => "consolidated-into-another-note",
+        "other" => "other-owner-approved-archive",
+        _ => {
+            return Err(MemoryError::ConfigError(
+                "archive reason must be completed, obsolete, superseded, consolidated, or other"
+                    .into(),
+            ));
+        }
+    };
+    let event = LifecycleEvent {
+        schema: 1,
+        event_id: Uuid::new_v4().to_string(),
+        operation: "archive".into(),
+        phase: "intent".into(),
+        occurred_at: Utc::now().to_rfc3339(),
+        trigger: "plaesy memory archive".into(),
+        target_id: transition.note_id.map(str::to_owned),
+        path_sha256: sha256(transition.relative_path),
+        content_sha256: None,
+        from_content_sha256: Some(transition.from_hash.to_owned()),
+        to_content_sha256: Some(transition.to_hash.to_owned()),
+        scope: transition.scope,
+        from_state: transition.from_state.to_owned(),
+        to_state: "archived".into(),
+        evidence: evidence.into(),
+    };
+    let (dir, handle) = ensure_state_dir(root, EVENTS_DIR)?;
+    write_new_json(
+        &dir,
+        &handle,
+        &format!("{}.intent.json", event.event_id),
+        &event,
+    )?;
+    Ok(ArchiveIntent { event })
+}
+
+/// Record that an archived note's source and index reached the archived state.
+pub(crate) fn complete_archive(root: &Path, intent: ArchiveIntent) -> Result<()> {
+    let mut event = intent.event;
+    event.phase = "complete".into();
+    event.occurred_at = Utc::now().to_rfc3339();
+    event.evidence = format!("{}; source and index archive completed", event.evidence);
     let (dir, handle) = ensure_state_dir(root, EVENTS_DIR)?;
     write_new_json(
         &dir,
