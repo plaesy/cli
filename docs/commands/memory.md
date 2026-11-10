@@ -21,7 +21,7 @@ vault, so each device builds its own index from synchronized Markdown files.
 ## Commands
 
 The command groups are shown by `plaesy memory --help`. They cover indexing (`index`, `watch`),
-retrieval (`search`, `links`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
+retrieval (`search`, `links`), lifecycle (`remember`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
 setup (`config`, `onboard`, `serve`, `schedule`), source-code lookup (`code-find`, `code-audit`),
 and project graph views (`projects`, `decisions`, `contexts`).
 
@@ -92,6 +92,28 @@ For a regular note, omit the body to read Markdown from stdin. `remember` create
 does not overwrite an existing note. The `--type`, `--id`, `--status`, `--project`, `--scope`, and
 `--supersedes` options attach graph metadata when appropriate; check `plaesy memory remember --help`
 for the required combinations.
+
+### Forget a note
+
+Permanently remove one source file from the vault and its current search index:
+
+```sh
+plaesy memory --vault <vault-path> forget knowledges/obsolete-note.md \
+  --reason owner-request --yes
+```
+
+`--yes` is required because this removes the source file. Plaesy first writes an intent event and
+tombstones under the vault's hidden `.plaesy-memory/` directory, then removes the file and its
+indexed chunks. Tombstones carry the note id when available, a hash of its relative path, scope,
+timestamp, a content hash, and a structured reason category; they do not copy note content or
+persist free-form reason text. Indexing and `remember` both
+honour these markers, so a Syncthing conflict copy with the same stable note id or content is not
+reintroduced into retrieval. `--reason` accepts `owner-request`, `duplicate`, `obsolete`, or
+`privacy`.
+
+This removes the active source and Plaesy index entry. It does not rewrite Git history or erase
+Syncthing's retained file versions: when Syncthing versioning is enabled, remote deletions can be
+stored in `.stversions`. See [Syncthing file versioning](https://docs.syncthing.net/users/versioning.html).
 
 ## Validate the index
 

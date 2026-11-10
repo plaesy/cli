@@ -237,6 +237,9 @@ pub mod cli;
 /// Writing new notes on behalf of an agent (`memory_remember`); never overwrites.
 pub mod notes;
 
+/// Explicit, durable note lifecycle events and forgetting tombstones.
+pub mod lifecycle;
+
 /// Scheduled jobs (`memory schedule once|run`): index, hygiene, missing and curation at intervals.
 pub mod schedule;
 

@@ -339,6 +339,17 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Permanently remove a note from this vault and its index, leaving a synced tombstone.
+    Forget {
+        /// File path relative to the notes root.
+        path: PathBuf,
+        /// Structured reason category; free-form text is not persisted.
+        #[arg(long, value_parser = ["owner-request", "duplicate", "obsolete", "privacy"])]
+        reason: String,
+        /// Required confirmation for permanent source-file removal.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 /// Output format for the projects/decisions/contexts commands.
@@ -1229,6 +1240,16 @@ async fn run(cli: Cli) -> Result<()> {
                 println!("saved: {}", path.display());
             }
         }
+        Command::Forget { path, reason, yes } => {
+            if !yes {
+                return Err(MemoryError::ConfigError(
+                    "forget permanently removes the source file; rerun with --yes after reviewing the path".into(),
+                ));
+            }
+            let shown = path.display().to_string();
+            engine.forget_note(&path, &reason).await?;
+            println!("forgotten: {shown}");
+        }
     }
     if engine.has_vector_search() {
         engine.save_snapshot().await;
@@ -1675,5 +1696,45 @@ mod remember_cli_tests {
         assert_eq!(template.as_deref(), Some("knowledge"));
         assert_eq!(values, ["ONE_SENTENCE_SUMMARY=A core claim"]);
         assert!(body.is_none());
+    }
+
+    #[test]
+    fn forget_requires_confirmation_and_a_structured_reason() {
+        let without_confirmation = Cli::try_parse_from([
+            "plaesy memory",
+            "forget",
+            "notes/a.md",
+            "--reason",
+            "owner-request",
+        ])
+        .expect("confirmation is checked during execution");
+        assert!(matches!(
+            without_confirmation.command,
+            Command::Forget { yes: false, .. }
+        ));
+
+        let with_confirmation = Cli::try_parse_from([
+            "plaesy memory",
+            "forget",
+            "notes/a.md",
+            "--reason",
+            "privacy",
+            "--yes",
+        ])
+        .expect("structured forget command parses");
+        assert!(matches!(
+            with_confirmation.command,
+            Command::Forget { yes: true, .. }
+        ));
+
+        assert!(Cli::try_parse_from([
+            "plaesy memory",
+            "forget",
+            "notes/a.md",
+            "--reason",
+            "free-form secret reason",
+            "--yes",
+        ])
+        .is_err());
     }
 }

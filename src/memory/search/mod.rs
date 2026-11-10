@@ -85,6 +85,9 @@ pub enum IndexOutcome {
 
     /// Content hash matched the stored document; nothing was written.
     Unchanged,
+
+    /// A vault tombstone suppresses this note and removed its indexed copy.
+    Forgotten,
 }
 
 /// Summary of a directory sync.
@@ -640,9 +643,23 @@ impl SearchEngine {
                 path.display()
             )));
         }
+        let file_content =
+            std::fs::read_to_string(path).map_err(|source| MemoryError::IoError {
+                path: path.display().to_string(),
+                source,
+            })?;
         let mut doc = self.extractor.extract_file(path)?;
         doc.source_path = PathBuf::from(rel.to_string_lossy().replace('\\', "/"));
         let key = doc.source_path.to_string_lossy().to_string();
+        let note_id = doc.metadata.get("id").and_then(serde_json::Value::as_str);
+        let forgotten = crate::memory::lifecycle::is_forgotten(root, &key, note_id)?
+            || crate::memory::lifecycle::content_is_forgotten(root, &file_content)?;
+        if forgotten {
+            if self.remove_path_locked(&key).await? {
+                return Ok(IndexOutcome::Forgotten);
+            }
+            return Ok(IndexOutcome::Unchanged);
+        }
         if let Some((_, Some(h))) = self.db.find_document(&key).await? {
             if Some(&h) == doc.hash.as_ref() {
                 return Ok(IndexOutcome::Unchanged);
@@ -705,6 +722,7 @@ impl SearchEngine {
                     summary.chunks += chunks;
                 }
                 Ok(IndexOutcome::Unchanged) => summary.unchanged += 1,
+                Ok(IndexOutcome::Forgotten) => summary.removed += 1,
                 Err(e) => {
                     self.metrics.record_error("index_file_failed");
                     summary.failed.push((rel, e.to_string()));
@@ -751,6 +769,149 @@ impl SearchEngine {
             self.watch_root().map(WriteLock::acquire).transpose()?
         };
         self.remove_path_locked(source_path).await
+    }
+
+    /// Forget a note: persist a synced tombstone, unlink its source, and remove its index entry.
+    ///
+    /// `relative_path` must be a path below the configured vault root. The tombstone is durable
+    /// before the unlink, so a crash or a Syncthing conflict copy cannot make an identified note
+    /// searchable again after the next index pass.
+    pub async fn forget_note(&self, relative_path: &Path, reason: &str) -> Result<()> {
+        use std::path::Component;
+
+        let root = self
+            .watch_root()
+            .ok_or_else(|| MemoryError::ConfigError("no notes root is configured".into()))?
+            .to_path_buf();
+        if relative_path.as_os_str().is_empty()
+            || relative_path.is_absolute()
+            || relative_path
+                .components()
+                .any(|part| !matches!(part, Component::Normal(_)))
+        {
+            return Err(MemoryError::ConfigError(
+                "forget requires a relative file path inside the vault".into(),
+            ));
+        }
+        let rel = relative_path.to_string_lossy().replace('\\', "/");
+        let _process_lock = if self.daemon_mode() {
+            None
+        } else {
+            Some(WriteLock::acquire(&root)?)
+        };
+        let real_root = std::fs::canonicalize(&root).map_err(|e| MemoryError::IoError {
+            path: root.display().to_string(),
+            source: e,
+        })?;
+        let source = real_root.join(relative_path);
+        let parent = source.parent().ok_or_else(|| {
+            MemoryError::ConfigError("forget path has no parent directory".into())
+        })?;
+        let real_parent = std::fs::canonicalize(parent).map_err(|e| MemoryError::IoError {
+            path: parent.display().to_string(),
+            source: e,
+        })?;
+        let notes_root = std::fs::canonicalize(&root).map_err(|e| MemoryError::IoError {
+            path: root.display().to_string(),
+            source: e,
+        })?;
+        if !real_parent.starts_with(&notes_root) {
+            return Err(MemoryError::ConfigError(format!(
+                "forget path resolves outside the vault: {}",
+                source.display()
+            )));
+        }
+        let file_name = source
+            .file_name()
+            .ok_or_else(|| MemoryError::ConfigError("forget path must name a file".into()))?;
+        let mut note_id = None;
+        let mut scope = Vec::new();
+        let mut forgotten_content = None;
+        match std::fs::symlink_metadata(&source) {
+            Ok(meta) if meta.file_type().is_file() => {
+                let real_source =
+                    std::fs::canonicalize(&source).map_err(|e| MemoryError::IoError {
+                        path: source.display().to_string(),
+                        source: e,
+                    })?;
+                if !real_source.starts_with(&notes_root) {
+                    return Err(MemoryError::ConfigError(format!(
+                        "forget path resolves outside the vault: {}",
+                        source.display()
+                    )));
+                }
+                let document = self.extractor.extract_file(&source)?;
+                forgotten_content = Some(std::fs::read_to_string(&source).map_err(|error| {
+                    MemoryError::IoError {
+                        path: source.display().to_string(),
+                        source: error,
+                    }
+                })?);
+                note_id = document
+                    .metadata
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned);
+                if let Some(value) = document.metadata.get("scope") {
+                    scope = match value {
+                        serde_json::Value::String(value) => vec![value.clone()],
+                        serde_json::Value::Array(values) => values
+                            .iter()
+                            .filter_map(serde_json::Value::as_str)
+                            .map(str::to_owned)
+                            .collect(),
+                        _ => Vec::new(),
+                    };
+                }
+            }
+            Ok(_) => {
+                return Err(MemoryError::ConfigError(format!(
+                    "forget refuses a non-regular file: {}",
+                    source.display()
+                )))
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(MemoryError::IoError {
+                    path: source.display().to_string(),
+                    source: error,
+                })
+            }
+        }
+        let intent = crate::memory::lifecycle::begin_forget(
+            &notes_root,
+            &rel,
+            note_id.as_deref(),
+            forgotten_content.as_deref(),
+            scope,
+            reason,
+        )?;
+        let dir =
+            crate::memory::fs_safety::DirHandle::open_nofollow(&real_parent).map_err(|e| {
+                MemoryError::IoError {
+                    path: real_parent.display().to_string(),
+                    source: e,
+                }
+            })?;
+        match dir.remove_file(Path::new(file_name)) {
+            Ok(()) => {
+                dir.sync().map_err(|e| MemoryError::IoError {
+                    path: real_parent.display().to_string(),
+                    source: e,
+                })?;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(MemoryError::IoError {
+                    path: source.display().to_string(),
+                    source: error,
+                })
+            }
+        }
+        self.remove_path_locked(&rel).await?;
+        crate::memory::lifecycle::complete_forget(&notes_root, intent)?;
+        self.save_snapshot_locked().await;
+        Ok(())
     }
 
     async fn remove_path_locked(&self, source_path: &str) -> Result<bool> {
@@ -1934,6 +2095,51 @@ mod tests {
             .is_empty());
         assert_eq!(e.hnsw.read().len(), 1);
         assert!(!e.remove_path("gone.md").await.expect("again"));
+    }
+
+    #[tokio::test]
+    async fn forget_removes_index_and_suppresses_synced_conflict_copies() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let root = dir.path();
+        let forgotten = "---\nid: stable-note-id\nscope: [project-a]\n---\n\n# Private\n\nsecret phrase to forget\n";
+        write(root, "private.md", forgotten);
+        write(root, "stay.md", "unrelated retained information\n");
+        let engine = engine(true).await;
+        engine.set_watch_root(root.to_path_buf());
+        engine.index_directory(root).await.expect("initial index");
+        assert_eq!(
+            engine
+                .keyword_search("secret phrase", 5)
+                .await
+                .expect("before forget")
+                .len(),
+            1
+        );
+
+        engine
+            .forget_note(Path::new("private.md"), "owner-request")
+            .await
+            .expect("forget note");
+        assert!(!root.join("private.md").exists());
+        assert!(engine
+            .keyword_search("secret phrase", 5)
+            .await
+            .expect("after forget")
+            .is_empty());
+        assert_eq!(engine.hnsw.read().len(), 1);
+
+        // A sync conflict copy retains the stable id and must not re-enter retrieval.
+        write(root, "private.sync-conflict.md", forgotten);
+        engine
+            .index_directory(root)
+            .await
+            .expect("resync conflict copy");
+        assert!(engine
+            .keyword_search("secret phrase", 5)
+            .await
+            .expect("after conflict sync")
+            .is_empty());
+        assert_eq!(engine.statistics().await.expect("stats").documents_total, 1);
     }
 
     #[tokio::test]

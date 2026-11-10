@@ -805,6 +805,17 @@ impl SearchEngine {
             )));
         }
         let path = dir.join(format!("{}.md", slugify(title)));
+        let relative = path
+            .strip_prefix(&root)
+            .map_err(|_| MemoryError::ConfigError("note destination escaped notes root".into()))?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let candidate_id = note.graph.as_ref().map(|graph| graph.id.as_str());
+        if crate::memory::lifecycle::is_forgotten(&root, &relative, candidate_id)? {
+            return Err(MemoryError::ConfigError(format!(
+                "cannot recreate forgotten note identity or path: {relative}"
+            )));
+        }
         let text = match markdown {
             Some(text) if text.trim().is_empty() => {
                 return Err(MemoryError::ConfigError(
@@ -819,6 +830,11 @@ impl SearchEngine {
             Some(text) => text.to_owned(),
             None => render(note, Utc::now().date_naive()),
         };
+        if crate::memory::lifecycle::content_is_forgotten(&root, &text)? {
+            return Err(MemoryError::ConfigError(format!(
+                "cannot recreate forgotten note content at: {relative}"
+            )));
+        }
         // Publish through a same-directory temporary file. On Linux, every step from here is
         // performed relative to a single O_NOFOLLOW directory descriptor (`DirHandle`) opened
         // once against `dir`: this closes the window between the `canonicalize` check above and
@@ -875,11 +891,6 @@ impl SearchEngine {
                 source: e,
             });
         }
-        let relative = path
-            .strip_prefix(&root)
-            .map_err(|_| MemoryError::ConfigError("published note escaped notes root".into()))?
-            .to_string_lossy()
-            .replace('\\', "/");
         // The outbox is durable before indexing starts. If the process dies after publication
         // (or during SQLite/HNSW replacement), startup reconciliation replays this path.
         self.database().enqueue_index(&relative).await?;
