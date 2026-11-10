@@ -2487,6 +2487,24 @@ mod tests {
             original
         );
 
+        let invalid_frontmatter_hash = engine
+            .fingerprint_note(Path::new("claim.md"))
+            .expect("fingerprint unchanged note");
+        let err = engine
+            .update_note(
+                Path::new("claim.md"),
+                &invalid_frontmatter_hash,
+                "---\nid: stable-note-id\ninvalid: [yaml\n---\n\nBody.\n",
+                "correction",
+            )
+            .await
+            .expect_err("invalid YAML front matter must be rejected");
+        assert!(err.to_string().contains("YAML parse error"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("claim.md")).unwrap(),
+            original
+        );
+
         write(root, "claim.md", "external concurrent edit\n");
         let err = engine
             .update_note(
