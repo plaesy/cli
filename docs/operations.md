@@ -168,13 +168,71 @@ Create the log directory, then load in the signed-in user's GUI domain with `lau
 
 Run `plaesy memory schedule once` manually before enabling the task and inspect its log. Scheduled execution inherits the selected user's vault configuration and file access.
 
-## 7. Backup and recovery
+## 7. Updating a Linux server from CI
+
+Deploy the Linux artifact from a successful CI run instead of rebuilding on the server. This keeps
+the server binary tied to a tested commit and avoids compiling alongside memory-intensive services.
+The CI artifact is retained for a limited time; use a published release for long-term downloads.
+
+On a machine with GitHub CLI, download and verify the artifact, then send its extracted binary to
+the server's persistent Plaesy state directory. Replace the placeholders with the full commit SHA,
+run ID, and SSH destination:
+
+```sh
+commit=<full-commit-sha>
+run_id=<successful-ci-run-id>
+server=<user>@<server>
+stage="${XDG_STATE_HOME:-$HOME/.local/state}/plaesy/deploy/$commit"
+mkdir -p "$stage"
+gh run download "$run_id" --repo plaesy/cli \
+  --name "plaesy-linux-x86_64-$commit" --dir "$stage"
+(cd "$stage" && sha256sum -c SHA256SUMS)
+tar -xzf "$stage/plaesy-linux-x86_64.tar.gz" -C "$stage"
+remote_state="$(ssh "$server" 'printf %s "${XDG_STATE_HOME:-$HOME/.local/state}/plaesy"')"
+remote_stage="$remote_state/deploy/$commit"
+ssh "$server" "mkdir -p '$remote_stage'"
+scp "$stage/plaesy" "$server:$remote_stage/plaesy"
+sha256sum "$stage/plaesy"
+ssh "$server" "sha256sum '$remote_stage/plaesy'"
+```
+
+Confirm the two binary hashes match. Then run this on the server, replacing the commit placeholder:
+
+```sh
+commit=<full-commit-sha>
+state="${XDG_STATE_HOME:-$HOME/.local/state}/plaesy"
+binary="$(bash -lc 'command -v plaesy')"
+candidate="$state/deploy/$commit/plaesy"
+old_sha="$(sha256sum "$binary" | cut -d' ' -f1)"
+backup="$state/backups/plaesy-${old_sha:0:16}"
+mkdir -p "$state/backups"
+if [ ! -e "$backup" ]; then
+  cp -p "$binary" "$backup"
+else
+  test "$(sha256sum "$backup" | cut -d' ' -f1)" = "$old_sha"
+fi
+install -m 0755 "$candidate" "$binary.new"
+cmp -s "$candidate" "$binary.new"
+mv -f "$binary.new" "$binary"
+sync -f "$binary"
+bash -lc 'command -v plaesy && plaesy --version'
+plaesy memory archive --help >/dev/null
+printf 'backup=%s\n' "$backup"
+```
+
+The candidate and replacement are placed on the same filesystem so the final rename is atomic.
+Keep the checksum-named backup until the new binary has been verified. To roll back, install that
+backup beside the active binary and rename it over the active path using the same steps. If the
+server also has a source checkout, fast-forward it separately with `git pull --ff-only`; inspect and
+preserve untracked datasets and benchmark output, and do not use `git clean`.
+
+## 8. Backup and recovery
 
 - The notes are the backup. Keep the vault in git or in a sync folder with history.
 - The index is rebuildable. Back it up only if re-indexing a large vault is slow for you.
 - Models are a cache. `scripts/install-model.sh` downloads them again.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -184,7 +242,7 @@ Run `plaesy memory schedule once` manually before enabling the task and inspect 
 | Hermes uses an unexpected database | process was started before the path change | restart the MCP client and check `plaesy memory --vault "<vault>" stats` |
 | Search is slow on first run | model load and first embedding pass | normal; later runs use the embedding cache |
 
-## 9. Checklist for a new machine
+## 10. Checklist for a new machine
 
 1. Install: use the Windows PowerShell or macOS/Linux release installer in the README.
 2. Models: run `bash scripts/install-model.sh` on macOS/Linux (add `--rerank` for optional reranking).
