@@ -231,9 +231,8 @@ impl SearchEngine {
             None => false,
         };
         let needs_reindex = embeddings.is_some() && db.has_unindexed_documents().await?;
-        let vector_index_ready = config.enable_vector_search
-            && embeddings.is_some()
-            && !needs_reindex;
+        let vector_index_ready =
+            config.enable_vector_search && embeddings.is_some() && !needs_reindex;
         let generation = db.generation().await?;
         let snapshot = if !vector_index_ready || model_changed {
             None
