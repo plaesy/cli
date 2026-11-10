@@ -29,6 +29,10 @@ struct LifecycleEvent {
     target_id: Option<String>,
     path_sha256: String,
     content_sha256: Option<String>,
+    #[serde(default)]
+    from_content_sha256: Option<String>,
+    #[serde(default)]
+    to_content_sha256: Option<String>,
     scope: Vec<String>,
     from_state: String,
     to_state: String,
@@ -38,6 +42,11 @@ struct LifecycleEvent {
 #[derive(Clone, Debug)]
 pub(crate) struct ForgetIntent {
     event_id: String,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct UpdateIntent {
+    event: LifecycleEvent,
 }
 
 fn sha256(value: &str) -> String {
@@ -228,6 +237,8 @@ pub(crate) fn begin_forget(
         target_id: note_id.map(str::to_owned),
         path_sha256: path_sha256.clone(),
         content_sha256: content_sha256.map(str::to_owned),
+        from_content_sha256: None,
+        to_content_sha256: None,
         scope,
         from_state: "active".into(),
         to_state: "forgotten".into(),
@@ -278,6 +289,8 @@ pub(crate) fn complete_forget(root: &Path, intent: ForgetIntent) -> Result<()> {
         target_id: None,
         path_sha256: String::new(),
         content_sha256: None,
+        from_content_sha256: None,
+        to_content_sha256: None,
         scope: Vec::new(),
         from_state: "active".into(),
         to_state: "forgotten".into(),
@@ -288,6 +301,69 @@ pub(crate) fn complete_forget(root: &Path, intent: ForgetIntent) -> Result<()> {
         &dir,
         &handle,
         &format!("{}.complete.json", intent.event_id),
+        &event,
+    )
+}
+
+/// Persist an update intent with hashes and state transition, without storing note content.
+pub(crate) fn begin_update(
+    root: &Path,
+    relative_path: &str,
+    note_id: Option<&str>,
+    scope: Vec<String>,
+    from_hash: &str,
+    to_hash: &str,
+    reason: &str,
+) -> Result<UpdateIntent> {
+    let evidence = match reason {
+        "correction" => "correction",
+        "new-evidence" => "new-evidence",
+        "clarification" => "clarification",
+        "other" => "other-owner-approved-update",
+        _ => {
+            return Err(MemoryError::ConfigError(
+                "update reason must be correction, new-evidence, clarification, or other".into(),
+            ));
+        }
+    };
+    let event = LifecycleEvent {
+        schema: 1,
+        event_id: Uuid::new_v4().to_string(),
+        operation: "update".into(),
+        phase: "intent".into(),
+        occurred_at: Utc::now().to_rfc3339(),
+        trigger: "plaesy memory update".into(),
+        target_id: note_id.map(str::to_owned),
+        path_sha256: sha256(relative_path),
+        content_sha256: None,
+        from_content_sha256: Some(from_hash.to_owned()),
+        to_content_sha256: Some(to_hash.to_owned()),
+        scope,
+        from_state: "current".into(),
+        to_state: "updated".into(),
+        evidence: evidence.into(),
+    };
+    let (dir, handle) = ensure_state_dir(root, EVENTS_DIR)?;
+    write_new_json(
+        &dir,
+        &handle,
+        &format!("{}.intent.json", event.event_id),
+        &event,
+    )?;
+    Ok(UpdateIntent { event })
+}
+
+/// Record that replacement and index reconciliation reached the completed state.
+pub(crate) fn complete_update(root: &Path, intent: UpdateIntent) -> Result<()> {
+    let mut event = intent.event;
+    event.phase = "complete".into();
+    event.occurred_at = Utc::now().to_rfc3339();
+    event.evidence = format!("{}; source and index update completed", event.evidence);
+    let (dir, handle) = ensure_state_dir(root, EVENTS_DIR)?;
+    write_new_json(
+        &dir,
+        &handle,
+        &format!("{}.complete.json", event.event_id),
         &event,
     )
 }

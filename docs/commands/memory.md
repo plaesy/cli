@@ -21,7 +21,7 @@ vault, so each device builds its own index from synchronized Markdown files.
 ## Commands
 
 The command groups are shown by `plaesy memory --help`. They cover indexing (`index`, `watch`),
-retrieval (`search`, `links`), lifecycle (`remember`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
+retrieval (`search`, `links`), lifecycle (`remember`, `fingerprint`, `update`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
 setup (`config`, `onboard`, `serve`, `schedule`), source-code lookup (`code-find`, `code-audit`),
 and project graph views (`projects`, `decisions`, `contexts`).
 
@@ -32,6 +32,7 @@ plaesy memory search --help
 plaesy memory hygiene --help
 plaesy memory curate --help
 plaesy memory remember --help
+plaesy memory update --help
 ```
 
 ## Curate memory
@@ -92,6 +93,25 @@ For a regular note, omit the body to read Markdown from stdin. `remember` create
 does not overwrite an existing note. The `--type`, `--id`, `--status`, `--project`, `--scope`, and
 `--supersedes` options attach graph metadata when appropriate; check `plaesy memory remember --help`
 for the required combinations.
+
+### Update a note
+
+Read the note's current fingerprint, review and prepare the complete replacement Markdown, then
+write it only if the source still matches that fingerprint:
+
+```sh
+plaesy memory --vault <vault-path> fingerprint knowledges/system-design.md
+plaesy memory --vault <vault-path> update knowledges/system-design.md \
+  --if-match <sha256-from-fingerprint> --reason new-evidence --yes < revised-note.md
+```
+
+`update` reads the replacement from stdin. Supported reason categories are `correction`,
+`new-evidence`, `clarification`, and `other`; free-form reason text is not stored. It refuses stale
+fingerprints and changes to a note's stable `id`, writes the replacement atomically, records an
+intent/completion event with old/new hashes, and refreshes the local index. The durable index
+outbox lets startup reconciliation finish if the process stops after the file replacement. The
+audit contains no note body. Keep the note's front matter in the replacement; invalid YAML is
+rejected before publication.
 
 ### Forget a note
 

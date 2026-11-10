@@ -149,6 +149,54 @@ fn git_revision(dir: &Path) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/// Hash one vault-relative note without opening the embedding or search engines.
+pub fn fingerprint_note_in_root(root: &Path, relative_path: &Path) -> Result<String> {
+    use std::path::Component;
+
+    if relative_path.as_os_str().is_empty()
+        || relative_path.is_absolute()
+        || relative_path
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_)))
+    {
+        return Err(MemoryError::ConfigError(
+            "fingerprint requires a relative file path inside the vault".into(),
+        ));
+    }
+    let real_root = std::fs::canonicalize(root).map_err(|source| MemoryError::IoError {
+        path: root.display().to_string(),
+        source,
+    })?;
+    let source = real_root.join(relative_path);
+    let meta = std::fs::symlink_metadata(&source).map_err(|source_error| MemoryError::IoError {
+        path: source.display().to_string(),
+        source: source_error,
+    })?;
+    if !meta.file_type().is_file() {
+        return Err(MemoryError::ConfigError(format!(
+            "fingerprint refuses a non-regular file: {}",
+            source.display()
+        )));
+    }
+    let real_source =
+        std::fs::canonicalize(&source).map_err(|source_error| MemoryError::IoError {
+            path: source.display().to_string(),
+            source: source_error,
+        })?;
+    if !real_source.starts_with(&real_root) {
+        return Err(MemoryError::ConfigError(format!(
+            "fingerprint path resolves outside the vault: {}",
+            source.display()
+        )));
+    }
+    let content =
+        std::fs::read_to_string(&real_source).map_err(|source_error| MemoryError::IoError {
+            path: real_source.display().to_string(),
+            source: source_error,
+        })?;
+    Ok(crate::memory::indexer::content_hash(&content))
+}
+
 /// Crash/power-loss recovery (startup reconciliation): remove leftover note-publication
 /// temporary files left behind by a process that died between creating `.{slug}.tmp-{pid}-{nonce}`
 /// and either linking it into place or deleting it (see `SearchEngine::remember`).
@@ -767,6 +815,219 @@ impl SearchEngine {
             self.watch_root().map(WriteLock::acquire).transpose()?
         };
         self.remove_path_locked(source_path).await
+    }
+
+    /// Hash the current note bytes for an optimistic, conflict-checked update.
+    pub fn fingerprint_note(&self, relative_path: &Path) -> Result<String> {
+        let root = self
+            .watch_root()
+            .ok_or_else(|| MemoryError::ConfigError("no notes root is configured".into()))?;
+        fingerprint_note_in_root(root, relative_path)
+    }
+
+    /// Replace a note only when its current SHA-256 matches the caller's reviewed version.
+    ///
+    /// The replacement is published atomically, recorded without retaining note content, and
+    /// reconciled with the local index through its durable indexing outbox.
+    pub async fn update_note(
+        &self,
+        relative_path: &Path,
+        expected_sha256: &str,
+        updated_content: &str,
+        reason: &str,
+    ) -> Result<String> {
+        use std::io::Write;
+        use std::path::Component;
+
+        if updated_content.trim().is_empty() || updated_content.len() > 256 * 1024 {
+            return Err(MemoryError::ConfigError(
+                "updated note must be non-empty and at most 256 KiB".into(),
+            ));
+        }
+        if expected_sha256.len() != 64
+            || !expected_sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(MemoryError::ConfigError(
+                "--if-match must be a 64-character SHA-256 hex digest".into(),
+            ));
+        }
+        if relative_path.as_os_str().is_empty()
+            || relative_path.is_absolute()
+            || relative_path
+                .components()
+                .any(|part| !matches!(part, Component::Normal(_)))
+        {
+            return Err(MemoryError::ConfigError(
+                "update requires a relative file path inside the vault".into(),
+            ));
+        }
+        let root = self
+            .watch_root()
+            .ok_or_else(|| MemoryError::ConfigError("no notes root is configured".into()))?
+            .to_path_buf();
+        let rel = relative_path.to_string_lossy().replace('\\', "/");
+        let _process_lock = if self.daemon_mode() {
+            None
+        } else {
+            Some(WriteLock::acquire(&root)?)
+        };
+        let notes_root = std::fs::canonicalize(&root).map_err(|source| MemoryError::IoError {
+            path: root.display().to_string(),
+            source,
+        })?;
+        let source = notes_root.join(relative_path);
+        let parent = source.parent().ok_or_else(|| {
+            MemoryError::ConfigError("update path has no parent directory".into())
+        })?;
+        let real_parent =
+            std::fs::canonicalize(parent).map_err(|source_error| MemoryError::IoError {
+                path: parent.display().to_string(),
+                source: source_error,
+            })?;
+        if !real_parent.starts_with(&notes_root) {
+            return Err(MemoryError::ConfigError(format!(
+                "update path resolves outside the vault: {}",
+                source.display()
+            )));
+        }
+        let meta =
+            std::fs::symlink_metadata(&source).map_err(|source_error| MemoryError::IoError {
+                path: source.display().to_string(),
+                source: source_error,
+            })?;
+        if !meta.file_type().is_file() {
+            return Err(MemoryError::ConfigError(format!(
+                "update refuses a non-regular file: {}",
+                source.display()
+            )));
+        }
+        let real_source =
+            std::fs::canonicalize(&source).map_err(|source_error| MemoryError::IoError {
+                path: source.display().to_string(),
+                source: source_error,
+            })?;
+        if !real_source.starts_with(&notes_root) {
+            return Err(MemoryError::ConfigError(format!(
+                "update path resolves outside the vault: {}",
+                source.display()
+            )));
+        }
+        let source_permissions = std::fs::metadata(&real_source)
+            .map_err(|source_error| MemoryError::IoError {
+                path: real_source.display().to_string(),
+                source: source_error,
+            })?
+            .permissions();
+        let current = self.extractor.extract_file(&real_source)?;
+        let current_hash = current
+            .hash
+            .as_deref()
+            .ok_or_else(|| MemoryError::ConfigError("could not fingerprint current note".into()))?;
+        if current_hash != expected_sha256 {
+            return Err(MemoryError::ConfigError(format!(
+                "note changed since it was reviewed (current SHA-256: {current_hash}); fingerprint it again before updating"
+            )));
+        }
+        let updated = self
+            .extractor
+            .extract(real_source.clone(), updated_content)?;
+        let current_id = current
+            .metadata
+            .get("id")
+            .and_then(serde_json::Value::as_str);
+        let updated_id = updated
+            .metadata
+            .get("id")
+            .and_then(serde_json::Value::as_str);
+        if current_id != updated_id {
+            return Err(MemoryError::ConfigError(
+                "update cannot add, remove, or change a note's stable id".into(),
+            ));
+        }
+        if crate::memory::lifecycle::is_forgotten(&notes_root, &rel, current_id)?
+            || crate::memory::lifecycle::content_hash_is_forgotten(&notes_root, current_hash)?
+        {
+            return Err(MemoryError::ConfigError(
+                "cannot update a note that has already been forgotten".into(),
+            ));
+        }
+        let updated_hash = updated
+            .hash
+            .as_deref()
+            .ok_or_else(|| MemoryError::ConfigError("could not fingerprint updated note".into()))?;
+        if crate::memory::lifecycle::content_hash_is_forgotten(&notes_root, updated_hash)? {
+            return Err(MemoryError::ConfigError(
+                "updated content matches a note that has already been forgotten".into(),
+            ));
+        }
+        if current_hash == updated_hash {
+            return Ok(current_hash.to_owned());
+        }
+        let scope = match current.metadata.get("scope") {
+            Some(serde_json::Value::String(value)) => vec![value.clone()],
+            Some(serde_json::Value::Array(values)) => values
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(str::to_owned)
+                .collect(),
+            _ => Vec::new(),
+        };
+        let intent = crate::memory::lifecycle::begin_update(
+            &notes_root,
+            &rel,
+            current_id,
+            scope,
+            current_hash,
+            updated_hash,
+            reason,
+        )?;
+        self.database().enqueue_index(&rel).await?;
+
+        let file_name = source
+            .file_name()
+            .ok_or_else(|| MemoryError::ConfigError("update path must name a file".into()))?;
+        let temp_name = format!(".plaesy-update-{}.tmp", uuid::Uuid::new_v4());
+        let dir = crate::memory::fs_safety::DirHandle::open_nofollow(&real_parent).map_err(
+            |source_error| MemoryError::IoError {
+                path: real_parent.display().to_string(),
+                source: source_error,
+            },
+        )?;
+        let write_result = (|| -> std::io::Result<()> {
+            let mut file = dir.create_new_file(Path::new(&temp_name))?;
+            file.write_all(updated_content.as_bytes())?;
+            file.sync_all()?;
+            file.set_permissions(source_permissions)?;
+            file.sync_all()?;
+            drop(file);
+            let latest = std::fs::read_to_string(&source)?;
+            if crate::memory::indexer::content_hash(&latest) != expected_sha256 {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    "note changed during update; replacement was not published",
+                ));
+            }
+            dir.replace_within(Path::new(&temp_name), Path::new(file_name))?;
+            dir.sync()?;
+            Ok(())
+        })();
+        if let Err(source_error) = write_result {
+            let _ = dir.remove_file(Path::new(&temp_name));
+            if source_error.kind() == std::io::ErrorKind::AlreadyExists {
+                return Err(MemoryError::ConfigError(
+                    "note changed during update; no replacement was published. Fingerprint it again before retrying".into(),
+                ));
+            }
+            return Err(MemoryError::IoError {
+                path: source.display().to_string(),
+                source: source_error,
+            });
+        }
+        self.index_file_at(&notes_root, &real_source, None).await?;
+        crate::memory::lifecycle::complete_update(&notes_root, intent)?;
+        self.database().dequeue_index(&rel).await?;
+        self.save_snapshot_locked().await;
+        Ok(updated_hash.to_owned())
     }
 
     /// Forget a note: persist a synced tombstone, unlink its source, and remove its index entry.
@@ -2133,6 +2394,132 @@ mod tests {
             .expect("after conflict sync")
             .is_empty());
         assert_eq!(engine.statistics().await.expect("stats").documents_total, 1);
+    }
+
+    #[tokio::test]
+    async fn update_is_conflict_checked_audited_and_reindexed() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let root = dir.path();
+        let original =
+            "---\nid: stable-note-id\nscope: [project-a]\n---\n\n# Claim\n\nRetiredParachute.\n";
+        let revised =
+            "---\nid: stable-note-id\nscope: [project-a]\n---\n\n# Claim\n\nUpdatedSeashell.\n";
+        write(root, "claim.md", original);
+        let engine = engine(true).await;
+        engine.set_watch_root(root.to_path_buf());
+        engine.index_directory(root).await.expect("initial index");
+
+        let reviewed_hash = engine
+            .fingerprint_note(Path::new("claim.md"))
+            .expect("fingerprint");
+        assert_eq!(
+            reviewed_hash,
+            crate::memory::indexer::content_hash(original)
+        );
+        let updated_hash = engine
+            .update_note(
+                Path::new("claim.md"),
+                &reviewed_hash,
+                revised,
+                "new-evidence",
+            )
+            .await
+            .expect("update");
+        assert_eq!(updated_hash, crate::memory::indexer::content_hash(revised));
+        assert_eq!(
+            std::fs::read_to_string(root.join("claim.md")).unwrap(),
+            revised
+        );
+        assert!(engine
+            .keyword_search("RetiredParachute", 5)
+            .await
+            .expect("old result")
+            .is_empty());
+        assert_eq!(
+            engine
+                .keyword_search("UpdatedSeashell", 5)
+                .await
+                .expect("new result")
+                .len(),
+            1
+        );
+
+        let events = root.join(".plaesy-memory").join("events");
+        let entries: Vec<_> = std::fs::read_dir(events)
+            .unwrap()
+            .collect::<std::io::Result<_>>()
+            .unwrap();
+        assert_eq!(entries.len(), 2);
+        let trace = entries
+            .iter()
+            .map(|entry| std::fs::read_to_string(entry.path()).unwrap())
+            .collect::<String>();
+        assert!(trace.contains(&reviewed_hash));
+        assert!(trace.contains(&updated_hash));
+        assert!(trace.contains("new-evidence"));
+        assert!(!trace.contains("UpdatedSeashell"));
+    }
+
+    #[tokio::test]
+    async fn update_rejects_a_changed_source_and_a_changed_stable_id() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let root = dir.path();
+        let original = "---\nid: stable-note-id\n---\n\n# Claim\n\nOriginal.\n";
+        write(root, "claim.md", original);
+        let engine = engine(true).await;
+        engine.set_watch_root(root.to_path_buf());
+        let reviewed_hash = engine
+            .fingerprint_note(Path::new("claim.md"))
+            .expect("fingerprint");
+
+        let err = engine
+            .update_note(
+                Path::new("claim.md"),
+                "short",
+                "invalid-hash replacement",
+                "correction",
+            )
+            .await
+            .expect_err("malformed fingerprints must be rejected");
+        assert!(err.to_string().contains("64-character SHA-256"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("claim.md")).unwrap(),
+            original
+        );
+
+        write(root, "claim.md", "external concurrent edit\n");
+        let err = engine
+            .update_note(
+                Path::new("claim.md"),
+                &reviewed_hash,
+                "my stale replacement",
+                "correction",
+            )
+            .await
+            .expect_err("stale fingerprint must be rejected");
+        assert!(err.to_string().contains("changed since it was reviewed"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("claim.md")).unwrap(),
+            "external concurrent edit\n"
+        );
+
+        let current_hash = engine
+            .fingerprint_note(Path::new("claim.md"))
+            .expect("new fingerprint");
+        let err = engine
+            .update_note(
+                Path::new("claim.md"),
+                &current_hash,
+                "---\nid: different-id\n---\n\nReplacement.\n",
+                "correction",
+            )
+            .await
+            .expect_err("stable identity must be preserved");
+        assert!(err.to_string().contains("stable id"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("claim.md")).unwrap(),
+            "external concurrent edit\n"
+        );
     }
 
     #[tokio::test]

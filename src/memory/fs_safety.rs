@@ -126,9 +126,37 @@ impl DirHandle {
         Ok(())
     }
 
+    /// Atomically replace `new_name` with `old_name` inside this directory.
+    #[cfg(target_os = "linux")]
+    pub fn replace_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
+        let c_old = to_cstring(old_name)?;
+        let c_new = to_cstring(new_name)?;
+        let rc = unsafe {
+            libc::renameat(
+                self.fd.as_raw_fd(),
+                c_old.as_ptr(),
+                self.fd.as_raw_fd(),
+                c_new.as_ptr(),
+            )
+        };
+        if rc != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+
     #[cfg(not(target_os = "linux"))]
     pub fn link_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         std::fs::hard_link(
+            self.child_path_fallback(old_name)?,
+            self.child_path_fallback(new_name)?,
+        )
+    }
+
+    /// Atomically replace `new_name` with `old_name` inside this directory.
+    #[cfg(not(target_os = "linux"))]
+    pub fn replace_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
+        std::fs::rename(
             self.child_path_fallback(old_name)?,
             self.child_path_fallback(new_name)?,
         )

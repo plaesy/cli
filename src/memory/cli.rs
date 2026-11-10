@@ -16,6 +16,8 @@
 //! memory serve [--mcp]            JSON service on stdin/stdout, or MCP server with --mcp
 //! memory serve --mcp --transport http --port 8080   MCP over Streamable HTTP
 //! memory remember "title" ["body"] [--template NAME] [--folder PATH]  write a note
+//! memory fingerprint PATH       print the current note SHA-256 before update
+//! memory update PATH --if-match SHA256 --reason correction --yes  replace from stdin
 //! memory schedule install|uninstall register or remove the per-user OS schedule
 //! ```
 
@@ -87,6 +89,8 @@ const SAMPLE_PER_KIND: usize = 5;
 enum Command {
     /// Sync a directory into the index (new/changed files in, deleted files out).
     Index { dir: Option<PathBuf> },
+    /// Print the SHA-256 of a note for a conflict-checked update.
+    Fingerprint { path: PathBuf },
     /// Search the index.
     Search {
         query: String,
@@ -339,6 +343,20 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Replace a note from stdin after confirming its reviewed SHA-256.
+    Update {
+        /// File path relative to the notes root.
+        path: PathBuf,
+        /// SHA-256 printed by `memory fingerprint`.
+        #[arg(long = "if-match")]
+        expected_sha256: String,
+        /// Structured reason category; free-form text is not persisted.
+        #[arg(long, value_parser = ["correction", "new-evidence", "clarification", "other"])]
+        reason: String,
+        /// Required confirmation for replacing the source file.
+        #[arg(long, required = true)]
+        yes: bool,
+    },
     /// Permanently remove a note from this vault and its index, leaving a synced tombstone.
     Forget {
         /// File path relative to the notes root.
@@ -347,7 +365,7 @@ enum Command {
         #[arg(long, value_parser = ["owner-request", "duplicate", "obsolete", "privacy"])]
         reason: String,
         /// Required confirmation for permanent source-file removal.
-        #[arg(long)]
+        #[arg(long, required = true)]
         yes: bool,
     },
 }
@@ -684,6 +702,11 @@ async fn run(cli: Cli) -> Result<()> {
         }
         return Ok(());
     }
+    if let Command::Fingerprint { path } = &cli.command {
+        let hash = crate::memory::search::fingerprint_note_in_root(&config.watch_dir, path)?;
+        println!("{hash}  {}", path.display());
+        return Ok(());
+    }
     let engine = SearchEngine::from_config(&config).await?;
     engine.set_watch_root(config.watch_dir.clone());
     match cli.command {
@@ -739,6 +762,10 @@ async fn run(cli: Cli) -> Result<()> {
             if !s.failed.is_empty() {
                 std::process::exit(2);
             }
+        }
+        Command::Fingerprint { path } => {
+            let hash = engine.fingerprint_note(&path)?;
+            println!("{hash}  {}", path.display());
         }
         Command::Search {
             query,
@@ -1250,6 +1277,25 @@ async fn run(cli: Cli) -> Result<()> {
             engine.forget_note(&path, &reason).await?;
             println!("forgotten: {shown}");
         }
+        Command::Update {
+            path,
+            expected_sha256,
+            reason,
+            yes: _,
+        } => {
+            use std::io::Read;
+            let mut updated = String::new();
+            std::io::stdin()
+                .read_to_string(&mut updated)
+                .map_err(|source| MemoryError::IoError {
+                    path: "<stdin>".into(),
+                    source,
+                })?;
+            let hash = engine
+                .update_note(&path, &expected_sha256, &updated, &reason)
+                .await?;
+            println!("updated: {} (sha256 {hash})", path.display());
+        }
     }
     if engine.has_vector_search() {
         engine.save_snapshot().await;
@@ -1700,18 +1746,14 @@ mod remember_cli_tests {
 
     #[test]
     fn forget_requires_confirmation_and_a_structured_reason() {
-        let without_confirmation = Cli::try_parse_from([
+        assert!(Cli::try_parse_from([
             "plaesy memory",
             "forget",
             "notes/a.md",
             "--reason",
             "owner-request",
         ])
-        .expect("confirmation is checked during execution");
-        assert!(matches!(
-            without_confirmation.command,
-            Command::Forget { yes: false, .. }
-        ));
+        .is_err());
 
         let with_confirmation = Cli::try_parse_from([
             "plaesy memory",
@@ -1736,5 +1778,53 @@ mod remember_cli_tests {
             "--yes",
         ])
         .is_err());
+    }
+
+    #[test]
+    fn update_requires_expected_hash_reason_and_confirmation() {
+        let parsed = Cli::try_parse_from([
+            "plaesy memory",
+            "update",
+            "knowledges/a.md",
+            "--if-match",
+            &"a".repeat(64),
+            "--reason",
+            "new-evidence",
+            "--yes",
+        ])
+        .expect("well-formed update parses");
+        assert!(matches!(parsed.command, Command::Update { yes: true, .. }));
+
+        assert!(Cli::try_parse_from([
+            "plaesy memory",
+            "update",
+            "knowledges/a.md",
+            "--if-match",
+            &"a".repeat(64),
+            "--reason",
+            "free-form",
+            "--yes",
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "plaesy memory",
+            "update",
+            "knowledges/a.md",
+            "--if-match",
+            &"a".repeat(64),
+            "--reason",
+            "new-evidence",
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn fingerprint_path_parses() {
+        assert!(matches!(
+            Cli::try_parse_from(["plaesy memory", "fingerprint", "knowledges/a.md"])
+                .expect("fingerprint parses")
+                .command,
+            Command::Fingerprint { .. }
+        ));
     }
 }
