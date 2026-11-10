@@ -58,6 +58,7 @@ pub fn remove_from_user_path(dir: &Path) -> Result<bool, InstallerError> {
 
 /// Drops every entry that names `dir`. Returns the new value when anything was removed.
 #[must_use]
+#[cfg(any(windows, test))]
 pub fn drop_path_entry(value: &str, dir: &Path, fold: bool) -> Option<String> {
     let target = dir.components().collect::<PathBuf>();
     let mut removed = false;
@@ -72,6 +73,7 @@ pub fn drop_path_entry(value: &str, dir: &Path, fold: bool) -> Option<String> {
     removed.then(|| kept.join(";"))
 }
 
+#[cfg(any(windows, test))]
 fn same_path_entry(entry: &str, target: &Path, fold: bool) -> bool {
     let candidate = entry.trim().trim_matches('"');
     if candidate.is_empty() {
@@ -90,6 +92,7 @@ fn same_path_entry(entry: &str, target: &Path, fold: bool) -> bool {
     }
 }
 
+#[cfg(any(windows, test))]
 fn expand_windows_environment(value: &str) -> String {
     let mut expanded = String::new();
     let mut rest = value;
