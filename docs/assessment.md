@@ -29,7 +29,7 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 | Evaluation | Retrieval recall, end-to-end QA accuracy, and token cost reported separately | Recall@k on LongMemEval-S, 94 questions only; no QA accuracy; no token cost | **Gap** |
 | Reproducibility | Others can rerun the numbers | `make lme`; full 470-question run not done | **Gap** |
 | Multilingual default | Non-English notes retrieve well | `multilingual-e5-small` is the code and onboarding default; MiniLM remains selectable; current evaluation is too small to establish broad superiority | Partial |
-| Maintenance | Hygiene is run regularly, not once | bounded `curate` report is available in CLI, MCP, and the in-process scheduler; OS task registration remains manual | Partial |
+| Maintenance | Hygiene is run regularly, not once | bounded `curate` report is available in CLI, MCP, and the in-process scheduler; cross-platform OS registration steps are documented, but still manual | Partial |
 
 ## What the research says, and how it applies
 
@@ -45,7 +45,7 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 1. **Measure secret-scan coverage.** A safe synthetic regression corpus now checks 11 positive signatures and 7 negative examples (precision/recall both 1.00 on that corpus). Expand it with reviewed, provider-documented edge cases and measure on representative notes; it is still not a replacement for a dedicated secret scanner.
 2. **Evaluate end-to-end.** Add QA accuracy and token cost next to Recall@k on the same 94 questions, and run the full 470 set. Report all three.
 3. **Validate the current default embedder.** The code and onboarding default is now E5; existing evaluation supports it for multilingual use, but the Indonesian probe has only eight queries. See [embedder-decision](eval/embedder-decision.md).
-4. **Automate scheduled review.** The CLI can run curation in-process; OS task/service registration is still manual. See [operations](operations.md).
+4. **Automate scheduled review setup.** Windows, systemd user timers, and macOS LaunchAgents now have documented registration steps. A native `schedule install`/`uninstall` flow is still absent. See [operations](operations.md).
 5. **Lifecycle operations.** Add safe, auditable update and archive/forget workflows before claiming full memory lifecycle coverage. `remember` is create-only.
 
 ## Not planned

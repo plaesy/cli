@@ -99,7 +99,65 @@ The server exposes eight tools: six read-only (`memory_search`, `memory_backlink
 - `hygiene`, `missing` and `curate` do not run unless listed. A vault with known findings would otherwise add a line to the log every hour.
 - Each run appends one line per job to `<root>\Plaesy\schedule.log`. A failing job is logged and the rest still run.
 - Last-run times are kept in the database (`schedule_runs`). A second `once` within the interval does nothing.
-- The installer does not register a scheduled task. To automate `once`, create a task in your operating system's scheduler that runs `plaesy memory --vault "<vault>" schedule once` at the interval you want, using the same user account and vault configuration as your interactive CLI. Run it manually first to check the config and output.
+The installer does not register OS scheduler jobs. Register a user-level task to call `schedule once`; internal job intervals decide what is due. Use the same OS account and vault configuration as the interactive CLI. These examples poll every 30 minutes, the shortest supported job interval.
+
+**Windows PowerShell (current user, while signed in):**
+
+```powershell
+$exe = (Get-Command plaesy).Source
+$taskRun = "`"$exe`" memory schedule once"
+schtasks.exe /Create /F /TN "Plaesy Memory Schedule" /TR $taskRun /SC MINUTE /MO 30 /IT
+schtasks.exe /Run /TN "Plaesy Memory Schedule"
+schtasks.exe /Query /TN "Plaesy Memory Schedule" /V /FO LIST
+```
+
+`/IT` runs in the interactive user session and avoids storing a password. Remove it with `schtasks.exe /Delete /F /TN "Plaesy Memory Schedule"`. See [Microsoft schtasks](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create).
+
+**Linux systemd user units:** create `~/.config/systemd/user/plaesy-memory.service`:
+
+```ini
+[Unit]
+Description=Run due Plaesy memory jobs
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/plaesy memory schedule once
+```
+
+Create `~/.config/systemd/user/plaesy-memory.timer`:
+
+```ini
+[Unit]
+Description=Schedule Plaesy memory jobs
+[Timer]
+OnCalendar=*-*-* *:0/30:00
+Persistent=true
+Unit=plaesy-memory.service
+[Install]
+WantedBy=timers.target
+```
+
+Enable with `systemctl --user daemon-reload && systemctl --user enable --now plaesy-memory.timer`; inspect with `systemctl --user list-timers plaesy-memory.timer` and `journalctl --user -u plaesy-memory.service`. On a headless VPS, enable lingering so the user manager starts without login: `sudo loginctl enable-linger "$USER"`. See [systemd.timer](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html).
+
+**macOS LaunchAgent:** save as `~/Library/LaunchAgents/com.plaesy.memory-schedule.plist`; replace paths with absolute paths for the user:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.plaesy.memory-schedule</string>
+  <key>ProgramArguments</key><array>
+    <string>/Users/your-name/.local/bin/plaesy</string>
+    <string>memory</string><string>schedule</string><string>once</string>
+  </array>
+  <key>StartInterval</key><integer>1800</integer>
+  <key>StandardOutPath</key><string>/Users/your-name/Library/Logs/plaesy-memory-schedule.log</string>
+  <key>StandardErrorPath</key><string>/Users/your-name/Library/Logs/plaesy-memory-schedule.log</string>
+</dict></plist>
+```
+
+Create the log directory, then load in the signed-in user's GUI domain with `launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.plaesy.memory-schedule.plist"`; inspect with `launchctl print "gui/$(id -u)/com.plaesy.memory-schedule"`, unload with `launchctl bootout "gui/$(id -u)/com.plaesy.memory-schedule"`. See [Apple LaunchAgents](https://developer.apple.com/documentation/servicemanagement/) and [launchd timed jobs](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html).
+
+Run `plaesy memory schedule once` manually before enabling the task and inspect its log. Scheduled execution inherits the selected user's vault configuration and file access.
 
 ## 7. Backup and recovery
 
