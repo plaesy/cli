@@ -1147,6 +1147,9 @@ async fn run(cli: Cli) -> Result<()> {
             }
         }
     }
+    if engine.has_vector_search() {
+        engine.save_snapshot().await;
+    }
     Ok(())
 }
 

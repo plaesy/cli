@@ -64,7 +64,7 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -126,6 +126,8 @@ pub struct SearchEngine {
     write_lock: tokio::sync::Mutex<()>,
     /// Database generation captured by the last HNSW snapshot (`u64::MAX` = none).
     snapshot_generation: AtomicU64,
+    /// False while stored documents need re-embedding or vector search is disabled.
+    vector_index_ready: AtomicBool,
     /// Folder the index mirrors; set once at startup so `statistics` can report coverage.
     watch_root: std::sync::OnceLock<PathBuf>,
     /// True when this engine is owned by the long-running daemon.
@@ -199,8 +201,8 @@ fn reconcile_stale_temp_files(root: &Path) {
 impl SearchEngine {
     /// Create a search engine over an open database.
     ///
-    /// The HNSW index is rebuilt from the embeddings stored in `db`, so SQLite
-    /// is the single source of truth. `embeddings = None` gives keyword-only operation.
+    /// The HNSW index is loaded or rebuilt only when the semantic index is current.
+    /// `embeddings = None` gives keyword-only operation without loading the vector index.
     ///
     /// # Errors
     ///
@@ -228,20 +230,34 @@ impl SearchEngine {
             }
             None => false,
         };
+        let needs_reindex = embeddings.is_some() && db.has_unindexed_documents().await?;
+        let vector_index_ready = config.enable_vector_search
+            && embeddings.is_some()
+            && !needs_reindex;
         let generation = db.generation().await?;
-        let snapshot = if model_changed {
+        let snapshot = if !vector_index_ready || model_changed {
             None
         } else {
             Self::load_snapshot(&db, dim, generation).await
         };
-        let (hnsw, snapshot_generation) = match snapshot {
-            Some(h) => (h, generation),
-            None => {
-                let mut h = HnswIndex::with_dimensions(db.hnsw_config().clone(), dim)?;
-                for (id, v) in db.all_embeddings().await? {
-                    h.insert(id, &v)?;
+        let (hnsw, snapshot_generation) = if !vector_index_ready {
+            (
+                HnswIndex::with_dimensions(db.hnsw_config().clone(), dim)?,
+                u64::MAX,
+            )
+        } else {
+            match snapshot {
+                Some(h) => (h, generation),
+                None => {
+                    tracing::warn!(
+                        "semantic index snapshot is missing or stale; rebuilding from stored embeddings"
+                    );
+                    let mut h = HnswIndex::with_dimensions(db.hnsw_config().clone(), dim)?;
+                    for (id, v) in db.all_embeddings().await? {
+                        h.insert(id, &v)?;
+                    }
+                    (h, u64::MAX)
                 }
-                (h, u64::MAX) // no valid snapshot: write one on the next save_snapshot()
             }
         };
         Ok(SearchEngine {
@@ -256,6 +272,7 @@ impl SearchEngine {
             metrics: Arc::new(Metrics::new()),
             write_lock: tokio::sync::Mutex::new(()),
             snapshot_generation: AtomicU64::new(snapshot_generation),
+            vector_index_ready: AtomicBool::new(vector_index_ready),
             watch_root: std::sync::OnceLock::new(),
             daemon_mode: std::sync::atomic::AtomicBool::new(false),
         })
@@ -314,6 +331,9 @@ impl SearchEngine {
 
     /// Snapshot publication for callers that already hold the process-wide writer lock.
     async fn save_snapshot_locked(&self) {
+        if !self.has_vector_search() {
+            return;
+        }
         let Some(path) = Self::snapshot_path(&self.db) else {
             return;
         };
@@ -408,6 +428,16 @@ impl SearchEngine {
             None
         };
         let mut engine = Self::new(db, embeddings, config.search.clone()).await?;
+        engine.set_watch_root(config.watch_dir.clone());
+        if engine.has_vector_search() {
+            // Persist a cold rebuild so ordinary read-only commands do not rebuild HNSW
+            // again on every process start.
+            engine.save_snapshot().await;
+        } else if config.search.enable_vector_search && engine.embeddings.is_some() {
+            tracing::warn!(
+                "semantic documents need an index sync; run `plaesy memory index` before semantic search"
+            );
+        }
         if config.search.rerank {
             let model = CrossEncoder::resolve_model_dir(config.search.rerank_model_dir.as_deref())
                 .ok_or_else(|| "no cross-encoder model found".to_string())
@@ -482,7 +512,9 @@ impl SearchEngine {
 
     /// Whether the semantic leg is available.
     pub fn has_vector_search(&self) -> bool {
-        self.config.enable_vector_search && self.embeddings.is_some()
+        self.config.enable_vector_search
+            && self.embeddings.is_some()
+            && self.vector_index_ready.load(Ordering::Acquire)
     }
 
     /// Search settings in effect.
@@ -685,8 +717,30 @@ impl SearchEngine {
                 summary.removed += 1;
             }
         }
+        if self.config.enable_vector_search && self.embeddings.is_some() {
+            let needs_reindex = self.db.has_unindexed_documents().await?;
+            if !needs_reindex && !self.vector_index_ready.load(Ordering::Acquire) {
+                self.rebuild_hnsw_from_storage().await?;
+                self.vector_index_ready.store(true, Ordering::Release);
+            }
+        }
         self.save_snapshot_locked().await;
         Ok(summary)
+    }
+
+    async fn rebuild_hnsw_from_storage(&self) -> Result<()> {
+        let _guard = self.write_lock.lock().await;
+        let dim = self
+            .embeddings
+            .as_ref()
+            .map(|engine| engine.dimension())
+            .unwrap_or(384);
+        let mut rebuilt = HnswIndex::with_dimensions(self.db.hnsw_config().clone(), dim)?;
+        for (id, vector) in self.db.all_embeddings().await? {
+            rebuilt.insert(id, &vector)?;
+        }
+        *self.hnsw.write() = rebuilt;
+        Ok(())
     }
 
     /// Remove a document (by stored relative path) from both stores.
@@ -1148,7 +1202,11 @@ impl SearchEngine {
     ) -> Result<Vec<SearchResult>> {
         if !self.has_vector_search() {
             return Err(MemoryError::FeatureNotEnabled {
-                feature: "embeddings".to_string(),
+                feature: if self.config.enable_vector_search && self.embeddings.is_some() {
+                    "semantic index (run `plaesy memory index` to synchronize it)".to_string()
+                } else {
+                    "embeddings".to_string()
+                },
             });
         }
         let timer = Timer::start();

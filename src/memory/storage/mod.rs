@@ -581,6 +581,19 @@ impl Database {
         Ok(changed)
     }
 
+    /// Whether any indexed document still needs a content or embedding sync.
+    pub async fn has_unindexed_documents(&self) -> Result<bool> {
+        let conn = self.conn.lock();
+        let pending = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM documents WHERE hash IS NULL)",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(db_err)?;
+        Ok(pending != 0)
+    }
+
     /// Atomically replace a document, its links, chunks, and embeddings.
     ///
     /// The document hash is committed only together with all chunks and vectors,
