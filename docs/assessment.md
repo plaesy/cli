@@ -45,8 +45,8 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 ## Improvements, in order of value
 
 1. **Measure secret-scan coverage.** A safe synthetic regression corpus now checks 13 positive cases and 9 negative examples (precision/recall both 1.00 on that corpus), including documented GitLab and Anthropic token prefixes. Expand with reviewed patterns for other providers and representative, sanitized notes; this remains a narrow heuristic regression check, not a replacement for a dedicated secret scanner.
-2. **Evaluate end-to-end.** Add generated-answer accuracy and token cost alongside retrieval metrics, and run a matched MiniLM comparison on the full 470 questions. Report each metric separately.
-3. **Validate the current default embedder.** The full-set E5 retrieval run and earlier subset comparison support keeping E5 as the practical default, but do not prove broad superiority; the Indonesian probe still has only eight queries. See [embedder-decision](eval/embedder-decision.md).
+2. **Evaluate end-to-end.** Add generated-answer accuracy, token cost, latency, and task success alongside retrieval metrics. The matched 470-question MiniLM/E5 retrieval comparison is complete; retrieval alone does not measure answer quality.
+3. **Validate the current default embedder.** The matched English retrieval results are close, while the Indonesian probe still has only eight queries. Keep E5 for its multilingual use case pending broader language coverage and end-to-end evidence. See [embedder-decision](eval/embedder-decision.md).
 4. **Verify scheduled review setup on each OS.** Native `schedule install/uninstall` now registers Windows Task Scheduler, systemd user timers, and macOS LaunchAgents, with a saved snapshot of the effective vault configuration. Validate install, repeated install, run, and uninstall on all three operating systems. Headless Linux also requires systemd user lingering. See [operations](operations.md).
 5. **Lifecycle evaluation.** Measure remember, update, archive, forget, stale-value leakage, and over-forgetting with operation-level traces. `forget` removes active vault content and index state, but Syncthing/Git history can retain older copies.
 
@@ -60,4 +60,4 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 ## Caveats
 
 - Competitor claims come from READMEs and search summaries. Items marked "unverified" were not read in full.
-- The probe for Indonesian is eight queries. The matched English comparison between MiniLM and E5 is 94 questions; one question is about 1.1 points. The full 470-question E5 run does not include a matching full-set MiniLM run.
+- The Indonesian probe is eight queries. The matched English comparison covers all 470 LongMemEval-S questions, but only measures retrieval; it does not establish answer quality, token cost, or performance across languages.

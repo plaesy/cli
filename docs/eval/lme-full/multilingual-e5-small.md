@@ -29,7 +29,7 @@
 
 ## Method and limits
 
-The full dataset was covered using the resumable checkpoint: the final checkpoint has 470 question results, and this run processed the 450 questions missing when it resumed. The harness reported session-level retrieval. This is a retrieval-only measurement; it does not include generated-answer accuracy, token cost, or a full-set MiniLM comparison. Do not compare these numbers directly with answer-quality scores from other benchmark harnesses.
+The full dataset was covered using the resumable checkpoint: the final checkpoint has 470 question results, and this run processed the 450 questions missing when it resumed. The harness reported session-level retrieval. This is a retrieval-only measurement; it does not include generated-answer accuracy or token cost. A matched full-set comparison with MiniLM is now available in the [embedder decision](../embedder-decision.md) and the [MiniLM run report](all-MiniLM-L6-v2.md). Do not compare these retrieval numbers directly with answer-quality scores from other benchmark harnesses.
 
 The run used the release `longmemeval` example with one worker. A fresh run can be reproduced after obtaining the dataset:
 

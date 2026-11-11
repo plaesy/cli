@@ -2,7 +2,7 @@
 
 Evaluation date: 2026-11-11. Implementation status checked: 2026-11-11. Scope: compare these two models only; Indonesian-specific models are outside this decision.
 
-Current implementation: `multilingual-e5-small` is the default in `EmbeddingConfig` and onboarding. `all-MiniLM-L6-v2` remains selectable for English-focused vaults. The full LongMemEval-S run below gives broader retrieval evidence for E5, but does not compare it with MiniLM on all 470 questions or prove broad superiority. Changing the default requires an explicit decision and a full re-index.
+Current implementation: `multilingual-e5-small` is the default in `EmbeddingConfig` and onboarding. `all-MiniLM-L6-v2` remains selectable for English-focused vaults. Both models now have matched retrieval runs on all 470 LongMemEval-S questions. The result is close and does not prove broad superiority or answer quality. Keep E5 as the default for its multilingual use case unless broader language and end-to-end evidence supports a change. Changing the default requires an explicit decision and a full re-index.
 
 ## Evidence and implementation history
 
@@ -19,20 +19,23 @@ The earlier decision record kept MiniLM because the English and Indonesian sampl
 Source: `docs/eval/lme-subset/all-MiniLM-L6-v2.txt`, `docs/eval/lme-subset/multilingual-e5-small.txt`.
 
 - One question is about 1.1 points at n = 94, and the 95% interval on R@5 is about ±3.5 points (README). The hybrid R@5 gap (0.968 vs 0.947, two questions) is inside that interval.
-- e5 is higher on R@1 and MRR. Those differences are also within noise at this size.
-- Verdict on English: no reliable difference.
+- At this sample size, the subset is not a reliable model comparison; use the matched full-set run below for the broader retrieval comparison.
+- The subset does not measure answer quality or cover Indonesian.
 
-## English: LongMemEval-S, full set (470 questions), E5
+## English: LongMemEval-S, matched full-set retrieval (470 questions)
 
-The full 470-question retrieval run for `multilingual-e5-small` completed on 2026-11-11. The checkpoint contains one result per dataset question. This run reports retrieval recall and MRR only; it does not measure answer accuracy or token cost. It also does not provide a full-set MiniLM comparison.
+Both runs cover the same 470 question IDs with the same cleaned dataset and retrieval harness; cross-encoder reranking was disabled in both. Each checkpoint has one result per question. The metrics are session-level retrieval recall and MRR, not generated-answer accuracy or token cost.
 
-| Mode | R@1 | R@3 | R@5 | R@10 | MRR |
-|---|---:|---:|---:|---:|---:|
-| keyword | 0.819 | 0.930 | 0.951 | 0.977 | 0.878 |
-| semantic | 0.885 | 0.962 | 0.977 | 0.989 | 0.925 |
-| hybrid | 0.891 | 0.955 | 0.972 | 0.996 | 0.928 |
+| Mode | Model | R@1 | R@3 | R@5 | R@10 | MRR |
+|---|---|---:|---:|---:|---:|---:|
+| keyword | multilingual-e5-small | 0.819 | 0.930 | 0.951 | 0.977 | 0.878 |
+| keyword | all-MiniLM-L6-v2 | 0.819 | 0.930 | 0.951 | 0.977 | 0.878 |
+| semantic | multilingual-e5-small | 0.885 | 0.962 | 0.977 | 0.989 | 0.925 |
+| semantic | all-MiniLM-L6-v2 | 0.887 | 0.966 | 0.977 | 0.989 | 0.927 |
+| hybrid | multilingual-e5-small | 0.891 | 0.955 | 0.972 | 0.996 | 0.928 |
+| hybrid | all-MiniLM-L6-v2 | 0.896 | 0.972 | 0.987 | 0.994 | 0.936 |
 
-Hybrid leads at R@1 and MRR; semantic leads at R@3 and R@5. These results alone do not establish which mode is best for answer quality. The benchmark output, including R@5 by question type, is recorded in [`lme-full/multilingual-e5-small.md`](lme-full/multilingual-e5-small.md).
+MiniLM is slightly ahead on semantic R@1/R@3 and hybrid R@1/R@3/R@5/MRR; E5 is slightly ahead on hybrid R@10. Keyword metrics are identical at the displayed precision. These differences are retrieval evidence for this English dataset only; they do not establish answer quality or broad model superiority. See the [E5 report](lme-full/multilingual-e5-small.md) and [MiniLM report](lme-full/all-MiniLM-L6-v2.md), including recall by question type.
 
 ## Indonesian: probe of 8 hand-labelled queries (`docs/eval/id-probe`)
 
@@ -52,6 +55,6 @@ Hybrid leads at R@1 and MRR; semantic leads at R@3 and R@5. These results alone 
 
 ## Open items
 
-- Run MiniLM on the same 470 questions with matching retrieval settings before drawing a full-set embedder comparison.
+- Measure generated-answer accuracy, token cost, latency, and end-to-end task success before changing the embedder default.
 - Tests that must pass before switching: `cargo test --test relevance_eval` with the chosen default.
 - Prefix behaviour: `multilingual-e5-small` gets `query: `/`passage: ` automatically (name contains "e5"), which matches its training.
