@@ -1,10 +1,10 @@
 # Assessment: is plaesy-memory the best option?
 
-Research checked: 2026-11-10. Implementation status updated: 2026-11-10. Scope: offline agent memory over a Markdown second brain, exposed over MCP and Hermes.
+Research checked: 2026-11-10. Implementation status updated: 2026-11-11. Scope: offline agent memory over a Markdown second brain, exposed over MCP and Hermes.
 
 ## Verdict
 
-**Not the best overall. It is the best of this set on provenance and offline guarantees, and behind on evaluation breadth, measured secret protection, and lifecycle coverage.**
+**Not the best overall. It is the best of this set on provenance and offline guarantees, and behind on measured secret protection, lifecycle coverage, and end-to-end answer evaluation.**
 
 Which "best" depends on the goal. For an owner who needs to cite and verify what an agent reads from their own notes, plaesy is the strongest choice in the research set (see [comparison](comparison.md)). For a general agent that must answer broad questions over many sources, QMD or a hosted memory service is stronger on raw retrieval, at the cost of an LLM in the loop.
 
@@ -26,9 +26,9 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 | Secrets | Keep credentials out of memory (JetBrains 2026 survey guidance) | `memory hygiene` checks credential assignments plus common AWS, GitHub, Slack, Stripe, Google, and OpenAI token formats; reports only kind/path/line. A synthetic unit corpus reports precision 1.00 (11/11) and recall 1.00 (11/11) against 7 negative examples; this is a narrow rule regression check, not real-world coverage evidence. | Partial |
 | Staleness | Mark unverified and obsolete facts | `last_verified`, STALE penalty, `status`, `valid_from`/`valid_to` | Met |
 | Lifecycle | Operation traces capture trigger, target, scope, state transition, and evidence; assess stale-value leakage and over-forgetting | CLI supports create, optimistic hash-checked update, non-destructive archive, and `forget`, with audit records and synced tombstones; lifecycle evaluation remains absent | **Partial** |
-| Evaluation | Retrieval recall, end-to-end QA accuracy, and token cost reported separately | Recall@k on LongMemEval-S, 94 questions only; no QA accuracy; no token cost | **Gap** |
-| Reproducibility | Others can rerun the numbers | `make lme`; full 470-question run not done | **Gap** |
-| Multilingual default | Non-English notes retrieve well | `multilingual-e5-small` is the code and onboarding default; MiniLM remains selectable; current evaluation is too small to establish broad superiority | Partial |
+| Evaluation | Retrieval recall, end-to-end QA accuracy, and token cost reported separately | Full-set (470-question) LongMemEval-S retrieval metrics are recorded for E5; no generated-answer accuracy or token cost | **Partial** |
+| Reproducibility | Others can rerun the numbers | Full-set E5 retrieval run completed on 2026-11-11; report includes the command and run context, but the dataset must be obtained separately | **Partial** |
+| Multilingual default | Non-English notes retrieve well | `multilingual-e5-small` is the code and onboarding default; full English retrieval results and a small Indonesian probe are available; MiniLM has no full-set comparison | Partial |
 | Maintenance | Hygiene is run regularly, not once | bounded `curate` report is available in CLI, MCP, and the in-process scheduler; `schedule install/uninstall` registers a per-user task on Windows, systemd Linux, and macOS | Partial: per-OS runtime coverage remains to verify |
 
 ## What the research says, and how it applies
@@ -45,8 +45,8 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 ## Improvements, in order of value
 
 1. **Measure secret-scan coverage.** A safe synthetic regression corpus now checks 11 positive signatures and 7 negative examples (precision/recall both 1.00 on that corpus). Expand it with reviewed, provider-documented edge cases and measure on representative notes; it is still not a replacement for a dedicated secret scanner.
-2. **Evaluate end-to-end.** Add QA accuracy and token cost next to Recall@k on the same 94 questions, and run the full 470 set. Report all three.
-3. **Validate the current default embedder.** The code and onboarding default is now E5; existing evaluation supports it for multilingual use, but the Indonesian probe has only eight queries. See [embedder-decision](eval/embedder-decision.md).
+2. **Evaluate end-to-end.** Add generated-answer accuracy and token cost alongside retrieval metrics, and run a matched MiniLM comparison on the full 470 questions. Report each metric separately.
+3. **Validate the current default embedder.** The full-set E5 retrieval run and earlier subset comparison support keeping E5 as the practical default, but do not prove broad superiority; the Indonesian probe still has only eight queries. See [embedder-decision](eval/embedder-decision.md).
 4. **Verify scheduled review setup on each OS.** Native `schedule install/uninstall` now registers Windows Task Scheduler, systemd user timers, and macOS LaunchAgents, with a saved snapshot of the effective vault configuration. Validate install, repeated install, run, and uninstall on all three operating systems. Headless Linux also requires systemd user lingering. See [operations](operations.md).
 5. **Lifecycle evaluation.** Measure remember, update, archive, forget, stale-value leakage, and over-forgetting with operation-level traces. `forget` removes active vault content and index state, but Syncthing/Git history can retain older copies.
 
@@ -60,4 +60,4 @@ Which "best" depends on the goal. For an owner who needs to cite and verify what
 ## Caveats
 
 - Competitor claims come from READMEs and search summaries. Items marked "unverified" were not read in full.
-- The probe for Indonesian is eight queries. The English comparison is 94 questions; one question is about 1.1 points.
+- The probe for Indonesian is eight queries. The matched English comparison between MiniLM and E5 is 94 questions; one question is about 1.1 points. The full 470-question E5 run does not include a matching full-set MiniLM run.
