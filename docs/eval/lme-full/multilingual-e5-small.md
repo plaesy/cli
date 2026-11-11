@@ -37,4 +37,4 @@ The run used the release `longmemeval` example with one worker. A fresh run can 
 cargo run --release --locked --example longmemeval -- <DATASET> --workers 1 --checkpoint docs/eval/lme-full/multilingual-e5-small.jsonl --out docs/eval/lme-full/multilingual-e5-small.json
 ```
 
-The benchmark output and checkpoint were verified on the Linux server. The checked-in report preserves the metrics and reproducibility command; the raw checkpoint and execution log are not included.
+The [machine-readable summary](multilingual-e5-small.json) and [470-question checkpoint](multilingual-e5-small.jsonl) preserve the aggregate metrics and per-question ranks. The server execution log is not included because it contains host-specific paths.
