@@ -31,7 +31,7 @@ valid_to:                # optional
 
 Rules that match the engine's behaviour:
 
-- Keep credentials out of notes. The index stores the text, and `memory_search` can return it to a model. `plaesy memory hygiene` reports likely API keys, passwords, bearer/access tokens, client secrets, private-key headers, and recognizable AWS, GitHub, Slack, Stripe, Google, and OpenAI token formats by file and line; it never includes matched values. It ignores fenced code examples and remains a heuristic, not a complete secret scanner. See the secret-scan item in [assessment](assessment.md).
+- Keep credentials out of notes. The index stores the text, and `memory_search` can return it to a model. `plaesy memory hygiene` reports likely API keys, passwords, bearer/access tokens, client secrets, private-key headers, and recognizable AWS, GitHub, GitLab, Slack, Stripe, Google, Anthropic, and OpenAI token formats by file and line; it never includes matched values. It ignores fenced code examples and remains a heuristic, not a complete secret scanner. Provider token formats change; the [GitLab token prefix reference](https://docs.gitlab.com/security/tokens/) and [Anthropic API-key example](https://docs.anthropic.com/en/docs/build-with-claude/claude-for-sheets) informed the current signatures. See the secret-scan item in [assessment](assessment.md).
 
 To inspect only likely credential findings in JSON:
 
@@ -99,6 +99,7 @@ The server exposes eight tools: six read-only (`memory_search`, `memory_backlink
 - `hygiene`, `missing` and `curate` do not run unless listed. A vault with known findings would otherwise add a line to the log every hour.
 - Each run appends one line per job to `<root>\Plaesy\schedule.log`. A failing job is logged and the rest still run.
 - Last-run times are kept in the database (`schedule_runs`). A second `once` within the interval does nothing.
+
 Install or remove a user-level OS task with the CLI. The command saves a private snapshot of the effective memory configuration, including the selected vault and database, so scheduled runs use the same settings even when the original terminal environment is gone:
 
 ```sh

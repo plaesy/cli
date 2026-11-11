@@ -216,6 +216,14 @@ fn provider_credential_kind(line: &str) -> Option<&'static str> {
         ),
         ("google_api_key", r"\bAIza[0-9A-Za-z_-]{35}\b"),
         (
+            "gitlab_token",
+            r"\b(?:glpat|gloas|gldt|glrt|glrtr|glcbt|glptt|glft|glimt|glagent|glwt|glsoat|glffct)-[A-Za-z0-9_-]{16,}\b",
+        ),
+        (
+            "anthropic_api_key",
+            r"\bsk-ant-api[0-9]{2}-[A-Za-z0-9_-]{20,}\b",
+        ),
+        (
             "openai_api_key",
             r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}\b",
         ),
@@ -804,6 +812,8 @@ mod tests {
             "xoxb-123456789012345678901234",
             "sk_live_12345678901234567890",
             "AIza01234567890123456789012345678901234",
+            "glpat-01234567890123456789",
+            "sk-ant-api03-0123456789abcdefghij",
             "sk-proj-012345678901234567890123456789012345",
         ]
         .join("\n");
@@ -819,6 +829,8 @@ mod tests {
                 "slack_token",
                 "stripe_secret_key",
                 "google_api_key",
+                "gitlab_token",
+                "anthropic_api_key",
                 "openai_api_key",
             ]
         );
@@ -839,6 +851,8 @@ mod tests {
             ("sk_live_12345678901234567890", true),
             ("sk_test_0123456789012345", true),
             ("AIza01234567890123456789012345678901234", true),
+            ("glpat-01234567890123456789", true),
+            ("sk-ant-api03-0123456789abcdefghij", true),
             ("sk-proj-012345678901234567890123456789012345", true),
             ("-----BEGIN PRIVATE KEY-----", true),
         ];
@@ -850,6 +864,8 @@ mod tests {
             "```text\nOPENAI_API_KEY=sk-example-secret-value\n```",
             "client_secret is the field name, not a value",
             "Bearer <access-token>",
+            "glpat-12345",
+            "sk-ant-api03-placeholder",
         ];
 
         let tp = positives
@@ -868,7 +884,7 @@ mod tests {
         eprintln!(
             "synthetic secret scan: TP={tp} FN={fn_} FP={fp} TN={tn}; precision={precision:.3}, recall={recall:.3}"
         );
-        assert_eq!((tp, fn_, fp, tn), (11, 0, 0, 7));
+        assert_eq!((tp, fn_, fp, tn), (13, 0, 0, 9));
         for (line, _) in positives {
             let findings = secret_references(line);
             assert_eq!(findings.len(), 1);
