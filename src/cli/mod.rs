@@ -2,7 +2,6 @@
 //! one module; the logic lives in the library modules, and these files parse arguments and print.
 
 pub mod advisor;
-pub mod agent_messages;
 pub mod analyze;
 pub mod common;
 pub mod decisions;
@@ -15,7 +14,9 @@ pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
+pub mod projects;
 pub mod reach;
+pub mod relay;
 pub mod sessions;
 pub mod status;
 pub mod tasks;
@@ -73,10 +74,12 @@ pub enum Command {
     Trim(trim::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
-    /// Durable, acknowledged direct messages between agents
-    AgentMessages(agent_messages::Args),
+    /// Durable, acknowledged direct messaging between agents
+    Relay(relay::Args),
     /// Manage local advisory claims on project files
     Files(files::Args),
+    /// Register and discover local Plaesy projects
+    Projects(projects::Args),
     /// Report and inspect self-declared agent session state
     Sessions(sessions::Args),
     /// Manage the local Markdown memory index and notes
@@ -126,8 +129,9 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
-        Command::AgentMessages(args) => agent_messages::run(&args),
+        Command::Relay(args) => relay::run(&args),
         Command::Files(args) => files::run(&args),
+        Command::Projects(args) => projects::run(&args),
         Command::Sessions(args) => sessions::run(&args),
         Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),

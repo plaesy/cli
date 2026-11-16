@@ -1,4 +1,4 @@
-//! CLI for durable direct messages between registered agent identities.
+//! CLI for durable direct relay messages between registered agent identities.
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use super::CliResult;
 #[command(arg_required_else_help = true)]
 pub struct Args {
     /// SQLite database file. Protect it as private project data.
-    #[arg(long, default_value = ".plaesy/agent-messages.sqlite")]
+    #[arg(long, default_value = ".plaesy/relay.sqlite")]
     db: PathBuf,
     #[command(subcommand)]
     command: Action,
@@ -48,7 +48,7 @@ pub fn run(args: &Args) -> CliResult {
     if let Some(parent) = args.db.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
     }
-    let mut store = crate::agent_messages::MessageStore::open(&args.db)?;
+    let mut store = crate::relay::MessageStore::open(&args.db)?;
     match &args.command {
         Action::Send { id, from, to, body } => println!(
             "{}",

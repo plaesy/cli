@@ -87,7 +87,7 @@ impl MessageStore {
     fn initialize(connection: Connection) -> Result<Self, MessageError> {
         connection.execute_batch(
             "PRAGMA foreign_keys=ON;
-             CREATE TABLE IF NOT EXISTS agent_messages (
+             CREATE TABLE IF NOT EXISTS relay_messages (
                id TEXT PRIMARY KEY,
                sender TEXT NOT NULL,
                recipient TEXT NOT NULL,
@@ -96,8 +96,8 @@ impl MessageStore {
                acknowledged_at TEXT,
                UNIQUE(sender, id)
              );
-             CREATE INDEX IF NOT EXISTS agent_messages_inbox
-               ON agent_messages(recipient, acknowledged_at, created_at);",
+             CREATE INDEX IF NOT EXISTS relay_messages_inbox
+               ON relay_messages(recipient, acknowledged_at, created_at);",
         )?;
         Ok(Self { connection })
     }
@@ -121,7 +121,7 @@ impl MessageStore {
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let existing: Option<Message> = tx.query_row(
-            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM agent_messages WHERE id=?1",
+            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM relay_messages WHERE id=?1",
             [id], row_to_message,
         ).optional()?;
         if let Some(message) = existing {
@@ -132,7 +132,7 @@ impl MessageStore {
             return Ok(message);
         }
         tx.execute(
-            "INSERT INTO agent_messages(id,sender,recipient,body,created_at) VALUES (?1,?2,?3,?4,?5)",
+            "INSERT INTO relay_messages(id,sender,recipient,body,created_at) VALUES (?1,?2,?3,?4,?5)",
             params![id, sender, recipient, body, created_at],
         )?;
         tx.commit()?;
@@ -153,7 +153,7 @@ impl MessageStore {
             return Err(MessageError::Invalid("inbox limit must be 1..=500"));
         }
         let mut statement = self.connection.prepare(
-            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM agent_messages WHERE recipient=?1 AND acknowledged_at IS NULL ORDER BY created_at,id LIMIT ?2",
+            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL ORDER BY created_at,id LIMIT ?2",
         )?;
         let rows = statement.query_map(params![recipient, limit as i64], row_to_message)?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
@@ -164,7 +164,7 @@ impl MessageStore {
         validate_id(id)?;
         validate_agent(recipient)?;
         let changed = self.connection.execute(
-            "UPDATE agent_messages SET acknowledged_at=?1 WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL",
+            "UPDATE relay_messages SET acknowledged_at=?1 WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL",
             params![chrono::Utc::now().to_rfc3339(), id, recipient],
         )?;
         Ok(changed == 1)
@@ -225,6 +225,36 @@ mod tests {
         assert!(store.acknowledge("m-1", "agent-b").unwrap());
         assert!(!store.acknowledge("m-1", "agent-b").unwrap());
         assert!(store.inbox("agent-b", 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn concurrent_acknowledgments_have_exactly_one_winner() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("messages.sqlite");
+        MessageStore::open(&path)
+            .unwrap()
+            .send("ack-race", "a", "b", "payload")
+            .unwrap();
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
+        let workers: Vec<_> = (0..2)
+            .map(|_| {
+                let path = path.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    let mut store = MessageStore::open(path).unwrap();
+                    barrier.wait();
+                    store.acknowledge("ack-race", "b").unwrap()
+                })
+            })
+            .collect();
+        barrier.wait();
+        let acknowledgments: Vec<_> = workers.into_iter().map(|w| w.join().unwrap()).collect();
+        assert_eq!(acknowledgments.iter().filter(|ack| **ack).count(), 1);
+        assert!(MessageStore::open(&path)
+            .unwrap()
+            .inbox("b", 10)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

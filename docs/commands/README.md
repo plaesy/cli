@@ -17,7 +17,9 @@ Command behavior and options are described in the pages below. The executable is
 | `loop` | [Run an iteration loop](loop.md) |
 | `mcp` | [MCP server](mcp.md) |
 | `memory` | [Memory subsystem CLI](memory.md) |
+| `projects` | [Local project registry](projects.md) |
 | `reach` | [External data sources](reach.md) |
+| `relay` | [Durable direct messaging between agents](relay.md) |
 | `repair` | [Repair installation](repair.md) |
 | `status` | [Status](status.md) |
 | `sessions` | [Session status registry](sessions.md) |

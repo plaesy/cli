@@ -147,6 +147,28 @@ pub fn list(root: &Path, include_stale: bool) -> Result<Vec<(Session, bool)>, Er
         Ok(out)
     })
 }
+/// List self-reported sessions across explicitly registered project roots.
+/// The project path is returned alongside each record; session JSON remains transcript-free.
+pub fn list_global(
+    project: Option<&str>,
+    include_stale: bool,
+) -> Result<Vec<(crate::projects::Project, Session, bool)>, Error> {
+    let projects = match project {
+        Some(selector) => {
+            vec![crate::projects::resolve(selector).map_err(|e| Error::Invalid(e.to_string()))?]
+        }
+        None => crate::projects::list().map_err(|e| Error::Invalid(e.to_string()))?,
+    };
+    let mut out = Vec::new();
+    for project in projects {
+        for (session, stale) in list(&project.path, include_stale)? {
+            out.push((project.clone(), session, stale));
+        }
+    }
+    out.sort_by(|a, b| (&a.0.id, &a.1.id).cmp(&(&b.0.id, &b.1.id)));
+    Ok(out)
+}
+
 /// Stop a session's record explicitly.
 pub fn stop(root: &Path, id: &str) -> Result<(), Error> {
     locked(root, |dir| {

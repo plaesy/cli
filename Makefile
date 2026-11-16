@@ -5,7 +5,7 @@ help:
 	@echo ""
 	@echo "  make build                 Debug build"
 	@echo "  make release               Optimised build"
-	@echo "  make reload                Build debug CLI and replace the user-installed binary"
+	@echo "  make reload                Build CLI and replace ~/.local/bin/plaesy with this checkout"
 	@echo "  make test                  Run all tests"
 	@echo "  make test-one TEST=name    Run tests matching name"
 	@echo "  make eval                  Relevance evaluation (Recall@3 / MRR), prints the table"

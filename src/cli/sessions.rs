@@ -13,6 +13,9 @@ pub enum Command {
     List {
         #[arg(long)]
         all: bool,
+        /// Limit discovery to a registered project ID or path.
+        #[arg(long)]
+        project: Option<String>,
     },
     /// Publish or update this session's declared status
     Status {
@@ -46,17 +49,33 @@ pub fn run(args: &Args) -> CliResult {
     let Some(command) = &args.command else {
         return super::print_group_help("sessions");
     };
-    let root = find_root()?;
     match command {
-        Command::List { all } => {
-            let list = crate::sessions::list(&root, *all)?;
+        Command::List { all, project } => {
+            let list = crate::sessions::list_global(project.as_deref(), *all)?;
+            let mut list: Vec<_> = list
+                .into_iter()
+                .map(|(project, session, stale)| (project.id, session, stale))
+                .collect();
+            if project.is_none() {
+                if let Ok(root) = find_root() {
+                    if !crate::projects::list()?.iter().any(|p| p.path == root) {
+                        list.extend(
+                            crate::sessions::list(&root, *all)?
+                                .into_iter()
+                                .map(|(session, stale)| ("current".to_owned(), session, stale)),
+                        );
+                    }
+                }
+            }
+            list.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.id.cmp(&b.1.id)));
             if list.is_empty() {
                 println!("No {}session records.", if *all { "" } else { "active " });
             }
-            for (s, stale) in list {
+            for (project_id, s, stale) in list {
                 println!(
-                    "{} [{}] agent={} state={} task={} files={} updated={} expires={}",
+                    "{} project={} [{}] agent={} state={} task={} files={} updated={} expires={}",
                     s.id,
+                    project_id,
                     if stale { "stale" } else { "active" },
                     s.agent,
                     s.state,
@@ -80,6 +99,7 @@ pub fn run(args: &Args) -> CliResult {
             files,
             ttl,
         } => {
+            let root = find_root()?;
             let s = crate::sessions::report(&root, id, agent, state, task.as_deref(), files, *ttl)?;
             println!(
                 "Reported session {}: {} (expires {})",
@@ -87,6 +107,7 @@ pub fn run(args: &Args) -> CliResult {
             );
         }
         Command::Heartbeat { id, ttl } => {
+            let root = find_root()?;
             let s = crate::sessions::heartbeat(&root, id, *ttl)?;
             println!(
                 "Heartbeat refreshed for {} (expires {})",
@@ -94,6 +115,7 @@ pub fn run(args: &Args) -> CliResult {
             );
         }
         Command::Stop { id } => {
+            let root = find_root()?;
             crate::sessions::stop(&root, id)?;
             println!("Stopped session record {id}");
         }
