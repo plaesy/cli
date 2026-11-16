@@ -536,7 +536,7 @@ Closes a query gap previously listed by `memory_missing`; a later failed search 
 ### Graph commands and remember
 
 The CLI also provides `projects`, `decisions`, `contexts`, and `remember`. See the
-[graph guide](graph.md) and [memory command reference](commands/memory.md) for their options and
+[graph guide](graph.md) and [memory command reference](../commands/memory.md) for their options and
 note-writing workflow.
 
 ---

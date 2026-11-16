@@ -155,7 +155,7 @@ fn numeric_satisfies(expected: &str, actual: &str) -> Numeric {
             _ => {
                 return Numeric::Problem(format!(
                     "units differ: expected {t_unit:?}, actual {a_unit:?}"
-                ))
+                ));
             }
         }
     }

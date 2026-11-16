@@ -168,7 +168,7 @@ pub async fn run(opts: OnboardOptions) -> Result<()> {
                 return Err(MemoryError::ConfigError(format!(
                     "notes folder not found: {}",
                     p.display()
-                )))
+                )));
             }
             None => ask.folder("Vault folder (the notes to index)")?,
         };

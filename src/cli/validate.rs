@@ -16,8 +16,7 @@ use crate::mdlint;
 use crate::tasks;
 use crate::validate::{self, ValidateError};
 
-const NO_RENDER_NOTICE: &str =
-    "[INFO] Structure only: no rendering check was run, so layout and visual output are not verified.";
+const NO_RENDER_NOTICE: &str = "[INFO] Structure only: no rendering check was run, so layout and visual output are not verified.";
 
 /// The validation targets, in the order `--list` shows them.
 const TARGETS: [(&str, &str); 11] = [
@@ -125,10 +124,10 @@ pub enum ValidateCommand {
 pub struct MarkdownArgs {
     /// Paths to lint (default: the repository root)
     pub paths: Vec<PathBuf>,
-    /// Config file (default: <repo>/.markdownlint.json, falling back to .markdownlintrc.json)
+    /// Config file (default: `<repo>/.markdownlint.json`, falling back to .markdownlintrc.json)
     #[arg(long, default_value = "")]
     pub config: String,
-    /// Ratchet baseline file (default: <repo>/.markdownlint-baseline.json)
+    /// Ratchet baseline file (default: `<repo>/.markdownlint-baseline.json`)
     #[arg(long, default_value = "")]
     pub baseline: String,
     /// Ignore the baseline and require zero violations
@@ -397,7 +396,9 @@ fn constitution_check(path: &Path) -> CliResult {
             println!("[✗] {e}");
             println!();
             println!("To fix:");
-            println!("1. Use a constitution template from your project, then fill every {{{{PLACEHOLDER}}}}");
+            println!(
+                "1. Use a constitution template from your project, then fill every {{{{PLACEHOLDER}}}}"
+            );
             println!(
                 "2. Mark each §1 dimension row yes/no; the table is the source of the active scope"
             );
@@ -441,7 +442,9 @@ fn memory_check(root: &Path) -> CliResult {
     println!("[!] Self-containment issues detected\n");
     println!("To fix:");
     println!("1. For content in ~/.claude/projects: Copy it into .plaesy/memory/");
-    println!("2. For external links: Replace with internal .plaesy/memory/ references (flat structure, no subfolders)");
+    println!(
+        "2. For external links: Replace with internal .plaesy/memory/ references (flat structure, no subfolders)"
+    );
     println!("3. Re-run this command after fixes");
     Err(format!(
         "self-containment issues detected in {} file(s)",
@@ -584,7 +587,9 @@ fn markdown_check(root: &Path, args: &MarkdownArgs) -> CliResult {
             println!("[OK] nothing to fix");
             return Ok(());
         }
-        println!("[✓] applied machine-fixable rules (MD009, MD010, MD012, MD022, MD031, MD032, MD047, MD058)");
+        println!(
+            "[✓] applied machine-fixable rules (MD009, MD010, MD012, MD022, MD031, MD032, MD047, MD058)"
+        );
     }
     let res = mdlint::lint(root, &paths, Some(&cfg), &[]).inspect_err(|e| println!("[✗] {e}"))?;
     println!(
@@ -665,7 +670,9 @@ fn markdown_check(root: &Path, args: &MarkdownArgs) -> CliResult {
                         .unwrap_or_default()
                         .to_string_lossy()
                 );
-                println!("Either fix them (plaesy validate markdown --fix, then by hand), or record the new");
+                println!(
+                    "Either fix them (plaesy validate markdown --fix, then by hand), or record the new"
+                );
                 println!(
                     "ceiling in the baseline file — never delete the baseline to make a run pass."
                 );
@@ -813,7 +820,9 @@ fn evals_check(root: &Path) -> CliResult {
     let (pass, fail, skip) = evals::summary(&outcomes);
     println!("\n{pass} pass, {fail} fail, {skip} skip");
     if skip > 0 {
-        println!("[SKIP] {skip} brief case(s) not run: PLAESY_EVAL_RUNNER is not set. No model behaviour was checked.");
+        println!(
+            "[SKIP] {skip} brief case(s) not run: PLAESY_EVAL_RUNNER is not set. No model behaviour was checked."
+        );
     }
     if fail > 0 {
         println!("[✗] evals failed");

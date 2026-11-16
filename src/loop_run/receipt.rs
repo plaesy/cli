@@ -18,9 +18,25 @@ use crate::checklist::{self, Checklist, CommandOutput, Item, Receipt, Status};
 
 /// Where an item's output is stored, relative to the project root. The path depends
 /// only on the task and item names, so it survives a task move.
-#[must_use]
-pub fn receipt_output_path(task: &str, item: &str) -> String {
-    format!(".plaesy/receipts/{task}/{item}.out")
+pub fn receipt_output_path(task: &str, item: &str) -> io::Result<String> {
+    fn valid_component(value: &str) -> bool {
+        !value.contains('/')
+            && !value.contains('\\')
+            && !value.contains('\0')
+            && matches!(
+                Path::new(value).components().next(),
+                Some(std::path::Component::Normal(_))
+            )
+            && Path::new(value).components().nth(1).is_none()
+    }
+
+    if !valid_component(task) || !valid_component(item) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "receipt task name and item id must be single path components",
+        ));
+    }
+    Ok(format!(".plaesy/receipts/{task}/{item}.out"))
 }
 
 fn ansi() -> &'static Regex {
@@ -81,12 +97,49 @@ pub fn output_sha256(path: &Path) -> io::Result<String> {
 ///
 /// The output file cannot be read.
 pub fn receipt_for(root: &Path, rel: &str, exit_code: i32) -> io::Result<Receipt> {
-    let sha256 = output_sha256(&root.join(rel))?;
+    let path = safe_receipt_path(root, rel)?;
+    let sha256 = output_sha256(&path)?;
     Ok(Receipt {
         output: rel.replace('\\', "/"),
         exit_code,
         sha256,
     })
+}
+
+fn validate_receipt_rel(rel: &str) -> io::Result<&Path> {
+    let path = Path::new(rel);
+    let mut components = path.components();
+    let valid = matches!(components.next(), Some(std::path::Component::Normal(p)) if p == ".plaesy")
+        && matches!(components.next(), Some(std::path::Component::Normal(p)) if p == "receipts")
+        && matches!(components.next(), Some(std::path::Component::Normal(_)))
+        && matches!(components.next(), Some(std::path::Component::Normal(name)) if name.to_string_lossy().ends_with(".out"))
+        && components.next().is_none()
+        && !rel.contains('\\');
+    if valid {
+        Ok(path)
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "receipt output must be .plaesy/receipts/<task>/<item>.out",
+        ))
+    }
+}
+
+fn safe_receipt_path(root: &Path, rel: &str) -> io::Result<PathBuf> {
+    let path = validate_receipt_rel(rel)?;
+    let root = root.canonicalize()?;
+    let full = root.join(path);
+    let parent = full
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "receipt path has no parent"))?;
+    let canonical_parent = parent.canonicalize()?;
+    if !canonical_parent.starts_with(&root) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "receipt parent resolves outside project root",
+        ));
+    }
+    Ok(full)
 }
 
 /// Rejects a passed item that has no receipt, or whose receipt names a missing output file.
@@ -103,13 +156,13 @@ pub fn check_receipts(
     for item in items.iter().filter(|i| i.status == Status::Passed) {
         match receipts.get(&item.id) {
             None => problems.push(format!("{}: no receipt", item.id)),
-            Some(rc) if !root.join(&rc.output).exists() => {
-                problems.push(format!(
-                    "{}: receipt output missing: {}",
+            Some(rc) => match safe_receipt_path(root, &rc.output) {
+                Ok(path) if path.exists() => {}
+                _ => problems.push(format!(
+                    "{}: receipt output missing or invalid: {}",
                     item.id, rc.output
-                ));
-            }
-            Some(_) => {}
+                )),
+            },
         }
     }
     if problems.is_empty() {
@@ -140,8 +193,9 @@ pub fn replay(
             item.id, result.exit_code, receipt.exit_code
         ));
     }
-    let sum = output_sha256(&root.join(&receipt.output))
-        .map_err(|e| format!("{}: output missing: {e}", item.id))?;
+    let path = safe_receipt_path(root, &receipt.output)
+        .map_err(|e| format!("{}: invalid receipt output: {e}", item.id))?;
+    let sum = output_sha256(&path).map_err(|e| format!("{}: output missing: {e}", item.id))?;
     if sum != receipt.sha256 {
         return Err(format!(
             "{}: output hash changed since the receipt was written",
@@ -164,22 +218,35 @@ pub fn settle(
     for index in 0..checklist.checklist.len() {
         let prior = checklist.checklist[index].receipt.clone();
         let item_id = checklist.checklist[index].id.clone();
-        let output_rel = receipt_output_path(task, &item_id);
+        let output_rel = match receipt_output_path(task, &item_id) {
+            Ok(path) => path,
+            Err(error) => {
+                fail(&mut checklist.checklist[index], now, error.to_string());
+                continue;
+            }
+        };
 
         let mut one = Checklist {
             id: checklist.id.clone(),
             checklist: vec![checklist.checklist[index].clone()],
         };
+        let mut output_error = None;
         checklist::run(
             &mut one,
             |cmd| {
                 let result = run(cmd)?;
-                let _ = write_output(root, &output_rel, &result.stdout);
+                if let Err(error) = write_output(root, &output_rel, &result.stdout) {
+                    output_error = Some(error);
+                }
                 Ok(result)
             },
             now,
         );
         checklist.checklist[index] = one.checklist.remove(0);
+        if let Some(error) = output_error {
+            fail(&mut checklist.checklist[index], now, error.to_string());
+            continue;
+        }
         if checklist.checklist[index].status != Status::Passed {
             continue;
         }
@@ -209,10 +276,15 @@ fn fail(item: &mut Item, now: DateTime<Utc>, message: String) {
 }
 
 fn write_output(root: &Path, rel: &str, out: &str) -> io::Result<()> {
-    let path: PathBuf = root.join(rel);
+    validate_receipt_rel(rel)?;
+    let root = root.canonicalize()?;
+    let path = root.join(rel);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
+    // Resolve the created parent and reject symlink escapes before opening output.
+    // This is not atomic against concurrent replacement.
+    let path = safe_receipt_path(&root, rel)?;
     fs::write(path, out)
 }
 
@@ -233,10 +305,101 @@ mod tests {
     }
 
     #[test]
+    fn unsafe_receipt_output_is_rejected_without_reading_outside_root() {
+        let root = tempfile::tempdir().unwrap();
+        for rel in [
+            "../../secret",
+            ".plaesy/receipts/task/../../secret.out",
+            "/etc/passwd",
+            ".plaesy/receipts/task/other.txt",
+            ".plaesy/receipts/task/item.out/extra",
+        ] {
+            assert!(
+                safe_receipt_path(root.path(), rel).is_err(),
+                "accepted {rel:?}"
+            );
+        }
+
+        let item = Item {
+            id: "C1".into(),
+            check: String::new(),
+            run: "true".into(),
+            expected: "pass".into(),
+            status: Status::Passed,
+            histories: Vec::new(),
+            receipt: None,
+            evidence: None,
+        };
+        let receipt = Receipt {
+            output: "../../secret".into(),
+            exit_code: 0,
+            sha256: String::new(),
+        };
+        assert!(replay(root.path(), &item, &receipt, &mut |_| {
+            Ok(CommandOutput {
+                exit_code: 0,
+                stdout: String::new(),
+            })
+        })
+        .unwrap_err()
+        .contains("invalid receipt output"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_receipt_directories_are_rejected() {
+        use std::os::unix::fs::symlink;
+
+        for link_component in ["receipts", "task"] {
+            let root = tempfile::tempdir().unwrap();
+            let outside = tempfile::tempdir().unwrap();
+            let receipts = root.path().join(".plaesy/receipts");
+            std::fs::create_dir_all(receipts.parent().unwrap()).unwrap();
+            if link_component == "receipts" {
+                symlink(outside.path(), &receipts).unwrap();
+            } else {
+                std::fs::create_dir(&receipts).unwrap();
+                symlink(outside.path(), receipts.join("task")).unwrap();
+            }
+
+            let rel = receipt_output_path("task", "C1").unwrap();
+            assert!(safe_receipt_path(root.path(), &rel).is_err());
+            assert!(outside.path().read_dir().unwrap().next().is_none());
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_output_rejects_symlinked_receipt_directories() {
+        use std::os::unix::fs::symlink;
+
+        for link_component in ["receipts", "task"] {
+            let root = tempfile::tempdir().unwrap();
+            let outside = tempfile::tempdir().unwrap();
+            let sentinel = outside.path().join("C1.out");
+            fs::write(&sentinel, "untouched").unwrap();
+            let receipts = root.path().join(".plaesy/receipts");
+            fs::create_dir_all(receipts.parent().unwrap()).unwrap();
+            if link_component == "receipts" {
+                symlink(outside.path(), &receipts).unwrap();
+            } else {
+                fs::create_dir(&receipts).unwrap();
+                symlink(outside.path(), receipts.join("task")).unwrap();
+            }
+
+            let rel = receipt_output_path("task", "C1").unwrap();
+            assert!(write_output(root.path(), &rel, "overwritten").is_err());
+            assert_eq!(fs::read_to_string(sentinel).unwrap(), "untouched");
+        }
+    }
+
+    #[test]
     fn receipt_output_path_depends_only_on_names() {
         assert_eq!(
-            receipt_output_path("auth", "C1"),
+            receipt_output_path("auth", "C1").unwrap(),
             ".plaesy/receipts/auth/C1.out"
         );
+        assert!(receipt_output_path("auth", "../outside").is_err());
+        assert!(receipt_output_path("../outside", "C1").is_err());
     }
 }

@@ -108,7 +108,7 @@ pub fn load(path: &Path) -> Result<Option<Settings>> {
             return Err(MemoryError::ConfigError(format!(
                 "cannot inspect {}: {error}",
                 path.display()
-            )))
+            )));
         }
     };
     if !metadata.file_type().is_file() {

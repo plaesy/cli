@@ -69,8 +69,12 @@ impl PlatformAdapter for BilibiliAdapter {
             "bili-api" => {
                 let action = opt_or(opts, "action", "search");
                 let url = match action {
-                    "search" => format!("https://api.bilibili.com/x/web-interface/search/type?keyword={query}&page=1"),
-                    "video" => format!("https://api.bilibili.com/x/web-interface/view?bvid={query}"),
+                    "search" => format!(
+                        "https://api.bilibili.com/x/web-interface/search/type?keyword={query}&page=1"
+                    ),
+                    "video" => {
+                        format!("https://api.bilibili.com/x/web-interface/view?bvid={query}")
+                    }
                     other => return Err(unknown_action(other, "bili-api")),
                 };
                 Ok(run_backend(

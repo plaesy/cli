@@ -134,7 +134,7 @@ pub(super) fn check(root: &Path, docs: &[StoredDocument]) -> Vec<Finding> {
 
 fn resolve_target(root: &Path, candidate: &Path) -> Option<String> {
     if !is_within(root, candidate) {
-        return Some("target escapes the indexed root".into());
+        return Some("target escapes the vault root".into());
     }
     let target = resolve_existing_target(candidate);
     let Some(target) = target else {
@@ -142,7 +142,7 @@ fn resolve_target(root: &Path, candidate: &Path) -> Option<String> {
     };
     let canonical = target.canonicalize().unwrap_or(target);
     if !is_within(root, &canonical) {
-        return Some("target resolves outside the indexed root".into());
+        return Some("target resolves outside the vault root".into());
     }
     None
 }

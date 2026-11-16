@@ -102,7 +102,7 @@ pub fn load(path: &Path) -> Result<Config, ConfigError> {
             return Err(ConfigError::Read {
                 path: path.to_path_buf(),
                 source,
-            })
+            });
         }
     };
     serde_json::from_str(&text).map_err(|source| ConfigError::Parse {

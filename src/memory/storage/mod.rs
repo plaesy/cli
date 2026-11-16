@@ -282,6 +282,15 @@ fn row_to_result(
     })
 }
 
+/// A metadata-only entry returned by indexed-note listing.
+#[derive(Clone, Debug)]
+pub struct ListedDocument {
+    /// Path relative to the indexed root.
+    pub path: String,
+    /// YAML frontmatter.
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
 /// A document as stored in the index.
 #[derive(Clone, Debug)]
 pub struct StoredDocument {
@@ -1101,6 +1110,70 @@ impl Database {
         Ok(out)
     }
 
+    /// List document metadata without loading note bodies, in stable path order.
+    pub async fn list_documents(
+        &self,
+        path_prefix: Option<&str>,
+        note_type: Option<&str>,
+        status: Option<&str>,
+        query: Option<&str>,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<ListedDocument>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn
+            .prepare(
+                "SELECT source_path, metadata FROM documents
+                 WHERE (?1 IS NULL OR substr(source_path, 1, length(?1)) = ?1)
+                   AND (?2 IS NULL OR lower(COALESCE(json_extract(metadata, '$.type'), json_extract(metadata, '$.note_type'), '')) = lower(?2))
+                   AND (?3 IS NULL OR lower(COALESCE(json_extract(metadata, '$.status'), '')) = lower(?3))
+                   AND (?4 IS NULL OR instr(lower(source_path), lower(?4)) > 0 OR instr(lower(body), lower(?4)) > 0)
+                 ORDER BY source_path LIMIT ?5 OFFSET ?6",
+            )
+            .map_err(db_err)?;
+        let rows = stmt
+            .query_map(
+                params![
+                    path_prefix,
+                    note_type,
+                    status,
+                    query,
+                    limit as i64,
+                    offset as i64
+                ],
+                |r| {
+                    let raw: String = r.get(1)?;
+                    Ok(ListedDocument {
+                        path: r.get(0)?,
+                        metadata: serde_json::from_str(&raw).unwrap_or_default(),
+                    })
+                },
+            )
+            .map_err(db_err)?;
+        rows.collect::<rusqlite::Result<Vec<_>>>().map_err(db_err)
+    }
+
+    /// Count indexed documents matching the list filters.
+    pub async fn count_documents(
+        &self,
+        path_prefix: Option<&str>,
+        note_type: Option<&str>,
+        status: Option<&str>,
+        query: Option<&str>,
+    ) -> Result<u64> {
+        let conn = self.conn.lock();
+        conn.query_row(
+            "SELECT COUNT(*) FROM documents
+             WHERE (?1 IS NULL OR substr(source_path, 1, length(?1)) = ?1)
+               AND (?2 IS NULL OR lower(COALESCE(json_extract(metadata, '$.type'), json_extract(metadata, '$.note_type'), '')) = lower(?2))
+               AND (?3 IS NULL OR lower(COALESCE(json_extract(metadata, '$.status'), '')) = lower(?3))
+               AND (?4 IS NULL OR instr(lower(source_path), lower(?4)) > 0 OR instr(lower(body), lower(?4)) > 0)",
+            params![path_prefix, note_type, status, query],
+            |r| r.get(0),
+        )
+        .map_err(db_err)
+    }
+
     /// Every stored document, ordered by path.
     pub async fn all_documents(&self) -> Result<Vec<StoredDocument>> {
         let conn = self.conn.lock();
@@ -1490,6 +1563,20 @@ pub struct ResultMeta {
     /// Lifecycle status, e.g. `active`, `superseded`, `deprecated`.
     pub status: Option<String>,
 
+    /// Tags explicitly declared by the source.
+    #[serde(default)]
+    pub tags: Vec<String>,
+
+    /// Project that owns the source, when declared.
+    pub project: Option<String>,
+
+    /// Scopes this source belongs to, when declared.
+    #[serde(default)]
+    pub scope: Vec<String>,
+
+    /// Explicit event date declared in source frontmatter.
+    pub event_date: Option<String>,
+
     /// First day the source's claims hold (`valid_from` in frontmatter), if declared.
     pub valid_from: Option<String>,
 
@@ -1612,6 +1699,68 @@ mod tests {
             ..DatabaseConfig::default()
         };
         Database::new(cfg).await.expect("open db")
+    }
+
+    #[tokio::test]
+    async fn list_documents_filters_counts_and_paginates_without_bodies() {
+        let db = mem_db().await;
+        for (path, kind) in [
+            ("notes/b.md", "decision"),
+            ("notes/a.md", "decision"),
+            ("other/c.md", "context"),
+        ] {
+            let mut document = doc(path, "body must not be returned");
+            document
+                .metadata
+                .insert("type".into(), serde_json::json!(kind));
+            db.insert_document(&document)
+                .await
+                .expect("insert document");
+        }
+
+        assert_eq!(
+            db.count_documents(Some("notes/"), Some("DECISION"), None, None)
+                .await
+                .expect("count"),
+            2
+        );
+        assert_eq!(
+            db.count_documents(Some("notes/"), Some("DECISION"), None, Some("BODY MUST"))
+                .await
+                .expect("query count"),
+            2
+        );
+        assert_eq!(
+            db.count_documents(Some("notes/"), Some("DECISION"), None, Some("no match"))
+                .await
+                .expect("empty query count"),
+            0
+        );
+        let body_filtered = db
+            .list_documents(
+                Some("notes/"),
+                Some("decision"),
+                None,
+                Some("BODY MUST"),
+                5,
+                0,
+            )
+            .await
+            .expect("body query");
+        assert_eq!(body_filtered.len(), 2);
+        let page = db
+            .list_documents(Some("notes/"), Some("decision"), None, None, 1, 1)
+            .await
+            .expect("list");
+        assert_eq!(page.len(), 1);
+        assert_eq!(page[0].path, "notes/b.md");
+        assert_eq!(
+            page[0]
+                .metadata
+                .get("type")
+                .and_then(serde_json::Value::as_str),
+            Some("decision")
+        );
     }
 
     #[test]

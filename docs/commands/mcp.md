@@ -59,4 +59,4 @@ A healthy server replies to `initialize` with `serverInfo` and to `tools/list` w
 - **Client shows no `plaesy` server.** Check that `plaesy` is on `PATH` and that `.mcp.json` contains the `plaesy` entry.
 - **A tool returns an error for a path.** Paths must be relative and stay inside `.plaesy/`; `analysis/` is read-only for MCP writes.
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

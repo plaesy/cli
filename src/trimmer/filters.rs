@@ -143,7 +143,9 @@ mod tests {
 
     #[test]
     fn git_log_keeps_one_line_per_commit() {
-        let input = lines("commit abcdef1234 (HEAD -> main)\nAuthor: me\nDate: today\n\n    Fix the parser\n    body text");
+        let input = lines(
+            "commit abcdef1234 (HEAD -> main)\nAuthor: me\nDate: today\n\n    Fix the parser\n    body text",
+        );
         let out = git_log(&input).unwrap();
         assert_eq!(out, ["commit abcdef1 (HEAD -> main)", "    Fix the parser"]);
     }

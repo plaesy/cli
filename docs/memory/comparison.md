@@ -40,7 +40,6 @@ Where plaesy is still ahead of Nexus Memory: **fully offline with zero required 
 
 If closing the gap with Nexus Memory specifically is the goal, the missing piece is auto-capture at the agent/protocol layer (writing frontmatter automatically after a turn, per the standing NN-01 rule that extraction must not live inside the Rust engine itself) — this was flagged as a future step in a prior round and remains undone.
 
-
 ## Practices the research converges on, and where we stand
 
 | Practice | Evidence | plaesy |

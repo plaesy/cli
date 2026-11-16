@@ -68,6 +68,7 @@ sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 toml = "0.8"
 tokenizers = { version = "0.23.2", default-features = false, features = ["fancy-regex"] }
+laya-decision = { path = "vendor/laya-decision", version = "=0.2.20" }
 
 # HTTP server for MCP Streamable HTTP transport (n8n, Dify, Kilo Code, Paperclip, etc.)
 axum = { version = "0.8", features = ["json"] }

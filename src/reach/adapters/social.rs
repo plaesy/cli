@@ -66,7 +66,7 @@ impl PlatformAdapter for TwitterAdapter {
                         return Err(ReachError::UnknownAction {
                             action: other.to_owned(),
                             context: "twitter-cli".to_owned(),
-                        })
+                        });
                     }
                 }
                 let mut env = Vec::new();

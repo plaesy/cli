@@ -223,7 +223,7 @@ fn parse_active_dimensions(body: &str) -> Result<Vec<String>, String> {
                 return Err(format!(
                     "§1 Active Dimensions cell for {:?} must be yes or no, got {:?}",
                     cells[0], cells[1]
-                ))
+                ));
             }
         }
     }

@@ -108,7 +108,7 @@ pub fn safe_folder(folder: &str) -> Result<PathBuf> {
             _ => {
                 return Err(MemoryError::ConfigError(format!(
                     "folder must be relative to the notes root without '..': {folder}"
-                )))
+                )));
             }
         }
     }
@@ -369,7 +369,7 @@ pub(crate) fn render_template(
             _ => {
                 return Err(MemoryError::ConfigError(format!(
                     "template '{template}' needs an explicit --folder (type '{note_type}')"
-                )))
+                )));
             }
         },
     };
@@ -595,7 +595,7 @@ impl WriteLock {
                     return Err(MemoryError::IoError {
                         path: path.display().to_string(),
                         source: e,
-                    })
+                    });
                 }
             }
         }
@@ -633,7 +633,9 @@ pub fn render(note: &NewNote, today: NaiveDate) -> String {
             let code = c as u32;
             let is_noncharacter = (0xFDD0..=0xFDEF).contains(&code) || (code & 0xFFFF) >= 0xFFFE;
             if is_noncharacter {
-                out.push_str(&format!("\\u{:04X}", code));
+                // YAML forbids Unicode noncharacters even in escaped form. Replace them with
+                // the standard replacement character so arbitrary titles remain parseable.
+                out.push('\u{FFFD}');
             } else if c.is_control() && c != '\u{0}' {
                 // '\u{0}' never reaches here since JSON already escaped it as \u0000.
                 out.push_str(&format!("\\x{:02X}", code));
@@ -834,12 +836,12 @@ impl SearchEngine {
             Some(text) if text.trim().is_empty() => {
                 return Err(MemoryError::ConfigError(
                     "rendered note must not be empty".into(),
-                ))
+                ));
             }
             Some(text) if text.len() > MAX_BODY_BYTES => {
                 return Err(MemoryError::ConfigError(format!(
                     "rendered note is larger than {MAX_BODY_BYTES} bytes"
-                )))
+                )));
             }
             Some(text) => text.to_owned(),
             None => render(note, Utc::now().date_naive()),

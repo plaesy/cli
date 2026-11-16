@@ -20,4 +20,4 @@ informational; a disabled provider does not make the doctor command fail.
 - `plaesy doctor web` — check one reach platform
 - `plaesy doctor --verbose` — include rate limits and cache stats
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

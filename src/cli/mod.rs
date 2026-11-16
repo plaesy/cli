@@ -1,19 +1,26 @@
 //! The `plaesy` command tree. Port of `scripts/cmd/plaesy` (Go, cobra). Each command group is
 //! one module; the logic lives in the library modules, and these files parse arguments and print.
 
+pub mod advisor;
+pub mod agent_messages;
 pub mod analyze;
 pub mod common;
+pub mod decisions;
 pub mod delegate;
 pub mod doctor;
+pub mod files;
 pub mod images;
+pub mod init;
 pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
 pub mod reach;
+pub mod sessions;
 pub mod status;
 pub mod tasks;
 pub mod tasks_create;
+pub mod tasks_issue;
 pub mod tasks_run;
 pub mod tasks_validate;
 pub mod trim;
@@ -34,8 +41,14 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Read-only model advice for comparing options and triaging tasks
+    Advisor(advisor::Args),
+    /// Typed, structured decisions using locally managed decision models
+    Decisions(decisions::Args),
     /// Show Plaesy CLI version and environment status
     Status,
+    /// Initialize project-local Plaesy metadata safely
+    Init(init::Args),
     /// Serve scoped list, read, and write tools for this project's .plaesy/ folder over MCP
     Mcp(mcp::Args),
     /// Install the plaesy CLI to a well-known bin directory
@@ -60,6 +73,12 @@ pub enum Command {
     Trim(trim::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
+    /// Durable, acknowledged direct messages between agents
+    AgentMessages(agent_messages::Args),
+    /// Manage local advisory claims on project files
+    Files(files::Args),
+    /// Report and inspect self-declared agent session state
+    Sessions(sessions::Args),
     /// Manage the local Markdown memory index and notes
     Memory(memory::Args),
     /// Task lifecycle under .plaesy/tasks/ (backlog/todo/doing/done/blocked)
@@ -91,7 +110,10 @@ pub fn print_group_help(name: &str) -> CliResult {
 /// The command fails. The caller prints the error and exits with status 1.
 pub fn run(cli: Cli) -> CliResult {
     match cli.command {
+        Command::Advisor(args) => advisor::run(&args),
+        Command::Decisions(args) => decisions::run(&args),
         Command::Status => status::run(),
+        Command::Init(args) => init::run(&args),
         Command::Mcp(args) => mcp::run(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
@@ -104,6 +126,9 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
+        Command::AgentMessages(args) => agent_messages::run(&args),
+        Command::Files(args) => files::run(&args),
+        Command::Sessions(args) => sessions::run(&args),
         Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),

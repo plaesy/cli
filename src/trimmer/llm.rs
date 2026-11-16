@@ -72,7 +72,9 @@ pub enum LlmError {
     AnnotationsNotFound(String),
     #[error("invalid annotations JSON: {0}")]
     InvalidAnnotations(String),
-    #[error("annotations were produced for {queued:?} but --path resolves to {target:?}: the segment indexes belong to the queued file, not this one (re-run `plaesy trim llm-queue --path {target}`)")]
+    #[error(
+        "annotations were produced for {queued:?} but --path resolves to {target:?}: the segment indexes belong to the queued file, not this one (re-run `plaesy trim llm-queue --path {target}`)"
+    )]
     WrongFile { queued: String, target: String },
     #[error("{0}")]
     Io(#[from] io::Error),

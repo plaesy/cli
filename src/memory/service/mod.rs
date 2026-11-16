@@ -207,8 +207,19 @@ async fn dispatch(
                 .get("expand_links")
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
+            let explain = req
+                .params
+                .get("explain")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
             let results = if expand {
-                engine.search_expanded(query, limit, mode, &filter).await?
+                engine
+                    .search_expanded_with_explain(query, limit, mode, &filter, explain)
+                    .await?
+            } else if explain {
+                engine
+                    .search_with_explain(query, limit, mode, &filter, true)
+                    .await?
             } else {
                 engine.search_with(query, limit, mode, &filter).await?
             };
@@ -444,6 +455,32 @@ mod tests {
         assert_eq!(hits[0]["confidence"], "FACT");
         assert_eq!(hits[0]["citation"]["file_path"], "a.md");
         assert_eq!(hits[0]["citation"]["line_range"], json!([1, 3]));
+    }
+
+    #[tokio::test]
+    async fn expanded_search_preserves_explain_in_service_response() {
+        let (e, dir) = engine_with_doc().await;
+        std::fs::write(
+            dir.path().join("a.md"),
+            "rollback procedure\n\nsee [[b]] for rollback steps\n",
+        )
+        .expect("write a");
+        std::fs::write(dir.path().join("b.md"), "rollback steps\n").expect("write b");
+        e.index_directory(dir.path()).await.expect("reindex");
+
+        let responses = roundtrip(
+            &e,
+            "{\"id\":9,\"method\":\"search\",\"params\":{\"query\":\"rollback\",\"mode\":\"keyword\",\"limit\":1,\"expand_links\":true,\"explain\":true}}\n",
+        )
+        .await;
+        let hits = responses[0].result.as_ref().expect("result")["hits"]
+            .as_array()
+            .expect("hits");
+        assert!(hits.len() >= 2, "direct and linked hits: {hits:?}");
+        assert!(
+            hits.iter().all(|hit| hit.get("explain").is_some()),
+            "{hits:?}"
+        );
     }
 
     #[tokio::test]

@@ -1,0 +1,80 @@
+loading /home/ubuntu/.local/share/plaesy/datasets/longmemeval_s_cleaned.json ...
+470 questions (of 500; stride 1; workers 1)
+embedding model: all-MiniLM-L6-v2
+rerank modes are skipped (no cross-encoder, or LME_SKIP_RERANK set)
+[10/470]    582s  hybrid R@5 so far 1.000
+[20/470]   1149s  hybrid R@5 so far 0.950
+[30/470]   1719s  hybrid R@5 so far 0.967
+[40/470]   2355s  hybrid R@5 so far 0.975
+[50/470]   2911s  hybrid R@5 so far 0.980
+[60/470]   3510s  hybrid R@5 so far 0.983
+loading /home/ubuntu/.local/share/plaesy/datasets/longmemeval_s_cleaned.json ...
+470 questions (of 500; stride 1; workers 2)
+resuming: 64 of 470 already in checkpoint
+embedding model: all-MiniLM-L6-v2
+rerank modes are skipped (no cross-encoder, or LME_SKIP_RERANK set)
+[10/406]    524s  hybrid R@5 so far 1.000
+[20/406]   1041s  hybrid R@5 so far 1.000
+[30/406]   1593s  hybrid R@5 so far 1.000
+[40/406]   2188s  hybrid R@5 so far 1.000
+[50/406]   2744s  hybrid R@5 so far 1.000
+[60/406]   3319s  hybrid R@5 so far 1.000
+[70/406]   3837s  hybrid R@5 so far 1.000
+[80/406]   4437s  hybrid R@5 so far 0.988
+loading /home/ubuntu/.local/share/plaesy/datasets/longmemeval_s_cleaned.json ...
+470 questions (of 500; stride 1; workers 1)
+resuming: 150 of 470 already in checkpoint
+embedding model: all-MiniLM-L6-v2
+rerank modes are skipped (no cross-encoder, or LME_SKIP_RERANK set)
+[10/320]    692s  hybrid R@5 so far 1.000
+[20/320]   1264s  hybrid R@5 so far 1.000
+[30/320]   1824s  hybrid R@5 so far 1.000
+[40/320]   2388s  hybrid R@5 so far 1.000
+[50/320]   3013s  hybrid R@5 so far 1.000
+[60/320]   3572s  hybrid R@5 so far 1.000
+[70/320]   4113s  hybrid R@5 so far 1.000
+[80/320]   4649s  hybrid R@5 so far 1.000
+[90/320]   5164s  hybrid R@5 so far 1.000
+loading /home/ubuntu/.local/share/plaesy/datasets/longmemeval_s_cleaned.json ...
+470 questions (of 500; stride 1; workers 2)
+resuming: 240 of 470 already in checkpoint
+embedding model: all-MiniLM-L6-v2
+rerank modes are skipped (no cross-encoder, or LME_SKIP_RERANK set)
+[10/230]    528s  hybrid R@5 so far 0.900
+[20/230]   1054s  hybrid R@5 so far 0.950
+[30/230]   1562s  hybrid R@5 so far 0.967
+[40/230]   2081s  hybrid R@5 so far 0.950
+[50/230]   2586s  hybrid R@5 so far 0.920
+[60/230]   3091s  hybrid R@5 so far 0.933
+[70/230]   3591s  hybrid R@5 so far 0.943
+[80/230]   4103s  hybrid R@5 so far 0.950
+[90/230]   4580s  hybrid R@5 so far 0.956
+[100/230]   5065s  hybrid R@5 so far 0.960
+[110/230]   5557s  hybrid R@5 so far 0.964
+[120/230]   6059s  hybrid R@5 so far 0.967
+[130/230]   6545s  hybrid R@5 so far 0.969
+[140/230]   7018s  hybrid R@5 so far 0.971
+[150/230]   7501s  hybrid R@5 so far 0.973
+[160/230]   7968s  hybrid R@5 so far 0.975
+[170/230]   8447s  hybrid R@5 so far 0.976
+[180/230]   8932s  hybrid R@5 so far 0.978
+[190/230]   9414s  hybrid R@5 so far 0.979
+[200/230]   9892s  hybrid R@5 so far 0.980
+[210/230]  10353s  hybrid R@5 so far 0.981
+[220/230]  10888s  hybrid R@5 so far 0.982
+[230/230]  11315s  hybrid R@5 so far 0.983
+
+LongMemEval-S retrieval, session level, 470 questions (model all-MiniLM-L6-v2)
+mode           R@1     R@3     R@5    R@10     MRR
+keyword      0.819   0.930   0.951   0.977   0.878
+semantic     0.887   0.966   0.977   0.989   0.927
+hybrid       0.896   0.972   0.987   0.994   0.936
+
+R@5 by question type
+  knowledge-update           n=72   keyword 1.000  semantic 1.000  hybrid 1.000
+  multi-session              n=121  keyword 0.975  semantic 0.983  hybrid 1.000
+  single-session-assistant   n=56   keyword 1.000  semantic 1.000  hybrid 1.000
+  single-session-preference  n=30   keyword 0.667  semantic 0.967  hybrid 0.967
+  single-session-user        n=64   keyword 1.000  semantic 0.969  hybrid 0.984
+  temporal-reasoning         n=127  keyword 0.921  semantic 0.953  hybrid 0.969
+wrote docs/eval/lme-full/all-MiniLM-L6-v2.json

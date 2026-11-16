@@ -3,6 +3,7 @@
 //! ```text
 //! memory index [DIR]              sync DIR (default: configured watch dir) into the index
 //! memory search "query" [-n 10]   hybrid/semantic/keyword search with citations
+//! memory list [--offset 0] [-n 50]  browse indexed note metadata without bodies
 //! memory links NOTE [--outgoing]  notes linking to NOTE (or linked from it)
 //! memory hygiene [DIR] [--project-root SLUG=PATH] [--json] stale notes, links, local paths
 //! memory curate [DIR] [--limit 20] [--project-root SLUG=PATH] [--json] read-only maintenance review
@@ -200,9 +201,45 @@ enum Command {
         /// Directory the notes live in (default: configured watch dir).
         dir: Option<PathBuf>,
     },
+    /// Show a paginated inventory of indexed notes (without note bodies).
+    List {
+        /// Skip this many matching notes.
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        /// Maximum notes to return.
+        #[arg(short = 'n', long, default_value_t = 50)]
+        limit: usize,
+        /// Match declared note type (e.g. decision, context, project).
+        #[arg(long = "type")]
+        note_type: Option<String>,
+        /// Match declared lifecycle status (e.g. active, archived, superseded).
+        #[arg(long)]
+        status: Option<String>,
+        /// Case-insensitive substring filter over note path and body (for browsing).
+        #[arg(long)]
+        query: Option<String>,
+        /// Only notes whose path starts with this prefix.
+        #[arg(long)]
+        path: Option<String>,
+        /// Output format.
+        #[arg(long, value_enum, default_value_t = GraphFormat::Text)]
+        format: GraphFormat,
+    },
+    /// Show recent hash-only lifecycle events (update, archive, forget).
+    History {
+        /// Maximum events to return (1–1000).
+        #[arg(short = 'n', long, default_value_t = 50)]
+        limit: usize,
+        /// Filter by lifecycle operation.
+        #[arg(long, value_parser = ["update", "archive", "forget"])]
+        operation: Option<String>,
+        /// Emit JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Show index statistics.
     Stats,
-    /// Watch a directory and keep the index current.
+    /// Watch a directory and keep the index current until Ctrl-C.
     Watch { dir: Option<PathBuf> },
     /// Print the effective configuration.
     Config {
@@ -221,6 +258,9 @@ enum Command {
         /// TCP port to listen on when `--transport http` is set (default: 8080).
         #[arg(long, default_value_t = 8080)]
         port: u16,
+        /// Require this bearer token for MCP HTTP requests. Alternatively set PLAESY_MCP_TOKEN.
+        #[arg(long)]
+        auth_token: Option<String>,
     },
     /// First-run setup: vault folder, settings.json, model download, first index.
     Onboard {
@@ -561,9 +601,11 @@ async fn run(cli: Cli) -> Result<()> {
         mcp,
         transport,
         port,
+        auth_token,
     } = cli.command
     {
-        return serve::run(config, mcp, transport, port).await;
+        let auth_token = auth_token.or_else(|| std::env::var("PLAESY_MCP_TOKEN").ok());
+        return serve::run(config, mcp, transport, port, auth_token).await;
     }
 
     if let Command::Schedule {
@@ -829,6 +871,7 @@ async fn run(cli: Cli) -> Result<()> {
                 min_trust,
                 include_inactive,
                 as_of,
+                ..SearchFilter::default()
             };
             let mode = match mode {
                 Mode::Hybrid => SearchMode::Hybrid,
@@ -836,7 +879,9 @@ async fn run(cli: Cli) -> Result<()> {
                 Mode::Keyword => SearchMode::Keyword,
             };
             let results = if expand_links {
-                engine.search_expanded(&query, limit, mode, &filter).await?
+                engine
+                    .search_expanded_with_explain(&query, limit, mode, &filter, explain)
+                    .await?
             } else {
                 engine
                     .search_with_explain(&query, limit, mode, &filter, explain)
@@ -915,14 +960,36 @@ async fn run(cli: Cli) -> Result<()> {
             strict,
             strict_facts,
         } => {
-            let root = dir.unwrap_or_else(|| config.watch_dir.clone());
-            if root.is_dir() {
-                engine.index_directory(&root).await?; // audit what is on disk now
+            let vault_root =
+                config
+                    .watch_dir
+                    .canonicalize()
+                    .map_err(|source| MemoryError::IoError {
+                        path: config.watch_dir.display().to_string(),
+                        source,
+                    })?;
+            let requested_scope = dir.unwrap_or_else(|| vault_root.clone());
+            let scope = requested_scope
+                .canonicalize()
+                .map_err(|source| MemoryError::IoError {
+                    path: requested_scope.display().to_string(),
+                    source,
+                })?;
+            if !scope.is_dir() || !scope.starts_with(&vault_root) {
+                return Err(MemoryError::ConfigError(format!(
+                    "hygiene directory must be inside the configured vault: {}",
+                    scope.display()
+                )));
             }
+            let relative_scope = scope
+                .strip_prefix(&vault_root)
+                .map_err(|_| MemoryError::ConfigError("invalid hygiene scope".into()))?;
             let project_roots = parse_project_roots(&project_roots)?;
             let report = engine
                 .hygiene(&HygieneOptions {
-                    root: root.is_dir().then_some(root),
+                    root: Some(vault_root),
+                    scope: (!relative_scope.as_os_str().is_empty())
+                        .then(|| relative_scope.to_path_buf()),
                     project_roots,
                     ..HygieneOptions::default()
                 })
@@ -1061,6 +1128,118 @@ async fn run(cli: Cli) -> Result<()> {
                             println!("  {kind}: {n}");
                         }
                     }
+                }
+            }
+        }
+        Command::List {
+            offset,
+            limit,
+            note_type,
+            status,
+            query,
+            path,
+            format,
+        } => {
+            if limit == 0 || limit > 1000 {
+                return Err(MemoryError::ConfigError(
+                    "list limit must be between 1 and 1000".into(),
+                ));
+            }
+            let database = engine.database();
+            let total = database
+                .count_documents(
+                    path.as_deref(),
+                    note_type.as_deref(),
+                    status.as_deref(),
+                    query.as_deref(),
+                )
+                .await?;
+            let page = database
+                .list_documents(
+                    path.as_deref(),
+                    note_type.as_deref(),
+                    status.as_deref(),
+                    query.as_deref(),
+                    limit,
+                    offset,
+                )
+                .await?;
+            match format {
+                GraphFormat::Json => {
+                    let items: Vec<_> = page.iter().map(|doc| serde_json::json!({
+                        "path": doc.path,
+                        "title": doc.path.rsplit('/').next().unwrap_or(&doc.path),
+                        "type": doc.metadata.get("type").or_else(|| doc.metadata.get("note_type")),
+                        "project": doc.metadata.get("project"),
+                        "scope": doc.metadata.get("scope"),
+                        "tags": doc.metadata.get("tags"),
+                    })).collect();
+                    println!(
+                        "{}",
+                        serde_json::json!({"total": total, "offset": offset, "limit": limit, "items": items})
+                    );
+                }
+                GraphFormat::Text => {
+                    for doc in &page {
+                        let kind = doc
+                            .metadata
+                            .get("type")
+                            .or_else(|| doc.metadata.get("note_type"))
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-");
+                        println!("{}\t{}", doc.path, kind);
+                    }
+                    println!("showing {} of {total} (offset {offset})", page.len());
+                }
+            }
+        }
+        Command::History {
+            limit,
+            operation,
+            json,
+        } => {
+            if !(1..=1000).contains(&limit) {
+                return Err(MemoryError::ConfigError(
+                    "history limit must be between 1 and 1000".into(),
+                ));
+            }
+            let events =
+                crate::memory::lifecycle::history(&config.watch_dir, limit, operation.as_deref())?;
+            if json {
+                let output = serde_json::to_string_pretty(&events)
+                    .map_err(|error| MemoryError::SerializationError(error.to_string()))?;
+                println!("{output}");
+            } else if events.is_empty() {
+                println!("no lifecycle events");
+            } else {
+                for event in events {
+                    println!(
+                        "{}\t{}\t{}\t{} -> {}\t{}",
+                        event
+                            .get("occurred_at")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-"),
+                        event
+                            .get("operation")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-"),
+                        event
+                            .get("phase")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-"),
+                        event
+                            .get("from_state")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-"),
+                        event
+                            .get("to_state")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-"),
+                        event
+                            .get("evidence")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("-")
+                    );
                 }
             }
         }

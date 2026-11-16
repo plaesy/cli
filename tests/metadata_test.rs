@@ -106,6 +106,62 @@ async fn tier_filter_uses_frontmatter_and_path() {
 }
 
 #[tokio::test]
+async fn project_filter_limits_results_to_owner_and_shared_scope() {
+    let (e, dir) = vault().await;
+    write(
+        dir.path(),
+        "20-semantic/studio-a.md",
+        "---\ntier: semantic\nproject: studio-a\n---\n# Studio A\n\nThe deploy ritual is project Alpha.\n",
+    );
+    write(
+        dir.path(),
+        "20-semantic/shared.md",
+        "---\ntier: semantic\nscope: [studio-a, studio-b]\n---\n# Shared\n\nThe deploy ritual is shared across projects.\n",
+    );
+    write(
+        dir.path(),
+        "20-semantic/studio-b.md",
+        "---\ntier: semantic\nproject: studio-b\n---\n# Studio B\n\nThe deploy ritual is project Beta.\n",
+    );
+    e.index_directory(dir.path()).await.expect("reindex");
+    let results = e
+        .search_with(
+            "deploy ritual",
+            20,
+            SearchMode::Keyword,
+            &SearchFilter {
+                project: Some("STUDIO-A".into()),
+                ..SearchFilter::default()
+            },
+        )
+        .await
+        .expect("project-scoped search");
+    let got = paths(&results);
+    assert!(got.contains(&"20-semantic/studio-a.md".into()));
+    assert!(got.contains(&"20-semantic/shared.md".into()));
+    assert!(!got.contains(&"20-semantic/studio-b.md".into()));
+    assert!(results.iter().all(|result| {
+        CitationBuilder::new()
+            .build(result)
+            .is_ok_and(|citation| citation.to_string().contains(&result.source_path))
+    }));
+
+    let unknown = e
+        .search_with(
+            "deploy ritual",
+            20,
+            SearchMode::Keyword,
+            &SearchFilter {
+                project: Some("unknown".into()),
+                ..SearchFilter::default()
+            },
+        )
+        .await
+        .expect("unknown project search");
+    assert!(unknown.is_empty());
+}
+
+#[tokio::test]
 async fn superseded_hidden_unless_requested() {
     let (e, _d) = vault().await;
     let default = e.search("manual FTP upload", 10).await.expect("search");
@@ -283,6 +339,35 @@ async fn hygiene_reports_each_problem_kind() {
 }
 
 #[tokio::test]
+async fn hygiene_reports_invalid_and_inverted_validity_ranges() {
+    let (e, d) = vault().await;
+    write(
+        d.path(),
+        "20-semantic/invalid-validity.md",
+        "---\ntier: semantic\nconfidence: high\nlast_verified: 2026-11-12\nvalid_from: \"not-a-date\"\nvalid_to: \"2026-11-12\"\n---\n# Invalid validity\n\nThis note has an invalid start date.\n",
+    );
+    write(
+        d.path(),
+        "20-semantic/inverted-validity.md",
+        "---\ntier: semantic\nconfidence: high\nlast_verified: 2026-11-12\nvalid_from: \"2026-11-13\"\nvalid_to: \"2026-11-12\"\n---\n# Inverted validity\n\nThis note ends before it starts.\n",
+    );
+    e.index_directory(d.path()).await.expect("reindex");
+    let report = e
+        .hygiene(&HygieneOptions {
+            root: Some(d.path().to_path_buf()),
+            ..HygieneOptions::default()
+        })
+        .await
+        .expect("hygiene");
+    assert!(report.findings.iter().any(|f| {
+        f.kind == "invalid_validity_date" && f.path == "20-semantic/invalid-validity.md"
+    }));
+    assert!(report.findings.iter().any(|f| {
+        f.kind == "inverted_validity_range" && f.path == "20-semantic/inverted-validity.md"
+    }));
+}
+
+#[tokio::test]
 async fn hygiene_reports_duplicate_graph_id_and_self_superseding_decision() {
     let dir = tempfile::tempdir().expect("tmp");
     let t = today();
@@ -305,6 +390,104 @@ async fn hygiene_reports_duplicate_graph_id_and_self_superseding_decision() {
         "decisions/self.md",
         &format!(
             "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"self-ref\"\nsupersedes: [\"self-ref\"]\n---\n# Self Ref\n\nClaims to supersede itself.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/dangling.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"new-decision\"\nsupersedes: [\"missing-decision\"]\n---\n# New Decision\n\nReferences a missing predecessor.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/dangling-replacement.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"old-decision\"\nstatus: \"superseded\"\nsuperseded_by: \"missing-replacement\"\n---\n# Old Decision\n\nReplacement ID does not exist.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/inconsistent-replacement.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"inconsistent-old\"\nstatus: \"superseded\"\nsuperseded_by: \"replacement-decision\"\n---\n# Inconsistent Old\n\nReplacement does not reciprocate.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/replacement.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"replacement-decision\"\nstatus: \"active\"\n---\n# Replacement\n\nDoes not list predecessor in supersedes.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-c.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-c\"\nstatus: \"active\"\nsupersedes: [\"cycle-d\"]\n---\n# Cycle C\n\nSecond independent cycle.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-d.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-d\"\nstatus: \"active\"\nsupersedes: [\"cycle-c\"]\n---\n# Cycle D\n\nSecond independent cycle.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-bridge.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-bridge\"\nstatus: \"active\"\nsupersedes: [\"cycle-c\"]\n---\n# Cycle Bridge\n\nConnects one cycle to another.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-tail.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-tail\"\nstatus: \"active\"\nsupersedes: [\"cycle-a\"]\n---\n# Cycle Tail\n\nPoints into a cycle without being part of it.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/ambiguous-a.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"ambiguous-decision\"\nstatus: \"active\"\nsupersedes: [\"cycle-edge\"]\n---\n# Ambiguous A\n\nDuplicate decision id.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/ambiguous-b.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"ambiguous-decision\"\nstatus: \"active\"\nsupersedes: [\"cycle-edge\"]\n---\n# Ambiguous B\n\nDuplicate decision id.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/ambiguous-edge.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-edge\"\nstatus: \"active\"\nsupersedes: [\"ambiguous-decision\"]\n---\n# Ambiguous Edge\n\nMust not be treated as a definite cycle through duplicate ids.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-a.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-a\"\nstatus: \"active\"\nsupersedes: [\"cycle-b\"]\n---\n# Cycle A\n\nPart of a two-note replacement cycle.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/cycle-b.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"cycle-b\"\nstatus: \"active\"\nsupersedes: [\"cycle-a\"]\n---\n# Cycle B\n\nPart of a two-note replacement cycle.\n"
+        ),
+    );
+    write(
+        dir.path(),
+        "decisions/empty-replacement.md",
+        &format!(
+            "---\ntier: semantic\nconfidence: high\nlast_verified: {t}\ntype: \"decision\"\nid: \"empty-old\"\nstatus: \"superseded\"\nsuperseded_by: \"   \"\n---\n# Empty Replacement\n\nReplacement ID is blank.\n"
         ),
     );
     let db = Arc::new(
@@ -340,5 +523,70 @@ async fn hygiene_reports_duplicate_graph_id_and_self_superseding_decision() {
             .iter()
             .any(|f| f.kind == "self_superseding_decision" && f.path == "decisions/self.md"),
         "a decision that lists its own id in `supersedes` must be flagged"
+    );
+    assert!(
+        report.findings.iter().any(|f| {
+            f.kind == "dangling_superseded_by_reference"
+                && f.path == "decisions/dangling-replacement.md"
+                && f.detail.contains("missing-replacement")
+        }),
+        "a `superseded_by` reference without a matching decision must be flagged"
+    );
+    assert!(
+        report.findings.iter().any(|f| {
+            f.kind == "supersession_cycle"
+                && f.path == "(graph)"
+                && f.detail.contains("cycle-a")
+                && f.detail.contains("cycle-b")
+                && f.detail.contains("cycle-c")
+                && f.detail.contains("cycle-d")
+                && !f.detail.contains("cycle-bridge")
+                && !f.detail.contains("ambiguous-decision")
+                && !f.detail.contains("cycle-edge")
+                && !f.detail.contains("cycle-tail")
+        }),
+        "report actual cycle members, excluding ambiguous IDs and nodes that only lead into a cycle"
+    );
+    assert!(
+        report.findings.iter().any(|f| {
+            f.kind == "inconsistent_supersession_reference"
+                && f.path == "decisions/inconsistent-replacement.md"
+                && f.detail.contains("replacement-decision")
+        }),
+        "a superseded_by relationship must be reciprocal with the replacement's supersedes field"
+    );
+    assert!(
+        report.findings.iter().any(|f| {
+            f.kind == "superseded_without_replacement" && f.path == "decisions/empty-replacement.md"
+        }),
+        "a blank `superseded_by` value is missing a usable replacement"
+    );
+    assert!(
+        !report.findings.iter().any(|f| {
+            f.kind == "dangling_superseded_by_reference" && f.path == "decisions/dangling.md"
+        }),
+        "a decision without a replacement field is a different hygiene issue"
+    );
+    assert!(
+        report.findings.iter().any(|f| {
+            f.kind == "dangling_supersedes_reference"
+                && f.path == "decisions/dangling.md"
+                && f.detail.contains("missing-decision")
+        }),
+        "a missing supersession target must be flagged"
+    );
+    assert!(
+        !report
+            .findings
+            .iter()
+            .any(|f| f.kind == "dangling_supersedes_reference" && f.path == "decisions/self.md"),
+        "self-reference is not dangling when the decision exists"
+    );
+    assert!(
+        !report
+            .findings
+            .iter()
+            .any(|f| f.kind == "dangling_supersedes_reference" && f.path == "decisions/a.md"),
+        "an existing duplicate ID is not dangling"
     );
 }

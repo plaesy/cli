@@ -258,7 +258,9 @@ async fn run_tool(
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
             let results = if expand {
-                engine.search_expanded(query, limit, mode, &filter).await?
+                engine
+                    .search_expanded_with_explain(query, limit, mode, &filter, explain)
+                    .await?
             } else if explain {
                 engine
                     .search_with_explain(query, limit, mode, &filter, explain)
@@ -533,7 +535,57 @@ pub async fn serve_stdio(engine: Arc<SearchEngine>) -> Result<()> {
     Ok(())
 }
 
-pub async fn serve_http(engine: Arc<SearchEngine>, addr: SocketAddr) -> Result<()> {
+async fn require_bearer_token(
+    axum::extract::State(expected_token): axum::extract::State<String>,
+    request: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::header::AUTHORIZATION;
+    use axum::response::IntoResponse;
+
+    let authorized = request
+        .headers()
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .is_some_and(|provided| constant_time_eq(provided.as_bytes(), expected_token.as_bytes()));
+    if authorized {
+        next.run(request).await
+    } else {
+        axum::http::StatusCode::UNAUTHORIZED.into_response()
+    }
+}
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    let mut difference = left.len() ^ right.len();
+    for index in 0..left.len().max(right.len()) {
+        difference |= usize::from(
+            left.get(index).copied().unwrap_or_default()
+                ^ right.get(index).copied().unwrap_or_default(),
+        );
+    }
+    difference == 0
+}
+
+#[test]
+fn bearer_token_comparison_requires_exact_bytes() {
+    assert!(constant_time_eq(
+        b"long-token-value-1234567890",
+        b"long-token-value-1234567890"
+    ));
+    assert!(!constant_time_eq(
+        b"long-token-value-1234567890",
+        b"long-token-value-1234567891"
+    ));
+    assert!(!constant_time_eq(b"long-token-value-1234567890", b"short"));
+    assert!(!constant_time_eq(b"", b"long-token-value-1234567890"));
+}
+
+pub async fn serve_http(
+    engine: Arc<SearchEngine>,
+    addr: SocketAddr,
+    auth_token: Option<String>,
+) -> Result<()> {
     use rmcp::transport::streamable_http_server::{
         session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
     };
@@ -560,6 +612,14 @@ pub async fn serve_http(engine: Arc<SearchEngine>, addr: SocketAddr) -> Result<(
         config,
     );
     let app = axum::Router::new().nest_service("/mcp", service);
+    let app = if let Some(expected_token) = auth_token {
+        app.route_layer(axum::middleware::from_fn_with_state(
+            expected_token,
+            require_bearer_token,
+        ))
+    } else {
+        app
+    };
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await

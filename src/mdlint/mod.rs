@@ -362,7 +362,7 @@ pub fn load_config(path: &Path) -> Result<Config, MdError> {
             return Err(MdError::Io {
                 context: format!("reading {}", path.display()),
                 source,
-            })
+            });
         }
     };
     let raw: serde_json::Map<String, Value> = serde_json::from_str(&text)
@@ -540,7 +540,7 @@ pub fn load_baseline(path: &Path) -> Result<Option<Baseline>, MdError> {
             return Err(MdError::Io {
                 context: format!("reading {}", path.display()),
                 source,
-            })
+            });
         }
     };
     let baseline: Baseline = serde_json::from_str(&text)

@@ -1320,14 +1320,14 @@ impl SearchEngine {
                 return Err(MemoryError::ConfigError(format!(
                     "forget refuses a non-regular file: {}",
                     source.display()
-                )))
+                )));
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => {
                 return Err(MemoryError::IoError {
                     path: source.display().to_string(),
                     source: error,
-                })
+                });
             }
         }
         let intent = crate::memory::lifecycle::begin_forget(
@@ -1357,7 +1357,7 @@ impl SearchEngine {
                 return Err(MemoryError::IoError {
                     path: source.display().to_string(),
                     source: error,
-                })
+                });
             }
         }
         self.remove_path_locked(&rel).await?;
@@ -1595,7 +1595,22 @@ impl SearchEngine {
         mode: SearchMode,
         filter: &SearchFilter,
     ) -> Result<Vec<SearchResult>> {
-        let mut hits = self.search_with(query, limit, mode, filter).await?;
+        self.search_expanded_with_explain(query, limit, mode, filter, false)
+            .await
+    }
+
+    /// Expanded search with optional per-leg score explanations on direct and linked hits.
+    pub async fn search_expanded_with_explain(
+        &self,
+        query: &str,
+        limit: usize,
+        mode: SearchMode,
+        filter: &SearchFilter,
+        explain: bool,
+    ) -> Result<Vec<SearchResult>> {
+        let mut hits = self
+            .search_with_explain(query, limit, mode, filter, explain)
+            .await?;
         let mut seeds: Vec<String> = hits
             .iter()
             .take(LINK_SEED_LIMIT)
@@ -1629,7 +1644,7 @@ impl SearchEngine {
             };
             // `path_prefix` is a prefix match; keep only the note itself.
             let best = self
-                .search_with(query, LINK_NEIGHBOUR_SEARCH, mode, &scoped)
+                .search_with_explain(query, LINK_NEIGHBOUR_SEARCH, mode, &scoped, explain)
                 .await?
                 .into_iter()
                 .find(|r| r.source_path == path);
@@ -3031,6 +3046,19 @@ mod tests {
         ));
         // Notes with no link and no match stay out.
         assert!(expanded.iter().all(|r| !r.source_path.ends_with("c.md")));
+
+        let explained = e
+            .search_expanded_with_explain(
+                "rollback",
+                1,
+                SearchMode::Keyword,
+                &SearchFilter::default(),
+                true,
+            )
+            .await
+            .expect("explained");
+        assert_eq!(explained.len(), 2);
+        assert!(explained.iter().all(|result| result.explain.is_some()));
     }
 
     #[tokio::test]

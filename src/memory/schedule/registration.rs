@@ -303,8 +303,10 @@ fn install_macos(exe: &Path, config: &Path, vault: &Path, db: &Path) -> Result<(
     })?;
     let plist = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n<key>Label</key><string>{LAUNCH_AGENT}</string>\n<key>ProgramArguments</key><array><string>{}</string><string>memory</string><string>--vault</string><string>{}</string><string>--config</string><string>{}</string><string>--db</string><string>{}</string><string>schedule</string><string>once</string></array>\n<key>StartInterval</key><integer>1800</integer>\n<key>StandardOutPath</key><string>{}</string>\n<key>StandardErrorPath</key><string>{}</string>\n</dict></plist>\n",
-        xml(&exe.to_string_lossy()), xml(&vault.to_string_lossy()),
-        xml(&config.to_string_lossy()), xml(&db.to_string_lossy()),
+        xml(&exe.to_string_lossy()),
+        xml(&vault.to_string_lossy()),
+        xml(&config.to_string_lossy()),
+        xml(&db.to_string_lossy()),
         xml(&logs.join("plaesy-memory-schedule.log").to_string_lossy()),
         xml(&logs.join("plaesy-memory-schedule.log").to_string_lossy())
     );

@@ -31,10 +31,14 @@ Used by any MCP client supporting stdio JSON-RPC 2.0.
 plaesy memory serve --mcp --transport http --port 8080
 ```
 
-The server binds to `127.0.0.1`. The SDK validates the request host and rejects non-loopback browser
-origins. It is only reachable from the same machine by default; use an SSH tunnel when a remote client needs access.
-Do not expose the endpoint directly to a network. This is useful for HTTP-based clients running on
-the same machine, including n8n, Dify, Kilo Code, Cursor, and Claude Code.
+The server binds to `127.0.0.1`. To require bearer authentication, set `PLAESY_MCP_TOKEN` in the
+server environment or pass `--auth-token`; tokens must be at least 32 bytes. Clients send
+`Authorization: Bearer <token>`. Keep the token out of shell history and public configuration.
+Authentication is checked before the MCP route. The SDK validates the request host and rejects
+non-loopback browser origins. For remote access, use a reverse proxy or secure tunnel that runs on
+the same machine and forwards requests to `127.0.0.1:8080/mcp`. Ensure the upstream `Host` header
+is `localhost:8080` and that the `Authorization` header is forwarded. Terminate TLS at the proxy,
+and do not expose Plaesy's listener directly to the network.
 
 ## Client configuration
 

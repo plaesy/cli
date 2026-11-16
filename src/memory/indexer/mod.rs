@@ -307,7 +307,7 @@ impl Extractor {
                         return Err(MemoryError::YamlError {
                             path,
                             reason: "frontmatter must be a YAML mapping".to_string(),
-                        })
+                        });
                     }
                 }
             }

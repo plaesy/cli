@@ -21,9 +21,11 @@ vault, so each device builds its own index from synchronized Markdown files.
 ## Commands
 
 The command groups are shown by `plaesy memory --help`. They cover indexing (`index`, `watch`),
-retrieval (`search`, `links`), lifecycle (`remember`, `fingerprint`, `update`, `archive`, `forget`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
+retrieval (`search`, `list`, `links`), lifecycle (`remember`, `fingerprint`, `update`, `archive`, `forget`, `history`), maintenance (`hygiene`, `missing`, `curate`, `stats`), configuration and service
 setup (`config`, `onboard`, `serve`, `schedule`), source-code lookup (`code-find`, `code-audit`),
-and project graph views (`projects`, `decisions`, `contexts`).
+and project graph views (`projects`, `decisions`, `contexts`). Search supports an exact, case-insensitive `--project ID` filter over a note's declared `project` or `scope` metadata; it does not resolve aliases or partial IDs. `--event-from DATE` / `--event-until DATE` filter using an explicitly declared `event_date` in frontmatter (inclusive date bounds); undated or malformed dates do not match these filters. These are event dates, distinct from `valid_from`/`valid_to` and index timestamps.
+
+`plaesy memory list` browses indexed notes without exposing their bodies. Use `--offset N` and `-n/--limit N` for pagination (limit 1–1000), `--type TYPE` to match declared note type, `--status STATUS` to match a declared lifecycle state, `--path PREFIX` for a path-prefix filter, `--query TEXT` for a case-insensitive substring match in indexed paths or note bodies, and `--format text|json` for output format. Query matching does not return body content. JSON includes the matching total, page offset/limit and per-note path/title/type/project/scope/tags; the total is calculated after filters.
 
 Use the installed version's help for command-specific arguments:
 
@@ -69,7 +71,7 @@ plaesy memory schedule uninstall
 Installation supports Windows Task Scheduler, Linux systemd user timers, and macOS LaunchAgents.
 The command saves a private configuration snapshot and runs due jobs every 30 minutes. On a
 headless Linux server, enable systemd user lingering for jobs to run after logout. See
-[`operations.md`](../operations.md#scheduled-jobs) for behavior and manual setup details.
+[`operations.md`](../memory/operations.md#scheduled-jobs) for behavior and manual setup details.
 
 ## Remember a note
 
@@ -163,8 +165,12 @@ plaesy memory --vault <vault-path> stats
 `hygiene` reports stale or incomplete provenance (`source`, `last_verified`, and `confidence` for
 claim-bearing tiers), broken wikilinks and Markdown links, invalid link
 anchors, likely credential assignments and private-key headers without printing matched values, and
-backticked path references that may be missing. `possible_secret` is inferred: the keyword and
-assignment heuristic can still flag examples or redacted values, and it is not a secret scanner.
+backticked path references that may be missing. It audits the existing index without modifying it;
+run `index` first to include filesystem changes. Passing a directory inside the configured vault
+limits reported findings to that scope while resolving Markdown links against the full vault, so
+links to sibling folders remain valid. Directories outside the configured vault are rejected.
+`possible_secret` is inferred: the keyword and assignment heuristic can still flag examples or
+redacted values, and it is not a secret scanner.
 `dead_path_reference` is inferred: Plaesy checks the note's directory and parent folders up to the
 project root, plus the vault root. It can still point to another repository or a path meaningful
 only in its original context, so review it separately from broken Markdown links. The command does

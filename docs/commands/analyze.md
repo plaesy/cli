@@ -18,4 +18,4 @@ trigger a rebuild; run `plaesy analyze` first to create or refresh it.
 
 **Example**: `plaesy analyze` — analyzes the current directory.
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

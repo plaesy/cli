@@ -86,7 +86,7 @@ fn child_dir(parent: &Path, name: &str, create: bool) -> Result<Option<PathBuf>>
             return Err(MemoryError::ConfigError(format!(
                 "lifecycle state path is not a directory: {}",
                 path.display()
-            )))
+            )));
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound && create => {
             match std::fs::create_dir(&path) {
@@ -189,6 +189,53 @@ pub(crate) fn id_is_forgotten(root: &Path, note_id: Option<&str>) -> Result<bool
     is_marked(&real_dir, vec![format!("id-{}.json", sha256(id.trim()))])
 }
 
+/// Read bounded hash-only lifecycle audit events from the vault.
+pub(crate) fn history(
+    root: &Path,
+    limit: usize,
+    operation: Option<&str>,
+) -> Result<Vec<serde_json::Value>> {
+    let Some(dir) = existing_state_dir(root, EVENTS_DIR)? else {
+        return Ok(Vec::new());
+    };
+    let mut entries = std::fs::read_dir(&dir)
+        .map_err(|e| io_error(&dir, e))?
+        .map(|entry| entry.map_err(|e| io_error(&dir, e)))
+        .collect::<Result<Vec<_>>>()?;
+    entries.sort_by_key(|entry| entry.file_name());
+
+    let mut events = Vec::new();
+    for entry in entries {
+        let path = entry.path();
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| io_error(&path, e))?;
+        if !meta.file_type().is_file()
+            || path.extension().and_then(|ext| ext.to_str()) != Some("json")
+        {
+            continue;
+        }
+        let bytes = std::fs::read(&path).map_err(|e| io_error(&path, e))?;
+        let event: serde_json::Value = serde_json::from_slice(&bytes)
+            .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
+        let matches_operation = operation.is_none_or(|expected| {
+            event
+                .get("operation")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|actual| actual.eq_ignore_ascii_case(expected))
+        });
+        if matches_operation {
+            events.push(event);
+        }
+    }
+    events.sort_by(|left, right| {
+        right
+            .get("occurred_at")
+            .and_then(serde_json::Value::as_str)
+            .cmp(&left.get("occurred_at").and_then(serde_json::Value::as_str))
+    });
+    events.truncate(limit);
+    Ok(events)
+}
+
 /// Whether every stable identity currently carrying a forgotten note's content was forgotten.
 pub(crate) fn content_is_forgotten(root: &Path, content: &str) -> Result<bool> {
     content_hash_is_forgotten(root, &sha256(content))
@@ -211,7 +258,7 @@ fn is_marked(real_dir: &Path, keys: Vec<String>) -> Result<bool> {
                 return Err(MemoryError::ConfigError(format!(
                     "lifecycle tombstone is not a regular file: {}",
                     marker.display()
-                )))
+                )));
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(io_error(&marker, e)),
@@ -446,6 +493,43 @@ pub(crate) fn complete_archive(root: &Path, intent: ArchiveIntent) -> Result<()>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn history_returns_recent_events_filtered_by_operation() {
+        let root = tempfile::tempdir().expect("vault");
+        let forget = begin_forget(
+            root.path(),
+            "old.md",
+            Some("id-1"),
+            None,
+            vec![],
+            "obsolete",
+        )
+        .expect("forget intent");
+        complete_forget(root.path(), forget).expect("forget completion");
+        let update = begin_update(
+            root.path(),
+            "new.md",
+            Some("id-2"),
+            vec![],
+            "before",
+            "after",
+            "correction",
+        )
+        .expect("update intent");
+        complete_update(root.path(), update).expect("update completion");
+
+        let events = history(root.path(), 10, Some("UPDATE")).expect("history");
+        assert_eq!(events.len(), 2);
+        assert!(events.iter().all(|event| event["operation"] == "update"));
+        assert!(events[0]["occurred_at"].as_str() >= events[1]["occurred_at"].as_str());
+        let limited = history(root.path(), 1, None).expect("limited history");
+        assert_eq!(limited.len(), 1);
+        assert_eq!(
+            history(root.path(), 10, Some("archive")).expect("empty"),
+            Vec::<serde_json::Value>::new()
+        );
+    }
 
     #[test]
     fn forget_writes_a_synced_tombstone_and_structured_audit_without_note_content() {

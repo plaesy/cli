@@ -93,4 +93,4 @@ user home directories (`~/`, `/Users/<name>`, `/home/<name>`, `/root`, and
 `<drive>:\Users\<name>` or `<drive>:\home\<name>`). Absolute system paths such
 as `/usr/bin` are not rejected by this portability check.
 
-See [CLI Reference](../reference.md) for the full command tree.
+See [command index](README.md) for the full command tree.

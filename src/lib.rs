@@ -3,16 +3,19 @@
 //! Porting is incremental. Each Go package maps to one module here; see
 //! `PORTING.md` for the status of every package.
 
+pub mod agent_messages;
 pub mod analyze;
 pub mod checklist;
 pub mod cli;
 pub mod common;
 pub mod config;
+pub mod decisions;
 pub mod delegate;
 pub mod designlint;
 pub mod evals;
 pub mod exclude;
 pub mod expected;
+pub mod files;
 pub mod graph;
 pub mod imagegen;
 pub mod installer;
@@ -21,6 +24,7 @@ pub mod mcpserver;
 pub mod mdlint;
 pub mod memory;
 pub mod reach;
+pub mod sessions;
 pub mod tasks;
 pub mod trimmer;
 pub mod validate;

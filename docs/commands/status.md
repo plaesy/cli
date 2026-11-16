@@ -15,4 +15,4 @@ Show Plaesy CLI version, environment, and installation state. Reports:
 The PATH check reports the current process environment. After changing the persistent user PATH,
 open a new terminal before relying on this check.
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

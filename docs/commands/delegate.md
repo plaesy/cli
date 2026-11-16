@@ -14,4 +14,4 @@ plaesy delegate report                          # token usage per provider and c
 Usage is logged to `.plaesy/analysis/delegate-usage.jsonl`. A provider with a
 `daily_token_budget` is refused once the day's estimate would exceed it.
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

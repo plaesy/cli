@@ -178,7 +178,7 @@ impl fmt::Display for ChainError {
 ///
 /// # Errors
 ///
-/// [`SelectError`] when the entry is missing, disabled, or billable without confirmation.
+/// Returns an error string when the entry is missing, disabled, or billable without confirmation.
 pub fn select(
     cfg: &DelegateConfig,
     name: &str,

@@ -31,7 +31,7 @@ pub enum ChecklistError {
         #[source]
         source: serde_json::Error,
     },
-    #[error("{path}: item {id:?} needs id, run and expected")]
+    #[error("{path}: item {id:?} needs a valid single-component id, run and expected")]
     Incomplete { path: String, id: String },
     #[error("writing {path}: {source}")]
     Write {
@@ -121,11 +121,15 @@ pub fn load(path: &Path) -> Result<Checklist, ChecklistError> {
             path: shown.clone(),
             source,
         })?;
-    if let Some(bad) = checklist
-        .checklist
-        .iter()
-        .find(|it| it.id.is_empty() || it.run.is_empty() || it.expected.is_empty())
-    {
+    if let Some(bad) = checklist.checklist.iter().find(|it| {
+        let mut components = Path::new(&it.id).components();
+        !matches!(
+            (components.next(), components.next()),
+            (Some(std::path::Component::Normal(_)), None)
+        ) || it.id.contains(['/', '\\'])
+            || it.run.is_empty()
+            || it.expected.is_empty()
+    }) {
         return Err(ChecklistError::Incomplete {
             path: shown,
             id: bad.id.clone(),
@@ -376,6 +380,30 @@ mod tests {
             load(&empty_run),
             Err(ChecklistError::Incomplete { .. })
         ));
+    }
+
+    #[test]
+    fn load_rejects_path_like_item_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        for id in ["../outside", "../../outside", ".", "..", "a/b", "a\\\\b"] {
+            let path = dir.path().join("contracts.json");
+            let json = format!(
+                r#"{{"id":"t","checklist":[{{"id":{id:?},"check":"","run":"true","expected":"pass","status":"pending"}}]}}"#
+            );
+            fs::write(&path, json).unwrap();
+            assert!(
+                matches!(load(&path), Err(ChecklistError::Incomplete { .. })),
+                "accepted {id:?}"
+            );
+        }
+
+        let path = dir.path().join("valid.json");
+        fs::write(
+            &path,
+            r#"{"id":"t","checklist":[{"id":"C1","check":"","run":"true","expected":"pass","status":"pending"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(load(&path).unwrap().checklist[0].id, "C1");
     }
 
     #[test]

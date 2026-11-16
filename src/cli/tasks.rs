@@ -24,6 +24,10 @@ pub struct Args {
 pub enum TasksCommand {
     /// Create a task in the backlog
     Create(super::tasks_create::Args),
+    /// List and filter issues by type, label, assignee, milestone, and status
+    Issues(super::tasks_issue::Args),
+    /// Update an issue's metadata without changing its stable task ID
+    UpdateIssue(super::tasks_issue::UpdateArgs),
     /// List tasks across every status (or --all for the board, --sync-context for context.md)
     List {
         /// Show every spec's tasks as one board, with title and phase, and report integrity problems
@@ -144,6 +148,14 @@ fn read_task(
     task: &str,
     status: Option<Status>,
 ) -> Result<(String, Status), Box<dyn std::error::Error>> {
+    if std::path::Path::new(task).components().count() != 1
+        || !matches!(
+            std::path::Path::new(task).components().next(),
+            Some(std::path::Component::Normal(_))
+        )
+    {
+        return Err(format!("invalid task name: {task}").into());
+    }
     let found = match status {
         Some(s) => {
             let path = tasks_dir.join(s.as_str()).join(task).join(tasks::TASK_FILE);
@@ -167,6 +179,8 @@ pub fn run(args: &Args) -> CliResult {
     let stdout = io::stdout();
     match command {
         TasksCommand::Create(create) => super::tasks_create::run(create, &tasks_dir()?, &spec),
+        TasksCommand::Issues(issues) => super::tasks_issue::run(issues, &tasks_dir()?),
+        TasksCommand::UpdateIssue(update) => super::tasks_issue::update(update, &tasks_dir()?),
         TasksCommand::List { all, sync_context } => {
             if *sync_context {
                 return sync_in_flight();

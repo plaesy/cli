@@ -214,7 +214,7 @@ fn run_static(root: &Path, name: &str, case: &CaseFile) -> Vec<Outcome> {
                 id: "(instruction)".into(),
                 status: Status::Fail,
                 detail: e.to_string(),
-            }]
+            }];
         }
     };
     case.statics

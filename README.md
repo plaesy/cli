@@ -8,6 +8,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Rust](<https://img.shields.io/badge/built%20with-Rust-00ADD8.svg>)](https://rust-lang.org/) [![Status: Early](<https://img.shields.io/badge/status-early%20(0.0.x)-orange.svg>)](VERSION)
 
+## Documentation
+
+- [Plaesy CLI documentation index](docs/README.md)
+- [Command reference](docs/commands/README.md)
+- [Memory subsystem guide](docs/memory/overview.md)
+- [Proposed platform design](docs/platform/README.md) — target design, not implemented functionality.
+
 ## Install
 
 The release workflow builds platform archives and creates a draft GitHub Release when a `v*` tag is

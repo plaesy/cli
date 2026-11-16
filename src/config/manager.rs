@@ -154,7 +154,7 @@ where
                 return Err(ConfigError::io(
                     format!("reading {}", old_path.display()),
                     e,
-                ))
+                ));
             }
         };
         let cfg = migrate(&bytes).map_err(|e| ConfigError::Migration(e.to_string()))?;
@@ -185,7 +185,7 @@ where
             return Err(ConfigError::io(
                 format!("reading config {}", shared.path.display()),
                 e,
-            ))
+            ));
         }
     };
     let cfg = Arc::new(serde_json::from_slice::<T>(&bytes)?);

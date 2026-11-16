@@ -41,7 +41,33 @@ impl std::str::FromStr for Transport {
 
 /// Run the service until stdin closes or the HTTP server stops. `mcp` selects the Model Context
 /// Protocol transport; `transport` selects stdio vs HTTP.
-pub async fn run(config: MemoryConfig, mcp: bool, transport: Transport, port: u16) -> Result<()> {
+pub async fn run(
+    config: MemoryConfig,
+    mcp: bool,
+    transport: Transport,
+    port: u16,
+    auth_token: Option<String>,
+) -> Result<()> {
+    if let Some(token) = auth_token.as_deref() {
+        if !mcp || transport != Transport::Http {
+            return Err(MemoryError::ConfigError(
+                "--auth-token requires --mcp --transport http".into(),
+            ));
+        }
+        if token.len() < 32 || token.trim() != token {
+            return Err(MemoryError::ConfigError(
+                "MCP bearer token must be at least 32 bytes and have no surrounding whitespace"
+                    .into(),
+            ));
+        }
+    }
+
+    if mcp && transport == Transport::Http && auth_token.is_none() {
+        tracing::warn!(
+            "MCP HTTP server has no bearer authentication; use --auth-token or PLAESY_MCP_TOKEN before exposing it"
+        );
+    }
+
     let daemon_lock = if config.watch_dir.is_dir() {
         Some(WriteLock::acquire_named(
             &config.watch_dir,
@@ -114,7 +140,7 @@ pub async fn run(config: MemoryConfig, mcp: bool, transport: Transport, port: u1
             let addr: SocketAddr = format!("127.0.0.1:{port}")
                 .parse()
                 .map_err(|e| MemoryError::ConfigError(format!("bad port {port}: {e}")))?;
-            mcp::serve_http(engine, addr).await
+            mcp::serve_http(engine, addr, auth_token).await
         }
     }
 }

@@ -41,4 +41,4 @@ For local development, `make reload` builds the debug binary and runs its `insta
 replaces the binary in the normal per-user install directory and ensures that directory is on the
 user PATH; it does not create a separate development install path.
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

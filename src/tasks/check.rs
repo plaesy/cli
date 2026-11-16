@@ -96,7 +96,14 @@ pub fn check_task(
                 } else {
                     root.as_path()
                 };
-                !base.join(&r.path).exists()
+                let candidate = base.join(&r.path);
+                let Ok(root) = root.canonicalize() else {
+                    return true;
+                };
+                let Ok(candidate) = candidate.canonicalize() else {
+                    return true;
+                };
+                !candidate.starts_with(root)
             })
             .collect();
         writeln!(
@@ -263,6 +270,43 @@ mod tests {
         let text = "`src/new.rs` (NEW) and `src/old.rs`";
         assert_eq!(extract_references(text, true).len(), 1);
         assert_eq!(extract_references(text, false).len(), 2);
+    }
+
+    #[test]
+    fn references_must_resolve_inside_project_root() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
+        std::fs::create_dir_all(dir.path().join("src")).unwrap();
+        std::fs::create_dir_all(dir.path().join(".plaesy/spec/chk/docs")).unwrap();
+        std::fs::write(dir.path().join("README.md"), "").unwrap();
+        std::fs::write(dir.path().join(".plaesy/spec/chk/docs/local.md"), "").unwrap();
+        let outside = tempfile::NamedTempFile::new().unwrap();
+        let tasks = tasks_dir(dir.path());
+        let name = add_task(&tasks, "s", "low", "check", "Check").unwrap();
+        let task_file = tasks
+            .join("backlog")
+            .join(&name)
+            .join(crate::tasks::TASK_FILE);
+        std::fs::write(&task_file, "---\nspec: s\ntopic: chk\n---\n").unwrap();
+        let spec = super::spec_doc(dir.path(), "chk");
+        std::fs::write(
+            &spec,
+            "[inside](../../../README.md) [outside](../../../../../etc/passwd)",
+        )
+        .unwrap();
+        let plan = super::plan_doc(dir.path(), "chk");
+        std::fs::create_dir_all(plan.parent().unwrap()).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(outside.path(), dir.path().join("src/external-link")).unwrap();
+        std::fs::write(&plan, "`src/external-link`\n").unwrap();
+
+        let mut out = Vec::new();
+        let err = check_task(&tasks, &name, &mut out).unwrap_err();
+        assert!(matches!(err, TasksError::MissingReferences(2)));
+        let report = String::from_utf8(out).unwrap();
+        assert!(report.contains("missing ../../../../../etc/passwd"));
+        assert!(report.contains("missing src/external-link"));
+        assert!(!report.contains("missing ../../../README.md"));
     }
 
     #[test]

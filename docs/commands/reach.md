@@ -34,4 +34,4 @@ List every platform `reach` can target.
 - `plaesy reach configure github` — store credentials for a platform
 - `plaesy reach list` — list available platforms
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

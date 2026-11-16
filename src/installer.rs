@@ -33,7 +33,9 @@ pub enum InstallerError {
         source: io::Error,
     },
     /// The running build is the installed copy, so there is nothing newer to upgrade from.
-    #[error("this is the installed copy; run 'plaesy upgrade' from a newer build outside the install directory")]
+    #[error(
+        "this is the installed copy; run 'plaesy upgrade' from a newer build outside the install directory"
+    )]
     RunningFromInstall,
     /// The Windows user PATH could not be read or written.
     #[error("{0}")]
@@ -286,7 +288,7 @@ pub fn uninstall() -> Result<Removal, InstallerError> {
             return Err(InstallerError::io(
                 format!("remove {}", binary_path.display()),
                 e,
-            ))
+            ));
         }
     }
 

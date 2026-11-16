@@ -306,7 +306,7 @@ pub fn read_result(dir: &Path, name: &str) -> io::Result<JobResult> {
                 finished: false,
                 exit_code: 0,
                 output,
-            })
+            });
         }
         Err(e) => return Err(e),
     };

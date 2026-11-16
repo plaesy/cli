@@ -37,7 +37,9 @@ pub async fn run(
             }
         }
         None => {
-            println!("Usage: plaesy memory config mcp --app <name> [--binary BIN] [--notes-dir DIR] [--http-url URL]");
+            println!(
+                "Usage: plaesy memory config mcp --app <name> [--binary BIN] [--notes-dir DIR] [--http-url URL]"
+            );
             println!();
             println!("Available apps:");
             for name in snippets.keys() {

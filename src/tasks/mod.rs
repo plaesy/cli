@@ -20,6 +20,7 @@ pub mod check;
 pub mod claim;
 pub mod contracts;
 pub mod inflight;
+pub mod issue;
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -236,7 +237,15 @@ pub fn read_frontmatter(path: &Path) -> HashMap<String, String> {
             continue;
         }
         if let Some((key, value)) = line.split_once(':') {
-            let value = value.trim().trim_matches(['"', '\'']);
+            let value = value.trim();
+            let value = if value.len() >= 2
+                && matches!(value.as_bytes()[0], b'"' | b'\'')
+                && value.as_bytes()[0] == *value.as_bytes().last().expect("non-empty value")
+            {
+                &value[1..value.len() - 1]
+            } else {
+                value
+            };
             out.insert(key.trim().to_owned(), value.to_owned());
         }
     }
@@ -249,7 +258,48 @@ pub fn read_frontmatter(path: &Path) -> HashMap<String, String> {
 ///
 /// I/O failures other than a missing folder.
 pub fn list_tasks(tasks_dir: &Path, status: Status) -> Result<Option<Vec<String>>, TasksError> {
+    if path_has_symlink_component(tasks_dir) {
+        return Err(TasksError::io(
+            format!("refusing symlinked tasks root {}", tasks_dir.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "tasks root has a symlink component",
+            ),
+        ));
+    }
+    match fs::symlink_metadata(tasks_dir) {
+        Ok(metadata) if !metadata.is_dir() => {
+            return Err(TasksError::io(
+                format!("refusing non-directory tasks root {}", tasks_dir.display()),
+                io::Error::new(io::ErrorKind::InvalidInput, "tasks root is not a directory"),
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(TasksError::io(
+                format!("reading tasks root {}", tasks_dir.display()),
+                error,
+            ));
+        }
+    }
     let dir = tasks_dir.join(status.as_str());
+    match fs::symlink_metadata(&dir) {
+        Ok(metadata) if !metadata.is_dir() => {
+            return Err(TasksError::io(
+                format!("refusing non-directory status path {}", dir.display()),
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "status path is not a directory",
+                ),
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(TasksError::io(format!("reading {}", dir.display()), error));
+        }
+    }
     let entries = match fs::read_dir(&dir) {
         Ok(entries) => entries,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -269,6 +319,9 @@ pub fn list_tasks(tasks_dir: &Path, status: Status) -> Result<Option<Vec<String>
 /// Spec a task belongs to, from its `task.md` frontmatter.
 #[must_use]
 pub fn spec_of(tasks_dir: &Path, status: Status, task: &str) -> String {
+    if validate_task_name(task).is_err() {
+        return String::new();
+    }
     read_frontmatter(&tasks_dir.join(status.as_str()).join(task).join(TASK_FILE))
         .remove("spec")
         .unwrap_or_default()
@@ -278,14 +331,22 @@ pub fn spec_of(tasks_dir: &Path, status: Status, task: &str) -> String {
 /// no topic: such a task needs no spec and no plan.
 #[must_use]
 pub fn topic_of(tasks_dir: &Path, status: Status, task: &str) -> Option<String> {
+    if validate_task_name(task).is_err() {
+        return None;
+    }
     read_frontmatter(&tasks_dir.join(status.as_str()).join(task).join(TASK_FILE))
         .remove("topic")
-        .filter(|topic| !topic.is_empty())
+        .filter(|topic| validate_task_name(topic).is_ok())
 }
 
 /// `<root>/.plaesy/spec/<topic>/spec.md`.
 #[must_use]
 pub fn spec_doc(project_root: &Path, topic: &str) -> PathBuf {
+    let topic = if validate_task_name(topic).is_ok() {
+        topic
+    } else {
+        "__invalid_topic__"
+    };
     project_root
         .join(".plaesy")
         .join(SPEC_DIR)
@@ -296,6 +357,11 @@ pub fn spec_doc(project_root: &Path, topic: &str) -> PathBuf {
 /// `<root>/.plaesy/plan/<topic>/plan.md`.
 #[must_use]
 pub fn plan_doc(project_root: &Path, topic: &str) -> PathBuf {
+    let topic = if validate_task_name(topic).is_ok() {
+        topic
+    } else {
+        "__invalid_topic__"
+    };
     project_root
         .join(".plaesy")
         .join(PLAN_DIR)
@@ -319,9 +385,23 @@ pub(crate) fn for_spec(
         .collect()
 }
 
+fn path_has_symlink_component(path: &Path) -> bool {
+    let mut current = PathBuf::new();
+    for component in path.components() {
+        current.push(component.as_os_str());
+        if fs::symlink_metadata(&current).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Finds the status folder that holds `task`, searching in lifecycle order.
 #[must_use]
 pub fn find_task(tasks_dir: &Path, task: &str) -> Option<(Status, PathBuf)> {
+    if validate_task_name(task).is_err() {
+        return None;
+    }
     STATUSES.into_iter().find_map(|status| {
         let path = tasks_dir.join(status.as_str()).join(task);
         path.is_dir().then_some((status, path))
@@ -451,6 +531,31 @@ pub fn add_task(
     topic: &str,
     title: &str,
 ) -> Result<String, TasksError> {
+    let _graph_lock = acquire_issue_graph_lock(tasks_dir)?;
+    add_task_locked(tasks_dir, spec, priority, topic, title)
+}
+
+pub(crate) fn add_task_locked(
+    tasks_dir: &Path,
+    spec: &str,
+    priority: &str,
+    topic: &str,
+    title: &str,
+) -> Result<String, TasksError> {
+    if path_has_symlink_component(tasks_dir)
+        || fs::symlink_metadata(tasks_dir).is_ok_and(|metadata| !metadata.is_dir())
+    {
+        return Err(TasksError::io(
+            format!(
+                "refusing symlinked or non-directory tasks root {}",
+                tasks_dir.display()
+            ),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "tasks root is not a real directory",
+            ),
+        ));
+    }
     validate_priority(priority)?;
     if topic.is_empty() || topic.contains(['/', '\\']) {
         return Err(TasksError::InvalidSlug(topic.to_owned()));
@@ -459,17 +564,79 @@ pub fn add_task(
     if find_task(tasks_dir, &name).is_some() {
         return Err(TasksError::Duplicate(name));
     }
-    let dir = tasks_dir.join(Status::Backlog.as_str()).join(&name);
-    fs::create_dir_all(&dir)
-        .map_err(|e| TasksError::io(format!("creating {}", dir.display()), e))?;
+    let status_dir = tasks_dir.join(Status::Backlog.as_str());
+    if fs::symlink_metadata(&status_dir).is_ok_and(|metadata| !metadata.is_dir()) {
+        return Err(TasksError::io(
+            format!(
+                "refusing non-directory status path {}",
+                status_dir.display()
+            ),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "status path is not a directory",
+            ),
+        ));
+    }
+    let dir = status_dir.join(&name);
+    fs::create_dir_all(&status_dir)
+        .map_err(|error| TasksError::io(format!("creating {}", status_dir.display()), error))?;
+    let status_metadata = fs::symlink_metadata(&status_dir);
+    if !status_metadata.is_ok_and(|metadata| metadata.is_dir()) {
+        return Err(TasksError::io(
+            format!(
+                "refusing non-directory status path {}",
+                status_dir.display()
+            ),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "status path is not a directory",
+            ),
+        ));
+    }
+    match fs::create_dir(&dir) {
+        Ok(()) => {}
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+            return Err(TasksError::Duplicate(name));
+        }
+        Err(error) => {
+            return Err(TasksError::io(format!("creating {}", dir.display()), error));
+        }
+    }
+    let spec = single_line_frontmatter_value(spec);
+    let topic = single_line_frontmatter_value(topic);
+    let title = single_line_frontmatter_value(title);
     let body = TASK_TEMPLATE
-        .replace("{spec}", spec)
-        .replace("{topic}", topic)
-        .replace("{title}", title);
-    write_file(&dir.join(TASK_FILE), &body)?;
+        .replace("{spec}", &spec)
+        .replace("{topic}", &topic)
+        .replace("{title}", &title);
     let contract = format!("{{\n  \"id\": {name:?},\n  \"checklist\": []\n}}\n");
-    write_file(&dir.join(CONTRACT_FILE), &contract)?;
+    if let Err(error) = write_task_files(&dir, &body, &contract) {
+        if let Err(cleanup_error) = fs::remove_dir_all(&dir) {
+            return Err(TasksError::io(
+                format!(
+                    "creating task failed ({error}); removing partial task failed: {cleanup_error}"
+                ),
+                io::Error::other(error),
+            ));
+        }
+        return Err(error);
+    }
     Ok(name)
+}
+
+fn write_task_files(dir: &Path, body: &str, contract: &str) -> Result<(), TasksError> {
+    write_file(&dir.join(TASK_FILE), body)?;
+    write_file(&dir.join(CONTRACT_FILE), contract)
+}
+
+fn single_line_frontmatter_value(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| match ch {
+            '\r' | '\n' => ' ',
+            _ => ch,
+        })
+        .collect()
 }
 
 fn write_file(path: &Path, contents: &str) -> Result<(), TasksError> {
@@ -490,6 +657,14 @@ pub fn next_backlog_task(tasks_dir: &Path, spec: &str) -> Result<Option<String>,
     Ok(names.into_iter().next())
 }
 
+fn validate_task_name(task: &str) -> Result<(), TasksError> {
+    let mut components = Path::new(task).components();
+    match (components.next(), components.next()) {
+        (Some(std::path::Component::Normal(_)), None) if !task.is_empty() => Ok(()),
+        _ => Err(TasksError::InvalidSlug(task.to_owned())),
+    }
+}
+
 /// Moves one task folder from `from` to `to` and sets its frontmatter status.
 ///
 /// # Errors
@@ -507,9 +682,51 @@ fn move_task_as(
     from: Status,
     to: Status,
 ) -> Result<(), TasksError> {
-    let source = tasks_dir.join(from.as_str()).join(task);
-    let target = tasks_dir.join(to.as_str()).join(task);
-    if !source.is_dir() {
+    let _graph_lock = acquire_issue_graph_lock(tasks_dir)?;
+    move_task_as_locked(tasks_dir, verb, task, from, to)
+}
+
+fn acquire_issue_graph_lock(tasks_dir: &Path) -> Result<issue::IssueGraphLock, TasksError> {
+    issue::IssueGraphLock::acquire(tasks_dir)
+        .map_err(|error| TasksError::io("acquiring issue graph lock", io::Error::other(error)))
+}
+
+fn move_task_as_locked(
+    tasks_dir: &Path,
+    verb: &str,
+    task: &str,
+    from: Status,
+    to: Status,
+) -> Result<(), TasksError> {
+    validate_task_name(task)?;
+    if path_has_symlink_component(tasks_dir) {
+        return Err(TasksError::io(
+            format!("refusing symlinked tasks root {}", tasks_dir.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "tasks root has a symlink component",
+            ),
+        ));
+    }
+    let source_status_dir = tasks_dir.join(from.as_str());
+    let target_status_dir = tasks_dir.join(to.as_str());
+    let source_status_metadata = fs::symlink_metadata(&source_status_dir);
+    if source_status_metadata.is_ok_and(|metadata| !metadata.is_dir()) {
+        return Err(TasksError::io(
+            format!(
+                "refusing non-directory status path {}",
+                source_status_dir.display()
+            ),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "status path is not a directory",
+            ),
+        ));
+    }
+    let source = source_status_dir.join(task);
+    let target = target_status_dir.join(task);
+    let source_metadata = fs::symlink_metadata(&source);
+    if !source_metadata.is_ok_and(|metadata| metadata.is_dir()) {
         return Err(match find_task(tasks_dir, task) {
             Some((actual, _)) => TasksError::WrongStatus {
                 task: task.to_owned(),
@@ -529,20 +746,59 @@ fn move_task_as(
             task: task.to_owned(),
         });
     }
-    if let Some(parent) = target.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| TasksError::io(format!("creating {}", parent.display()), e))?;
+    fs::create_dir_all(&target_status_dir)
+        .map_err(|e| TasksError::io(format!("creating {}", target_status_dir.display()), e))?;
+    let target_status_metadata = fs::symlink_metadata(&target_status_dir);
+    if !target_status_metadata.is_ok_and(|metadata| metadata.is_dir()) {
+        return Err(TasksError::io(
+            format!(
+                "refusing non-directory status path {}",
+                target_status_dir.display()
+            ),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "status path is not a directory",
+            ),
+        ));
     }
-    fs::rename(&source, &target)
-        .map_err(|e| TasksError::io(format!("moving {task} to {to}"), e))?;
-    set_frontmatter_status(&target.join(TASK_FILE), to)
+    let task_file = source.join(TASK_FILE);
+    let file_metadata = fs::symlink_metadata(&task_file)
+        .map_err(|e| TasksError::io(format!("reading {}", task_file.display()), e))?;
+    if !file_metadata.is_file() {
+        return Err(TasksError::io(
+            format!("refusing non-regular task file {}", task_file.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "task file is not a regular file",
+            ),
+        ));
+    }
+    let original = fs::read(&task_file)
+        .map_err(|e| TasksError::io(format!("reading {}", task_file.display()), e))?;
+    let updated = with_frontmatter_status(&original, to);
+    // Persist the destination status before moving the directory. If writing fails,
+    // the source task remains untouched; after rename the task is already consistent.
+    fs::write(&task_file, &updated)
+        .map_err(|e| TasksError::io(format!("writing {}", task_file.display()), e))?;
+    if let Err(error) = fs::rename(&source, &target) {
+        if let Err(restore_error) = fs::write(&task_file, &original) {
+            return Err(TasksError::io(
+                format!(
+                    "moving {task} to {to} failed ({error}); restoring source task failed: {restore_error}"
+                ),
+                error,
+            ));
+        }
+        return Err(TasksError::io(format!("moving {task} to {to}"), error));
+    }
+    Ok(())
 }
 
-/// Rewrites the `status:` line in a task's frontmatter. A missing file or a file
-/// without a status line is left unchanged.
-fn set_frontmatter_status(path: &Path, status: Status) -> Result<(), TasksError> {
-    let Ok(text) = fs::read_to_string(path) else {
-        return Ok(());
+/// Rewrites the `status:` line in task frontmatter bytes. A missing file or a
+/// file without a status line is left unchanged.
+fn with_frontmatter_status(original: &[u8], status: Status) -> Vec<u8> {
+    let Ok(text) = std::str::from_utf8(original) else {
+        return original.to_vec();
     };
     let mut lines: Vec<String> = text.split('\n').map(str::to_owned).collect();
     let mut in_front = false;
@@ -556,10 +812,10 @@ fn set_frontmatter_status(path: &Path, status: Status) -> Result<(), TasksError>
         }
         if in_front && line.starts_with("status:") {
             *line = format!("status: {status}");
-            return write_file(path, &lines.join("\n"));
+            return lines.join("\n").into_bytes();
         }
     }
-    Ok(())
+    original.to_vec()
 }
 
 /// Moves the next backlog task of `spec` to `todo` and returns its name.
@@ -568,10 +824,11 @@ fn set_frontmatter_status(path: &Path, status: Status) -> Result<(), TasksError>
 ///
 /// Same as [`move_task`] and [`next_backlog_task`].
 pub fn pop_next_task(tasks_dir: &Path, spec: &str) -> Result<Option<String>, TasksError> {
+    let _graph_lock = acquire_issue_graph_lock(tasks_dir)?;
     let Some(task) = next_backlog_task(tasks_dir, spec)? else {
         return Ok(None);
     };
-    move_task(tasks_dir, &task, Status::Backlog, Status::Todo)?;
+    move_task_as_locked(tasks_dir, "move", &task, Status::Backlog, Status::Todo)?;
     Ok(Some(task))
 }
 
@@ -599,16 +856,79 @@ pub fn complete_task(tasks_dir: &Path, task: &str) -> Result<(), TasksError> {
 ///
 /// As [`move_task`], plus I/O while appending the reason.
 pub fn block_task(tasks_dir: &Path, task: &str, reason: &str) -> Result<(), TasksError> {
+    let _graph_lock = acquire_issue_graph_lock(tasks_dir)?;
+    validate_task_name(task)?;
+    if path_has_symlink_component(tasks_dir) {
+        return Err(TasksError::io(
+            format!("refusing symlinked tasks root {}", tasks_dir.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "tasks root has a symlink component",
+            ),
+        ));
+    }
     let reason = if reason.is_empty() {
         "No reason provided"
     } else {
         reason
     };
-    move_task_as(tasks_dir, "block", task, Status::Doing, Status::Blocked)?;
-    let doc = tasks_dir.join("blocked").join(task).join(TASK_FILE);
-    let mut text = fs::read_to_string(&doc).unwrap_or_default();
-    text.push_str(&format!("\n## Blocked Reason\n{reason}\n"));
-    write_file(&doc, &text)
+    let doing_dir = tasks_dir.join("doing");
+    let doing_metadata = fs::symlink_metadata(&doing_dir)
+        .map_err(|error| TasksError::io(format!("reading {}", doing_dir.display()), error))?;
+    if !doing_metadata.is_dir() {
+        return Err(TasksError::io(
+            format!("refusing non-directory status path {}", doing_dir.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "status path is not a directory",
+            ),
+        ));
+    }
+    let task_dir = doing_dir.join(task);
+    let task_dir_metadata = fs::symlink_metadata(&task_dir)
+        .map_err(|error| TasksError::io(format!("reading {}", task_dir.display()), error))?;
+    if !task_dir_metadata.is_dir() {
+        return Err(TasksError::io(
+            format!("refusing non-directory task path {}", task_dir.display()),
+            io::Error::new(io::ErrorKind::InvalidInput, "task path is not a directory"),
+        ));
+    }
+    let doc = task_dir.join(TASK_FILE);
+    let metadata = fs::symlink_metadata(&doc)
+        .map_err(|error| TasksError::io(format!("reading {}", doc.display()), error))?;
+    if !metadata.is_file() {
+        return Err(TasksError::io(
+            format!("refusing non-regular task file {}", doc.display()),
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "task file is not a regular file",
+            ),
+        ));
+    }
+    let original = fs::read(&doc)
+        .map_err(|error| TasksError::io(format!("reading {}", doc.display()), error))?;
+    let mut blocked = String::from_utf8(original.clone()).map_err(|error| {
+        TasksError::io(
+            format!("task file {} is not valid UTF-8", doc.display()),
+            io::Error::new(io::ErrorKind::InvalidData, error),
+        )
+    })?;
+    blocked.push_str(&format!("\n## Blocked Reason\n{reason}\n"));
+    write_file(&doc, &blocked)?;
+    if let Err(error) =
+        move_task_as_locked(tasks_dir, "block", task, Status::Doing, Status::Blocked)
+    {
+        if let Err(restore_error) = fs::write(&doc, original) {
+            return Err(TasksError::io(
+                format!(
+                    "blocking {task} failed ({error}); restoring task file failed: {restore_error}"
+                ),
+                io::Error::other(error),
+            ));
+        }
+        return Err(error);
+    }
+    Ok(())
 }
 
 /// `blocked` → `todo`.
@@ -640,6 +960,163 @@ mod tests {
             "later".parse::<Status>(),
             Err(TasksError::InvalidStatus(_))
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_tasks_rejects_symlinked_ancestor_of_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (root, tasks) = project();
+        let external = root.path().join("external");
+        let alias = root.path().join("alias");
+        fs::create_dir_all(external.join("tasks/backlog")).unwrap();
+        fs::write(external.join("tasks/backlog/low_external"), "").unwrap();
+        symlink(&external, &alias).unwrap();
+
+        let result = list_tasks(&alias.join("tasks"), Status::Backlog);
+
+        assert!(external.join("tasks/backlog/low_external").exists());
+        assert!(result.is_err());
+        assert_eq!(list_tasks(&tasks, Status::Backlog).unwrap(), None);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_tasks_rejects_symlinked_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (_root, tasks) = project();
+        let external = tasks.parent().unwrap().join("external-tasks");
+        fs::create_dir_all(external.join("backlog")).unwrap();
+        symlink(&external, &tasks).unwrap();
+
+        assert!(list_tasks(&tasks, Status::Backlog).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_tasks_rejects_symlinked_status_directory() {
+        use std::os::unix::fs::symlink;
+
+        let (_root, tasks) = project();
+        let backlog = tasks.join("backlog");
+        fs::create_dir_all(&backlog).unwrap();
+        let external = tasks.parent().unwrap().join("external-backlog");
+        fs::rename(&backlog, &external).unwrap();
+        symlink(&external, &backlog).unwrap();
+
+        assert!(list_tasks(&tasks, Status::Backlog).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn add_task_does_not_create_through_symlinked_ancestor_of_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (root, tasks) = project();
+        let external = root.path().join("external");
+        let alias = root.path().join("alias");
+        fs::create_dir_all(external.join("tasks/backlog")).unwrap();
+        symlink(&external, &alias).unwrap();
+
+        let result = add_task(&alias.join("tasks"), "spec", "low", "linked", "Linked");
+
+        assert!(result.is_err());
+        assert!(!external.join("tasks/backlog/low_linked").exists());
+        assert!(!tasks.join("backlog/low_linked").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn add_task_does_not_create_through_symlinked_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (_root, tasks) = project();
+        let external = tasks.parent().unwrap().join("external-tasks");
+        fs::create_dir_all(external.join("backlog")).unwrap();
+        symlink(&external, &tasks).unwrap();
+
+        let result = add_task(&tasks, "spec", "low", "linked", "Linked");
+
+        assert!(result.is_err());
+        assert!(!external.join("backlog/low_linked").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn add_task_does_not_create_through_symlinked_status_directory() {
+        use std::os::unix::fs::symlink;
+
+        let (_root, tasks) = project();
+        let backlog = tasks.join("backlog");
+        fs::create_dir_all(&backlog).unwrap();
+        let external = tasks.parent().unwrap().join("external-backlog");
+        fs::rename(&backlog, &external).unwrap();
+        symlink(&external, &backlog).unwrap();
+
+        let result = add_task(&tasks, "spec", "low", "linked", "Linked");
+
+        assert!(result.is_err());
+        assert!(!external.join("low_linked").exists());
+    }
+
+    #[test]
+    fn topic_of_rejects_path_traversal_from_frontmatter() {
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "s", "low", "safe", "Safe").unwrap();
+        let task_file = tasks.join("backlog").join(&name).join(TASK_FILE);
+        fs::write(&task_file, "---\nspec: s\ntopic: ../../outside\n---\n").unwrap();
+        assert_eq!(topic_of(&tasks, Status::Backlog, &name), None);
+    }
+
+    #[test]
+    fn spec_and_plan_doc_keep_invalid_topics_inside_plaesy() {
+        let (root, _tasks) = project();
+        let outside = root.path().join("outside");
+
+        let spec = spec_doc(root.path(), "../../outside");
+        let plan = plan_doc(root.path(), "../outside");
+
+        assert!(spec.starts_with(root.path().join(".plaesy/spec")));
+        assert!(plan.starts_with(root.path().join(".plaesy/plan")));
+        assert!(!spec.starts_with(&outside));
+        assert!(!plan.starts_with(&outside));
+        assert!(spec.ends_with("__invalid_topic__/spec.md"));
+        assert!(plan.ends_with("__invalid_topic__/plan.md"));
+    }
+
+    #[test]
+    fn read_frontmatter_does_not_strip_unmatched_quotes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("task.md");
+        fs::write(&path, "---\ntitle: \"keep opening quote\n---\n").unwrap();
+        assert_eq!(read_frontmatter(&path)["title"], "\"keep opening quote");
+    }
+
+    #[test]
+    fn read_frontmatter_uses_last_colon_in_value() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("task.md");
+        fs::write(&path, "---\ntitle: https://example.test/a:b\n---\n").unwrap();
+        assert_eq!(read_frontmatter(&path)["title"], "https://example.test/a:b");
+    }
+
+    #[test]
+    fn task_frontmatter_values_are_preserved_as_strings() {
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "# prod", "low", "safe", "# note").unwrap();
+        let frontmatter = read_frontmatter(&tasks.join("backlog").join(name).join(TASK_FILE));
+        assert_eq!(frontmatter["spec"], "# prod");
+        assert_eq!(frontmatter["title"], "# note");
+    }
+
+    #[test]
+    fn task_title_cannot_inject_frontmatter_fields() {
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "safe", "Title\nspec: injected").unwrap();
+        let frontmatter = read_frontmatter(&tasks.join("backlog").join(name).join(TASK_FILE));
+        assert_eq!(frontmatter["spec"], "auth");
     }
 
     #[test]
@@ -677,6 +1154,205 @@ mod tests {
     }
 
     #[test]
+    fn status_frontmatter_is_prepared_without_mutating_source_bytes() {
+        let original = b"---\ntitle: Example\nstatus: todo\n---\nbody\n";
+        let updated = with_frontmatter_status(original, Status::Doing);
+        assert_eq!(original, b"---\ntitle: Example\nstatus: todo\n---\nbody\n");
+        assert_eq!(updated, b"---\ntitle: Example\nstatus: doing\n---\nbody\n");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn moving_task_does_not_write_through_symlinked_task_directory() {
+        use std::os::unix::fs::symlink;
+
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "symlink-dir", "Symlink").unwrap();
+        let task_dir = tasks.join("backlog").join(&name);
+        let external = tasks.parent().unwrap().join("external-task-dir");
+        fs::rename(&task_dir, &external).unwrap();
+        symlink(&external, &task_dir).unwrap();
+        let task_file = external.join(TASK_FILE);
+        let original = fs::read(&task_file).unwrap();
+
+        let result = move_task(&tasks, &name, Status::Backlog, Status::Todo);
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(&task_file).unwrap(), original);
+        assert!(task_dir
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn moving_task_rejects_symlinked_ancestor_of_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (root, _tasks) = project();
+        let external = root.path().join("external");
+        let alias = root.path().join("alias");
+        fs::create_dir_all(external.join("tasks/backlog/low_external")).unwrap();
+        fs::write(
+            external.join("tasks/backlog/low_external/task.md"),
+            "---\nstatus: backlog\n---\n",
+        )
+        .unwrap();
+        symlink(&external, &alias).unwrap();
+
+        let result = move_task(
+            &alias.join("tasks"),
+            "low_external",
+            Status::Backlog,
+            Status::Todo,
+        );
+
+        assert!(result.is_err());
+        assert!(external.join("tasks/backlog/low_external").exists());
+        assert!(!external.join("tasks/todo/low_external").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn moving_task_does_not_follow_symlinked_status_directory() {
+        use std::os::unix::fs::symlink;
+
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "status-link", "Status link").unwrap();
+        let backlog = tasks.join("backlog");
+        let external = tasks.parent().unwrap().join("external-backlog");
+        fs::rename(&backlog, &external).unwrap();
+        symlink(&external, &backlog).unwrap();
+        let source_task = external.join(&name);
+        let original = fs::read(source_task.join(TASK_FILE)).unwrap();
+
+        let result = move_task(&tasks, &name, Status::Backlog, Status::Todo);
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(source_task.join(TASK_FILE)).unwrap(), original);
+        assert!(backlog.symlink_metadata().unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn moving_task_does_not_write_through_symlinked_task_file() {
+        use std::os::unix::fs::symlink;
+
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "symlink", "Symlink").unwrap();
+        move_task(&tasks, &name, Status::Backlog, Status::Todo).unwrap();
+        let task_file = tasks.join("todo").join(&name).join(TASK_FILE);
+        fs::remove_file(&task_file).unwrap();
+        let external = tasks.parent().unwrap().join("external-task.md");
+        let sentinel = b"external sentinel\n";
+        fs::write(&external, sentinel).unwrap();
+        symlink(&external, &task_file).unwrap();
+
+        let result = start_task(&tasks, &name);
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(&external).unwrap(), sentinel);
+        assert!(task_file
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn block_task_rejects_symlinked_ancestor_of_tasks_root() {
+        use std::os::unix::fs::symlink;
+
+        let (root, _tasks) = project();
+        let external = root.path().join("external");
+        let alias = root.path().join("alias");
+        let task_dir = external.join("tasks/doing/low_external");
+        fs::create_dir_all(&task_dir).unwrap();
+        let task_file = task_dir.join(TASK_FILE);
+        let original = b"---\nstatus: doing\n---\nTask body\n";
+        fs::write(&task_file, original).unwrap();
+        symlink(&external, &alias).unwrap();
+
+        let result = block_task(&alias.join("tasks"), "low_external", "reason");
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(task_file).unwrap(), original);
+        assert!(external.join("tasks/doing/low_external").exists());
+        assert!(!external.join("tasks/blocked/low_external").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn block_task_does_not_write_through_symlinked_task_directory() {
+        use std::os::unix::fs::symlink;
+
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "symlink-dir", "Symlink").unwrap();
+        move_task(&tasks, &name, Status::Backlog, Status::Todo).unwrap();
+        start_task(&tasks, &name).unwrap();
+        let task_dir = tasks.join("doing").join(&name);
+        let external = tasks.parent().unwrap().join("external-doing-task");
+        fs::rename(&task_dir, &external).unwrap();
+        symlink(&external, &task_dir).unwrap();
+        let task_file = external.join(TASK_FILE);
+        let original = fs::read(&task_file).unwrap();
+
+        let result = block_task(&tasks, &name, "external reason");
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(&task_file).unwrap(), original);
+        assert!(task_dir
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn block_task_does_not_write_through_symlinked_task_file() {
+        use std::os::unix::fs::symlink;
+
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "low", "symlink-block", "Symlink").unwrap();
+        move_task(&tasks, &name, Status::Backlog, Status::Todo).unwrap();
+        start_task(&tasks, &name).unwrap();
+        let task_file = tasks.join("doing").join(&name).join(TASK_FILE);
+        fs::remove_file(&task_file).unwrap();
+        let external = tasks.parent().unwrap().join("external-block.md");
+        let sentinel = b"external sentinel\n";
+        fs::write(&external, sentinel).unwrap();
+        symlink(&external, &task_file).unwrap();
+
+        let result = block_task(&tasks, &name, "external reason");
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(&external).unwrap(), sentinel);
+        assert!(task_file
+            .symlink_metadata()
+            .unwrap()
+            .file_type()
+            .is_symlink());
+    }
+
+    #[test]
+    fn lifecycle_commands_reject_path_traversal_names() {
+        let (_dir, tasks) = project();
+        add_task(&tasks, "auth", "medium", "safe", "Safe").unwrap();
+        for result in [
+            move_task(&tasks, "../outside", Status::Backlog, Status::Todo),
+            block_task(&tasks, "../outside", "reason"),
+            unblock_task(&tasks, "../outside"),
+        ] {
+            assert!(matches!(result, Err(TasksError::InvalidSlug(_))));
+        }
+        assert!(!tasks.join("../outside/task.md").exists());
+    }
+
+    #[test]
     fn add_then_start_complete_moves_the_folder_and_status() {
         let (_dir, tasks) = project();
         let name = add_task(&tasks, "auth", "high", "login-form", "Login form").unwrap();
@@ -692,6 +1368,21 @@ mod tests {
         let (status, path) = find_task(&tasks, &name).unwrap();
         assert_eq!(status, Status::Done);
         assert!(read_frontmatter(&path.join(TASK_FILE))["status"] == "done");
+    }
+
+    #[test]
+    fn block_failure_keeps_original_task_content_in_source_status() {
+        let (_dir, tasks) = project();
+        let name = add_task(&tasks, "auth", "medium", "rollback", "Rollback").unwrap();
+        move_task(&tasks, &name, Status::Backlog, Status::Todo).unwrap();
+        start_task(&tasks, &name).unwrap();
+        let source = tasks.join("doing").join(&name);
+        let original = fs::read(source.join(TASK_FILE)).unwrap();
+        fs::create_dir_all(tasks.join("blocked").join(&name)).unwrap();
+
+        assert!(block_task(&tasks, &name, "cannot move").is_err());
+        assert_eq!(fs::read(source.join(TASK_FILE)).unwrap(), original);
+        assert!(source.exists());
     }
 
     #[test]
@@ -740,6 +1431,49 @@ mod tests {
         assert!(problems
             .iter()
             .any(|p| p.message == "in both backlog and todo"));
+    }
+
+    #[test]
+    fn concurrent_add_task_creates_one_folder_without_overwriting() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        for round in 0..25 {
+            let root = tempfile::tempdir().unwrap();
+            let tasks = tasks_dir(root.path());
+            let backlog = tasks.join(Status::Backlog.as_str());
+            fs::create_dir_all(&backlog).unwrap();
+            let tasks = Arc::new(tasks);
+            let barrier = Arc::new(Barrier::new(8));
+            let handles: Vec<_> = (0..8)
+                .map(|_| {
+                    let tasks = Arc::clone(&tasks);
+                    let barrier = Arc::clone(&barrier);
+                    thread::spawn(move || {
+                        barrier.wait();
+                        add_task(&tasks, "spec", "high", "feature-same", "Same title")
+                    })
+                })
+                .collect();
+            let results: Vec<_> = handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect();
+
+            assert_eq!(
+                results.iter().filter(|result| result.is_ok()).count(),
+                1,
+                "round {round}"
+            );
+            assert_eq!(
+                results.iter().filter(|result| result.is_err()).count(),
+                7,
+                "round {round}"
+            );
+            let task_dir = backlog.join("high_feature-same");
+            assert!(task_dir.join(TASK_FILE).is_file(), "round {round}");
+            assert!(task_dir.join(CONTRACT_FILE).is_file(), "round {round}");
+        }
     }
 
     #[test]

@@ -171,7 +171,9 @@ impl PlatformAdapter for GitHubAdapter {
                 let action = opt_or(opts, "action", "view");
                 let mut args = argv(&["gh", "repo", action, query]);
                 let fields = match action {
-                    "view" => "name,description,url,stargazerCount,forkCount,primaryLanguage,issues,latestRelease",
+                    "view" => {
+                        "name,description,url,stargazerCount,forkCount,primaryLanguage,issues,latestRelease"
+                    }
                     "list-issues" | "list-prs" => "number,title,state,labels,createdAt,updatedAt",
                     "list-releases" => "tagName,name,createdAt,isLatest,isPrerelease",
                     _ => "",

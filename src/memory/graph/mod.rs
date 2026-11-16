@@ -62,7 +62,7 @@ fn inactive_statuses(note_type: &str) -> &'static [&'static str] {
     match note_type {
         "project" => &["completed", "archived"],
         "decision" => &["superseded", "revoked"],
-        "context" => &["archived"],
+        "context" | "capture" => &["archived"],
         _ => &[],
     }
 }
@@ -79,7 +79,7 @@ pub struct GraphNote {
     pub note_type: String,
     /// Display title: the `title` frontmatter field, else the declared `id`.
     pub title: String,
-    /// Declared `status`, normalised to lowercase. Defaults applied by [`effective_status`].
+    /// Declared `status`, normalised to lowercase. Defaults are applied by [`GraphNote::effective_status`].
     pub status: Option<String>,
     /// `project` field (decision/context: the project it mainly belongs to).
     pub project: Option<String>,
@@ -99,12 +99,25 @@ impl GraphNote {
 
     /// Whether this note is linked to `project_id`, directly or via `scope`.
     pub fn belongs_to(&self, project_id: &str) -> bool {
-        self.project.as_deref() == Some(project_id) || self.scope.iter().any(|s| s == project_id)
+        self.project
+            .as_deref()
+            .is_some_and(|project| project.eq_ignore_ascii_case(project_id))
+            || self
+                .scope
+                .iter()
+                .any(|scope| scope.eq_ignore_ascii_case(project_id))
     }
 
     /// `true` when related via `scope` only (not the direct `project` owner) — rendered `(shared)`.
     pub fn is_shared_only(&self, project_id: &str) -> bool {
-        self.project.as_deref() != Some(project_id) && self.scope.iter().any(|s| s == project_id)
+        !self
+            .project
+            .as_deref()
+            .is_some_and(|project| project.eq_ignore_ascii_case(project_id))
+            && self
+                .scope
+                .iter()
+                .any(|scope| scope.eq_ignore_ascii_case(project_id))
     }
 }
 
@@ -271,7 +284,10 @@ pub enum Resolved<'a> {
 /// closest titles/ids by substring.
 pub fn resolve_project<'a>(graph: &'a Graph, query: &str) -> Resolved<'a> {
     let projects = graph.projects();
-    let exact_ids: Vec<&&GraphNote> = projects.iter().filter(|p| p.id == query).collect();
+    let exact_ids: Vec<&&GraphNote> = projects
+        .iter()
+        .filter(|p| p.id.eq_ignore_ascii_case(query))
+        .collect();
     match exact_ids.len() {
         1 => return Resolved::Found(exact_ids[0]),
         n if n > 1 => {
@@ -281,7 +297,7 @@ pub fn resolve_project<'a>(graph: &'a Graph, query: &str) -> Resolved<'a> {
                     .iter()
                     .map(|p| format!("{} ({})", p.id, p.title))
                     .collect(),
-            }
+            };
         }
         _ => {}
     }
@@ -303,7 +319,10 @@ pub fn resolve_project<'a>(graph: &'a Graph, query: &str) -> Resolved<'a> {
     }
     let prefix_matches: Vec<&&GraphNote> = projects
         .iter()
-        .filter(|p| p.id.starts_with(query))
+        .filter(|p| {
+            p.id.get(..query.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(query))
+        })
         .collect();
     match prefix_matches.len() {
         1 => Resolved::Found(prefix_matches[0]),
@@ -377,7 +396,10 @@ pub fn list<'a>(graph: &'a Graph, note_type: &str, filter: &ListFilter) -> Vec<&
                 }
             }
             if !filter.status.is_empty() {
-                return filter.status.iter().any(|s| s == n.effective_status());
+                return filter
+                    .status
+                    .iter()
+                    .any(|status| status.eq_ignore_ascii_case(n.effective_status()));
             }
             if filter.include_inactive {
                 return true;
@@ -556,6 +578,19 @@ mod tests {
     }
 
     #[test]
+    fn resolve_unique_prefix_is_case_insensitive() {
+        let g = graph_of(vec![doc(
+            "a.md",
+            &[
+                ("type", s("project")),
+                ("id", s("Studio-A")),
+                ("title", s("Studio A")),
+            ],
+        )]);
+        assert!(matches!(resolve_project(&g, "STUDIO"), Resolved::Found(_)));
+    }
+
+    #[test]
     fn resolve_unique_prefix() {
         let g = graph_of(vec![doc(
             "a.md",
@@ -630,6 +665,63 @@ mod tests {
     }
 
     #[test]
+    fn captures_list_uses_project_status_and_limit_filters() {
+        let g = graph_of(vec![
+            doc(
+                "one.md",
+                &[
+                    ("type", s("capture")),
+                    ("id", s("c1")),
+                    ("project", s("p1")),
+                    ("status", s("active")),
+                ],
+            ),
+            doc(
+                "two.md",
+                &[
+                    ("type", s("capture")),
+                    ("id", s("c2")),
+                    ("scope", Value::Array(vec![s("p1")])),
+                    ("status", s("archived")),
+                ],
+            ),
+            doc(
+                "three.md",
+                &[
+                    ("type", s("capture")),
+                    ("id", s("c3")),
+                    ("project", s("p2")),
+                    ("status", s("active")),
+                ],
+            ),
+        ]);
+        let filtered = ListFilter {
+            projects: vec!["p1".into()],
+            status: vec!["archived".into()],
+            include_inactive: false,
+            limit: 10,
+        };
+        let captures = list(&g, "capture", &filtered);
+        assert_eq!(
+            captures.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
+            vec!["c2"]
+        );
+        let default_visible = list(&g, "capture", &ListFilter::default());
+        assert_eq!(
+            default_visible
+                .iter()
+                .map(|n| n.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["c1", "c3"]
+        );
+        let limited = ListFilter {
+            limit: 1,
+            ..ListFilter::default()
+        };
+        assert_eq!(list(&g, "capture", &limited).len(), 1);
+    }
+
+    #[test]
     fn decisions_default_hides_superseded_and_revoked() {
         let g = graph_of(vec![
             doc(
@@ -682,7 +774,7 @@ mod tests {
     }
 
     #[test]
-    fn explicit_status_overrides_default_hiding() {
+    fn explicit_status_filter_is_case_insensitive() {
         let g = graph_of(vec![doc(
             "d2.md",
             &[
@@ -692,10 +784,29 @@ mod tests {
             ],
         )]);
         let filter = ListFilter {
-            status: vec!["superseded".into()],
+            status: vec!["SUPERSEDED".into()],
             ..ListFilter::default()
         };
         assert_eq!(list(&g, "decision", &filter).len(), 1);
+    }
+
+    #[test]
+    fn project_filter_matches_owner_and_scope_case_insensitively() {
+        let note = GraphNote {
+            path: "d.md".into(),
+            id: "d1".into(),
+            note_type: "decision".into(),
+            title: "Decision".into(),
+            status: None,
+            project: Some("Studio-A".into()),
+            scope: vec!["Studio-B".into()],
+            supersedes: Vec::new(),
+            updated: None,
+        };
+        assert!(note.belongs_to("studio-a"));
+        assert!(note.belongs_to("studio-b"));
+        assert!(!note.is_shared_only("studio-a"));
+        assert!(note.is_shared_only("studio-b"));
     }
 
     #[test]

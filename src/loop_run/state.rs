@@ -61,7 +61,7 @@ pub fn load(path: &Path) -> Result<State, StateError> {
             return Err(StateError::Io {
                 path: path.to_path_buf(),
                 source,
-            })
+            });
         }
     };
     if text.trim().is_empty() {

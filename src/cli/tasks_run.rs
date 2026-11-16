@@ -72,7 +72,18 @@ pub fn run(args: &Args, spec: &str) -> CliResult {
                         let res =
                             run_claimed_task(&root, &tasks_dir, &file, &cfg, &names, args, timeout);
                         ran.fetch_add(1, Ordering::SeqCst);
-                        res
+                        match res {
+                            Ok(()) => Ok(()),
+                            Err(error) => {
+                                let reason = format!("task run failed before completion: {error}");
+                                match tasks::block_task(&tasks_dir, &file, &reason) {
+                                    Ok(()) => Err(error),
+                                    Err(block_error) => Err(format!(
+                                        "{error}; also failed to block task: {block_error}"
+                                    )),
+                                }
+                            }
+                        }
                     }
                     Err(e) => Err(e.to_string()),
                 };
@@ -113,12 +124,19 @@ fn run_claimed_task(
     timeout: Duration,
 ) -> Result<(), String> {
     let task_dir = tasks_dir.join("doing").join(file);
-    // The prompt is the task's topic spec.
+    let task_body = fs::read_to_string(task_dir.join(crate::tasks::TASK_FILE))
+        .map_err(|e| format!("reading task {file}: {e}"))?;
     let topic = crate::tasks::topic_of(tasks_dir, crate::tasks::Status::Doing, file)
-        .ok_or_else(|| format!("{file} has no topic; every task needs one"))?;
-    let body =
+        .ok_or_else(|| format!("{file} has no topic; tasks run requires a topic spec"))?;
+    let spec_body =
         fs::read_to_string(crate::tasks::spec_doc(root, &topic)).map_err(|e| e.to_string())?;
-    let prompt = build_task_prompt(file, &body);
+    let contracts_path = task_dir.join(crate::tasks::CONTRACT_FILE);
+    let contracts_body = match fs::read_to_string(&contracts_path) {
+        Ok(body) => body,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(format!("reading contracts for {file}: {error}")),
+    };
+    let prompt = build_task_prompt(file, &task_body, &spec_body, &contracts_body);
 
     let usage_path = usage::usage_path(&root.join(".plaesy").join("analysis"));
     let records = usage::read(&usage_path).map_err(|e| e.to_string())?;
@@ -195,13 +213,20 @@ fn run_claimed_task(
     Ok(())
 }
 
-/// What the provider receives: the task, and the instruction to report what changed.
-fn build_task_prompt(task_file: &str, task_body: &str) -> String {
+/// What the provider receives: task instructions, topic specification, and validation contracts.
+fn build_task_prompt(
+    task_file: &str,
+    task_body: &str,
+    spec_body: &str,
+    contracts_body: &str,
+) -> String {
     format!(
         "You are implementing one task.\n\
          Work in the current directory and change only what the task needs.\n\
          When you finish, reply with a short summary: what changed, and how each acceptance criterion was checked.\n\n\
-         ## Task ({task_file})\n\n{task_body}\n"
+         ## Task ({task_file})\n\n{task_body}\n\n\
+         ## Topic specification\n\n{spec_body}\n\n\
+         ## Validation contracts\n\n{contracts_body}\n"
     )
 }
 
@@ -236,4 +261,22 @@ fn write_run_record(
     }
     fs::write(&path, text)?;
     Ok(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_task_prompt;
+
+    #[test]
+    fn task_prompt_includes_task_spec_and_contracts() {
+        let prompt = build_task_prompt(
+            "high_update-api",
+            "Task: update the parser",
+            "Spec: keep the API stable",
+            "Contracts: unit tests pass",
+        );
+        assert!(prompt.contains("Task: update the parser"));
+        assert!(prompt.contains("Spec: keep the API stable"));
+        assert!(prompt.contains("Contracts: unit tests pass"));
+    }
 }

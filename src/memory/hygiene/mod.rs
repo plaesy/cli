@@ -20,8 +20,8 @@
 
 //! Secret findings report only kind and line number. They never include the matched value.
 
-//! Set [`HygieneOptions::scan_secrets`] to `false` only for compatibility with a caller that
-//! explicitly does not want this check.
+//! Set [`crate::memory::hygiene::HygieneOptions::scan_secrets`] to `false` only for compatibility
+//! with a caller that explicitly does not want this check.
 
 //! The check intentionally favours recall over certainty; findings require human review.
 
@@ -35,7 +35,7 @@
 //! read from indexed content or metadata.
 
 use crate::memory::error::Result;
-use crate::memory::search::{age_days, build_meta, normalize_tier, SearchEngine};
+use crate::memory::search::{age_days, build_meta, normalize_tier, parse_date, SearchEngine};
 use crate::memory::storage::LinkRef;
 use chrono::{DateTime, Utc};
 use regex::Regex;
@@ -51,24 +51,43 @@ mod markdown_links;
 pub fn validate_markdown_links(
     root: &std::path::Path,
 ) -> crate::memory::error::Result<Vec<Finding>> {
+    validate_markdown_links_in_scope(root, root)
+}
+
+/// Validate links from Markdown files under `scope` against the full `vault_root` boundary.
+///
+/// The scope must be a directory inside the vault. Link targets may cross the scope boundary,
+/// but cannot leave the vault. This function reads files only and never modifies the index.
+pub fn validate_markdown_links_in_scope(
+    vault_root: &std::path::Path,
+    scope: &std::path::Path,
+) -> crate::memory::error::Result<Vec<Finding>> {
     use crate::memory::indexer::Extractor;
     use crate::memory::storage::StoredDocument;
 
-    let root =
-        root.canonicalize()
+    let canonicalize = |path: &std::path::Path| {
+        path.canonicalize()
             .map_err(|source| crate::memory::error::MemoryError::IoError {
-                path: root.display().to_string(),
+                path: path.display().to_string(),
                 source,
-            })?;
-    if !root.is_dir() {
+            })
+    };
+    let root = canonicalize(vault_root)?;
+    let scope = canonicalize(scope)?;
+    if !root.is_dir() || !scope.is_dir() {
+        return Err(crate::memory::error::MemoryError::ConfigError(
+            "link validation vault and scope must be directories".into(),
+        ));
+    }
+    if !scope.starts_with(&root) {
         return Err(crate::memory::error::MemoryError::ConfigError(format!(
-            "link validation target is not a directory: {}",
-            root.display()
+            "link validation scope is outside vault root: {}",
+            scope.display()
         )));
     }
     let extractor = Extractor::new();
     let mut docs = Vec::new();
-    for entry in walkdir::WalkDir::new(&root)
+    for entry in walkdir::WalkDir::new(&scope)
         .follow_links(false)
         .into_iter()
         .filter_entry(|entry| {
@@ -131,6 +150,9 @@ pub struct HygieneOptions {
     /// directory name is also accepted.
     pub root: Option<PathBuf>,
 
+    /// Optional vault-relative directory prefix restricting findings and checked documents.
+    pub scope: Option<PathBuf>,
+
     /// Additional local source repository roots keyed by the vault project slug. These paths
     /// remain device-local and are used only to resolve backticked repository-relative paths.
     pub project_roots: BTreeMap<String, Vec<PathBuf>>,
@@ -149,6 +171,7 @@ impl Default for HygieneOptions {
     fn default() -> Self {
         Self {
             root: None,
+            scope: None,
             project_roots: BTreeMap::new(),
             stale_after_days: None,
             now: None,
@@ -497,7 +520,23 @@ impl SearchEngine {
         let stale_days = opts
             .stale_after_days
             .unwrap_or(self.search_config().stale_after_days);
-        let docs = db.all_documents().await?;
+        let mut docs = db.all_documents().await?;
+        let scope = opts.scope.as_ref().map(|scope| {
+            scope
+                .to_string_lossy()
+                .replace('\\', "/")
+                .trim_matches('/')
+                .to_owned()
+        });
+        if let Some(scope) = scope.as_deref() {
+            if scope.is_empty() || scope.split('/').any(|part| part == ".." || part == ".") {
+                return Err(crate::memory::error::MemoryError::ConfigError(
+                    "hygiene scope must be a normalized vault-relative path".into(),
+                ));
+            }
+            let prefix = format!("{scope}/");
+            docs.retain(|doc| doc.path == scope || doc.path.starts_with(&prefix));
+        }
         let mut findings: Vec<Finding> = Vec::new();
 
         for doc in &docs {
@@ -559,6 +598,48 @@ impl SearchEngine {
                         path,
                         None,
                         format!("{} note has no `confidence`", tier.unwrap_or("?")),
+                        "FACT",
+                    ));
+                }
+            }
+
+            for key in ["valid_from", "valid_to"] {
+                if let Some(raw) = md.get(key) {
+                    let Some(value) = raw.as_str() else {
+                        findings.push(finding(
+                            "invalid_validity_date",
+                            path,
+                            None,
+                            format!("`{key}` must be a YYYY-MM-DD or RFC 3339 string"),
+                            "FACT",
+                        ));
+                        continue;
+                    };
+                    if parse_date(value).is_none() {
+                        findings.push(finding(
+                            "invalid_validity_date",
+                            path,
+                            None,
+                            format!("`{key}` value is not a valid date or RFC 3339 timestamp"),
+                            "FACT",
+                        ));
+                    }
+                }
+            }
+            if let (Some(from), Some(to)) = (
+                md.get("valid_from")
+                    .and_then(|value| value.as_str())
+                    .and_then(parse_date),
+                md.get("valid_to")
+                    .and_then(|value| value.as_str())
+                    .and_then(parse_date),
+            ) {
+                if from > to {
+                    findings.push(finding(
+                        "inverted_validity_range",
+                        path,
+                        None,
+                        "`valid_from` is later than `valid_to`".to_string(),
                         "FACT",
                     ));
                 }
@@ -747,6 +828,11 @@ impl SearchEngine {
         // A decision that lists its own id in `supersedes` is a self-referencing cycle: it can
         // never be a legitimate replacement for itself, and it would make `supersession_map`
         // report the decision as superseding itself with no warning otherwise.
+        let decision_ids: std::collections::HashSet<&str> = graph
+            .of_type("decision")
+            .into_iter()
+            .map(|decision| decision.id.as_str())
+            .collect();
         for n in graph.of_type("decision") {
             if n.supersedes.iter().any(|s| s == &n.id) {
                 findings.push(finding(
@@ -757,8 +843,119 @@ impl SearchEngine {
                     "FACT",
                 ));
             }
-        }
+            for target in &n.supersedes {
+                if !decision_ids.contains(target.as_str()) {
+                    findings.push(finding(
+                        "dangling_supersedes_reference",
+                        &n.path,
+                        None,
+                        format!("`supersedes` references missing decision '{target}'"),
+                        "FACT",
+                    ));
+                }
+            }
 
+            let metadata = docs
+                .iter()
+                .find(|doc| doc.path == n.path)
+                .map(|doc| &doc.metadata);
+            let replacement = metadata
+                .and_then(|metadata| metadata.get("superseded_by"))
+                .and_then(|value| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+            if n.effective_status() == "superseded" {
+                match replacement {
+                    None => {
+                        if !findings
+                            .iter()
+                            .any(|f| f.kind == "superseded_without_replacement" && f.path == n.path)
+                        {
+                            findings.push(finding(
+                                "superseded_without_replacement",
+                                &n.path,
+                                None,
+                                "status is `superseded` but `superseded_by` is not set".to_string(),
+                                "FACT",
+                            ));
+                        }
+                    }
+                    Some(target) if !decision_ids.contains(target) => findings.push(finding(
+                        "dangling_superseded_by_reference",
+                        &n.path,
+                        None,
+                        format!("`superseded_by` references missing decision '{target}'"),
+                        "FACT",
+                    )),
+                    Some(target) => {
+                        let reciprocal = graph.of_type("decision").into_iter().any(|candidate| {
+                            candidate.id == target
+                                && candidate.supersedes.iter().any(|id| id == &n.id)
+                        });
+                        if !reciprocal {
+                            findings.push(finding(
+                                "inconsistent_supersession_reference",
+                                &n.path,
+                                None,
+                                format!("replacement decision '{target}' does not list '{}' in `supersedes`", n.id),
+                                "FACT",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        // Report only actual cycle members, not decisions that merely lead into a cycle. IDs
+        // must be unique before they can be used as unambiguous graph vertices.
+        let unique_decisions: std::collections::HashMap<&str, &crate::memory::graph::GraphNote> =
+            graph
+                .of_type("decision")
+                .into_iter()
+                .filter(|decision| {
+                    by_id
+                        .get(decision.id.as_str())
+                        .is_some_and(|notes| notes.len() == 1)
+                })
+                .map(|decision| (decision.id.as_str(), decision))
+                .collect();
+        let mut cycle_members = std::collections::BTreeSet::new();
+        for start in unique_decisions.keys().copied() {
+            let mut seen = std::collections::HashMap::new();
+            let mut path = Vec::new();
+            let mut current = start;
+            while let Some(decision) = unique_decisions.get(current) {
+                if let Some(&cycle_start) = seen.get(current) {
+                    cycle_members.extend(path[cycle_start..].iter().copied());
+                    break;
+                }
+                seen.insert(current, path.len());
+                path.push(current);
+                let Some(next) = decision
+                    .supersedes
+                    .iter()
+                    .find(|id| unique_decisions.contains_key(id.as_str()))
+                else {
+                    break;
+                };
+                current = next;
+            }
+        }
+        if !cycle_members.is_empty() {
+            findings.push(finding(
+                "supersession_cycle",
+                "(graph)",
+                None,
+                format!(
+                    "decisions form supersession cycle(s): {}",
+                    cycle_members.into_iter().collect::<Vec<_>>().join(", ")
+                ),
+                "FACT",
+            ));
+        }
+        if let Some(scope) = scope.as_deref() {
+            let prefix = format!("{scope}/");
+            findings.retain(|finding| finding.path == scope || finding.path.starts_with(&prefix));
+        }
         findings.sort_by(|a, b| {
             (a.path.as_str(), a.line, a.kind.as_str()).cmp(&(
                 b.path.as_str(),
@@ -781,6 +978,55 @@ impl SearchEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scoped_markdown_link_validation_accepts_targets_elsewhere_in_vault() {
+        let vault = tempfile::tempdir().unwrap();
+        let scope = vault.path().join("python");
+        std::fs::create_dir_all(&scope).unwrap();
+        std::fs::write(scope.join("source.md"), "[target](../shared/target.md)\n").unwrap();
+        std::fs::create_dir_all(vault.path().join("shared")).unwrap();
+        std::fs::write(vault.path().join("shared/target.md"), "# Target\n").unwrap();
+
+        let findings = validate_markdown_links_in_scope(vault.path(), &scope).unwrap();
+
+        assert!(!findings.iter().any(|finding| {
+            finding.kind == "broken_markdown_link" || finding.kind == "broken_link_anchor"
+        }));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scoped_markdown_link_validation_rejects_symlink_escape() {
+        use std::os::unix::fs::symlink;
+
+        let vault = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let scope = vault.path().join("python");
+        std::fs::create_dir_all(&scope).unwrap();
+        std::fs::write(outside.path().join("target.md"), "# Target\n").unwrap();
+        symlink(outside.path(), vault.path().join("external")).unwrap();
+        std::fs::write(scope.join("source.md"), "[target](../external/target.md)\n").unwrap();
+
+        let findings = validate_markdown_links_in_scope(vault.path(), &scope).unwrap();
+
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.kind == "broken_markdown_link"),
+            "expected symlink escape finding; actual findings: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn scoped_markdown_link_validation_rejects_scope_outside_vault() {
+        let vault = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+
+        let error = validate_markdown_links_in_scope(vault.path(), outside.path()).unwrap_err();
+
+        assert!(error.to_string().contains("outside vault root"));
+    }
 
     #[test]
     fn path_references_filters_noise() {

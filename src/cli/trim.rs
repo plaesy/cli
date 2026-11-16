@@ -145,7 +145,9 @@ pub fn run(args: &Args) -> CliResult {
                 "Wrote {count} prose segment(s) from {relative} to {}",
                 queue_path.display()
             );
-            println!("Next: have the calling assistant rewrite each segment.text denser (same meaning, no code/commands touched),");
+            println!(
+                "Next: have the calling assistant rewrite each segment.text denser (same meaning, no code/commands touched),"
+            );
             println!("save as {{file, segments:[{{index, text}}]}} JSON, then run:");
             println!("  plaesy trim apply-llm --path {path} --annotations <annotations.json>");
             Ok(())

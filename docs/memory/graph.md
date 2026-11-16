@@ -53,7 +53,7 @@ exactly what you asked for.
 
 ## Commands
 
-```
+```text
 memory projects [<id>] [--include-inactive] [--format text|json]
 memory projects <id|*> decisions [--include-inactive] [--status ...] [-n N]
 memory projects <id|*> contexts  [--include-inactive] [--status ...] [-n N]

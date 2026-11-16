@@ -33,4 +33,4 @@ then compresses output.
 
 **Example**: `plaesy trim run -- echo "hello world"`
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).

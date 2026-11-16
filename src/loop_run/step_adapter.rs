@@ -103,7 +103,7 @@ pub fn new_step(
         other => {
             return Err(format!(
                 "loop step: unknown kind {other:?} (supported: command, openai)"
-            ))
+            ));
         }
     };
     let provider =

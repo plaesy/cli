@@ -17,4 +17,4 @@ prints the available image subcommands.
 
 **Example**: `plaesy images create --prompt "a logo" --out logo.png --provider openai`
 
-See [CLI Reference](../reference.md).
+See [command index](README.md).
