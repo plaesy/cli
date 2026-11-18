@@ -50,3 +50,18 @@ directly. `make check-artifacts` lists machine-local `.plaesy` paths that are st
 - Preserve source citations and exact line ranges in retrieval results.
 - Migrate persisted schema changes on open and add coverage for opening an older database.
 - Update the relevant command/API documentation and `CHANGELOG.md` for user-visible changes.
+
+## Quality gates
+
+These gates are measured, not judged. Each has a command that produces the number. Values below were measured on 2026-11-18 on branch `chore/plaesy-program-refactor`.
+
+| Gate | Command or check | Measured | Limit and source |
+| --- | --- | --- | --- |
+| Largest production file | `find src -name '*.rs' ! -name '*_test.rs' -exec wc -l {} + \| sort -rn \| head -2` | 902 lines | 1,000 lines. This is a review trigger, not a validated limit: studies find that size confounds most code metrics ([TOSEM/EMSE 2022, s10664-022-10193-8](https://research.tudelft.nl/files/130282524/s10664_022_10193_8.pdf)). |
+| `unwrap()` in production code | `cargo clippy --lib --bins -- -W clippy::unwrap_used` | 0 | 0. No study found a density benchmark; the Clippy lint is the measurable check. |
+| `expect()` in production code | `cargo clippy --lib --bins -- -W clippy::expect_used` | 57 | Only for static regex patterns and provable invariants, each with a message that names the invariant. |
+| `pub(super)` visibility | Compile each item with `pub(super)` removed; keep it only if the build fails | 74 probed: 11 narrowed, 63 needed | Minimize visibility ([Effective Rust, Item 22](https://www.lurklurk.org/effective-rust/visibility.html)). No empirical study found. |
+| Intermittent test failure | Record a root cause or quarantine the test before merging | 1 open: `concurrent_workers_claim_a_task_only_once`, 1 failure in about 270 runs | Concurrency flaky tests have no single fix, so each needs its own root cause (Luo et al., FSE 2014, cited from a search summary and not opened). Reproduction is hard ([FlakeRake, 2024](https://people.cs.gmu.edu/~winglam/publications/2024/RahmanETAL24FlakeRake.pdf)). |
+| Build, lint and format | `cargo fmt --check`, `cargo clippy --locked --all-targets -- -D warnings`, `cargo test --locked` | Green; 613 tests pass | Zero warnings, zero failures. |
+
+Clippy's usage in real projects is described in [Unleashing the Power of Clippy in Real-World Rust Projects](https://ar5iv.labs.arxiv.org/html/2310.11738).
