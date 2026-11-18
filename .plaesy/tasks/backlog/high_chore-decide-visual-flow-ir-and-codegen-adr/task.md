@@ -18,7 +18,7 @@ Record, as an owner-reviewed ADR, the language-neutral flow IR, the editor techn
 - Define how node behaviour is referenced without hardcoding a language (for example a named operation with a typed contract).
 - Choose editor technology and record it as an approved R14 exception, or reject the exception.
 - Target language is Rust (owner decision, 2026-11-18). Record it, and define how later targets are added.
-- First editor surface is web. UI technology is Dioxus (owner choice, 2026-11-18), which keeps the UI in Rust. Record the proof-of-concept gate: web, desktop and mobile builds must pass before implementation. Note that Dioxus desktop renders through a system webview, so the rendering layer is not pure Rust; record that as a stated limit.
+- First editor surface is web. UI technology is Dioxus (owner choice, 2026-11-18), which keeps the UI in Rust. No proof-of-concept gate is required (owner decision). Note that Dioxus desktop renders through a system webview, so the rendering layer is not pure Rust; record that as a stated limit.
 - Define loss reporting for node types a target cannot express.
 
 ## Non-goals
