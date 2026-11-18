@@ -1,6 +1,6 @@
 # ADR 0002: Language-neutral visual flow IR
 
-- Status: accepted for the node catalogue, expression language, retry, loop limits and approval channel. Accepted by the owner in chat on 2026-11-18. Still open: the first codegen adapter (see below), so implementation stays blocked until it is chosen.
+- Status: accepted in full. Accepted by the owner in chat on 2026-11-18: node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. Implementation may start.
 - Version: flow-ir/1 (proposed)
 - Governs: spec R16; tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen`
 - Related: ADR 0001 (design-code IR). Flow IR is separate because flows are logic, not layout.
@@ -109,6 +109,6 @@ Accepted on 2026-11-18: the proposals above (CEL, the retry formula, loop limits
 | # | Question | Owner | Why it stays open |
 | --- | --- | --- | --- |
 | 1 | Approver and acceptance date for this ADR | product owner | Accepted in chat on 2026-11-18; a named approver can be added if required. |
-| 2 | First codegen adapter (Rust, Go, JavaScript, or other) | product owner | A product choice. |
+| 2 | First codegen adapter | product owner | Decided 2026-11-18: Rust, for testing with Plaesy's own application. Go and JavaScript follow later as separate adapters. |
 | 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | Accepted 2026-11-18. |
 
