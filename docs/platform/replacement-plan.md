@@ -1,6 +1,8 @@
-# Plaesy replacement program — plan
+# Plaesy replacement program — supporting plan
 
-**Status:** Draft, phased program. **Spec:** [replacement-spec.md](replacement-spec.md). **Backlog:** [replacement-backlog.md](replacement-backlog.md). This is not an authorization to implement all targets at once or retire incumbents. The 46 RP rows are a program-level task map; the current `.plaesy` topic has 18 Plaesy task folders as higher-level work items, not a one-to-one import. Task-directory count is not an acceptance or coverage measure; the RP-to-task crosswalk remains provisional until each row is reconciled to an executable task contract or an explicit status. The audit umbrella task coordinates three distinct evidence work packages (agent/runtime/workspace; creative authoring; work-management/OS automation), not 11 product clones. Task presence does not prove its acceptance criteria are complete.
+> **Authority:** The canonical program plan is `.plaesy/plan/plaesy-agent-platform/plan.md`; the canonical requirement spec is `.plaesy/spec/plaesy-agent-platform/spec.md`, and executable work is tracked under `.plaesy/tasks/`. This document retains supplementary sequencing detail only. Reconcile tasks and priority against the canonical `.plaesy` crosswalk; do not use its historical task counts or RP rows as authoritative.
+
+**Status:** Draft, phased program. **Spec:** [replacement-spec.md](replacement-spec.md). **Backlog:** [replacement-backlog.md](replacement-backlog.md). This is not an authorization to implement all targets at once or retire incumbents. The 46 RP rows are a supplementary program-level taxonomy, not the canonical task index. Executable task folders and authoritative task IDs are maintained under `.plaesy/tasks/` and indexed in the canonical spec; task-directory count is not an acceptance or coverage measure. The RP-to-task crosswalk remains provisional until each row is reconciled to an executable task contract or an explicit status. The audit umbrella task coordinates three distinct evidence work packages (agent/runtime/workspace; creative authoring; work-management/OS automation), not 11 product clones. Task presence does not prove its acceptance criteria are complete.
 
 ## Measurement and definition of done
 
@@ -17,7 +19,13 @@ Apply `docs/platform/feature-measurement-framework.md` to every target feature. 
 
 **Rust policy:** Core, domain, persistence, service, CLI and native runtime replacement code is Rust. UI implementation technology remains open pending owner-approved platform/UI ADR, but its business rules and authoritative state remain in Rust services/core.
 
+## Design↔code track
+
+Design↔code conversion is a separately gated workflow, not implied by the eleven-product audit. Canonical requirement R15 and its ADR/implementation tasks are in `.plaesy/spec/plaesy-agent-platform/spec.md` and `.plaesy/tasks/`; this supporting plan summarizes that track only. First approve the IR schema, target formats, edit policy, and measurable fidelity corpus; then implement one bounded Rust importer/exporter/code-generation/parser slice. Do not claim design-tool interoperability or round-trip acceptance before executing the corpus against an owner-approved threshold.
+
 ## Phases and exit gates
+
+This supplementary outline records intended gates, not current status. Canonical requirements/status/sequence live in `.plaesy/spec/plaesy-agent-platform/spec.md`, `.plaesy/plan/plaesy-agent-platform/plan.md`, and `.plaesy/tasks/`; no phase is complete merely because this outline has an exit heading.
 
 ### Phase 0 — ownership, inventory, evidence (P0)
 
@@ -28,7 +36,9 @@ Apply `docs/platform/feature-measurement-framework.md` to every target feature. 
 - Assign RP-028's early foundation subset to P1; repeat profile-specific target, supply-chain, security, and artifact-provenance evidence in P4 before release.
 - Record the current VM envelope as a development-only constraint; execute `high_chore-establish-local-hardware-capacity-baseline` for repeatable build/test measurements before claiming local workload capacity.
 
-**Exit:** owner-approved target boundary and first workflow; source/version map for all 11; baseline with citations and uncertainty; duplicate review; unresolved decisions named and assigned. Rust foundation-gate task and its executable checks are ready before implementation begins.
+**Exit:** the Phase 0 evidence package is assembled; unresolved owner choices are named, assigned and remain explicitly open. This supporting exit statement is not an assertion that Phase 0 is complete.
+
+This supporting phase outline is aspirational, not an independent authority or status report. Canonical requirements/status/sequence live in `.plaesy/spec/plaesy-agent-platform/spec.md`, `.plaesy/plan/plaesy-agent-platform/plan.md`, and `.plaesy/tasks/`; owner-dependent gates remain open until recorded there.
 
 ### Phase 1 — architecture and executable contracts (P1)
 

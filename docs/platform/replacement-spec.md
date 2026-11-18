@@ -1,4 +1,6 @@
-# Plaesy replacement program — specification
+# Plaesy replacement program — supporting specification
+
+> **Authority:** The canonical program spec and phase plan are `.plaesy/spec/plaesy-agent-platform/spec.md` and `.plaesy/plan/plaesy-agent-platform/plan.md`. This file preserves supporting product-level research and the original RP-01–RP-16 taxonomy; it is not an independent source of scope or task priority. Keep it aligned with the canonical spec and use the canonical RP-001–RP-046 backlog for task mapping.
 
 **Status:** Draft; target scope, not a parity claim. **Language:** Rust for Plaesy-owned application and service code. **Evidence reviewed:** pinned discovery snapshots and partial source/documentation reviews described in [replacement-source-inventory.md](replacement-source-inventory.md); the snapshots are not owner-approved release baselines and the leaf audits remain incomplete. Re-pin approved versions before acceptance testing.
 
@@ -41,6 +43,10 @@ Target sources: [Hermes Agent](https://github.com/NousResearch/hermes-agent), [P
 | OpenProject | Project/portfolio/work-package management, agile boards/roadmaps/Gantt, time/cost, collaboration and integrations | README describes broad project management; define target edition/version and verify migration, permissions, reporting, and enterprise-only boundaries. |
 
 This table is a discovery index, not a complete feature inventory or feature-by-feature source audit. Maintain a separate row per concrete workflow in `feature-gap-register.md`; attach permalink + commit/release, observed/documented label, Plaesy mapping, acceptance evidence, owner, and review date. Never infer absence from missing evidence.
+
+## Design↔code requirement
+
+The design↔code workflow is not covered by the 11 incumbent audits alone. Its canonical requirement is R15 in `.plaesy/spec/plaesy-agent-platform/spec.md`, with an owner-reviewed IR/target ADR task and a separate Rust round-trip implementation task. The fidelity threshold and selected source/target remain unresolved until owner approval; no interoperability claim is made here.
 
 ## Functional requirements
 

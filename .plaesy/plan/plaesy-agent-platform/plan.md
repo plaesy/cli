@@ -1,10 +1,10 @@
 # Plaesy agent platform and incumbent replacement — implementation plan
 
-Status: draft; replacement inventory and implementation backlog remain incomplete
-Spec: ../../spec/plaesy-agent-platform/spec.md
+Status: draft; canonical Plaesy program plan
+Authority: `.plaesy/spec/plaesy-agent-platform/spec.md` is the canonical spec; executable tasks live under `.plaesy/tasks/`. Supporting product research and evidence remain in `docs/platform/`.
 Checklist: ../../../docs/platform/feature-gap-register.md
 
-This plan targets the 11 incumbents named in the spec. The 18 backlog task folders are program-level foundations, not a complete per-capability implementation plan. First complete the all-target evidence audit and capability crosswalk; then derive deduplicated implementation tasks from verified requirements. The 2026-11-18 bounded source-audit delta adds 18 leads with pinned revisions, evidence labels and next checks; they do not satisfy the source-coverage gate. No incumbent cutover is authorized by this plan. Plaesy-owned replacement core/domain, persistence, service/backend, CLI, and native runtime code must be Rust; UI technology remains subject to an owner-approved ADR, with authoritative business logic/state in Rust.
+This plan targets the 11 incumbents named in the spec plus the separately scoped design↔code requirement R15. The current 52 backlog task folders include audit, foundations, and conditional workflow work; they are not a complete per-capability implementation plan. First complete the all-target evidence audit and capability crosswalk; then derive deduplicated leaf implementation tasks from verified requirements. The 2026-11-18 bounded source-audit delta adds 18 leads with pinned revisions, evidence labels and next checks; they do not satisfy the source-coverage gate. No incumbent cutover is authorized by this plan. Plaesy-owned replacement core/domain, persistence, service/backend, CLI, and native runtime code must be Rust; UI technology remains subject to an owner-approved ADR, with authoritative business logic/state in Rust.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Produce an owner-reviewable, evidence-backed capability inventory and deduplicat
 
 ## Program completion boundary
 
-The planning effort is not complete until every requested incumbent has an auditable source-coverage ledger, each in-scope leaf capability maps to a requirement and acceptance scenario (or explicit UNKNOWN/out-of-scope disposition), all 46 RP rows have a contract-verified disposition, and unique implementation/verification follow-up tasks exist for every approved gap. The current 18 task folders are scaffolding; their count does not imply contract completeness and they do not satisfy this boundary. Product owner approval is required for scope, baseline versions and implementation priorities. Runtime parity and cutover remain separate later gates.
+The planning effort is not complete until every requested incumbent has an auditable source-coverage ledger, each in-scope leaf capability maps to a requirement and acceptance scenario (or explicit UNKNOWN/out-of-scope disposition), all 46 canonical RP-001–RP-046 rows have a task-contract-verified disposition, and unique implementation/verification follow-up tasks exist for every approved gap. The current 52 task folders are scaffolding; their count does not imply contract completeness and they do not satisfy this boundary. Product owner approval is required for scope, baseline versions and implementation priorities. Runtime parity and cutover remain separate later gates.
 
 ## Planning assumptions
 
@@ -66,6 +66,17 @@ The planning effort is not complete until every requested incumbent has an audit
 
 **Gate:** evidence is attached for every release checklist item; unresolved safety or parity gaps block replacement claims.
 
+### Design↔code track (canonical spec R15)
+
+1. Decide the canonical IR schema, node set, lowering contracts, edit policy and targets in an ADR (`high_chore-decide-design-code-ir-schema-and-target-adr`). Reuse the existing token model in `src/designlint/` where it fits.
+2. After the ADR is accepted and the owner selects the design workflow, implement the Rust IR, importer/exporter, codegen and parser for one target with a fidelity corpus (`high_feature-implement-design-code-ir-round-trip`).
+
+**Gate:** ADR accepted by the owner; the fidelity threshold is recorded before any parity or round-trip claim.
+
+## Program source of truth and supporting evidence
+
+The canonical requirement IDs are R1–R15 in `.plaesy/spec/plaesy-agent-platform/spec.md`; the canonical plan, phase gates, priority and RP-001–RP-046 mappings are in this file; executable tasks and lifecycle statuses are in `.plaesy/tasks/`. These are separate but linked roles, not parallel copies. `docs/platform/replacement-spec.md`, `replacement-plan.md`, and `replacement-backlog.md` are supporting product research and a provisional historical crosswalk; do not use their RP-01–RP-16 taxonomy or priority statements as an authority. `docs/platform/feature-gap-register.md`, `feature-measurement-framework.md`, `replacement-source-inventory.md`, `hermes-api-acceptance.md`, and `hermes-capability-audit.md` remain evidence/acceptance resources and are linked rather than duplicated. Design↔code is explicitly in canonical R15 and its two named ADR/implementation tasks, outside the claim that the 11 incumbent audits alone cover the full program.
+
 ## Parallel work boundaries
 
 After Phase 0 decisions, assign one owner each to: (A) adapter/runtime contract, (B) identity/policy threat review, (C) Relay/delivery only if required by workflow, (D) run/task persistence and recovery, (E) test harness/evidence, and (F) operator surface. Define interfaces first; prohibit simultaneous ownership of the same source/test files. One integrator reviews the combined diff and reruns focused tests. Do not run `tasks run --parallel` for tasks that edit overlapping files because the current task runner shares one project directory.
@@ -96,4 +107,5 @@ These paths are relative to the repository root, matching the spec references ab
 - Decisions: `docs/platform/decisions.md`
 - Current-state assessment: `docs/platform/current-state-assessment.md`
 - Task command safety/semantics: `docs/commands/tasks.md`
-- Backlog index: `.plaesy/tasks/backlog/` (18 task folders; see spec task index; these are scaffolding, not a complete per-capability backlog)
+- Backlog index: `.plaesy/tasks/backlog/` (52 active task folders across backlog and done; see spec task index; these are scaffolding, not a complete per-capability backlog)
+- **Authority and supporting artifacts:** `.plaesy/spec/plaesy-agent-platform/spec.md` and this plan govern program requirements and sequencing; `.plaesy/tasks/` contains executable work. `docs/platform/replacement-spec.md`, `replacement-plan.md`, and `replacement-backlog.md` are explicitly supporting research/crosswalk documents, not parallel authorities. Product evidence, feature registers, and design-code research may remain in `docs/platform/` and must be linked from the canonical spec/plan.

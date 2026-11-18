@@ -1,0 +1,45 @@
+{
+  "id": "high_chore-decide-design-code-ir-schema-and-target-adr",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/backlog/high_chore-decide-design-code-ir-schema-and-target-adr/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_chore-decide-design-code-ir-schema-and-target-adr/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_chore-decide-design-code-ir-schema-and-target-adr' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "adr-schema-version-recorded",
+      "check": "ADR records IR schema version and node set",
+      "run": "grep -q -i 'ir schema version' docs/platform/decisions.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "adr-deferred-threshold-recorded",
+      "check": "ADR states the fidelity threshold is owner-approved, not assumed",
+      "run": "grep -q -i 'fidelity threshold' docs/platform/decisions.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    }
+  ]
+}

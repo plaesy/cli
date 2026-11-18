@@ -62,3 +62,16 @@ The owner wants Plaesy to be better than, and ultimately able to replace, Hermes
 ## Recommended decision sequence
 
 Resolve product/module scope and tenant/ownership hierarchy with identity/authorization together first. These are implementation gates for shared/remote APIs and data contracts. Next approve enforced shared-write boundary and fail-closed/degraded mode, overlap/confirmation semantics, Git/lease protocol, one CLI namespace and the deterministic pre-implementation test set. Those gates block implementation of the affected shared collaboration, schema/API and stable CLI contracts; isolated local-only work may proceed only if it does not bake in unresolved assumptions. Runtime adapter conformance, full fault-injection coverage, recovery drills, accessibility and data lifecycle evidence are release gates for the capabilities they cover; live injection/shared collaboration must not be advertised before required conformance evidence exists. Every gate needs named accountable product/engineering/security owner, chosen option, rationale, affected components, test/evidence, and approval date. Record decisions in dated ADRs and link them here. Until authorized owners approve, unresolved decisions remain open; recommendations here do not silently select policy on their behalf.
+
+## Design-code IR (ADR, proposed)
+
+Status: proposed, not accepted. Owner approval is required before `high_feature-implement-design-code-ir-round-trip` starts. Spec R15 and task `high_chore-decide-design-code-ir-schema-and-target-adr` govern this record.
+
+- **IR schema version:** `ir/1` as a proposal. The version is bumped on any breaking change to the node set or lowering contract.
+- **Node set:** frame, auto-layout constraints, component and variant, style and token, vector and image asset, text, and stable node ID. Every node carries a source map entry to its code span or design path.
+- **Reuse:** the token model in `src/designlint/` (`tokens.rs`, `colour.rs`, `fonts.rs`, `images.rs`) is the starting point. Decide per type whether it is reused, extended, or replaced.
+- **Lowerings:** design → IR, IR → design, IR → code per target, and code → IR. Each direction lists what is reported as lost. No construct is dropped silently.
+- **Edit policy:** owner decision open. Options are one-way regeneration, guarded merge with source-map preservation, or manual edits that are never parsed back.
+- **Targets:** owner decision open. No design tool or code framework is approved yet.
+- **Fidelity threshold:** not set. It is UNKNOWN until owner approval, and no round-trip result may be reported as passing before then.
+- **Rust:** the IR and converters are core logic and must be Rust, per R14.

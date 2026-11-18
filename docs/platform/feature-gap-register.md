@@ -12,7 +12,7 @@
 - **Unknown** — not sufficiently inspected or tested to classify.
 - **Design only** — requirement/proposal exists; implementation has not been verified.
 
-Do not change a status based on a plan, another agent’s summary, or a feature in an upstream backend. Update it only with implementation path plus a focused acceptance-test command/result and date. Backend-dependent capabilities must remain labeled as such.
+Do not change a status based on a plan, another agent’s summary, or a feature in an upstream backend. Update it only with implementation path plus a focused acceptance-test command/result and date. Backend-dependent capabilities must remain labeled as such. This register remains a supporting bounded evidence checklist: design↔code is separately scoped by canonical requirement R15 and its ADR/implementation tasks in `.plaesy/`; its absence from the incumbent comparison table is not an omission from the canonical program.
 
 ## A. Agent execution and orchestration
 

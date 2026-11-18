@@ -10,7 +10,7 @@ Plaesy's product requirements target a self-hosted platform for workflows, knowl
 
 ## Scope and evidence boundary
 
-This is a program-level specification, not approval to implement every target feature in one release. Requirements are staged by dependency; owners must select and validate one first replacement workflow before runtime or deployment assumptions are frozen. Implementations and statuses are to be assessed across CLI, Studio and deployed services, not inferred from one repository. The feature checklist at `docs/platform/feature-gap-register.md` is the current bounded baseline; status `unknown` remains unknown until inspected and tested.
+This is the canonical program-level specification, not approval to implement every target feature in one release. Requirements are staged by dependency; owners must select and validate one first replacement workflow before runtime or deployment assumptions are frozen. Implementations and statuses are to be assessed across CLI, Studio and deployed services, not inferred from one repository. Product evidence, feature registers, and design-code research remain supporting artifacts in `docs/platform/`; the supporting `replacement-spec.md`, `replacement-plan.md`, and `replacement-backlog.md` are not parallel authorities. Executable tasks and their lifecycle are under `.plaesy/tasks/`. The feature checklist at `docs/platform/feature-gap-register.md` is the current bounded baseline; status `unknown` remains unknown until inspected and tested.
 
 ## Requirements
 
@@ -30,10 +30,11 @@ This is a program-level specification, not approval to implement every target fe
 | R12 | Plaesy shall compare incumbent products against the same concrete user workflow using versioned, cited evidence and shall reuse prior research rather than repeat it. | Given an incumbent comparison row, when an agent adds or revises a claim, then it records exact product/version, primary source or reproducible observation, review date, Plaesy implementation/test mapping, uncertainty and next action; unsupported claims remain unknown. | open |
 | R13 | Plaesy shall gate replacement/cutover on verified workflow parity, authorization, reliability, operations, migration and rollback evidence while keeping the incumbent available until the gate passes. | Given a candidate Plaesy slice and incumbent workflow, when the release gate is evaluated, then each mandatory criterion has linked test/operational evidence, failures block cutover, and rollback/parallel-run remain available. | open |
 | R14 | Plaesy-owned replacement application, service, CLI, domain, persistence and native runtime logic shall be implemented in Rust. Any UI or platform-specific exception must be explicitly documented and approved in an architecture decision; it must not move core business logic outside Rust. | Given an approved implementation slice and its source/build pipeline, when the release evidence is reviewed, then all Plaesy-owned core/service/CLI/native code for the slice is Rust, the toolchain and dependencies are pinned/locked, and required Rust checks pass; any non-Rust UI/platform exception links to an approved ADR. | open |
+| R15 | Plaesy shall convert between design documents and code through one canonical, versioned intermediate representation (IR), so each design source or code target needs one importer or exporter rather than a converter per pair. | Given a design file with frames, auto-layout, components/variants, tokens and assets, when it is imported to IR and exported to a code target, then every mapped node keeps a stable ID and a source map, unsupported constructs are reported as explicit losses (never silently dropped), and an ADR records the IR schema version and target list. Given code produced from the IR, when it is parsed back to IR under the documented edit policy, then the round trip preserves the mapped structure within the corpus-tested fidelity threshold. Status: the threshold is UNKNOWN until owner approval. | open |
 
 ## Task index
 
-All 49 task folders under `.plaesy/tasks/backlog/` are indexed below. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
+All 52 active task folders under `.plaesy/tasks/` are indexed below; this count includes work in backlog and done, not just `.plaesy/tasks/backlog/`. This index is a directory inventory, not a mapping of task acceptance to each requirement; traceability remains incomplete until every requirement has an acceptance scenario and task or explicit disposition. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
 
 - `critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate`
 - `critical_feature-implement-authenticated-agent-identity-and-policy-boundary`
@@ -54,12 +55,14 @@ All 49 task folders under `.plaesy/tasks/backlog/` are indexed below. Conditiona
 - `high_chore-audit-wordcraft-capability-ledger`
 - `high_chore-audit-work-management-and-os-products`
 - `high_chore-complete-evidence-backed-feature-audit-for-11-incumbents`
+- `high_chore-decide-design-code-ir-schema-and-target-adr`
 - `high_chore-define-measurable-workflow-nfrs-and-benchmark-thresholds`
 - `high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries`
 - `high_chore-establish-local-hardware-capacity-baseline`
 - `high_chore-establish-rust-security-and-release-quality-gates`
 - `high_chore-implement-source-specific-migration-and-reconciliation-for-selected-workflow`
 - `high_chore-owner-decisions-for-first-replacement-slice`
+- `high_chore-produce-canonical-cross-incumbent-capability-inventory`
 - `high_chore-recover-and-compare-incumbent-research`
 - `high_chore-specify-data-portability-and-source-migration-contracts`
 - `high_chore-specify-identity-tenancy-threat-model-and-authorization-contracts`
@@ -83,6 +86,7 @@ All 49 task folders under `.plaesy/tasks/backlog/` are indexed below. Conditiona
 - `high_feature-enforce-isolated-concurrent-agent-changes`
 - `high_feature-implement-approval-secret-reference-and-audit-controls`
 - `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting`
+- `high_feature-implement-design-code-ir-round-trip`
 - `high_feature-implement-durable-run-append-retry-torn-tail-recovery-and-shutdown-drain`
 
 The evidence audit must refine capability families into deduplicated leaf tasks for approved scope, and retain UNKNOWN/out-of-scope dispositions for everything else.

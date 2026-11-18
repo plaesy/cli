@@ -1,8 +1,14 @@
-# Plaesy replacement program — deduplicated backlog
+# Plaesy replacement program — supporting backlog crosswalk
 
-**Status:** Proposed backlog; tasks are not executed. Spec: [replacement-spec.md](replacement-spec.md). Plan: [replacement-plan.md](replacement-plan.md). Dependencies are task IDs below. All tasks carry product mappings through capability IDs rather than cloning work per incumbent. Do not start implementation tasks until owner scope decisions pass.
+> **Authority:** Executable tasks and their statuses live in `.plaesy/tasks/`; the canonical requirements and program priorities are in `.plaesy/spec/plaesy-agent-platform/spec.md` and `.plaesy/plan/plaesy-agent-platform/plan.md`. This document preserves a supplementary 46-row RP taxonomy and provisional mapping; it is not the executable task list, and its RP-01 numbering is not interchangeable with canonical RP-001 IDs. Reconcile each row with the canonical index before using it for decisions.
+
+**Status:** Proposed crosswalk; tasks are not executed. All mappings are provisional. Do not start conditional implementation tasks until required owner decisions and dependencies pass.
 
 ## Priority and mapping
+
+The P0–P5 labels below are historical/supporting planning hints. They do not set canonical priority or override `.plaesy/plan/plaesy-agent-platform/plan.md`; RP-01–RP-16 numbering in the supporting spec is distinct from this RP-001–RP-046 taxonomy. Mappings remain provisional until reconciled against canonical task contracts and evidence. Task status is authoritative only in `.plaesy/tasks/`.
+
+The P0–P5 labels below are historical/supporting planning hints. They do not set canonical priority or override `.plaesy/plan/plaesy-agent-platform/plan.md`; RP-01–RP-16 numbering in the supporting spec is distinct from this RP-001–RP-046 taxonomy. Mappings remain provisional until reconciled against canonical task contracts and evidence. Task status is authoritative only in `.plaesy/tasks/`.
 
 P0 = scope/evidence gates; P1 = contracts/architecture; P2 = shared foundations; P3 = selected workflow families; P4 = hardening; P5 = migration/cutover. IDs are stable, unique, and capability-centered. Each implementation task must be split further only when distinct ownership or independently verifiable outcomes warrant it; do not create duplicate tasks per product.
 
@@ -57,7 +63,7 @@ P0 = scope/evidence gates; P1 = contracts/architecture; P2 = shared foundations;
 
 ## Plaesy executable task crosswalk (deduplicated)
 
-The RP rows above are the program-level plan, not a guarantee that each is a separate Plaesy task folder. The current `.plaesy` topic has 50 backlog task folders, including the canonical capability-inventory deliverable and three product-family evidence work packages coordinated by the umbrella audit. Folder count is not an acceptance-completeness measure; the crosswalk below groups related RP rows and is a planning aid only: a mapped task is not proof that its contract meets every RP acceptance condition. Row-by-row disposition remains open until every RP row is traced to an inspected contract with acceptance evidence, an explicit status/dependency with rationale, or a justified unique follow-up. The audit task must resolve unverified or orphaned rows and recommend distinct tasks only for independently verifiable outcomes; no RP is closed by appearing in the crosswalk.
+The RP rows above are the program-level plan, not a guarantee that each is a separate Plaesy task folder. This historical crosswalk predates the current canonical 52-task index. Folder count is not an acceptance-completeness measure; the crosswalk below groups related RP rows and is a planning aid only: a mapped task is not proof that its contract meets every RP acceptance condition. Row-by-row disposition remains open until every canonical RP row is traced to an inspected contract with acceptance evidence, an explicit status/dependency with rationale, or a justified unique follow-up. The audit task must resolve unverified or orphaned rows and recommend distinct tasks only for independently verifiable outcomes; no RP is closed by appearing in the crosswalk.
 
 For any future Rust implementation task, acceptance must require the repository-pinned toolchain, committed lockfile and locked build (`cargo ... --locked` where applicable), `cargo fmt --all -- --check`, focused `cargo test`, Clippy on the changed crate/target with warnings denied, and relevant dependency/license/advisory/security checks. CI/release-gate tasks must make these checks executable and report evidence; a prose rule alone is not completion. UI technology remains subject to owner-approved ADR.
 
