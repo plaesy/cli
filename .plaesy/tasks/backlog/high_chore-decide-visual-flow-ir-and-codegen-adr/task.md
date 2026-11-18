@@ -3,7 +3,7 @@ spec: plaesy-agent-platform
 topic: chore-decide-visual-flow-ir-and-codegen-adr
 title: Decide visual flow IR, editor technology and codegen targets ADR
 phase: decision
-status: backlog
+status: done
 ---
 
 # Decide visual flow IR, editor technology and codegen targets ADR
@@ -38,8 +38,8 @@ Record, as an owner-reviewed ADR, the language-neutral flow IR, the editor techn
 
 ## Acceptance criteria
 
-- [ ] ADR records approver and approval date, or remains proposed and this task stays open.
-- [ ] Flow IR node and edge model is written with stable ID rules and a schema version.
-- [ ] Editor technology decision is recorded as an approved R14 exception or rejected.
-- [ ] Target list and loss rules are written, with unknowns named and owned.
-- [ ] No implementation or parity claim is made.
+- [x] ADR records approver and approval date, or remains proposed and this task stays open.
+- [x] Flow IR node and edge model is written with stable ID rules and a schema version.
+- [x] Editor technology decision is recorded as an approved R14 exception or rejected.
+- [x] Target list and loss rules are written, with unknowns named and owned.
+- [x] No implementation or parity claim is made.

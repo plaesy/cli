@@ -1,7 +1,8 @@
 # ADR 0002: Language-neutral visual flow IR
 
 - Status: accepted in full. Accepted by the owner in chat on 2026-11-18: node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. Implementation may start.
-- Version: flow-ir/1 (proposed)
+- Approver: owner, by chat approval on 2026-11-18 (no named person recorded).
+- Version: flow-ir/1 (accepted)
 - Governs: spec R16; tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen`
 - Related: ADR 0001 (design-code IR). Flow IR is separate because flows are logic, not layout.
 
