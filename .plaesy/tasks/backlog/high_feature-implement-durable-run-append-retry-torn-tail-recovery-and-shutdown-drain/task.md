@@ -30,16 +30,16 @@ Implementasikan durability dan recovery run store sesuai kontrak yang disetujui;
 
 ## Dependencies
 
+- `high_chore-specify-versioned-project-task-run-artifact-and-event-contracts` — approve the persistence/event contract before implementation.
+- `high_chore-establish-rust-security-and-release-quality-gates` — pinned toolchain and Rust quality gates.
 - `high_chore-owner-decisions-for-first-replacement-slice` where decisions affect scope; document UNKNOWN blockers.
-
 - Relevant audit/baseline tasks and approved spec/contract; do not begin dependent implementation before these are satisfied.
 
 ## Acceptance criteria
 
-- [ ] Append-vs-flush durability dinyatakan dan dibuktikan dengan fault injection.
-
-- [ ] Retry mempertahankan urutan serta data batch; duplicate/replay berperilaku idempotent sesuai kontrak.
-- [ ] Torn-tail recovery mempertahankan record valid dan melaporkan korupsi tanpa klaim sukses palsu.
-
-- [ ] Shutdown drain/cancellation bounded dan teruji; restart memulihkan status persisten secara konsisten.
-- [ ] Migrasi schema backward/forward compatibility ditentukan; R14 build/test gates lulus.
+- [ ] Append-vs-flush durability is specified in the approved contract and proved by focused fault-injection tests at each documented boundary.
+- [ ] Retry preserves ordering and batch data; duplicate/replay is idempotent according to the approved contract, verified by deterministic tests.
+- [ ] Torn-tail recovery preserves valid records and reports corruption without false success; tests cover partial final records and corruption before the tail.
+- [ ] Shutdown drain/cancellation is bounded and tested; restart restores persistent state consistently, with interruption/restart tests.
+- [ ] Schema migration compatibility policy is specified; migration tests cover supported versions without production data.
+- [ ] Focused locked Rust tests and R14 format/Clippy gates pass; attach exact commands and results. No completion based only on task status or checklist presence.

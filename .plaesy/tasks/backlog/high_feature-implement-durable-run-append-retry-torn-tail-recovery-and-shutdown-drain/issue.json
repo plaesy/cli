@@ -1,6 +1,10 @@
 {
   "id": "high_feature-implement-durable-run-append-retry-torn-tail-recovery-and-shutdown-drain",
   "type": "task",
+  "depends_on": [
+    "high_chore-specify-versioned-project-task-run-artifact-and-event-contracts",
+    "high_chore-establish-rust-security-and-release-quality-gates"
+  ],
   "labels": [
     "replacement",
     "persistence"

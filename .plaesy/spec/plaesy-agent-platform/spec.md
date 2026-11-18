@@ -31,6 +31,7 @@ This is the canonical program-level specification, not approval to implement eve
 | R13 | Plaesy shall gate replacement/cutover on verified workflow parity, authorization, reliability, operations, migration and rollback evidence while keeping the incumbent available until the gate passes. | Given a candidate Plaesy slice and incumbent workflow, when the release gate is evaluated, then each mandatory criterion has linked test/operational evidence, failures block cutover, and rollback/parallel-run remain available. | open |
 | R14 | Plaesy-owned replacement application, service, CLI, domain, persistence and native runtime logic shall be implemented in Rust. Any UI or platform-specific exception must be explicitly documented and approved in an architecture decision; it must not move core business logic outside Rust. | Given an approved implementation slice and its source/build pipeline, when the release evidence is reviewed, then all Plaesy-owned core/service/CLI/native code for the slice is Rust, the toolchain and dependencies are pinned/locked, and required Rust checks pass; any non-Rust UI/platform exception links to an approved ADR. | open |
 | R15 | Plaesy shall convert between design documents and code through one canonical, versioned intermediate representation (IR), so each design source or code target needs one importer or exporter rather than a converter per pair. | Given a design file with frames, auto-layout, components/variants, tokens and assets, when it is imported to IR and exported to a code target, then every mapped node keeps a stable ID and a source map, unsupported constructs are reported as explicit losses (never silently dropped), and an ADR records the IR schema version and target list. Given code produced from the IR, when it is parsed back to IR under the documented edit policy, then the round trip preserves the mapped structure within the corpus-tested fidelity threshold. Status: the threshold is UNKNOWN until owner approval. | open |
+| R16 | Plaesy shall provide a visual flow editor whose graph is stored in one language-neutral flow IR, so a flow can be authored once and code-generated later into any supported target language chosen per project. | Given a flow authored in the visual editor, when it is saved, then it is stored as a versioned flow IR with stable node IDs and no target-language fields; when a target language is selected, then the generated code passes the same flow test fixtures as the IR, and unsupported node types are reported as explicit losses rather than dropped. Status: target-language list and editor technology are UNKNOWN until owner approval (R14 UI exception needs an ADR). | open |
 
 ## Task index
 
@@ -56,6 +57,7 @@ All 52 active task folders under `.plaesy/tasks/` are indexed below; this count 
 - `high_chore-audit-work-management-and-os-products`
 - `high_chore-complete-evidence-backed-feature-audit-for-11-incumbents`
 - `high_chore-decide-design-code-ir-schema-and-target-adr`
+- `high_chore-decide-visual-flow-ir-and-codegen-adr`
 - `high_chore-define-measurable-workflow-nfrs-and-benchmark-thresholds`
 - `high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries`
 - `high_chore-establish-local-hardware-capacity-baseline`
@@ -88,6 +90,7 @@ All 52 active task folders under `.plaesy/tasks/` are indexed below; this count 
 - `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting`
 - `high_feature-implement-design-code-ir-round-trip`
 - `high_feature-implement-durable-run-append-retry-torn-tail-recovery-and-shutdown-drain`
+- `high_feature-implement-visual-flow-editor-and-codegen`
 
 The evidence audit must refine capability families into deduplicated leaf tasks for approved scope, and retain UNKNOWN/out-of-scope dispositions for everything else.
 
