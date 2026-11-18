@@ -1,9 +1,45 @@
 {
   "id": "high_feature-implement-visual-flow-editor-and-codegen",
   "checklist": [
-    {"id": "task-file-present", "check": "Task file exists", "run": "test -s .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md", "expected": "pass", "status": "pending", "evidence": "doc"},
-    {"id": "acceptance-section-present", "check": "Task has acceptance section", "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md", "expected": "pass", "status": "pending", "evidence": "doc"},
-    {"id": "spec-index-lists-task", "check": "Spec task index lists this task", "run": "grep -q 'high_feature-implement-visual-flow-editor-and-codegen' .plaesy/spec/plaesy-agent-platform/spec.md", "expected": "pass", "status": "pending", "evidence": "doc"},
-    {"id": "frontmatter-present", "check": "task.md has spec, topic and status frontmatter", "run": "head -1 .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md", "expected": "pass", "status": "pending", "evidence": "doc"}
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_feature-implement-visual-flow-editor-and-codegen' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_feature-implement-visual-flow-editor-and-codegen/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "fixture-tests-pass",
+      "check": "Visual flow fixtures pass and generated Rust compiles",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked visual_flow",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "test"
+    }
   ]
 }

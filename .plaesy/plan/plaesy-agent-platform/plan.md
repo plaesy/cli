@@ -77,6 +77,16 @@ The planning effort is not complete until every requested incumbent has an audit
 
 The canonical requirement IDs are R1–R16 in `.plaesy/spec/plaesy-agent-platform/spec.md`; the canonical plan, phase gates, priority and RP-001–RP-046 mappings are in this file; executable tasks and lifecycle statuses are in `.plaesy/tasks/`. These are separate but linked roles, not parallel copies. `docs/platform/replacement-spec.md`, `replacement-plan.md`, and `replacement-backlog.md` are supporting product research and a provisional historical crosswalk; do not use their RP-01–RP-16 taxonomy or priority statements as an authority. `docs/platform/feature-gap-register.md`, `feature-measurement-framework.md`, `replacement-source-inventory.md`, `hermes-api-acceptance.md`, and `hermes-capability-audit.md` remain evidence/acceptance resources and are linked rather than duplicated. Design↔code is explicitly in canonical R15 and its two named ADR/implementation tasks, outside the claim that the 11 incumbent audits alone cover the full program.
 
+### Visual flow track (spec R16)
+
+1. Accept ADR 0002 (`docs/adr/0002-visual-flow-ir.md`): node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. Done 2026-11-18.
+2. Implement the flow IR in Rust, with schema version, stable node IDs, and validation (`high_feature-implement-visual-flow-editor-and-codegen`).
+3. Build the Dioxus web editor on top of the Rust core. Desktop and mobile reuse the same core.
+4. Generate Rust code through the first adapter, and check it against the IR fixtures.
+5. Add Go and JavaScript adapters later, as separate tasks.
+
+**Gate:** IR fixtures pass for every node kind in the catalogue, and unsupported kinds are reported as losses.
+
 ## Parallel work boundaries
 
 After Phase 0 decisions, assign one owner each to: (A) adapter/runtime contract, (B) identity/policy threat review, (C) Relay/delivery only if required by workflow, (D) run/task persistence and recovery, (E) test harness/evidence, and (F) operator surface. Define interfaces first; prohibit simultaneous ownership of the same source/test files. One integrator reviews the combined diff and reruns focused tests. Do not run `tasks run --parallel` for tasks that edit overlapping files because the current task runner shares one project directory.
