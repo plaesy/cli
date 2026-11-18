@@ -17,7 +17,8 @@ Record, as an owner-reviewed ADR, the language-neutral flow IR, the editor techn
 - Define the flow IR: nodes (trigger, action, branch, loop, subflow), typed ports and edges, stable node IDs, schema version, and no target-language fields.
 - Define how node behaviour is referenced without hardcoding a language (for example a named operation with a typed contract).
 - Choose editor technology and record it as an approved R14 exception, or reject the exception.
-- Choose the first codegen targets and the order in which later targets are added.
+- Target language is Rust (owner decision, 2026-11-18). Record it, and define how later targets are added.
+- First editor surface is web. Decide the web UI technology: Rust-to-WASM keeps R14 without an exception; a JavaScript UI needs an ADR exception. Name the desktop and mobile path so the IR and core are not tied to web.
 - Define loss reporting for node types a target cannot express.
 
 ## Non-goals
