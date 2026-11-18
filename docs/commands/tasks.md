@@ -12,7 +12,7 @@ plaesy tasks [subcommand]
 ```
 
 Task lifecycle management for `.plaesy/tasks/{backlog,todo,doing,done,blocked}/`.
-Every task lives in a folder with `task.md`; its frontmatter identifies the spec/topic. The topic specification and plan live separately under `.plaesy/spec/<topic>/` and `.plaesy/plan/<topic>/`.
+Every task lives in a folder with `task.md`; its frontmatter identifies the spec/topic. Tasks created by `tasks create` start with editable Goal, Scope, Non-goals, Deliverables, Dependencies, and Acceptance criteria sections. Fill them in for the task; the template does not invent task-specific requirements. The topic specification and plan live separately under `.plaesy/spec/<topic>/` and `.plaesy/plan/<topic>/`.
 `--spec <name>` filters tasks by spec. `tasks check` resolves referenced paths and only considers existing targets inside the canonical project root; relative links within the project (including `../` paths that stay inside) remain valid. Paths outside the project or escaping through symlinks are reported as missing.
 
 ## Subcommands
@@ -26,13 +26,15 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 | `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, and cycles |
 | `next` | — | Move the next backlog task into `todo` and report it |
 | `start` | `<task>` | Move task to `doing` |
-| `complete` | `<task>` | Move task to `done` |
+| `complete` | `<task>` | Manually move task from `doing` to `done`; does not run or verify `contracts.json` |
 | `block` | `<task>` | Move task to `blocked` |
 | `unblock` | `<task>` | Unblock a task |
 | `move` | `<task_file> <from> <to>` | Move between arbitrary statuses |
 | `show` | `<task_file> [status]` | Display task content |
 | `run` | `--chain <name>` or `--provider <name>`, `[--max N]`, `[--parallel N]`, `[--timeout D]`, `[--confirm]` | Claim todo tasks of the current spec (highest priority first) and send each to a delegate provider or chain, in the project root. `--parallel N` runs up to N tasks at once in the same project directory; it does not create an isolated branch/worktree per task. Avoid parallel tasks that edit overlapping files. Output goes to `<task>/runs/`; the task stays in `doing` until reviewed, and a failed run moves it to `blocked` |
 | `validate` | `[task]`, `[--spec <folder>]` | Run the checklist of each unfinished task (`contracts.json`), record each result, and move a finished task to `done`; tasks already in `done` are skipped |
+
+`complete` is a manual status transition, not evidence that the task's goal or checklist passed. Use `validate [task]` to execute checks, record results, and move a task to `done` only when its non-empty checklist passes. An empty checklist is not proof of completion and `validate` rejects it. Existing workflows may still use `complete` as a manual override; do not treat the resulting `done` status as verified evidence.
 
 `update-issue` supports `--type`, `--parent` / `--clear-parent`, repeatable `--dep` / `--clear-deps`, repeatable `--label` / `--clear-labels`, `--assignee` / `--clear-assignee`, and `--milestone` / `--clear-milestone`. Repeated `--dep` and `--label` values replace their respective lists; use `--clear-*` to remove them. Parent types are unrestricted: hierarchy is independent of issue type and dependency edges. Parent references must exist, cannot point to the issue itself, and parent/dependency graphs must remain acyclic.
 
@@ -50,6 +52,12 @@ Valid statuses: `backlog`, `todo`, `doing`, `done`, `blocked`. `blocked` is only
 
 Each checklist item has an `expected` value. Its command must exit with code `0`; except for
 `pass`/`yes`/`true`/`present`, the CLI compares the last non-empty output line with `expected`.
+
+**Trust boundary:** `tasks validate` executes each checklist item's `run` command through Bash in the project root, with the permissions of the Plaesy process. Treat `contracts.json` as executable code: validate only repositories and task metadata you trust. This is not a sandbox; a failed check may still have changed project files or caused other side effects.
+
+The output comparison and behavior-evidence rule do not limit what a checklist command can do; use checks with effects you understand and avoid destructive commands.
+
+**Simulation safety:** when testing validation behavior, use a disposable project directory and synthetic fixtures. Never point destructive checks at a real vault, credentials, production services, or a shared working tree.
 
 | Expected value | Pass condition |
 |---|---|

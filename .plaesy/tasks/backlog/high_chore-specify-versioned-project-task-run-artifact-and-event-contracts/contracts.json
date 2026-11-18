@@ -1,0 +1,33 @@
+{
+  "id": "high_chore-specify-versioned-project-task-run-artifact-and-event-contracts",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/backlog/high_chore-specify-versioned-project-task-run-artifact-and-event-contracts/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-specify-versioned-project-task-run-artifact-and-event-contracts/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_chore-specify-versioned-project-task-run-artifact-and-event-contracts/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-specify-versioned-project-task-run-artifact-and-event-contracts/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    }
+  ]
+}

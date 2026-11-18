@@ -101,6 +101,41 @@ fn print_task_list(tasks_dir: &Path, status: Status) -> CliResult {
     Ok(())
 }
 
+#[cfg(test)]
+#[path = "tasks_test.rs"]
+mod tasks_test;
+
+fn goal_is_unfilled(task: &str) -> bool {
+    goal_summary(task).is_none() && task.lines().map(str::trim).any(|line| line == "## Goal")
+}
+
+fn goal_summary(task: &str) -> Option<String> {
+    let mut in_goal = false;
+    let mut paragraph = Vec::new();
+    for line in task.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            if in_goal {
+                break;
+            }
+            in_goal = trimmed == "## Goal";
+            continue;
+        }
+        if in_goal {
+            if trimmed.is_empty() {
+                if !paragraph.is_empty() {
+                    break;
+                }
+            } else {
+                paragraph.push(trimmed);
+            }
+        }
+    }
+    let summary = paragraph.join(" ");
+    (!summary.is_empty() && summary != "Describe the observable outcome this task should achieve.")
+        .then_some(summary)
+}
+
 fn print_board(tasks_dir: &Path) -> CliResult {
     let refs = tasks::list_all_tasks(tasks_dir)?;
     println!("📋 Task Board ({} tasks)\n", refs.len());
@@ -117,6 +152,17 @@ fn print_board(tasks_dir: &Path) -> CliResult {
             r.phase,
             r.title
         );
+        let task_path = tasks_dir
+            .join(r.status.as_str())
+            .join(&r.name)
+            .join(tasks::TASK_FILE);
+        if let Ok(content) = fs::read_to_string(task_path) {
+            if let Some(goal) = goal_summary(&content) {
+                println!("         Goal: {goal}");
+            } else if goal_is_unfilled(&content) {
+                println!("         Goal: belum diisi");
+            }
+        }
     }
     let problems = tasks::check_integrity(tasks_dir)?;
     println!();
@@ -157,19 +203,28 @@ fn read_task(
         return Err(format!("invalid task name: {task}").into());
     }
     let found = match status {
-        Some(s) => {
-            let path = tasks_dir.join(s.as_str()).join(task).join(tasks::TASK_FILE);
-            if path.exists() {
-                Some((s, path))
-            } else {
-                None
-            }
-        }
-        None => tasks::find_task(tasks_dir, task).map(|(s, dir)| (s, dir.join(tasks::TASK_FILE))),
+        Some(s) => tasks::find_task(tasks_dir, task)
+            .filter(|(found_status, _)| *found_status == s)
+            .and_then(|(found_status, task_dir)| {
+                let task_file = task_dir.join(tasks::TASK_FILE);
+                fs::symlink_metadata(&task_file)
+                    .is_ok_and(|metadata| !metadata.file_type().is_symlink())
+                    .then_some((found_status, task_file))
+            }),
+        None => tasks::find_task(tasks_dir, task).and_then(|(status, dir)| {
+            let task_file = dir.join(tasks::TASK_FILE);
+            fs::symlink_metadata(&task_file)
+                .is_ok_and(|metadata| !metadata.file_type().is_symlink())
+                .then_some((status, task_file))
+        }),
     };
     let (status, path) = found.ok_or_else(|| format!("task not found: {task}"))?;
     Ok((fs::read_to_string(path)?, status))
 }
+
+#[cfg(test)]
+#[path = "tasks_read_task_tests_test.rs"]
+mod tasks_read_task_tests_test;
 
 pub fn run(args: &Args) -> CliResult {
     let Some(command) = &args.command else {
@@ -216,6 +271,7 @@ pub fn run(args: &Args) -> CliResult {
             tasks::complete_task(&tasks_dir()?, task)?;
             println!("[✓] Moved: {task} (doing → done)");
             println!("[✓] Task completed: {task}");
+            println!("[!] Manual completion only; checklist and goal were not verified.");
             Ok(())
         }
         TasksCommand::Block { task, reason } => {

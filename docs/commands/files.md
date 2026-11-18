@@ -11,4 +11,4 @@ plaesy files list
 plaesy files release src/foo.rs --agent hermes-session-1 --lease <LEASE_ID>
 ```
 
-A conflicting live claim is rejected. An expired claim is omitted from `who` and `list`; a new claim may replace stale records. This first version does not deliver messages into another running session, discover OS processes holding a file, or stop non-cooperating writers.
+A conflicting live claim is rejected. An expired claim is omitted from `who` and `list`; a new claim may replace stale records. `plaesy files watch` polls active claim snapshots (500 ms default) and prints observed `claimed`/`released` changes as JSON Lines. It may miss changes between polls and does not replay events after a watcher disconnects. It does not provide agent messaging. Claims do not stop non-cooperating writers.

@@ -89,20 +89,5 @@ pub fn push_flag(args: &mut Vec<String>, flag: &str, value: &str) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn with_scheme_adds_https_only_when_missing() {
-        assert_eq!(with_scheme("example.com"), "https://example.com");
-        assert_eq!(with_scheme("https://example.com"), "https://example.com");
-    }
-
-    #[test]
-    fn opt_or_treats_an_empty_value_as_missing() {
-        let mut opts = Options::new();
-        opts.insert("action".into(), String::new());
-        assert_eq!(opt_or(&opts, "action", "search"), "search");
-        assert_eq!(opt(&opts, "absent"), "");
-    }
-}
+#[path = "adapter_test.rs"]
+mod adapter_test;

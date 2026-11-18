@@ -1,0 +1,11 @@
+{
+  "id": "high_feature-define-runtime-adapter-and-fake-conformance-suite",
+  "type": "task",
+  "depends_on": [
+    "critical_feature-specify-first-replacement-vertical-slice"
+  ],
+  "labels": [
+    "phase-1",
+    "runtime"
+  ]
+}

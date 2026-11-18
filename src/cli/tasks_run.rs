@@ -112,6 +112,63 @@ pub fn run(args: &Args, spec: &str) -> CliResult {
     Ok(())
 }
 
+fn load_topic_spec(root: &Path, topic: &str) -> Result<String, String> {
+    let path = crate::tasks::spec_doc(root, topic);
+    let relative = path
+        .strip_prefix(root)
+        .map_err(|error| format!("invalid spec path: {error}"))?;
+    let root_handle = crate::memory::fs_safety::DirHandle::open_nofollow(root)
+        .map_err(|error| format!("opening project root safely: {error}"))?;
+    let mut file = root_handle
+        .open_file_read_relative_nofollow(relative)
+        .map_err(|error| format!("reading {}: {error}", path.display()))?;
+    let mut contents = String::new();
+    std::io::Read::read_to_string(&mut file, &mut contents)
+        .map_err(|error| format!("reading {}: {error}", path.display()))?;
+    Ok(contents)
+}
+
+fn load_claimed_task(tasks_dir: &Path, file: &str) -> Result<(PathBuf, String, String), String> {
+    let task_dir = crate::tasks::find_task(tasks_dir, file)
+        .filter(|(status, _)| *status == crate::tasks::Status::Doing)
+        .map(|(_, path)| path)
+        .ok_or_else(|| format!("task not found in doing: {file}"))?;
+    let tasks_handle = crate::memory::fs_safety::DirHandle::open_nofollow(tasks_dir)
+        .map_err(|error| format!("opening tasks directory safely: {error}"))?;
+    let task_handle = tasks_handle
+        .open_dir_beneath(&Path::new(crate::tasks::Status::Doing.as_str()).join(file))
+        .map_err(|error| format!("opening task {file} safely: {error}"))?;
+    let task_body = read_task_file(
+        &task_handle,
+        Path::new(crate::tasks::TASK_FILE),
+        &format!("task {file}"),
+    )
+    .map_err(|error| format!("reading task {file}: {error}"))?;
+    let contracts_body = match read_task_file(
+        &task_handle,
+        Path::new(crate::tasks::CONTRACT_FILE),
+        &format!("contracts for {file}"),
+    ) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(format!("reading contracts for {file}: {error}")),
+    };
+    Ok((task_dir, task_body, contracts_body))
+}
+
+fn read_task_file(
+    task_handle: &crate::memory::fs_safety::DirHandle,
+    name: &Path,
+    description: &str,
+) -> Result<String, std::io::Error> {
+    let mut file = task_handle
+        .open_file_read_nofollow(name)
+        .map_err(|error| std::io::Error::new(error.kind(), format!("{description}: {error}")))?;
+    let mut contents = String::new();
+    std::io::Read::read_to_string(&mut file, &mut contents)?;
+    Ok(contents)
+}
+
 /// Sends one claimed task to the chain, saves the run, and moves the task on. An `Err` is an I/O
 /// failure; a failed run is recorded on the task and does not stop the batch.
 fn run_claimed_task(
@@ -123,19 +180,10 @@ fn run_claimed_task(
     args: &Args,
     timeout: Duration,
 ) -> Result<(), String> {
-    let task_dir = tasks_dir.join("doing").join(file);
-    let task_body = fs::read_to_string(task_dir.join(crate::tasks::TASK_FILE))
-        .map_err(|e| format!("reading task {file}: {e}"))?;
+    let (task_dir, task_body, contracts_body) = load_claimed_task(tasks_dir, file)?;
     let topic = crate::tasks::topic_of(tasks_dir, crate::tasks::Status::Doing, file)
         .ok_or_else(|| format!("{file} has no topic; tasks run requires a topic spec"))?;
-    let spec_body =
-        fs::read_to_string(crate::tasks::spec_doc(root, &topic)).map_err(|e| e.to_string())?;
-    let contracts_path = task_dir.join(crate::tasks::CONTRACT_FILE);
-    let contracts_body = match fs::read_to_string(&contracts_path) {
-        Ok(body) => body,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(error) => return Err(format!("reading contracts for {file}: {error}")),
-    };
+    let spec_body = load_topic_spec(root, &topic)?;
     let prompt = build_task_prompt(file, &task_body, &spec_body, &contracts_body);
 
     let usage_path = usage::usage_path(&root.join(".plaesy").join("analysis"));
@@ -264,19 +312,5 @@ fn write_run_record(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::build_task_prompt;
-
-    #[test]
-    fn task_prompt_includes_task_spec_and_contracts() {
-        let prompt = build_task_prompt(
-            "high_update-api",
-            "Task: update the parser",
-            "Spec: keep the API stable",
-            "Contracts: unit tests pass",
-        );
-        assert!(prompt.contains("Task: update the parser"));
-        assert!(prompt.contains("Spec: keep the API stable"));
-        assert!(prompt.contains("Contracts: unit tests pass"));
-    }
-}
+#[path = "tasks_run_test.rs"]
+mod tasks_run_test;

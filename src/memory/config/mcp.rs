@@ -149,9 +149,15 @@ fn claude_code(binary: &str, notes_dir: &str, http_url: &Option<String>) -> Stri
 
 # Then run: claude mcp add plaesy-memory
 "#,
-        serde_json::to_string_pretty(&cfg).unwrap(),
-        serde_json::to_string_pretty(&stdio_cfg).unwrap()
+        pretty_json(&cfg),
+        pretty_json(&stdio_cfg)
     )
+}
+
+/// Pretty-print a config snippet. Our config structs contain only strings and maps, so
+/// serialization cannot fail; the `expect` documents that invariant instead of hiding it.
+fn pretty_json<T: serde::Serialize>(value: &T) -> String {
+    serde_json::to_string_pretty(value).expect("MCP config snippet is always serializable")
 }
 
 fn kilocode(binary: &str, notes_dir: &str, http_url: &Option<String>) -> String {
@@ -176,8 +182,8 @@ fn kilocode(binary: &str, notes_dir: &str, http_url: &Option<String>) -> String 
 
 # Then run: kilo mcp add plaesy-memory
 "#,
-        serde_json::to_string_pretty(&cfg).unwrap(),
-        serde_json::to_string_pretty(&stdio_cfg).unwrap()
+        pretty_json(&cfg),
+        pretty_json(&stdio_cfg)
     )
 }
 
@@ -203,8 +209,8 @@ fn cursor(binary: &str, notes_dir: &str, http_url: &Option<String>) -> String {
 
 # Then run: cursor mcp add plaesy-memory
 "#,
-        serde_json::to_string_pretty(&cfg).unwrap(),
-        serde_json::to_string_pretty(&stdio_cfg).unwrap()
+        pretty_json(&cfg),
+        pretty_json(&stdio_cfg)
     )
 }
 

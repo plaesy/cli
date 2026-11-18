@@ -1,6 +1,6 @@
 # Autonomous operation and memory
 
-> **Status: proposed specification, not implemented.** Product direction: Plaesy is intended to replace, not depend on, Hermes, Claude CLI, Codex, DeepSeek harness, Paperclip, and similar agent/harness platforms. This document specifies only the autonomy, memory, and execution foundations of that broader target. It does not claim current replacement capability.
+> **Status: proposed specification, not implemented.** Product direction: Plaesy aims to outperform and ultimately replace products such as Hermes Agent, Claude Code, Codex, Paperclip, Orca, and similar agent/harness platforms. Plaesy may use Claude Code, Codex, and comparable harnesses as replaceable, permission-scoped execution backends, while owning orchestration, durable state, policy, memory/provenance, audit, and user control. This document specifies only the autonomy, memory, and execution foundations of that broader target. It does not claim current replacement capability.
 
 ## Scope
 

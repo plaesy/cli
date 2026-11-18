@@ -1,0 +1,45 @@
+{
+  "id": "high_chore-produce-canonical-cross-incumbent-capability-inventory",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "eleven-ledgers-present",
+      "check": "All 11 incumbent ledger task files exist",
+      "run": "python3 -c 'from pathlib import Path; ids=[\"hermes-agent\",\"paperclip\",\"deepseek-harness\",\"nimbalyst\",\"orca\",\"craft-anything\",\"figcraft\",\"deckcraft\",\"wordcraft\",\"herald-os\",\"openproject\"]; root=Path(\".plaesy/tasks/backlog\"); assert all((root/f\"high_chore-audit-{x}-capability-ledger/task.md\").is_file() for x in ids)'",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "crosswalk-includes-rp004",
+      "check": "RP-004 maps to inventory task",
+      "run": "grep -q '^| RP-004 | `high_chore-produce-canonical-cross-incumbent-capability-inventory`' docs/platform/replacement-backlog.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "inventory-fields-specified",
+      "check": "Acceptance requires per-row evidence and trace fields",
+      "run": "grep -q 'explicit evidence state, Plaesy baseline status/evidence or `UNKNOWN`, disposition status/provenance' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    }
+  ]
+}

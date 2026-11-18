@@ -832,6 +832,19 @@ fn evals_check(root: &Path) -> CliResult {
     Ok(())
 }
 
+fn load_task_contract(
+    tasks_root: &crate::memory::fs_safety::DirHandle,
+    contract: &tasks::contracts::ContractRef,
+) -> Result<checklist::Checklist, checklist::ChecklistError> {
+    let task = tasks_root
+        .open_dir_beneath(&Path::new(contract.status.as_str()).join(&contract.task))
+        .map_err(|source| checklist::ChecklistError::Read {
+            path: contract.path.display().to_string(),
+            source,
+        })?;
+    checklist::load_from_handle(&task, tasks::CONTRACT_FILE)
+}
+
 fn contracts_check(root: &Path) -> CliResult {
     let dir = tasks::tasks_dir(root);
     if !dir.exists() {
@@ -839,9 +852,10 @@ fn contracts_check(root: &Path) -> CliResult {
         return Ok(());
     }
     let refs = tasks::contracts::list_contracts(&dir, "")?;
+    let tasks_root = crate::memory::fs_safety::DirHandle::open_nofollow(&dir)?;
     let mut invalid = 0usize;
     for c in &refs {
-        match checklist::load(&c.path) {
+        match load_task_contract(&tasks_root, c) {
             Ok(list) => println!(
                 "[OK] {}/{}: {} check(s)",
                 c.spec,
@@ -863,3 +877,7 @@ fn contracts_check(root: &Path) -> CliResult {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "validate_test.rs"]
+mod validate_test;

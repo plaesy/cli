@@ -1,0 +1,11 @@
+{
+  "id": "high_feature-enforce-isolated-concurrent-agent-changes",
+  "type": "task",
+  "depends_on": [
+    "critical_feature-specify-first-replacement-vertical-slice"
+  ],
+  "labels": [
+    "phase-2",
+    "collaboration"
+  ]
+}

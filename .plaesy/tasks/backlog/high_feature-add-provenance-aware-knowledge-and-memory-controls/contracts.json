@@ -1,0 +1,21 @@
+{
+  "id": "high_feature-add-provenance-aware-knowledge-and-memory-controls",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/backlog/high_feature-add-provenance-aware-knowledge-and-memory-controls/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_feature-add-provenance-aware-knowledge-and-memory-controls/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    }
+  ]
+}

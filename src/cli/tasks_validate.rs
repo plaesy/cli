@@ -105,7 +105,10 @@ fn validate_task(
     tasks_dir: &Path,
     contract: &ContractRef,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut list = checklist::load(&contract.path)?;
+    let tasks_root = crate::memory::fs_safety::DirHandle::open_nofollow(tasks_dir)?;
+    let task_handle =
+        tasks_root.open_dir_beneath(&Path::new(contract.status.as_str()).join(&contract.task))?;
+    let mut list = checklist::load_from_handle(&task_handle, tasks::CONTRACT_FILE)?;
     if list.checklist.is_empty() {
         println!(
             "{}/{} ({}): {}",
@@ -123,7 +126,7 @@ fn validate_task(
         Ok(CommandOutput { exit_code, stdout })
     };
     receipt::settle(root, &contract.task, &mut list, &mut exec, Utc::now());
-    checklist::save(&contract.path, &list)?;
+    checklist::save_to_handle(&task_handle, tasks::CONTRACT_FILE, &list)?;
 
     let (passed, total) = checklist::progress(&list);
     println!(
@@ -178,34 +181,5 @@ pub fn invokes_plaesy(run: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn build_and_doc_items_are_exempt_from_the_behaviour_rule() {
-        let mut item = crate::checklist::Item {
-            id: "x".into(),
-            check: String::new(),
-            run: "cargo test".into(),
-            expected: "pass".into(),
-            status: crate::checklist::Status::Pending,
-            histories: Vec::new(),
-            receipt: None,
-            evidence: None,
-        };
-        assert!(!is_exempt(&item));
-        item.evidence = Some("build".into());
-        assert!(is_exempt(&item));
-        item.evidence = Some("doc".into());
-        assert!(is_exempt(&item));
-        item.evidence = Some("other".into());
-        assert!(!is_exempt(&item));
-    }
-
-    #[test]
-    fn a_plaesy_segment_counts_as_behaviour_evidence() {
-        assert!(invokes_plaesy("cargo build && plaesy status"));
-        assert!(invokes_plaesy("\"plaesy.exe\" validate"));
-        assert!(!invokes_plaesy("go test ./..."));
-    }
-}
+#[path = "tasks_validate_test.rs"]
+mod tasks_validate_test;

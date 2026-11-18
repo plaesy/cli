@@ -1,0 +1,14 @@
+{
+  "id": "critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate",
+  "type": "task",
+  "depends_on": [
+    "high_chore-recover-and-compare-incumbent-research",
+    "critical_feature-implement-durable-task-run-lifecycle-and-recovery",
+    "high_feature-add-operator-observability-and-recovery-controls",
+    "high_chore-verify-install-backup-restore-and-rollback-lifecycle"
+  ],
+  "labels": [
+    "phase-4",
+    "release-gate"
+  ]
+}

@@ -366,18 +366,5 @@ pub fn init_logging_with(cfg: &config::LoggingConfig) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_prelude_includes_error() {
-        // Verify prelude is usable
-        let _error_type: std::result::Result<(), MemoryError> = Ok(());
-    }
-
-    #[test]
-    fn test_module_structure() {
-        // Verify all modules are accessible
-        let _ = error::MemoryError::InternalError("test".to_string());
-    }
-}
+#[path = "memory_test.rs"]
+mod memory_test;

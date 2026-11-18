@@ -1,7 +1,10 @@
 //! `plaesy files`: local advisory file-ownership claims.
 use super::{common::find_root, CliResult};
 use clap::{Args as ClapArgs, Subcommand};
+use std::io::{self, Write};
 use std::path::PathBuf;
+use std::thread;
+use std::time::Duration;
 
 #[derive(Debug, ClapArgs)]
 pub struct Args {
@@ -25,6 +28,15 @@ pub enum Command {
     Who { path: String },
     /// List declared active file claims
     List,
+    /// Watch active claim snapshots and print observed changes as JSONL
+    Watch {
+        /// Polling interval, in milliseconds (100..=60000)
+        #[arg(long, default_value_t = 500)]
+        interval_ms: u64,
+        /// Exit after this many intervals; 0 runs until interrupted
+        #[arg(long, default_value_t = 0)]
+        max_polls: u64,
+    },
     /// Release your matching claim
     Release {
         path: String,
@@ -95,9 +107,37 @@ pub fn run(args: &Args) -> CliResult {
             }
             println!("Claims are advisory declarations; writes are not fenced.");
         }
+        Command::Watch {
+            interval_ms,
+            max_polls,
+        } => watch(&root, *interval_ms, *max_polls)?,
         Command::Release { path, agent, lease } => {
             crate::files::release_lease(&root, path, agent, lease)?;
             println!("Released advisory claim: {path} — agent={agent} lease={lease}");
+        }
+    }
+    Ok(())
+}
+
+fn watch(root: &std::path::Path, interval_ms: u64, max_polls: u64) -> CliResult {
+    if !(100..=60_000).contains(&interval_ms) {
+        return Err("--interval-ms must be 100..=60000".into());
+    }
+    let mut previous = crate::files::snapshot(root)?;
+    let mut stdout = io::BufWriter::new(io::stdout().lock());
+    for poll in 1.. {
+        thread::sleep(Duration::from_millis(interval_ms));
+        let current = crate::files::snapshot(root)?;
+        for change in crate::files::diff_snapshots(&previous, &current) {
+            let event =
+                serde_json::json!({"timestamp": chrono::Utc::now().to_rfc3339(), "change": change});
+            serde_json::to_writer(&mut stdout, &event)?;
+            stdout.write_all(b"\n")?;
+            stdout.flush()?;
+        }
+        previous = current;
+        if max_polls != 0 && poll >= max_polls {
+            break;
         }
     }
     Ok(())

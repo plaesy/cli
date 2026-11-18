@@ -19,12 +19,16 @@ Plaesy means **Platform Enterprise System**. It is one product with `plaesy` as 
 11. [Quality and delivery](quality.md) — test strategy, release gates, acceptance criteria and rollout.
 12. [Open decisions](decisions.md) — matters requiring explicit product/engineering decisions.
 13. [Current-state assessment](current-state-assessment.md) — evidence snapshot, gaps, safe simulations, implementation sequence and release blockers.
+14. [Replacement source inventory](replacement-source-inventory.md) — pinned discovery snapshots and partial source/documentation audits for the 11 requested incumbents; snapshots are not owner-approved baselines and the full leaf audit remains incomplete.
+15. [Replacement measurement framework](feature-measurement-framework.md) — feature/scenario-level evidence and replacement gates.
+16. [Hermes API server acceptance candidates](hermes-api-acceptance.md) — source-derived draft scenarios for the pinned API server docs; not rerun and not parity evidence.
+17. [Replacement specification](replacement-spec.md), [plan](replacement-plan.md), and [backlog](replacement-backlog.md) — program-level artifacts, not proof of complete feature inventory.
 
 ## Authority and terminology
 
 - **MUST / MUST NOT**: normative requirement; **SHOULD / SHOULD NOT**: default requirement with documented exception; **MAY**: optional.
 - **Target design** describes desired behavior. **Current implementation** describes only behavior verified in the code and current product documentation. The target design does not supersede existing CLI interfaces until migration is approved.
-- **Independence direction (owner confirmed 2026-11-16):** Plaesy is intended to replace rather than depend on Hermes, Claude CLI, Codex, DeepSeek harness, Paperclip, and similar products. This is a product goal, not present capability or blanket approval to cut over. See [owner direction and remaining decisions](decisions.md#direction-recorded-from-product-owner-2026-11-16).
+- **Product direction (owner confirmed 2026-11-16):** Plaesy aims to outperform and ultimately replace agent/coding/orchestration products such as Hermes Agent, Claude Code, Codex, Paperclip, and Orca. Plaesy may use external agent harnesses or model APIs as replaceable execution backends, while owning orchestration, durable state, policy, memory/provenance, audit, and user control. This is a product goal, not present capability or blanket approval to cut over. See [owner direction and remaining decisions](decisions.md#direction-recorded-from-product-owner-2026-11-16).
 - **Instance**: one running Plaesy Platform installation, whether local or remote.
 - **Control client**: the `plaesy` CLI; it issues commands to local components or an explicitly selected remote instance.
 - **Deployment**: a managed instance plus its persistent data, configuration, identity, and lifecycle state.

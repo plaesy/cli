@@ -1,0 +1,11 @@
+{
+  "id": "high_chore-verify-install-backup-restore-and-rollback-lifecycle",
+  "type": "task",
+  "depends_on": [
+    "high_chore-owner-decisions-for-first-replacement-slice"
+  ],
+  "labels": [
+    "phase-3",
+    "lifecycle"
+  ]
+}

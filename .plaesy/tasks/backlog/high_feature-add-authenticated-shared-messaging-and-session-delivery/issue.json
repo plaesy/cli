@@ -1,0 +1,12 @@
+{
+  "id": "high_feature-add-authenticated-shared-messaging-and-session-delivery",
+  "type": "task",
+  "depends_on": [
+    "critical_feature-specify-first-replacement-vertical-slice",
+    "critical_feature-implement-authenticated-agent-identity-and-policy-boundary"
+  ],
+  "labels": [
+    "phase-2",
+    "relay"
+  ]
+}

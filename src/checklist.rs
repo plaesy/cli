@@ -116,8 +116,35 @@ pub fn load(path: &Path) -> Result<Checklist, ChecklistError> {
         path: shown.clone(),
         source,
     })?;
+    parse_checklist(&text, shown)
+}
+
+pub(crate) fn load_from_handle(
+    handle: &crate::memory::fs_safety::DirHandle,
+    filename: &str,
+) -> Result<Checklist, ChecklistError> {
+    let name = checklist_filename(filename).map_err(|source| ChecklistError::Read {
+        path: filename.to_owned(),
+        source,
+    })?;
+    let shown = filename.to_owned();
+    let mut file = handle
+        .open_file_read_nofollow(name)
+        .map_err(|source| ChecklistError::Read {
+            path: shown.clone(),
+            source,
+        })?;
+    let mut text = String::new();
+    std::io::Read::read_to_string(&mut file, &mut text).map_err(|source| ChecklistError::Read {
+        path: shown.clone(),
+        source,
+    })?;
+    parse_checklist(&text, shown)
+}
+
+fn parse_checklist(text: &str, shown: String) -> Result<Checklist, ChecklistError> {
     let checklist: Checklist =
-        serde_json::from_str(&text).map_err(|source| ChecklistError::Parse {
+        serde_json::from_str(text).map_err(|source| ChecklistError::Parse {
             path: shown.clone(),
             source,
         })?;
@@ -160,6 +187,77 @@ pub fn save(path: &Path, checklist: &Checklist) -> Result<(), ChecklistError> {
     let tmp = std::path::PathBuf::from(tmp);
     fs::write(&tmp, json).map_err(write_err)?;
     fs::rename(&tmp, path).map_err(write_err)
+}
+
+pub(crate) fn save_to_handle(
+    handle: &crate::memory::fs_safety::DirHandle,
+    filename: &str,
+    checklist: &Checklist,
+) -> Result<(), ChecklistError> {
+    let name = checklist_filename(filename).map_err(|source| ChecklistError::Write {
+        path: filename.to_owned(),
+        source,
+    })?;
+    let shown = filename.to_owned();
+    let write_err = |source| ChecklistError::Write {
+        path: shown.clone(),
+        source,
+    };
+    let mut json =
+        serde_json::to_string_pretty(checklist).map_err(|source| ChecklistError::Parse {
+            path: shown.clone(),
+            source,
+        })?;
+    json.push('\n');
+    use std::io::Write;
+
+    static NEXT_TEMP_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let (tmp_name, mut file) = (0..100)
+        .find_map(|_| {
+            let sequence = NEXT_TEMP_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let candidate = format!(".{filename}.tmp-{}-{sequence}", std::process::id());
+            match handle.create_new_file(Path::new(&candidate)) {
+                Ok(file) => Some(Ok((candidate, file))),
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => None,
+                Err(error) => Some(Err(error)),
+            }
+        })
+        .unwrap_or_else(|| {
+            Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "could not allocate a unique checklist temporary file",
+            ))
+        })
+        .map_err(write_err)?;
+    let temp = Path::new(&tmp_name);
+    let result = (|| -> io::Result<()> {
+        file.write_all(json.as_bytes())?;
+        file.sync_all()?;
+        drop(file);
+        handle.replace_within(temp, name)?;
+        handle.sync()
+    })();
+    if result.is_err() {
+        let _ = handle.remove_file(temp);
+    }
+    result.map_err(write_err)
+}
+
+fn checklist_filename(filename: &str) -> io::Result<&Path> {
+    let path = Path::new(filename);
+    if path.components().count() == 1
+        && matches!(
+            path.components().next(),
+            Some(std::path::Component::Normal(_))
+        )
+    {
+        Ok(path)
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "checklist filename must be one normal path component",
+        ))
+    }
 }
 
 /// Runs every item's command and sets its status.
@@ -252,181 +350,5 @@ fn last_line(out: &str) -> &str {
 }
 
 #[cfg(test)]
-mod tests {
-    use chrono::TimeZone;
-
-    use super::*;
-
-    fn now() -> DateTime<Utc> {
-        Utc.with_ymd_and_hms(2026, 10, 22, 12, 0, 0).unwrap()
-    }
-
-    fn item(id: &str, run: &str, expected: &str) -> Item {
-        Item {
-            id: id.into(),
-            check: String::new(),
-            run: run.into(),
-            expected: expected.into(),
-            status: Status::Pending,
-            histories: Vec::new(),
-            receipt: None,
-            evidence: None,
-        }
-    }
-
-    fn ok(stdout: &str) -> Result<CommandOutput, String> {
-        Ok(CommandOutput {
-            exit_code: 0,
-            stdout: stdout.into(),
-        })
-    }
-
-    #[test]
-    fn failures_are_kept_in_histories() {
-        let mut list = Checklist {
-            id: "t".into(),
-            checklist: vec![
-                item("C1", "ok", "pass"),
-                item("C2", "count", ">= 3"),
-                item("C3", "broken", "pass"),
-            ],
-        };
-        run(
-            &mut list,
-            |cmd| match cmd {
-                "ok" => ok(""),
-                "count" => ok("5\n"),
-                _ => Err("no shell".into()),
-            },
-            now(),
-        );
-
-        assert_eq!(list.checklist[0].status, Status::Passed);
-        assert_eq!(list.checklist[1].status, Status::Passed);
-        let c3 = &list.checklist[2];
-        assert_eq!(c3.status, Status::Failed);
-        assert_eq!(
-            c3.histories,
-            [History {
-                at: "2026-10-22T12:00:00Z".into(),
-                actual: "no shell".into(),
-                run: "broken".into(),
-            }]
-        );
-        assert!(!is_done(&list));
-    }
-
-    #[test]
-    fn failures_accumulate_and_a_later_pass_keeps_them() {
-        let mut list = Checklist {
-            id: "t".into(),
-            checklist: vec![item("C1", "x", "pass")],
-        };
-        let fail = |_: &str| ok_code(1);
-        run(&mut list, fail, now());
-        run(&mut list, |_| ok_code(1), now());
-        assert_eq!(list.checklist[0].histories.len(), 2);
-
-        run(&mut list, |_| ok(""), now());
-        assert!(is_done(&list));
-        assert_eq!(list.checklist[0].histories.len(), 2);
-        assert_eq!(progress(&list), (1, 1));
-    }
-
-    fn ok_code(exit_code: i32) -> Result<CommandOutput, String> {
-        Ok(CommandOutput {
-            exit_code,
-            stdout: String::new(),
-        })
-    }
-
-    #[test]
-    fn sentence_expectation_names_the_accepted_values() {
-        let mut list = Checklist {
-            id: "t".into(),
-            checklist: vec![item(
-                "R10",
-                "go test ./internal/x/ -count=1",
-                "exit code 2 while running; turn ends when complete",
-            )],
-        };
-        run(&mut list, |_| ok("ok example 0.012s\n"), now());
-
-        assert_eq!(list.checklist[0].status, Status::Failed);
-        let msg = &list.checklist[0].histories[0].actual;
-        for want in ["ok example 0.012s", "pass", "zero", "all", ">= 9"] {
-            assert!(msg.contains(want), "history {msg:?} must contain {want:?}");
-        }
-    }
-
-    #[test]
-    fn load_rejects_unknown_fields_and_incomplete_items() {
-        let dir = tempfile::tempdir().unwrap();
-        let typo = dir.path().join("typo.json");
-        fs::write(
-            &typo,
-            r#"{"id":"t","checklist":[{"id":"C1","check":"","run":"x","expected":"pass","status":"pending","histroies":[]}]}"#,
-        )
-        .unwrap();
-        assert!(matches!(load(&typo), Err(ChecklistError::Parse { .. })));
-
-        let empty_run = dir.path().join("empty.json");
-        fs::write(
-            &empty_run,
-            r#"{"id":"t","checklist":[{"id":"C1","check":"","run":"","expected":"pass","status":"pending"}]}"#,
-        )
-        .unwrap();
-        assert!(matches!(
-            load(&empty_run),
-            Err(ChecklistError::Incomplete { .. })
-        ));
-    }
-
-    #[test]
-    fn load_rejects_path_like_item_ids() {
-        let dir = tempfile::tempdir().unwrap();
-        for id in ["../outside", "../../outside", ".", "..", "a/b", "a\\\\b"] {
-            let path = dir.path().join("contracts.json");
-            let json = format!(
-                r#"{{"id":"t","checklist":[{{"id":{id:?},"check":"","run":"true","expected":"pass","status":"pending"}}]}}"#
-            );
-            fs::write(&path, json).unwrap();
-            assert!(
-                matches!(load(&path), Err(ChecklistError::Incomplete { .. })),
-                "accepted {id:?}"
-            );
-        }
-
-        let path = dir.path().join("valid.json");
-        fs::write(
-            &path,
-            r#"{"id":"t","checklist":[{"id":"C1","check":"","run":"true","expected":"pass","status":"pending"}]}"#,
-        )
-        .unwrap();
-        assert_eq!(load(&path).unwrap().checklist[0].id, "C1");
-    }
-
-    #[test]
-    fn save_then_load_round_trips() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("contracts.json");
-        let list = Checklist {
-            id: "t".into(),
-            checklist: vec![item("C1", "x", "pass")],
-        };
-        save(&path, &list).unwrap();
-        assert_eq!(load(&path).unwrap(), list);
-    }
-
-    #[test]
-    fn contract_document_loads_without_external_assets() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("contracts.json");
-        fs::write(
-            &path,
-            r#"{"id":"example","checklist":[{"id":"C1","check":"command succeeds","run":"true","expected":"pass","status":"pending"}]}"#,
-        )
-        .unwrap();
-        load(&path).expect("contract document loads");
-    }
-}
+#[path = "checklist_test.rs"]
+mod checklist_test;

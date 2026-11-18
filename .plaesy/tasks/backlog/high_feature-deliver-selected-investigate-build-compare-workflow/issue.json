@@ -1,0 +1,14 @@
+{
+  "id": "high_feature-deliver-selected-investigate-build-compare-workflow",
+  "status": "backlog",
+  "labels": [
+    "replacement",
+    "conditional",
+    "owner-decision-dependent"
+  ],
+  "depends_on": [
+    "high_chore-complete-evidence-backed-feature-audit-for-11-incumbents",
+    "high_chore-owner-decisions-for-first-replacement-slice",
+    "critical_feature-specify-first-replacement-vertical-slice"
+  ]
+}

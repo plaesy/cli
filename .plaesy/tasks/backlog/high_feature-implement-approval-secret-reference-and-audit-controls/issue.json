@@ -1,0 +1,8 @@
+{
+  "id": "high_feature-implement-approval-secret-reference-and-audit-controls",
+  "type": "task",
+  "labels": [
+    "replacement",
+    "security"
+  ]
+}

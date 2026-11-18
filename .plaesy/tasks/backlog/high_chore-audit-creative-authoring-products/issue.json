@@ -1,0 +1,15 @@
+{
+  "id": "high_chore-audit-creative-authoring-products",
+  "type": "task",
+  "status": "backlog",
+  "title": "Audit creative authoring products",
+  "spec": "plaesy-agent-platform",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "creative"
+  ],
+  "depends_on": [
+    "high_chore-recover-and-compare-incumbent-research"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "high_feature-add-operator-observability-and-recovery-controls",
+  "type": "task",
+  "depends_on": [
+    "critical_feature-implement-durable-task-run-lifecycle-and-recovery"
+  ],
+  "labels": [
+    "phase-3",
+    "operations"
+  ]
+}

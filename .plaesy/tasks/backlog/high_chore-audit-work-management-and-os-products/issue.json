@@ -1,0 +1,16 @@
+{
+  "id": "high_chore-audit-work-management-and-os-products",
+  "type": "task",
+  "status": "backlog",
+  "title": "Audit work management and OS automation products",
+  "spec": "plaesy-agent-platform",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "work-management",
+    "os-automation"
+  ],
+  "depends_on": [
+    "high_chore-recover-and-compare-incumbent-research"
+  ]
+}

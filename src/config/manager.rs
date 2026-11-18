@@ -1,10 +1,11 @@
 //! Generic, cached JSON configuration with atomic saves and hot reload.
 
+use parking_lot::{Mutex, RwLock};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -89,11 +90,7 @@ where
     /// The cached value, or `None` if nothing has been loaded or saved yet.
     #[must_use]
     pub fn get(&self) -> Option<Arc<T>> {
-        self.shared
-            .cache
-            .read()
-            .expect("config cache poisoned")
-            .clone()
+        self.shared.cache.read().clone()
     }
 
     /// Writes `cfg` atomically, updates the cache, and notifies watchers.
@@ -115,12 +112,8 @@ where
     ///
     /// [`ConfigError::Io`] when the watcher cannot be created or attached.
     pub fn watch(&self, callback: impl Fn(&T) + Send + Sync + 'static) -> Result<(), ConfigError> {
-        self.shared
-            .callbacks
-            .lock()
-            .expect("callbacks poisoned")
-            .push(Arc::new(callback));
-        let mut watcher = self.watcher.lock().expect("watcher poisoned");
+        self.shared.callbacks.lock().push(Arc::new(callback));
+        let mut watcher = self.watcher.lock();
         if watcher.is_none() {
             *watcher = Some(WatchGuard::start(Arc::clone(&self.shared))?);
         }
@@ -130,7 +123,7 @@ where
     /// Stops the file watcher. Registered callbacks are kept, and `watch`
     /// restarts the watcher.
     pub fn stop_watch(&self) {
-        *self.watcher.lock().expect("watcher poisoned") = None;
+        *self.watcher.lock() = None;
     }
 
     /// Imports a configuration from `old_path` using `migrate`, saves it to this
@@ -178,7 +171,7 @@ where
         Ok(bytes) => bytes,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             let default = Arc::clone(&shared.default);
-            *shared.cache.write().expect("config cache poisoned") = Some(Arc::clone(&default));
+            *shared.cache.write() = Some(Arc::clone(&default));
             return Ok(default);
         }
         Err(e) => {
@@ -189,7 +182,7 @@ where
         }
     };
     let cfg = Arc::new(serde_json::from_slice::<T>(&bytes)?);
-    *shared.cache.write().expect("config cache poisoned") = Some(Arc::clone(&cfg));
+    *shared.cache.write() = Some(Arc::clone(&cfg));
     Ok(cfg)
 }
 
@@ -205,7 +198,7 @@ where
     }
     write_atomic(&shared.path, json.as_bytes())?;
     let cfg = Arc::new(cfg);
-    *shared.cache.write().expect("config cache poisoned") = Some(Arc::clone(&cfg));
+    *shared.cache.write() = Some(Arc::clone(&cfg));
     Ok(cfg)
 }
 
@@ -222,7 +215,7 @@ fn write_atomic(path: &Path, data: &[u8]) -> Result<(), ConfigError> {
 /// Calls every callback with `cfg`. Callbacks are copied first, so a callback may
 /// register another watcher without deadlocking.
 fn notify_watchers<T>(shared: &Shared<T>, cfg: &T) {
-    let callbacks: Vec<Callback<T>> = shared.callbacks.lock().expect("callbacks poisoned").clone();
+    let callbacks: Vec<Callback<T>> = shared.callbacks.lock().clone();
     for callback in callbacks {
         callback(cfg);
     }
@@ -305,117 +298,5 @@ fn is_write_to(event: &notify::Event, path: &Path) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::sync::mpsc::channel;
-
-    use serde::Deserialize;
-
-    use super::*;
-
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-    struct Sample {
-        name: String,
-        count: i64,
-    }
-
-    fn sample(name: &str, count: i64) -> Sample {
-        Sample {
-            name: name.into(),
-            count,
-        }
-    }
-
-    #[test]
-    fn missing_file_yields_the_default_without_error() {
-        let dir = tempfile::tempdir().unwrap();
-        let mgr = ConfigManager::new(dir.path().join("c.json"), sample("def", 1));
-        assert_eq!(*mgr.load().unwrap(), sample("def", 1));
-        assert!(!dir.path().join("c.json").exists());
-    }
-
-    #[test]
-    fn save_then_load_round_trips_and_leaves_no_temp_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("nested").join("c.json");
-        let mgr = ConfigManager::new(&path, sample("def", 0));
-        mgr.save(sample("saved", 7)).unwrap();
-
-        let fresh = ConfigManager::new(&path, sample("def", 0));
-        assert_eq!(*fresh.load().unwrap(), sample("saved", 7));
-        assert!(!path.with_extension("json.tmp").exists());
-    }
-
-    #[test]
-    fn invalid_json_is_an_error_not_the_default() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("c.json");
-        fs::write(&path, "{ nope").unwrap();
-        let mgr = ConfigManager::new(&path, sample("def", 0));
-        assert!(matches!(mgr.load(), Err(ConfigError::Json(_))));
-    }
-
-    #[test]
-    fn migrate_moves_contents_and_removes_the_old_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let old = dir.path().join("old.json");
-        let new = dir.path().join("new.json");
-        fs::write(&old, r#"{"name":"legacy","count":3}"#).unwrap();
-
-        let mgr = ConfigManager::new(&new, sample("def", 0));
-        mgr.migrate_from(&old, |bytes| serde_json::from_slice::<Sample>(bytes))
-            .unwrap();
-
-        assert!(!old.exists());
-        assert_eq!(*mgr.load().unwrap(), sample("legacy", 3));
-    }
-
-    #[test]
-    fn migrate_with_no_old_file_is_a_no_op() {
-        let dir = tempfile::tempdir().unwrap();
-        let mgr = ConfigManager::new(dir.path().join("new.json"), sample("def", 0));
-        mgr.migrate_from(&dir.path().join("absent.json"), |_: &[u8]| {
-            Ok::<_, String>(sample("x", 1))
-        })
-        .unwrap();
-        assert!(mgr.get().is_none());
-    }
-
-    #[test]
-    fn save_notifies_registered_callbacks() {
-        let dir = tempfile::tempdir().unwrap();
-        let mgr = ConfigManager::new(dir.path().join("c.json"), sample("def", 0));
-        let (tx, rx) = channel();
-        mgr.watch(move |cfg: &Sample| {
-            let _ = tx.send(cfg.clone());
-        })
-        .unwrap();
-        mgr.save(sample("changed", 2)).unwrap();
-        let seen = rx
-            .recv_timeout(Duration::from_secs(5))
-            .expect("callback ran");
-        assert_eq!(seen, sample("changed", 2));
-        mgr.stop_watch();
-    }
-
-    #[test]
-    fn external_edit_triggers_a_reload_for_watchers() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("c.json");
-        let mgr = ConfigManager::new(&path, sample("def", 0));
-        let (tx, rx) = channel();
-        mgr.watch(move |cfg: &Sample| {
-            let _ = tx.send(cfg.clone());
-        })
-        .unwrap();
-
-        // Give the watcher a moment to attach before the edit.
-        thread::sleep(Duration::from_millis(200));
-        fs::write(&path, r#"{"name":"edited","count":9}"#).unwrap();
-
-        let seen = rx
-            .recv_timeout(Duration::from_secs(10))
-            .expect("watcher reported the external edit");
-        assert_eq!(seen, sample("edited", 9));
-        mgr.stop_watch();
-    }
-}
+#[path = "manager_test.rs"]
+mod manager_test;

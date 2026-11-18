@@ -15,6 +15,10 @@ pub struct Message {
     pub body: String,
     pub created_at: String,
     pub acknowledged_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lease_owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lease_expiry_epoch_ms: Option<i64>,
 }
 
 #[derive(Debug, Error)]
@@ -23,11 +27,15 @@ pub enum MessageError {
     Invalid(&'static str),
     #[error("message idempotency key was reused with different content")]
     IdempotencyConflict,
+    #[error("lease duration must be 1..=86400 seconds")]
+    InvalidLease,
+    #[error("message is not claimable or lease token is stale")]
+    LeaseConflict,
     #[error(transparent)]
     Storage(#[from] rusqlite::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),
-    #[error("database permissions expose it to group/other users")]
+    #[error("database or its parent directory permissions expose it to group/other users")]
     InsecurePermissions,
 }
 
@@ -94,11 +102,29 @@ impl MessageStore {
                body TEXT NOT NULL,
                created_at TEXT NOT NULL,
                acknowledged_at TEXT,
+               lease_owner TEXT,
+               lease_expiry_epoch_ms INTEGER,
                UNIQUE(sender, id)
              );
              CREATE INDEX IF NOT EXISTS relay_messages_inbox
                ON relay_messages(recipient, acknowledged_at, created_at);",
         )?;
+        for (column, definition) in [
+            ("lease_owner", "TEXT"),
+            ("lease_expiry_epoch_ms", "INTEGER"),
+        ] {
+            let exists = connection
+                .prepare("PRAGMA table_info(relay_messages)")?
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<Result<Vec<_>, _>>()?
+                .iter()
+                .any(|existing| existing == column);
+            if !exists {
+                connection.execute_batch(&format!(
+                    "ALTER TABLE relay_messages ADD COLUMN {column} {definition};"
+                ))?;
+            }
+        }
         Ok(Self { connection })
     }
 
@@ -121,7 +147,7 @@ impl MessageStore {
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let existing: Option<Message> = tx.query_row(
-            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM relay_messages WHERE id=?1",
+            "SELECT id,sender,recipient,body,created_at,acknowledged_at,lease_owner,lease_expiry_epoch_ms FROM relay_messages WHERE id=?1",
             [id], row_to_message,
         ).optional()?;
         if let Some(message) = existing {
@@ -143,6 +169,8 @@ impl MessageStore {
             body: body.into(),
             created_at,
             acknowledged_at: None,
+            lease_owner: None,
+            lease_expiry_epoch_ms: None,
         })
     }
 
@@ -153,19 +181,84 @@ impl MessageStore {
             return Err(MessageError::Invalid("inbox limit must be 1..=500"));
         }
         let mut statement = self.connection.prepare(
-            "SELECT id,sender,recipient,body,created_at,acknowledged_at FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL ORDER BY created_at,id LIMIT ?2",
+            "SELECT id,sender,recipient,body,created_at,acknowledged_at,lease_owner,lease_expiry_epoch_ms FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL ORDER BY created_at,id LIMIT ?2",
         )?;
         let rows = statement.query_map(params![recipient, limit as i64], row_to_message)?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
-    /// Acknowledges only a pending message addressed to the specified recipient.
+    /// Atomically claim the oldest available message for a consumer until a bounded expiry.
+    pub fn claim_next(
+        &mut self,
+        recipient: &str,
+        lease_seconds: u64,
+    ) -> Result<Option<Message>, MessageError> {
+        validate_agent(recipient)?;
+        if lease_seconds == 0 || lease_seconds > 86_400 {
+            return Err(MessageError::InvalidLease);
+        }
+        let now_ms = chrono::Utc::now().timestamp_millis();
+        let expiry_ms = now_ms + (lease_seconds as i64 * 1_000);
+        let token = uuid::Uuid::new_v4().to_string();
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let next: Option<String> = tx
+            .query_row(
+                "SELECT id FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?2) ORDER BY created_at,id LIMIT 1",
+                params![recipient, now_ms],
+                |row| row.get(0),
+            )
+            .optional()?;
+        let Some(id) = next else {
+            tx.commit()?;
+            return Ok(None);
+        };
+        let changed = tx.execute(
+            "UPDATE relay_messages SET lease_owner=?1,lease_expiry_epoch_ms=?2 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?5)",
+            params![token, expiry_ms, id, recipient, now_ms],
+        )?;
+        if changed != 1 {
+            return Err(MessageError::LeaseConflict);
+        }
+        let message = tx.query_row(
+            "SELECT id,sender,recipient,body,created_at,acknowledged_at,lease_owner,lease_expiry_epoch_ms FROM relay_messages WHERE id=?1",
+            [&id],
+            row_to_message,
+        )?;
+        tx.commit()?;
+        Ok(Some(message))
+    }
+
+    /// Acknowledge a claimed message only when the caller still owns its lease.
+    pub fn acknowledge_claim(
+        &mut self,
+        id: &str,
+        recipient: &str,
+        owner: &str,
+    ) -> Result<bool, MessageError> {
+        validate_id(id)?;
+        validate_agent(recipient)?;
+        validate_id(owner)?;
+        let now = chrono::Utc::now();
+        let now_text = now.to_rfc3339();
+        let now_ms = now.timestamp_millis();
+        let changed = self.connection.execute(
+            "UPDATE relay_messages SET acknowledged_at=?1,lease_owner=NULL,lease_expiry_epoch_ms=NULL WHERE id=?2 AND recipient=?3 AND lease_owner=?4 AND lease_expiry_epoch_ms>?5 AND acknowledged_at IS NULL",
+            params![now_text, id, recipient, owner, now_ms],
+        )?;
+        Ok(changed == 1)
+    }
+
+    /// Acknowledge only never-claimed messages for legacy callers; lease tokens cannot be bypassed.
     pub fn acknowledge(&mut self, id: &str, recipient: &str) -> Result<bool, MessageError> {
         validate_id(id)?;
         validate_agent(recipient)?;
+        let now = chrono::Utc::now();
+        let now_text = now.to_rfc3339();
         let changed = self.connection.execute(
-            "UPDATE relay_messages SET acknowledged_at=?1 WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL",
-            params![chrono::Utc::now().to_rfc3339(), id, recipient],
+            "UPDATE relay_messages SET acknowledged_at=?1 WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL AND lease_owner IS NULL",
+            params![now_text, id, recipient],
         )?;
         Ok(changed == 1)
     }
@@ -200,162 +293,11 @@ fn row_to_message(row: &rusqlite::Row<'_>) -> rusqlite::Result<Message> {
         body: row.get(3)?,
         created_at: row.get(4)?,
         acknowledged_at: row.get(5)?,
+        lease_owner: row.get(6)?,
+        lease_expiry_epoch_ms: row.get(7)?,
     })
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn idempotent_send_and_explicit_ack_preserve_queue_semantics() {
-        let mut store = MessageStore::in_memory().unwrap();
-        let first = store.send("m-1", "agent-a", "agent-b", "hello").unwrap();
-        assert_eq!(
-            store.send("m-1", "agent-a", "agent-b", "hello").unwrap(),
-            first
-        );
-        assert!(matches!(
-            store.send("m-1", "agent-a", "agent-b", "changed"),
-            Err(MessageError::IdempotencyConflict)
-        ));
-        assert_eq!(store.inbox("agent-b", 10).unwrap().len(), 1);
-        assert!(!store.acknowledge("m-1", "agent-a").unwrap());
-        assert!(store.acknowledge("m-1", "agent-b").unwrap());
-        assert!(!store.acknowledge("m-1", "agent-b").unwrap());
-        assert!(store.inbox("agent-b", 10).unwrap().is_empty());
-    }
-
-    #[test]
-    fn concurrent_acknowledgments_have_exactly_one_winner() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("messages.sqlite");
-        MessageStore::open(&path)
-            .unwrap()
-            .send("ack-race", "a", "b", "payload")
-            .unwrap();
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
-        let workers: Vec<_> = (0..2)
-            .map(|_| {
-                let path = path.clone();
-                let barrier = barrier.clone();
-                std::thread::spawn(move || {
-                    let mut store = MessageStore::open(path).unwrap();
-                    barrier.wait();
-                    store.acknowledge("ack-race", "b").unwrap()
-                })
-            })
-            .collect();
-        barrier.wait();
-        let acknowledgments: Vec<_> = workers.into_iter().map(|w| w.join().unwrap()).collect();
-        assert_eq!(acknowledgments.iter().filter(|ack| **ack).count(), 1);
-        assert!(MessageStore::open(&path)
-            .unwrap()
-            .inbox("b", 10)
-            .unwrap()
-            .is_empty());
-    }
-
-    #[test]
-    fn concurrent_idempotent_retries_create_only_one_message() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("messages.sqlite");
-        MessageStore::open(&path).unwrap();
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
-        let workers: Vec<_> = (0..2)
-            .map(|_| {
-                let path = path.clone();
-                let barrier = barrier.clone();
-                std::thread::spawn(move || {
-                    let mut store = MessageStore::open(path).unwrap();
-                    barrier.wait();
-                    store.send("same-id", "a", "b", "payload").unwrap()
-                })
-            })
-            .collect();
-        barrier.wait();
-        let messages: Vec<_> = workers.into_iter().map(|w| w.join().unwrap()).collect();
-        assert_eq!(messages[0], messages[1]);
-        let store = MessageStore::open(&path).unwrap();
-        assert_eq!(store.inbox("b", 10).unwrap().len(), 1);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn existing_database_exposed_to_other_users_is_rejected() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("shared.sqlite");
-        std::fs::File::create(&path).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
-        assert!(matches!(
-            MessageStore::open(&path),
-            Err(MessageError::InsecurePermissions)
-        ));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn newly_created_database_is_owner_only() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("private.sqlite");
-        MessageStore::open(&path).unwrap();
-        let mode = std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode & 0o077, 0);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn restrictive_permissions_on_existing_database_are_preserved() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("private.sqlite");
-        std::fs::File::create(&path).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
-        MessageStore::open(&path).unwrap();
-        let mode = std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
-    }
-
-    #[test]
-    fn pending_message_survives_store_reopen() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("messages.sqlite");
-        MessageStore::open(&path)
-            .unwrap()
-            .send("m-2", "a", "b", "offline")
-            .unwrap();
-        let reopened = MessageStore::open(&path).unwrap();
-        assert_eq!(reopened.inbox("b", 10).unwrap()[0].body, "offline");
-    }
-
-    #[test]
-    fn idempotent_resend_after_ack_keeps_message_acknowledged() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("messages.sqlite");
-        {
-            let mut store = MessageStore::open(&path).unwrap();
-            store.send("m-3", "a", "b", "done").unwrap();
-            assert!(store.acknowledge("m-3", "b").unwrap());
-        }
-        let mut reopened = MessageStore::open(&path).unwrap();
-        let resent = reopened.send("m-3", "a", "b", "done").unwrap();
-        assert!(resent.acknowledged_at.is_some());
-        assert!(reopened.inbox("b", 10).unwrap().is_empty());
-    }
-
-    #[test]
-    fn invalid_recipient_and_oversized_body_are_rejected() {
-        let mut store = MessageStore::in_memory().unwrap();
-        assert!(matches!(
-            store.send("m", "a", "../b", "hello"),
-            Err(MessageError::Invalid(_))
-        ));
-        assert!(matches!(
-            store.send("m", "a", "b", &"x".repeat(MAX_BODY_BYTES + 1)),
-            Err(MessageError::Invalid(_))
-        ));
-    }
-}
+#[path = "relay_test.rs"]
+mod relay_test;

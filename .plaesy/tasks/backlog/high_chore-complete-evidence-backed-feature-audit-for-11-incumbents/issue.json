@@ -1,0 +1,27 @@
+{
+  "id": "high_chore-complete-evidence-backed-feature-audit-for-11-incumbents",
+  "type": "task",
+  "labels": [
+    "phase-0",
+    "incumbent-audit"
+  ],
+  "depends_on": [
+    "high_chore-recover-and-compare-incumbent-research",
+    "high_chore-verify-feature-baseline-across-repositories",
+    "high_chore-audit-agent-runtime-and-workspace-products",
+    "high_chore-audit-hermes-agent-capability-ledger",
+    "high_chore-audit-paperclip-capability-ledger",
+    "high_chore-audit-deepseek-harness-capability-ledger",
+    "high_chore-audit-nimbalyst-capability-ledger",
+    "high_chore-audit-orca-capability-ledger",
+    "high_chore-audit-creative-authoring-products",
+    "high_chore-audit-craft-anything-capability-ledger",
+    "high_chore-audit-figcraft-capability-ledger",
+    "high_chore-audit-deckcraft-capability-ledger",
+    "high_chore-audit-wordcraft-capability-ledger",
+    "high_chore-audit-work-management-and-os-products",
+    "high_chore-produce-canonical-cross-incumbent-capability-inventory",
+    "high_chore-audit-herald-os-capability-ledger",
+    "high_chore-audit-openproject-capability-ledger"
+  ]
+}

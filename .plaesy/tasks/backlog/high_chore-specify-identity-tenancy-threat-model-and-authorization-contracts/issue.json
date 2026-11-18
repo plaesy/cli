@@ -1,0 +1,8 @@
+{
+  "id": "high_chore-specify-identity-tenancy-threat-model-and-authorization-contracts",
+  "type": "task",
+  "labels": [
+    "replacement",
+    "security"
+  ]
+}

@@ -96,6 +96,52 @@ fn load(dir: &Path) -> Result<Vec<Claim>, Error> {
     }
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
+/// List active advisory claims, optionally filtered to one path.
+pub fn list(root: &Path, raw_path: Option<&str>) -> Result<Vec<Claim>, Error> {
+    let path = raw_path.map(|p| normalize(root, p)).transpose()?;
+    with_lock(root, |dir| {
+        let claims: Vec<_> = load(dir)?
+            .into_iter()
+            .filter(|c| c.expires_at > now() && path.as_ref().is_none_or(|p| p == &c.path))
+            .collect();
+        Ok(claims)
+    })
+}
+
+/// Read active claims in stable path order for best-effort polling clients.
+pub fn snapshot(root: &Path) -> Result<Vec<Claim>, Error> {
+    with_lock(root, |dir| {
+        let mut claims: Vec<_> = load(dir)?
+            .into_iter()
+            .filter(|c| c.expires_at > now())
+            .collect();
+        claims.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(claims)
+    })
+}
+
+/// Changes observed between two snapshots. This is not a durable event log.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "event", content = "claim", rename_all = "snake_case")]
+pub enum ClaimChange {
+    Claimed(Claim),
+    Released(Claim),
+}
+
+pub fn diff_snapshots(previous: &[Claim], current: &[Claim]) -> Vec<ClaimChange> {
+    let mut changes = Vec::new();
+    for claim in previous {
+        if !current.iter().any(|next| next.lease_id == claim.lease_id) {
+            changes.push(ClaimChange::Released(claim.clone()));
+        }
+    }
+    for claim in current {
+        if !previous.iter().any(|old| old.lease_id == claim.lease_id) {
+            changes.push(ClaimChange::Claimed(claim.clone()));
+        }
+    }
+    changes
+}
 
 fn save(dir: &Path, claims: &[Claim]) -> Result<(), Error> {
     let tmp = dir.join(format!(".claims-{}.tmp", uuid::Uuid::new_v4()));
@@ -145,18 +191,6 @@ pub fn claim(
     })
 }
 
-/// List active advisory claims, optionally filtered to one path.
-pub fn list(root: &Path, raw_path: Option<&str>) -> Result<Vec<Claim>, Error> {
-    let path = raw_path.map(|p| normalize(root, p)).transpose()?;
-    with_lock(root, |dir| {
-        let claims: Vec<_> = load(dir)?
-            .into_iter()
-            .filter(|c| c.expires_at > now() && path.as_ref().is_none_or(|p| p == &c.path))
-            .collect();
-        Ok(claims)
-    })
-}
-
 /// Release only the caller's own advisory claim.
 pub fn release(root: &Path, raw_path: &str, agent: &str) -> Result<(), Error> {
     release_matching(root, raw_path, agent, None)
@@ -198,108 +232,5 @@ fn release_matching(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn claim_is_visible_and_conflicting_claim_is_rejected() {
-        let root = tempfile::tempdir().unwrap();
-        let first = claim(root.path(), "src/lib.rs", "agent-a", None, 60).unwrap();
-        assert_eq!(
-            list(root.path(), Some("src/lib.rs")).unwrap(),
-            vec![first.clone()]
-        );
-        assert!(matches!(
-            claim(root.path(), "src/lib.rs", "agent-b", None, 60),
-            Err(Error::Conflict { .. })
-        ));
-    }
-
-    #[test]
-    fn concurrent_claims_have_one_winner() {
-        use std::sync::{Arc, Barrier};
-        use std::thread;
-
-        let root = tempfile::tempdir().unwrap();
-        let root = Arc::new(root.path().to_path_buf());
-        let barrier = Arc::new(Barrier::new(3));
-        let mut threads = Vec::new();
-        for agent in ["agent-a", "agent-b"] {
-            let root = Arc::clone(&root);
-            let barrier = Arc::clone(&barrier);
-            threads.push(thread::spawn(move || {
-                barrier.wait();
-                claim(&root, "src/lib.rs", agent, None, 60)
-            }));
-        }
-        barrier.wait();
-        let results: Vec<_> = threads
-            .into_iter()
-            .map(|thread| thread.join().unwrap())
-            .collect();
-        assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
-        assert_eq!(
-            results
-                .iter()
-                .filter(|result| matches!(result, Err(Error::Conflict { .. })))
-                .count(),
-            1
-        );
-        assert_eq!(list(&root, None).unwrap().len(), 1);
-    }
-
-    #[test]
-    fn only_owner_can_release_claim() {
-        let root = tempfile::tempdir().unwrap();
-        claim(root.path(), "src/lib.rs", "agent-a", None, 60).unwrap();
-        assert!(matches!(
-            release(root.path(), "src/lib.rs", "agent-b"),
-            Err(Error::NotOwner { .. })
-        ));
-        release(root.path(), "src/lib.rs", "agent-a").unwrap();
-        assert!(list(root.path(), None).unwrap().is_empty());
-    }
-
-    #[test]
-    fn stale_lease_cannot_release_replacement_for_same_agent() {
-        let root = tempfile::tempdir().unwrap();
-        let old = claim(root.path(), "src/lib.rs", "agent-a", None, 60).unwrap();
-        let new = claim(root.path(), "src/lib.rs", "agent-a", Some("new-task"), 60).unwrap();
-        assert_ne!(old.lease_id, new.lease_id);
-
-        assert!(matches!(
-            release_lease(root.path(), "src/lib.rs", "agent-a", &old.lease_id),
-            Err(Error::NotOwner { .. })
-        ));
-        assert_eq!(list(root.path(), None).unwrap(), vec![new.clone()]);
-
-        release_lease(root.path(), "src/lib.rs", "agent-a", &new.lease_id).unwrap();
-        assert!(list(root.path(), None).unwrap().is_empty());
-    }
-
-    #[test]
-    fn rejects_unsafe_paths() {
-        let root = tempfile::tempdir().unwrap();
-        assert!(matches!(
-            claim(root.path(), "../secret", "agent", None, 60),
-            Err(Error::InvalidPath(_))
-        ));
-        assert!(matches!(
-            claim(root.path(), "/etc/passwd", "agent", None, 60),
-            Err(Error::InvalidPath(_))
-        ));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn rejects_symlink_escape() {
-        use std::os::unix::fs::symlink;
-        let root = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        symlink(outside.path(), root.path().join("escape")).unwrap();
-        assert!(matches!(
-            claim(root.path(), "escape/file", "agent", None, 60),
-            Err(Error::InvalidPath(_))
-        ));
-    }
-}
+#[path = "files_test.rs"]
+mod files_test;

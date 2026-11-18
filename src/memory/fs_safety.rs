@@ -88,6 +88,7 @@ impl DirHandle {
     /// Restrict permissions on the directory represented by this handle.
     #[cfg(target_os = "linux")]
     pub fn set_permissions(&self, mode: u32) -> io::Result<()> {
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe { libc::fchmod(self.fd.as_raw_fd(), mode as libc::mode_t) };
         if rc != 0 {
             return Err(io::Error::last_os_error());
@@ -111,6 +112,7 @@ impl DirHandle {
     pub fn create_dir(&self, name: &Path, mode: u32) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
         let rc =
+            // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
             unsafe { libc::mkdirat(self.fd.as_raw_fd(), c_name.as_ptr(), mode as libc::mode_t) };
         if rc != 0 {
             return Err(io::Error::last_os_error());
@@ -153,6 +155,7 @@ impl DirHandle {
             mode: 0,
             resolve: RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS | RESOLVE_NO_MAGICLINKS,
         };
+        // SAFETY: `how` is a `repr(C)` struct matching the kernel's `open_how` layout and outlives the call; `path` is NUL-terminated; the size passed is `size_of::<OpenHow>()`.
         let fd = unsafe {
             libc::syscall(
                 libc::SYS_openat2,
@@ -164,6 +167,7 @@ impl DirHandle {
         };
         if fd >= 0 {
             return Ok(Self {
+                // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
                 fd: unsafe { OwnedFd::from_raw_fd(fd) },
             });
         }
@@ -188,6 +192,7 @@ impl DirHandle {
             let c_name = CString::new(name.as_bytes()).map_err(|_| {
                 io::Error::new(io::ErrorKind::InvalidInput, "path contains a NUL byte")
             })?;
+            // SAFETY: `current` is an open directory descriptor owned by this loop, and the C string argument is NUL-terminated and alive for the call.
             let next_fd = unsafe {
                 libc::openat(
                     current.as_raw_fd(),
@@ -198,9 +203,33 @@ impl DirHandle {
             if next_fd < 0 {
                 return Err(io::Error::last_os_error());
             }
+            // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
             current = unsafe { OwnedFd::from_raw_fd(next_fd) };
         }
         Ok(Self { fd: current })
+    }
+
+    /// Open a directory beneath this handle. Non-Linux fallback: path-based, rejecting symlinks
+    /// and parent-escape components, without the atomic guarantee of `openat2`.
+    #[cfg(not(target_os = "linux"))]
+    pub fn open_dir_beneath(&self, relative: &Path) -> io::Result<Self> {
+        let full = self.child_path_fallback(relative)?;
+        if relative.as_os_str().is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must contain only normal relative components",
+            ));
+        }
+        let meta = std::fs::symlink_metadata(&full)?;
+        if !meta.file_type().is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "not a directory (or is a symlink)",
+            ));
+        }
+        Ok(Self {
+            path: std::fs::canonicalize(full)?,
+        })
     }
 
     /// Open `dir` without following symlinks in any path component.
@@ -208,8 +237,8 @@ impl DirHandle {
     pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
         use std::path::Component;
 
-        let anchor = if dir.is_absolute() { "/" } else { "." };
-        let anchor = CString::new(anchor).expect("constant path has no NUL byte");
+        let anchor = if dir.is_absolute() { c"/" } else { c"." };
+        // SAFETY: `anchor` is a valid NUL-terminated string that lives across the call.
         let root_fd = unsafe {
             libc::open(
                 anchor.as_ptr(),
@@ -219,6 +248,7 @@ impl DirHandle {
         if root_fd < 0 {
             return Err(io::Error::last_os_error());
         }
+        // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
         let mut current = unsafe { OwnedFd::from_raw_fd(root_fd) };
         for component in dir.components() {
             let name = match component {
@@ -234,6 +264,7 @@ impl DirHandle {
             let c_name = CString::new(name.as_bytes()).map_err(|_| {
                 io::Error::new(io::ErrorKind::InvalidInput, "path contains a NUL byte")
             })?;
+            // SAFETY: `current` is an open directory descriptor owned by this loop, and the C string argument is NUL-terminated and alive for the call.
             let fd = unsafe {
                 libc::openat(
                     current.as_raw_fd(),
@@ -244,6 +275,7 @@ impl DirHandle {
             if fd < 0 {
                 return Err(io::Error::last_os_error());
             }
+            // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
             current = unsafe { OwnedFd::from_raw_fd(fd) };
         }
         Ok(Self { fd: current })
@@ -286,6 +318,7 @@ impl DirHandle {
                 io::Error::new(io::ErrorKind::InvalidInput, "path contains a NUL byte")
             })?;
             if components.peek().is_none() {
+                // SAFETY: `current` is an open directory descriptor owned by this loop, and the C string argument is NUL-terminated and alive for the call.
                 let fd = unsafe {
                     libc::openat(
                         current.as_raw_fd(),
@@ -296,6 +329,7 @@ impl DirHandle {
                 if fd < 0 {
                     return Err(io::Error::last_os_error());
                 }
+                // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
                 let file = unsafe { std::fs::File::from_raw_fd(fd) };
                 if !file.metadata()?.is_file() {
                     return Err(io::Error::new(
@@ -305,6 +339,7 @@ impl DirHandle {
                 }
                 return Ok(file);
             }
+            // SAFETY: `current` is an open directory descriptor owned by this loop, and the C string argument is NUL-terminated and alive for the call.
             let fd = unsafe {
                 libc::openat(
                     current.as_raw_fd(),
@@ -315,6 +350,7 @@ impl DirHandle {
             if fd < 0 {
                 return Err(io::Error::last_os_error());
             }
+            // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
             current = unsafe { OwnedFd::from_raw_fd(fd) };
         }
         Err(io::Error::new(
@@ -360,6 +396,7 @@ impl DirHandle {
             ));
         }
         let c_name = to_cstring(name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let fd = unsafe {
             libc::openat(
                 self.fd.as_raw_fd(),
@@ -370,6 +407,7 @@ impl DirHandle {
         if fd < 0 {
             return Err(io::Error::last_os_error());
         }
+        // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
         let file = unsafe { std::fs::File::from_raw_fd(fd) };
         if !file.metadata()?.is_file() {
             return Err(io::Error::new(
@@ -407,6 +445,7 @@ impl DirHandle {
     #[cfg(target_os = "linux")]
     pub fn open_or_create_file(&self, name: &Path, mode: u32) -> io::Result<std::fs::File> {
         let c_name = to_component_cstring(name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let fd = unsafe {
             libc::openat(
                 self.fd.as_raw_fd(),
@@ -423,6 +462,7 @@ impl DirHandle {
         if fd < 0 {
             return Err(io::Error::last_os_error());
         }
+        // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
         let file = unsafe { std::fs::File::from_raw_fd(fd) };
         if !file.metadata()?.is_file() {
             return Err(io::Error::new(
@@ -450,6 +490,7 @@ impl DirHandle {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(self.child_path_fallback(name)?)
     }
 
@@ -467,6 +508,7 @@ impl DirHandle {
     #[cfg(target_os = "linux")]
     pub fn create_new_file(&self, name: &Path) -> io::Result<std::fs::File> {
         let c_name = to_component_cstring(name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let fd = unsafe {
             libc::openat(
                 self.fd.as_raw_fd(),
@@ -478,6 +520,7 @@ impl DirHandle {
         if fd < 0 {
             return Err(io::Error::last_os_error());
         }
+        // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
         Ok(unsafe { std::fs::File::from_raw_fd(fd) })
     }
 
@@ -495,6 +538,7 @@ impl DirHandle {
     pub fn link_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         let c_old = to_component_cstring(old_name)?;
         let c_new = to_component_cstring(new_name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe {
             libc::linkat(
                 self.fd.as_raw_fd(),
@@ -515,6 +559,7 @@ impl DirHandle {
     pub fn replace_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         let c_old = to_component_cstring(old_name)?;
         let c_new = to_component_cstring(new_name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe {
             libc::renameat(
                 self.fd.as_raw_fd(),
@@ -551,6 +596,7 @@ impl DirHandle {
     pub fn remove_dir(&self, name: &Path) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
         let rc =
+            // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
             unsafe { libc::unlinkat(self.fd.as_raw_fd(), c_name.as_ptr(), libc::AT_REMOVEDIR) };
         if rc != 0 {
             return Err(io::Error::last_os_error());
@@ -567,6 +613,7 @@ impl DirHandle {
     #[cfg(target_os = "linux")]
     pub fn remove_file(&self, name: &Path) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe { libc::unlinkat(self.fd.as_raw_fd(), c_name.as_ptr(), 0) };
         if rc != 0 {
             return Err(io::Error::last_os_error());
@@ -582,6 +629,7 @@ impl DirHandle {
     /// Flush this directory's own metadata/entries to durable storage.
     #[cfg(target_os = "linux")]
     pub fn sync(&self) -> io::Result<()> {
+        // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe { libc::fsync(self.fd.as_raw_fd()) };
         if rc != 0 {
             return Err(io::Error::last_os_error());
@@ -627,182 +675,5 @@ impl DirHandle {
 }
 
 #[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rejects_symlinked_directory() {
-        let dir = tempfile::tempdir().unwrap();
-        let real = dir.path().join("real");
-        std::fs::create_dir(&real).unwrap();
-        let link = dir.path().join("link");
-        std::os::unix::fs::symlink(&real, &link).unwrap();
-        assert!(DirHandle::open_nofollow(&link).is_err());
-        assert!(DirHandle::open_nofollow(&real).is_ok());
-    }
-
-    #[test]
-    fn rejects_symlinked_ancestor_directory() {
-        let dir = tempfile::tempdir().unwrap();
-        let real = dir.path().join("real");
-        std::fs::create_dir(&real).unwrap();
-        let child = real.join("child");
-        std::fs::create_dir(&child).unwrap();
-        let link = dir.path().join("link");
-        std::os::unix::fs::symlink(&real, &link).unwrap();
-        assert!(DirHandle::open_nofollow(&link.join("child")).is_err());
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn relative_file_open_rejects_symlinked_intermediate_and_leaf() {
-        use std::io::Read;
-        use std::os::unix::fs::symlink;
-
-        let dir = tempfile::tempdir().unwrap();
-        let actual = dir.path().join("actual");
-        std::fs::create_dir(&actual).unwrap();
-        std::fs::write(actual.join("value"), b"inside").unwrap();
-        let linked_dir = dir.path().join("linked");
-        symlink(&actual, &linked_dir).unwrap();
-        let linked_file = dir.path().join("linked-file");
-        symlink(actual.join("value"), &linked_file).unwrap();
-        let handle = DirHandle::open_nofollow(dir.path()).unwrap();
-
-        assert!(handle
-            .open_file_read_relative_nofollow(Path::new("linked/value"))
-            .is_err());
-        assert!(handle
-            .open_file_read_relative_nofollow(Path::new("linked-file"))
-            .is_err());
-        let mut file = handle
-            .open_file_read_relative_nofollow(Path::new("actual/value"))
-            .unwrap();
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        assert_eq!(contents, "inside");
-    }
-
-    #[test]
-    fn open_dir_beneath_pins_directory_against_path_replacement() {
-        let root = tempfile::tempdir().unwrap();
-        let tasks = root.path().join("tasks");
-        let task = tasks.join("todo/item");
-        std::fs::create_dir_all(&task).unwrap();
-        let outside = root.path().join("outside");
-        std::fs::create_dir(&outside).unwrap();
-        let root_handle = DirHandle::open_nofollow(&tasks).unwrap();
-        let task_handle = root_handle
-            .open_dir_beneath(Path::new("todo/item"))
-            .unwrap();
-
-        std::fs::rename(&task, tasks.join("todo/item-original")).unwrap();
-        std::os::unix::fs::symlink(&outside, &task).unwrap();
-        let mut file = task_handle.create_new_file(Path::new("sentinel")).unwrap();
-        use std::io::Write;
-        file.write_all(b"pinned").unwrap();
-
-        assert_eq!(
-            std::fs::read(outside.join("sentinel")).unwrap_err().kind(),
-            io::ErrorKind::NotFound
-        );
-        assert_eq!(
-            std::fs::read(tasks.join("todo/item-original/sentinel")).unwrap(),
-            b"pinned"
-        );
-        assert!(root_handle
-            .open_dir_beneath(Path::new("todo/item/../item-original"))
-            .is_err());
-    }
-
-    #[test]
-    fn create_link_remove_roundtrip() {
-        let dir = tempfile::tempdir().unwrap();
-        let handle = DirHandle::open_nofollow(dir.path()).unwrap();
-        let tmp = Path::new(".note.tmp");
-        let dest = Path::new("note.md");
-        {
-            use std::io::Write;
-            let mut f = handle.create_new_file(tmp).unwrap();
-            f.write_all(b"hello").unwrap();
-            f.sync_all().unwrap();
-        }
-        handle.link_within(tmp, dest).unwrap();
-        handle.remove_file(tmp).unwrap();
-        handle.sync().unwrap();
-        let content = std::fs::read_to_string(dir.path().join("note.md")).unwrap();
-        assert_eq!(content, "hello");
-        // Destination already exists: must fail rather than silently replace it.
-        assert!(handle.create_new_file(dest).is_err());
-    }
-
-    #[test]
-    fn descriptor_relative_mutations_reject_path_escape() {
-        use std::io::Write;
-
-        let root = tempfile::tempdir().unwrap();
-        let held = root.path().join("held");
-        let outside = root.path().join("outside");
-        std::fs::create_dir(&held).unwrap();
-        std::fs::create_dir(&outside).unwrap();
-        let sentinel = outside.join("sentinel");
-        std::fs::write(&sentinel, b"unchanged").unwrap();
-        let handle = DirHandle::open_nofollow(&held).unwrap();
-
-        assert!(handle
-            .create_new_file(Path::new("../outside/created"))
-            .is_err());
-        assert!(handle.create_new_file(&sentinel).is_err());
-        assert!(handle
-            .link_within(Path::new("../outside/sentinel"), Path::new("linked"))
-            .is_err());
-        assert!(handle
-            .link_within(Path::new("sentinel"), Path::new("../outside/linked"))
-            .is_err());
-        assert!(handle
-            .replace_within(Path::new("../outside/sentinel"), Path::new("replaced"))
-            .is_err());
-        assert!(handle
-            .replace_within(Path::new("missing"), Path::new("../outside/replaced"))
-            .is_err());
-        assert!(handle
-            .remove_file(Path::new("../outside/sentinel"))
-            .is_err());
-        assert!(handle.remove_file(&sentinel).is_err());
-
-        let mut created = handle.create_new_file(Path::new("inside")).unwrap();
-        created.write_all(b"inside").unwrap();
-        assert_eq!(std::fs::read(&sentinel).unwrap(), b"unchanged");
-        assert!(!outside.join("created").exists());
-        assert!(!outside.join("linked").exists());
-        assert!(!outside.join("replaced").exists());
-    }
-
-    #[test]
-    fn open_or_create_file_does_not_block_on_fifo() {
-        let dir = tempfile::tempdir().unwrap();
-        let fifo = dir.path().join("pipe");
-        let fifo_c = std::ffi::CString::new(fifo.as_os_str().as_encoded_bytes()).unwrap();
-        let rc = unsafe { libc::mkfifo(fifo_c.as_ptr(), 0o600) };
-        assert_eq!(rc, 0, "mkfifo failed: {}", io::Error::last_os_error());
-
-        let handle = DirHandle::open_nofollow(dir.path()).unwrap();
-        assert!(handle
-            .open_or_create_file(Path::new("pipe"), 0o600)
-            .is_err());
-    }
-
-    #[test]
-    fn create_new_file_rejects_existing_symlink_target() {
-        let dir = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        let bait = outside.path().join("bait");
-        std::fs::write(&bait, "outside").unwrap();
-        let link_name = Path::new("escape");
-        std::os::unix::fs::symlink(&bait, dir.path().join(link_name)).unwrap();
-        let handle = DirHandle::open_nofollow(dir.path()).unwrap();
-        // O_EXCL already rejects anything pre-existing at that name, symlink or not.
-        assert!(handle.create_new_file(link_name).is_err());
-        assert_eq!(std::fs::read_to_string(&bait).unwrap(), "outside");
-    }
-}
+#[path = "fs_safety_test.rs"]
+mod fs_safety_test;

@@ -1,0 +1,13 @@
+{
+  "id": "high_chore-audit-agent-runtime-and-workspace-products",
+  "status": "backlog",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "agent-runtime",
+    "workspace"
+  ],
+  "depends_on": [
+    "high_chore-recover-and-compare-incumbent-research"
+  ]
+}

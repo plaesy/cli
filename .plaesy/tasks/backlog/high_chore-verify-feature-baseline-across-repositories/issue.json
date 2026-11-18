@@ -1,0 +1,8 @@
+{
+  "id": "high_chore-verify-feature-baseline-across-repositories",
+  "type": "task",
+  "labels": [
+    "phase-0",
+    "evidence"
+  ]
+}

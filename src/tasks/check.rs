@@ -13,7 +13,6 @@
 //!   is not checked.
 
 use std::fmt::Write as _;
-use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -76,7 +75,21 @@ pub fn check_task(
     let mut skipped = 0;
     for (name, path) in docs {
         let doc_dir = path.parent().unwrap_or(&root).to_path_buf();
-        let text = match fs::read_to_string(&path) {
+        let relative = path.strip_prefix(&root).map_err(|error| {
+            TasksError::io(
+                format!("invalid task document path {}", path.display()),
+                io::Error::new(io::ErrorKind::InvalidInput, error),
+            )
+        })?;
+        let root_handle = crate::memory::fs_safety::DirHandle::open_nofollow(&root)
+            .map_err(|error| TasksError::io("opening project root safely", error))?;
+        let text = match root_handle
+            .open_file_read_relative_nofollow(relative)
+            .and_then(|mut file| {
+                let mut text = String::new();
+                std::io::Read::read_to_string(&mut file, &mut text)?;
+                Ok(text)
+            }) {
             Ok(text) => text,
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 writeln!(out, "{name}: skipped (not present)").map_err(io_err)?;
@@ -241,121 +254,5 @@ pub fn summarize(name: &str, report: &FileReport) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tasks::{add_task, tasks_dir};
-
-    #[test]
-    fn backtick_paths_need_a_slash_and_no_placeholders() {
-        let refs = extract_references(
-            "see `src/lib.rs` and `tasks.rs` and `plaesy tasks check` and `a/<b>`",
-            false,
-        );
-        let paths: Vec<_> = refs.iter().map(|r| r.path.as_str()).collect();
-        assert_eq!(paths, ["src/lib.rs"]);
-    }
-
-    #[test]
-    fn links_skip_schemes_absolute_paths_and_anchors_strip() {
-        let refs = extract_references(
-            "[a](https://x.y) [b](/abs/p) [c](#top) [d](docs/x.md#sec) [e](../up.md?q=1)",
-            false,
-        );
-        let paths: Vec<_> = refs.iter().map(|r| (r.path.as_str(), r.is_link)).collect();
-        assert_eq!(paths, [("docs/x.md", true), ("../up.md", true)]);
-    }
-
-    #[test]
-    fn new_marker_excludes_planned_files_in_plan_only() {
-        let text = "`src/new.rs` (NEW) and `src/old.rs`";
-        assert_eq!(extract_references(text, true).len(), 1);
-        assert_eq!(extract_references(text, false).len(), 2);
-    }
-
-    #[test]
-    fn references_must_resolve_inside_project_root() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
-        std::fs::create_dir_all(dir.path().join("src")).unwrap();
-        std::fs::create_dir_all(dir.path().join(".plaesy/spec/chk/docs")).unwrap();
-        std::fs::write(dir.path().join("README.md"), "").unwrap();
-        std::fs::write(dir.path().join(".plaesy/spec/chk/docs/local.md"), "").unwrap();
-        let outside = tempfile::NamedTempFile::new().unwrap();
-        let tasks = tasks_dir(dir.path());
-        let name = add_task(&tasks, "s", "low", "check", "Check").unwrap();
-        let task_file = tasks
-            .join("backlog")
-            .join(&name)
-            .join(crate::tasks::TASK_FILE);
-        std::fs::write(&task_file, "---\nspec: s\ntopic: chk\n---\n").unwrap();
-        let spec = super::spec_doc(dir.path(), "chk");
-        std::fs::write(
-            &spec,
-            "[inside](../../../README.md) [outside](../../../../../etc/passwd)",
-        )
-        .unwrap();
-        let plan = super::plan_doc(dir.path(), "chk");
-        std::fs::create_dir_all(plan.parent().unwrap()).unwrap();
-        #[cfg(unix)]
-        std::os::unix::fs::symlink(outside.path(), dir.path().join("src/external-link")).unwrap();
-        std::fs::write(&plan, "`src/external-link`\n").unwrap();
-
-        let mut out = Vec::new();
-        let err = check_task(&tasks, &name, &mut out).unwrap_err();
-        assert!(matches!(err, TasksError::MissingReferences(2)));
-        let report = String::from_utf8(out).unwrap();
-        assert!(report.contains("missing ../../../../../etc/passwd"));
-        assert!(report.contains("missing src/external-link"));
-        assert!(!report.contains("missing ../../../README.md"));
-    }
-
-    #[test]
-    fn task_without_topic_is_rejected() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
-        let tasks = tasks_dir(dir.path());
-        let name = add_task(&tasks, "s", "low", "bare", "Bare").unwrap();
-        std::fs::write(
-            tasks
-                .join("backlog")
-                .join(&name)
-                .join(crate::tasks::TASK_FILE),
-            "---\nspec: s\ntopic:\n---\n",
-        )
-        .unwrap();
-        let mut out = Vec::new();
-        let err = check_task(&tasks, &name, &mut out).unwrap_err();
-        assert!(matches!(err, TasksError::NoTopic(_)));
-    }
-
-    #[test]
-    fn check_reports_missing_and_passes_when_present() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
-        std::fs::create_dir_all(dir.path().join("src")).unwrap();
-        std::fs::write(dir.path().join("src/real.rs"), "").unwrap();
-        let tasks = tasks_dir(dir.path());
-        let name = add_task(&tasks, "s", "low", "chk", "Chk").unwrap();
-        let task_file = tasks
-            .join("backlog")
-            .join(&name)
-            .join(crate::tasks::TASK_FILE);
-        std::fs::write(&task_file, "---\nspec: s\ntopic: chk\n---\n").unwrap();
-        let spec = super::spec_doc(dir.path(), "chk");
-        std::fs::create_dir_all(spec.parent().unwrap()).unwrap();
-        std::fs::write(&spec, "`src/real.rs` and `src/gone.rs`\n").unwrap();
-
-        let mut out = Vec::new();
-        let err = check_task(&tasks, &name, &mut out).unwrap_err();
-        assert!(matches!(err, TasksError::MissingReferences(1)));
-        let text = String::from_utf8(out).unwrap();
-        assert!(text.contains("spec.md:1: missing src/gone.rs"));
-
-        std::fs::write(&spec, "`src/real.rs`\n").unwrap();
-        let mut ok_out = Vec::new();
-        check_task(&tasks, &name, &mut ok_out).unwrap();
-        assert!(String::from_utf8(ok_out)
-            .unwrap()
-            .contains("[!] incomplete"));
-    }
-}
+#[path = "check_test.rs"]
+mod check_test;

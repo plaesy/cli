@@ -233,12 +233,5 @@ fn list() -> CliResult {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unknown_platforms_are_rejected_with_the_list_hint() {
-        let err = parse_platform("nope").expect_err("unknown");
-        assert!(err.contains("plaesy reach list"));
-    }
-}
+#[path = "reach_test.rs"]
+mod reach_test;

@@ -1,10 +1,9 @@
 //! `plaesy advisor`: read-only model advice for general choices and task triage.
 
-use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::CliResult;
-use crate::tasks::{self, TASK_FILE};
+use crate::tasks;
 
 /// Resolve an existing task by its folder name or unique title.
 fn resolve_task_directory(tasks_dir: &std::path::Path, query: &str) -> Result<String, String> {
@@ -21,10 +20,15 @@ fn resolve_task_directory(tasks_dir: &std::path::Path, query: &str) -> Result<St
             .map_err(|e| e.to_string())?
             .unwrap_or_default()
         {
-            let folder = tasks_dir.join(status.as_str()).join(&name);
-            let title = tasks::read_frontmatter(&folder.join(TASK_FILE))
-                .get("title")
-                .cloned()
+            let Some((found_status, _)) = tasks::find_task(tasks_dir, &name) else {
+                continue;
+            };
+            if found_status != status {
+                continue;
+            }
+            let title = tasks::read_task_frontmatter(tasks_dir, found_status, &name)
+                .ok()
+                .and_then(|frontmatter| frontmatter.get("title").cloned())
                 .unwrap_or_default();
             if title.eq_ignore_ascii_case(query) {
                 matches.push(name);
@@ -39,6 +43,19 @@ fn resolve_task_directory(tasks_dir: &std::path::Path, query: &str) -> Result<St
             matches.join(", ")
         )),
     }
+}
+
+fn read_task_body(tasks_dir: &Path, status: tasks::Status, task: &str) -> Result<String, String> {
+    let root = crate::memory::fs_safety::DirHandle::open_nofollow(tasks_dir)
+        .map_err(|error| format!("opening tasks directory safely: {error}"))?;
+    let relative = Path::new(status.as_str()).join(task).join(tasks::TASK_FILE);
+    let mut file = root
+        .open_file_read_relative_nofollow(&relative)
+        .map_err(|error| format!("reading task {task}: {error}"))?;
+    let mut body = String::new();
+    std::io::Read::read_to_string(&mut file, &mut body)
+        .map_err(|error| format!("reading task {task}: {error}"))?;
+    Ok(body)
 }
 
 /// Ask a configured delegate for advice without mutating project state.
@@ -199,12 +216,10 @@ fn triage(args: &TriageArgs) -> CliResult {
     let root = tasks::find_project_root(&path)?;
     let tasks_dir = tasks::tasks_dir(&root);
     let task_name = resolve_task_directory(&tasks_dir, &args.task)?;
-    let Some((status, task_dir)) = tasks::find_task(&tasks_dir, &task_name) else {
+    let Some((status, _task_dir)) = tasks::find_task(&tasks_dir, &task_name) else {
         return Err(format!("task not found: {task_name}").into());
     };
-    let task_path = task_dir.join(TASK_FILE);
-    let body = fs::read_to_string(&task_path)
-        .map_err(|e| format!("reading {}: {e}", task_path.display()))?;
+    let body = read_task_body(&tasks_dir, status, &task_name).map_err(std::io::Error::other)?;
     let issue = tasks::issue::Issue::read(&tasks_dir, status, &task_name)?;
     let metadata = serde_json::to_value(issue)?;
     let prompt = format!(
@@ -225,110 +240,5 @@ pub fn run(args: &Args) -> CliResult {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn triage_reads_existing_task_and_does_not_mutate_it() {
-        let temp = tempfile::tempdir().unwrap();
-        let marker = temp.path().join(".plaesy");
-        let task_dir = marker.join("tasks/todo/low_task-example");
-        fs::create_dir_all(&task_dir).unwrap();
-        let task_file = task_dir.join(TASK_FILE);
-        fs::write(&task_file, "---\ntopic: example\n---\nWrite a test.\n").unwrap();
-        let before = fs::read(&task_file).unwrap();
-        let args = TriageArgs {
-            task: "low_task-example".into(),
-            delegate: DelegateArgs {
-                path: temp.path().to_path_buf(),
-                provider: None,
-                chain: None,
-                confirm: false,
-                timeout: "120s".into(),
-                max_tokens: 0,
-            },
-        };
-        let root = args.delegate.path.canonicalize().unwrap();
-        let found = tasks::find_task(&tasks::tasks_dir(&root), &args.task);
-        assert!(found.is_some());
-        assert_eq!(fs::read(task_file).unwrap(), before);
-    }
-
-    #[test]
-    fn resolves_unique_title_and_rejects_ambiguous_title() {
-        let temp = tempfile::tempdir().unwrap();
-        let tasks_dir = temp.path().join("tasks");
-        let first = tasks_dir.join("todo/low_first");
-        let second = tasks_dir.join("doing/medium_second");
-        fs::create_dir_all(&first).unwrap();
-        fs::create_dir_all(&second).unwrap();
-        fs::write(
-            first.join(TASK_FILE),
-            "---\ntitle: Shared title\n---\nFirst task.\n",
-        )
-        .unwrap();
-        assert_eq!(
-            resolve_task_directory(&tasks_dir, "low_first").unwrap(),
-            "low_first"
-        );
-        assert_eq!(
-            resolve_task_directory(&tasks_dir, "shared TITLE").unwrap(),
-            "low_first"
-        );
-        fs::write(
-            second.join(TASK_FILE),
-            "---\ntitle: Shared title\n---\nSecond task.\n",
-        )
-        .unwrap();
-        assert!(resolve_task_directory(&tasks_dir, "Shared title")
-            .unwrap_err()
-            .contains("ambiguous"));
-    }
-
-    #[test]
-    fn compare_requires_two_options_at_runtime() {
-        use clap::Parser;
-        let parsed = crate::cli::Cli::try_parse_from([
-            "plaesy", "advisor", "compare", "--prompt", "choose", "--option", "one",
-        ])
-        .unwrap();
-        let crate::cli::Command::Advisor(Args {
-            command: AdvisorCommand::Compare(args),
-        }) = parsed.command
-        else {
-            panic!("expected advisor compare command");
-        };
-        let error = compare(&args).unwrap_err().to_string();
-        assert!(error.contains("provide at least two --option values"));
-    }
-
-    #[test]
-    fn parses_laya_endpoint_mode_without_delegate_provider() {
-        use clap::Parser;
-        let parsed = crate::cli::Cli::try_parse_from([
-            "plaesy",
-            "advisor",
-            "compare",
-            "--prompt",
-            "choose",
-            "--option",
-            "one",
-            "--option",
-            "two",
-            "--laya-endpoint",
-            "http://127.0.0.1:8000/v1/systemone",
-        ]);
-        assert!(parsed.is_ok(), "{parsed:?}");
-    }
-
-    #[test]
-    fn laya_response_must_choose_a_supplied_option() {
-        let answer = serde_json::json!({"choice": "three"});
-        let options = ["one".to_owned(), "two".to_owned()];
-        let choice = answer
-            .get("choice")
-            .and_then(serde_json::Value::as_str)
-            .unwrap();
-        assert!(!options.iter().any(|option| option == choice));
-    }
-}
+#[path = "advisor_test.rs"]
+mod advisor_test;

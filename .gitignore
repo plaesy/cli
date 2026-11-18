@@ -6,7 +6,39 @@ dist
 
 .kilo*
 .claude*
-.plaesy*
+# Keep durable Plaesy project specs, task contracts and task state in version control.
+.plaesy*/
+!.plaesy/
+!.plaesy/**/
+!.plaesy/spec/
+!.plaesy/spec/**
+!.plaesy/tasks/
+!.plaesy/tasks/**
+!.plaesy/memory/
+!.plaesy/memory/**
+!.plaesy/decisions/
+!.plaesy/decisions/**
+!.plaesy/config/
+!.plaesy/config/**
+!.plaesy/README.md
+!.plaesy/MEMORY.md
+!.plaesy/AGENTS.md
+
+# Machine-local Plaesy state: presence locks, task receipts and usage analysis. These come after
+# the whitelist above, so they win over the `!.plaesy/**` re-inclusion.
+.plaesy/presence/
+.plaesy/receipts/
+.plaesy/analysis/
+
+# Local tool caches and sync markers (machine-local).
+.pytest_cache/
+.stfolder/
+
+# Local Plaesy indexes/caches remain machine-local.
+.plaesy/index/
+.plaesy/cache/
+.plaesy/*.db
+.plaesy/*.sqlite*
 
 AGENTS.md
 CLAUDE.md
@@ -37,3 +69,6 @@ __pycache__/
 # Build artifacts from separate target dirs (LME, experiments)
 target-*/
 memory.exe
+
+# Runtime lock for the issue graph; never committed
+.plaesy/tasks/.issue-graph.lock

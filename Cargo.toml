@@ -112,3 +112,7 @@ harness = false
 [[bench]]
 name = "end_to_end"
 harness = false
+
+# esaxx-rs hard-codes a static MSVC CRT (/MT), which conflicts with the /MD objects of ort/cxx on Windows.
+[patch.crates-io]
+esaxx-rs = { path = "vendor/esaxx-rs" }

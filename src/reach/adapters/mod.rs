@@ -30,16 +30,5 @@ pub fn builtin() -> Vec<Box<dyn PlatformAdapter>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::reach::types::Platform;
-
-    #[test]
-    fn every_platform_has_exactly_one_adapter() {
-        let adapters = builtin();
-        assert_eq!(adapters.len(), Platform::ALL.len());
-        for p in Platform::ALL {
-            assert_eq!(adapters.iter().filter(|a| a.name() == p).count(), 1, "{p}");
-        }
-    }
-}
+#[path = "adapters_test.rs"]
+mod adapters_test;

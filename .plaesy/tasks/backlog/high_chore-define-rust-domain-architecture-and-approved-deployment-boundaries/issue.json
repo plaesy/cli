@@ -1,0 +1,8 @@
+{
+  "id": "high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries",
+  "type": "task",
+  "labels": [
+    "replacement",
+    "owner-decision-dependent"
+  ]
+}

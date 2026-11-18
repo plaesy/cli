@@ -104,6 +104,21 @@ pub fn build(
     }
 }
 
+/// Unwrap a stdio pipe that the spawn configuration promised. If it is missing, stop the child and
+/// report a transient error instead of panicking.
+fn piped_or_kill<T>(
+    child: &mut std::process::Child,
+    pipe: Option<T>,
+    stream: &str,
+    provider: &str,
+) -> Result<T, DelegateError> {
+    pipe.ok_or_else(|| {
+        let _ = child.kill();
+        let _ = child.wait();
+        DelegateError::transient(format!("provider {provider:?}: {stream} was not piped"))
+    })
+}
+
 fn require_model(entry: &DelegateProviderConfig) -> Result<(), DelegateError> {
     if entry.model.is_empty() {
         return Err(DelegateError::terminal(format!(
@@ -170,14 +185,17 @@ impl Provider for CliProvider {
             ))
         })?;
 
-        let mut stdin = child.stdin.take().expect("stdin was piped");
+        let stdin_pipe = child.stdin.take();
+        let mut stdin = piped_or_kill(&mut child, stdin_pipe, "stdin", &self.name)?;
         let prompt = req.prompt.clone();
         let writer = thread::spawn(move || {
             // A child that exits early closes stdin; the write error is not an answer.
             let _ = stdin.write_all(prompt.as_bytes());
         });
-        let mut stdout = child.stdout.take().expect("stdout was piped");
-        let mut stderr = child.stderr.take().expect("stderr was piped");
+        let stdout_pipe = child.stdout.take();
+        let mut stdout = piped_or_kill(&mut child, stdout_pipe, "stdout", &self.name)?;
+        let stderr_pipe = child.stderr.take();
+        let mut stderr = piped_or_kill(&mut child, stderr_pipe, "stderr", &self.name)?;
         let out_reader = thread::spawn(move || {
             let mut buf = String::new();
             let _ = stdout.read_to_string(&mut buf);
@@ -540,73 +558,5 @@ fn truncate(body: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn status_classes_match_the_chain_rules() {
-        assert_eq!(
-            http_error("p", 429, Some("7"), "").class,
-            Class::RateLimited
-        );
-        assert_eq!(
-            http_error("p", 429, Some("7"), "").retry_after,
-            Some(Duration::from_secs(7))
-        );
-        assert_eq!(http_error("p", 503, None, "").class, Class::Transient);
-        assert_eq!(http_error("p", 401, None, "").class, Class::Terminal);
-    }
-
-    #[test]
-    fn retry_after_accepts_seconds_and_rejects_nonsense() {
-        assert_eq!(parse_retry_after("12"), Some(Duration::from_secs(12)));
-        assert_eq!(parse_retry_after("0"), None);
-        assert_eq!(parse_retry_after("soon"), None);
-    }
-
-    #[test]
-    fn error_bodies_are_capped() {
-        let long = "x".repeat(500);
-        assert!(http_error("p", 400, None, &long).message.len() < 400);
-    }
-
-    #[test]
-    fn missing_model_is_a_configuration_error() {
-        let entry = DelegateProviderConfig {
-            name: "a".into(),
-            kind: "anthropic".into(),
-            ..Default::default()
-        };
-        let err = build(&entry, std::sync::Arc::new(|_: &str| None))
-            .err()
-            .expect("refused");
-        assert_eq!(err.class, Class::Terminal);
-    }
-
-    #[test]
-    fn cli_provider_runs_a_local_command_with_the_prompt_on_stdin() {
-        let entry = DelegateProviderConfig {
-            name: "echo".into(),
-            kind: "cli".into(),
-            command: if cfg!(windows) {
-                "cmd".into()
-            } else {
-                "cat".into()
-            },
-            args: if cfg!(windows) {
-                vec!["/C".into(), "more".into()]
-            } else {
-                vec![]
-            },
-            ..Default::default()
-        };
-        let provider = build(&entry, std::sync::Arc::new(|_: &str| None)).unwrap();
-        let reply = provider
-            .complete(&Request {
-                prompt: "hello there".into(),
-                ..Request::default()
-            })
-            .unwrap();
-        assert_eq!(reply.text, "hello there");
-    }
-}
+#[path = "providers_test.rs"]
+mod providers_test;

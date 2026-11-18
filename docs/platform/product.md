@@ -35,7 +35,7 @@ CLI for all administrative and automation workflows; desktop app for interactive
 
 ### Platform capabilities
 
-The product architecture must permit domain modules (including memory/knowledge, autonomous agent execution, and workflow orchestration) to be enabled, configured, permissioned, monitored, upgraded, and backed up without coupling unrelated modules. Plaesy is intended to own its core agent runtime, task state, policy, memory, audit, and control plane rather than require Hermes, Claude CLI, Codex, DeepSeek harness, Paperclip, or equivalent products. Model inference is a separate capability and may require model artifacts/hardware; whether external model APIs are excluded is an open owner decision. These are target requirements, not evidence of current implementation.
+The product architecture must permit domain modules (including memory/knowledge, autonomous agent execution, and workflow orchestration) to be enabled, configured, permissioned, monitored, upgraded, and backed up without coupling unrelated modules. Plaesy is intended to own its user-facing control plane, orchestration, durable task/workflow state, policy, project context, memory/provenance, audit, and backend selection rather than depend on a single agent/harness product. The product owner permits integrations with external harnesses such as Claude Code and Codex, and with model APIs, as replaceable execution backends behind explicit, permission-scoped adapters. Plaesy must distinguish its own capabilities from backend-provided behavior and avoid binding user data or core state to one backend. These are target requirements, not evidence of current implementation.
 
 ### Enterprise readiness
 

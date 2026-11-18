@@ -1,0 +1,20 @@
+{
+  "id": "high_chore-produce-canonical-cross-incumbent-capability-inventory",
+  "status": "backlog",
+  "type": "task",
+  "labels": ["replacement-program", "evidence", "inventory"],
+  "depends_on": [
+    "high_chore-audit-hermes-agent-capability-ledger",
+    "high_chore-audit-paperclip-capability-ledger",
+    "high_chore-audit-deepseek-harness-capability-ledger",
+    "high_chore-audit-nimbalyst-capability-ledger",
+    "high_chore-audit-orca-capability-ledger",
+    "high_chore-audit-craft-anything-capability-ledger",
+    "high_chore-audit-figcraft-capability-ledger",
+    "high_chore-audit-deckcraft-capability-ledger",
+    "high_chore-audit-wordcraft-capability-ledger",
+    "high_chore-audit-herald-os-capability-ledger",
+    "high_chore-audit-openproject-capability-ledger",
+    "high_chore-verify-feature-baseline-across-repositories"
+  ]
+}

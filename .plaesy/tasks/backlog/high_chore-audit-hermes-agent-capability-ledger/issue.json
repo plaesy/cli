@@ -1,0 +1,15 @@
+{
+  "id": "high_chore-audit-hermes-agent-capability-ledger",
+  "status": "backlog",
+  "type": "subtask",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "hermes-agent"
+  ],
+  "parent": "high_chore-audit-agent-runtime-and-workspace-products",
+  "depends_on": [
+    "high_chore-audit-agent-runtime-and-workspace-products",
+    "high_chore-verify-feature-baseline-across-repositories"
+  ]
+}

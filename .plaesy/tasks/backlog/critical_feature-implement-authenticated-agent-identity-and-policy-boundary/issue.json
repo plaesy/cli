@@ -1,0 +1,12 @@
+{
+  "id": "critical_feature-implement-authenticated-agent-identity-and-policy-boundary",
+  "type": "task",
+  "depends_on": [
+    "high_chore-owner-decisions-for-first-replacement-slice",
+    "critical_feature-specify-first-replacement-vertical-slice"
+  ],
+  "labels": [
+    "phase-2",
+    "security"
+  ]
+}

@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: plaesy/cli
+created: 2026-11-13T11:03:48+07:00
