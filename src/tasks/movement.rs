@@ -173,8 +173,13 @@ fn move_task_as_locked(
     // Replace atomically so a failed write cannot truncate the original task file.
     write_file_atomically(&task_handle, TASK_FILE, &updated)
         .map_err(|e| TasksError::io(format!("writing {}", task_file.display()), e))?;
-    if let Err(error) = fs::rename(&source, &target) {
-        if let Err(restore_error) = write_file_atomically(&task_handle, TASK_FILE, &original) {
+    // Windows refuses to rename a directory while a handle to it is open, so
+    // release the handle first and reopen it only if the move must be undone.
+    drop(task_handle);
+    if let Err(error) = rename_with_retry(&source, &target) {
+        let restore = crate::memory::fs_safety::DirHandle::open_nofollow(&source)
+            .and_then(|handle| write_file_atomically(&handle, TASK_FILE, &original));
+        if let Err(restore_error) = restore {
             return Err(TasksError::io(
                 format!(
                     "moving {task} to {to} failed ({error}); restoring source task failed: {restore_error}"
@@ -185,6 +190,28 @@ fn move_task_as_locked(
         return Err(TasksError::io(format!("moving {task} to {to}"), error));
     }
     Ok(())
+}
+
+/// Renames a task folder, retrying briefly on `PermissionDenied`. On Windows a
+/// concurrent reader can hold a handle inside the folder for a moment, and the
+/// rename is refused until that handle closes.
+fn rename_with_retry(from: &Path, to: &Path) -> io::Result<()> {
+    const MAX_RETRIES: u32 = 40;
+    let mut delay = std::time::Duration::from_millis(1);
+    let mut retries = 0;
+    loop {
+        match fs::rename(from, to) {
+            Ok(()) => return Ok(()),
+            Err(error)
+                if error.kind() == io::ErrorKind::PermissionDenied && retries < MAX_RETRIES =>
+            {
+                retries += 1;
+                std::thread::sleep(delay);
+                delay = (delay * 2).min(std::time::Duration::from_millis(50));
+            }
+            Err(error) => return Err(error),
+        }
+    }
 }
 
 /// Rewrites the `status:` line in task frontmatter bytes. A missing file or a
