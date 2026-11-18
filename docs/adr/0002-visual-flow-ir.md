@@ -79,12 +79,34 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 - A community note reports that Windmill's exponential retry description disagrees with its formula ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy's retry must define the formula explicitly.
 - Windmill's approval docs disagree on the default timeout (30 minutes versus indefinite). Plaesy requires an explicit timeout for every `approval` node.
 
-## Open questions (owner to decide)
+## Proposed resolutions (research and simulation; owner confirms)
 
-| # | Question | Owner |
-| --- | --- | --- |
-| 1 | Approver and acceptance date for this ADR | product owner |
-| 2 | First codegen adapter (Rust, Go, JavaScript, or other) | product owner |
-| 3 | Expression language for `input` / `pass` | product owner |
-| 4 | Default limits for `for_each` and `while` | engineering owner |
-| 5 | Approval channel for `approval` nodes | product owner |
+### Expression language for pass and branch
+
+- **Chosen proposal: CEL** (Common Expression Language, the `cel` crate, MIT, targets full conformance with cel-spec, runs the conformance suite in CI). CEL is non-Turing-complete, so expressions always terminate. Evaluation can be interrupted through `cel::Interrupt`, which gives a time bound ([cel-rust](https://github.com/cel-rust/cel-rust)).
+- **Rejected for expressions: Rhai.** It is a full scripting language. Its safety depends on `set_max_operations` and related caps, and an external Rust function counts as one operation regardless of its real cost ([Rhai max operations](https://rhai.rs/book/safety/max-operations.html)). A flow expression should not be a general program.
+
+### Retry formula (explicit, simulated)
+
+- Delay before attempt k (k ≥ 2) = min(base × multiplier^(k−2), cap). Defaults: base 1 s, multiplier 2, cap 60 s, no jitter (deterministic for fixture tests).
+- Simulation: 3 attempts → waits 1 s, 2 s (total 3 s). 5 attempts → 1, 2, 4, 8 s (total 15 s). 8 attempts → total 123 s, cap engaged at attempt 8.
+- `retry_if` is a CEL expression over the error object.
+
+### Loop limits (simulated)
+
+- `for_each`: wall time = ceil(N / P) × d. Proposed defaults: at most 10,000 items and parallelism at most 50. Simulation at d = 0.2 s: 10,000 items with P = 10 takes 200 s; with P = 50 takes 40 s. 100,000 items with P = 50 takes 400 s, so the 10,000-item default stays inside typical interactive bounds.
+- `while`: effective bound = min(max_iterations, ceil(max_duration / d)). Proposed defaults: `max_iterations` 1,000 and `max_duration_secs` 3,600. Simulation: with d = 1 s the bound is 1,000 iterations (1,000 s); with d = 10 s the duration cap binds at 360 iterations (3,600 s). Both fields are required, so neither bound can be omitted.
+
+### Approval channel (proposal)
+
+- Primary: HTTP API that returns a single-use resume URL with an expiry, plus a web page in the Dioxus editor. Windmill also uses generated secret URLs for approvers ([Windmill approval docs](https://www.windmill.dev/docs/flows/flow_approval)).
+- Approvals require `required_events`, an explicit `timeout`, and an outcome for timeout and rejection.
+
+## Still owner decisions (cannot be closed by research)
+
+| # | Question | Owner | Why it stays open |
+| --- | --- | --- | --- |
+| 1 | Approver and acceptance date for this ADR | product owner | Persons and dates cannot be inferred. |
+| 2 | First codegen adapter (Rust, Go, JavaScript, or other) | product owner | A product choice. |
+| 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | These are proposals backed by research and simulation; they become decisions only when approved. |
+
