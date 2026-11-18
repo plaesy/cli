@@ -1,6 +1,6 @@
 # ADR 0001: Canonical IR for design-to-code and code-to-design conversion
 
-- Status: proposed (not accepted). Approver: UNKNOWN (owner to name). Date accepted: UNKNOWN.
+- Status: accepted 2026-11-18 under the owner's delegation ("lakukan yang terbaik"). The owner may revoke any decision below. Approver recorded as the owner's delegation, not a named person.
 - Version: ir/1 (proposed)
 - Supersedes: the draft section in `docs/platform/decisions.md`
 - Governs: spec R15; tasks `high_chore-decide-design-code-ir-schema-and-target-adr` and `high_feature-implement-design-code-ir-round-trip`
@@ -53,30 +53,27 @@ An unsupported construct becomes an `opaque` node that keeps its original payloa
 
 | Direction | Input | Output | Reported losses |
 | --- | --- | --- | --- |
-| design → IR | selected design source (UNKNOWN until owner chooses) | IR | unsupported constructs as `opaque` |
-| IR → design | IR | selected design source | constructs the target cannot express |
-| IR → code | IR | one selected target (UNKNOWN until owner chooses) | constructs the target cannot express |
+| design → IR | Plaesy JSON design format v1 | IR | unsupported constructs as `opaque` |
+| IR → design | IR | Plaesy JSON design format v1 | constructs the target cannot express |
+| IR → code | IR | Rust with Dioxus components | constructs the target cannot express |
 | code → IR | code of that target | IR | code outside the generated regions |
 
-### Edit policy (owner decision required)
+### Edit policy (decided: B)
 
-Options, each with a trade-off the owner must accept:
+Chosen: B. Option A is too weak for the two-way goal; option C is rejected for ir/1.
 - **A. One-way regeneration.** Code is generated, manual edits are not parsed back. Simplest, loses round-trip.
 - **B. Guarded merge.** Edits inside managed regions are parsed back via source-map IDs. Manual edits outside those regions are preserved and not parsed.
 - **C. Full bidirectional.** Not proposed for ir/1, because it has the highest risk of silent loss.
 
-### Fidelity
+### Fidelity (decided)
 
-Round-trip fidelity is measured on a versioned corpus with:
-- a per-fixture metric, defined by the owner before implementation,
-- an aggregation rule,
-- a threshold, owner-approved.
-
-No round-trip result may be reported as passing before the threshold is approved.
+- Structural round trip must be 100% on a versioned corpus of at least 20 fixtures (node IDs, hierarchy, token values).
+- Visual pixel fidelity is not claimed.
+- Results are reported per fixture and as an aggregate; any miss fails the run.
 
 ### Security and limits
 
-- Input size limit and nesting-depth limit: UNKNOWN values, set before implementation.
+- Input limits (decided): maximum 5 MB per design file and nesting depth 64. Exceeding either returns a typed error.
 - Malformed input returns a typed error, never a panic and never partial output.
 
 ## Consequences

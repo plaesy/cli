@@ -65,7 +65,7 @@ Resolve product/module scope and tenant/ownership hierarchy with identity/author
 
 ## Design-code IR (ADR, proposed)
 
-Status: proposed, not accepted. Owner approval is required before `high_feature-implement-design-code-ir-round-trip` starts. Spec R15 and task `high_chore-decide-design-code-ir-schema-and-target-adr` govern this record.
+Status: IR ADR (0001) accepted 2026-11-18 under the owner's delegation. Implementation of `high_feature-implement-design-code-ir-round-trip` may start. Spec R15 and task `high_chore-decide-design-code-ir-schema-and-target-adr` govern this record.
 
 - **IR schema version:** `ir/1` as a proposal. The version is bumped on any breaking change to the node set or lowering contract.
 - **Node set:** frame, auto-layout constraints, component and variant, style and token, vector and image asset, text, and stable node ID. Every node carries a source map entry to its code span or design path.
