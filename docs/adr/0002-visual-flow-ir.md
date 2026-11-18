@@ -47,6 +47,7 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 - `stop_after_if`: early termination after a step.
 - `skip_if`: conditional skip.
 - `continue_on_error`: flow continues when the step fails.
+- `scope`: per-step permission scope (for example `domain:action[:resource]`). A step may only narrow the flow's scope, never widen it. Maps to R5 (least privilege) and R9 (tool and policy boundaries).
 - `early_return`: ends the flow with an explicit output.
 - `failure_handler`: one per flow; runs after retries are exhausted.
 - `preprocessor`: runs before the first step on external triggers; script or rawscript only.
@@ -55,7 +56,7 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 
 - `aiagent`, `aidecision`, memory settings, and AI transforms: AI nodes are a separate capability and need their own ADR.
 - `identity` used as an AI step: not needed.
-- `debounce` and per-step scopes: enterprise features in Windmill; not in slice one.
+- `debounce`: marked EE in Windmill's schema; not in slice one.
 - `mock`: kept as a test fixture concept, not a runtime node.
 - `sleep` and `cache_ttl`: deferred until the runtime exists.
 
@@ -73,6 +74,7 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 
 ## Evidence
 
+- Per-step scope is in Windmill's schema, and Plaesy adopts it because it serves R5 and R9.
 - Module kinds, step settings, retry, approval, timeout, early return and failure module are taken from Windmill's public OpenFlow schema, not from the marketing site. Verify again against the current version before any parity claim.
 - A community note reports that Windmill's exponential retry description disagrees with its formula ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy's retry must define the formula explicitly.
 - Windmill's approval docs disagree on the default timeout (30 minutes versus indefinite). Plaesy requires an explicit timeout for every `approval` node.
