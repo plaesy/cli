@@ -17,7 +17,7 @@ Record, as an owner-reviewed ADR, the language-neutral flow IR, the editor techn
 - Define the flow IR: nodes (trigger, action, branch, loop, subflow), typed ports and edges, stable node IDs, schema version, and no target-language fields.
 - Define how node behaviour is referenced without hardcoding a language (for example a named operation with a typed contract).
 - Choose editor technology and record it as an approved R14 exception, or reject the exception.
-- Target language is Rust (owner decision, 2026-11-18). Record it, and define how later targets are added.
+- Plaesy is implemented in Rust (R14). Generated code targets are pluggable: one adapter per language, such as Rust, Go, JavaScript or others. Record the adapter interface and the owner-chosen first target; do not hardcode one language into the IR.
 - First editor surface is web. UI technology is Dioxus (owner choice, 2026-11-18), which keeps the UI in Rust. No proof-of-concept gate is required (owner decision). Note that Dioxus desktop renders through a system webview, so the rendering layer is not pure Rust; record that as a stated limit.
 - Define loss reporting for node types a target cannot express.
 

@@ -16,7 +16,7 @@ Implement the visual flow editor, the flow IR storage, and one codegen target, s
 
 - Implement the flow IR as a versioned Rust module with serialization and validation.
 - Implement the visual editor for web first, in Dioxus (owner choice, 2026-11-18). Start the web editor directly; desktop and mobile follow on the same codebase. The editor must talk to the Rust core through a surface that desktop and mobile can reuse.
-- Target language for generated code is Rust (owner decision, 2026-11-18).
+- Generated code uses pluggable adapters; the first adapter is the owner-chosen target (Rust, Go, JavaScript or other). Plaesy's own code stays Rust.
 - Implement one codegen target and the loss reporting for unsupported nodes.
 - Add a fixture set of flows and check that generated code passes the same fixtures as the IR.
 
