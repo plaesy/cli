@@ -1,6 +1,6 @@
 # ADR 0002: Language-neutral visual flow IR
 
-- Status: proposed (not accepted). Approver: UNKNOWN (owner to name). Date accepted: UNKNOWN.
+- Status: accepted for the node catalogue, expression language, retry, loop limits and approval channel. Accepted by the owner in chat on 2026-11-18. Still open: the first codegen adapter (see below), so implementation stays blocked until it is chosen.
 - Version: flow-ir/1 (proposed)
 - Governs: spec R16; tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen`
 - Related: ADR 0001 (design-code IR). Flow IR is separate because flows are logic, not layout.
@@ -102,11 +102,13 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 - Primary: HTTP API that returns a single-use resume URL with an expiry, plus a web page in the Dioxus editor. Windmill also uses generated secret URLs for approvers ([Windmill approval docs](https://www.windmill.dev/docs/flows/flow_approval)).
 - Approvals require `required_events`, an explicit `timeout`, and an outcome for timeout and rejection.
 
-## Still owner decisions (cannot be closed by research)
+## Still owner decisions
+
+Accepted on 2026-11-18: the proposals above (CEL, the retry formula, loop limits, and the approval channel).
 
 | # | Question | Owner | Why it stays open |
 | --- | --- | --- | --- |
-| 1 | Approver and acceptance date for this ADR | product owner | Persons and dates cannot be inferred. |
+| 1 | Approver and acceptance date for this ADR | product owner | Accepted in chat on 2026-11-18; a named approver can be added if required. |
 | 2 | First codegen adapter (Rust, Go, JavaScript, or other) | product owner | A product choice. |
-| 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | These are proposals backed by research and simulation; they become decisions only when approved. |
+| 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | Accepted 2026-11-18. |
 
