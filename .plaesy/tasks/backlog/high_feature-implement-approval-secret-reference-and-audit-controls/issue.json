@@ -1,8 +1,14 @@
 {
   "id": "high_feature-implement-approval-secret-reference-and-audit-controls",
   "type": "task",
+  "depends_on": [
+    "high_chore-owner-decisions-for-first-replacement-slice",
+    "critical_feature-specify-first-replacement-vertical-slice"
+  ],
   "labels": [
     "replacement",
-    "security"
+    "security",
+    "r9",
+    "lane-B"
   ]
 }

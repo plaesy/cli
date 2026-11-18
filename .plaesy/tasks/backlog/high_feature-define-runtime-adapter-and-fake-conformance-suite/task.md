@@ -51,3 +51,11 @@ Define a minimal adapter contract and executable fake-adapter tests for the chos
 
 - [ ] Tests prove truthful run state; failure cannot be reported as success.
 - [ ] Backend-specific features are explicitly marked.
+
+## Parallel execution
+
+- Lane: A (adapter and runtime contract)
+- Owned paths (exclusive write): `src/adapter/` (new: adapter trait and fake adapter), `tests/adapter_conformance.rs` (new)
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked adapter_conformance` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

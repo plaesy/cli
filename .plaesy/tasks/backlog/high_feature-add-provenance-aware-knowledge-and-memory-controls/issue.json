@@ -1,14 +1,15 @@
 {
   "id": "high_feature-add-provenance-aware-knowledge-and-memory-controls",
-  "status": "backlog",
-  "labels": [
-    "replacement",
-    "conditional",
-    "owner-decision-dependent"
-  ],
+  "type": "task",
   "depends_on": [
     "high_chore-complete-evidence-backed-feature-audit-for-11-incumbents",
     "high_chore-owner-decisions-for-first-replacement-slice",
     "critical_feature-specify-first-replacement-vertical-slice"
+  ],
+  "labels": [
+    "replacement",
+    "conditional",
+    "owner-decision-dependent",
+    "lane-J"
   ]
 }

@@ -54,3 +54,11 @@ Implement, in Rust, the importers, exporters, and code lowering/parsing for the 
 - [ ] Malformed or oversized input returns a typed error and does not panic.
 - [ ] All Plaesy-owned code for this slice is Rust with a locked build, and format, Clippy, and tests pass (R14).
 - [ ] No claim of Figma or other design-tool parity is made in docs or output.
+
+## Parallel execution
+
+- Lane: I (design-code IR (R15))
+- Owned paths (exclusive write): `src/design_ir/` (new: IR, importer, exporter, parser), `tests/fixtures/design/` (new). Reads `src/designlint/` (not owned).
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked design_code_ir` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

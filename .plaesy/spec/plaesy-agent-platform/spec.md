@@ -1,6 +1,6 @@
 # Spec: Plaesy agent platform and incumbent replacement
 
-Status: draft
+Status: draft. Readiness: implementation claims stay blocked until the owner records the open decisions in Open questions (first workflow, deployment profile, runtime strategy, identity hierarchy). Execution rules are in `docs/platform/` plan section "Parallel work boundaries".
 Topic: plaesy-agent-platform
 Tasks: backlog task folders under `.plaesy/tasks/backlog/`; IDs listed in the Task index section below (the index is authoritative).
 
@@ -35,7 +35,7 @@ This is the canonical program-level specification, not approval to implement eve
 
 ## Task index
 
-All 54 active task folders under `.plaesy/tasks/` are indexed below; this count includes work in backlog and done, not just `.plaesy/tasks/backlog/`. This index is a directory inventory, not a mapping of task acceptance to each requirement; traceability remains incomplete until every requirement has an acceptance scenario and task or explicit disposition. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
+All 57 active task folders under `.plaesy/tasks/` are indexed below: 56 in the backlog folder and 1 in the done folder. Verify with `plaesy tasks list-status backlog` and `plaesy tasks list-status done`. This index is a directory inventory, not a mapping of task acceptance to each requirement; traceability remains incomplete until every requirement has an acceptance scenario and task or explicit disposition. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
 
 - `critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate`
 - `critical_feature-implement-authenticated-agent-identity-and-policy-boundary`
@@ -90,7 +90,10 @@ All 54 active task folders under `.plaesy/tasks/` are indexed below; this count 
 - `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting`
 - `high_feature-implement-design-code-ir-round-trip`
 - `high_feature-implement-durable-run-append-retry-torn-tail-recovery-and-shutdown-drain`
-- `high_feature-implement-visual-flow-editor-and-codegen`
+- `high_feature-implement-visual-flow-editor-and-codegen` (umbrella; owns no code)
+- `high_feature-implement-visual-flow-ir-core-in-rust`
+- `high_feature-implement-visual-flow-rust-codegen-adapter`
+- `high_feature-implement-visual-flow-dioxus-web-editor`
 
 The evidence audit must refine capability families into deduplicated leaf tasks for approved scope, and retain UNKNOWN/out-of-scope dispositions for everything else.
 
@@ -108,7 +111,7 @@ The evidence audit must refine capability families into deduplicated leaf tasks 
 - Keep credentials and secrets out of specs, task descriptions, logs, comparisons, and fixtures.
 - Keep local-first/offline and self-hosted requirements from `docs/platform/product.md`; define remote trust boundaries explicitly.
 - Existing Relay's local SQLite queue/polling, self-declared identity and advisory file claims are not equivalent to authenticated shared realtime service or enforced file locks.
-- Every implementation task must identify focused tests, observable acceptance evidence, dependencies and file ownership. Parallel work must avoid overlapping write ownership.
+- Every implementation task must identify focused tests, observable acceptance evidence, dependencies and file ownership. Parallel work must avoid overlapping write ownership. Each implementation task carries a `## Parallel execution` section (lane, owned paths, integrator-only files, focused tests) and an `ownership-assigned` contract check that fails while owned paths are `OWNERSHIP-UNASSIGNED`.
 - Plaesy-owned replacement core/service/CLI/domain/persistence/native runtime logic is Rust (R14). Any UI/platform exception requires an owner-approved ADR; implementation evidence must show pinned toolchain, locked dependencies/build, format, focused tests, Clippy, and applicable security/license checks. Existing non-Rust code in the current repository does not waive this requirement.
 - Do not classify a capability as implemented solely because upstream runtime supports it or a design document describes it.
 
@@ -154,4 +157,4 @@ Each requirement maps to the tasks that deliver or verify it. A requirement with
 | R13 | `critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate` |
 | R14 | `high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries`, `high_chore-establish-rust-security-and-release-quality-gates` |
 | R15 | `high_chore-decide-design-code-ir-schema-and-target-adr`, `high_feature-implement-design-code-ir-round-trip` |
-| R16 | `high_chore-decide-visual-flow-ir-and-codegen-adr`, `high_feature-implement-visual-flow-editor-and-codegen` |
+| R16 | `high_chore-decide-visual-flow-ir-and-codegen-adr`, `high_feature-implement-visual-flow-ir-core-in-rust`, `high_feature-implement-visual-flow-rust-codegen-adapter`, `high_feature-implement-visual-flow-dioxus-web-editor`, `high_feature-implement-visual-flow-editor-and-codegen` (umbrella) |

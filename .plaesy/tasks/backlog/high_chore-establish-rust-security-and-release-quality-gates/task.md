@@ -58,3 +58,11 @@ Define and enforce the Rust toolchain, CI, dependency, security, and release che
 
 - [ ] Release artifact provenance, signing/attestation (if required), and reproducible build expectations match the approved release profile and have verifiable CI artifact evidence.
 - [ ] Checks, target exclusions, MSRV/feature support, and accepted residual risks are linked to the approved slice and owner decisions; local-only output is not represented as release CI evidence.
+
+## Parallel execution
+
+- Lane: E (test harness, evidence and release gates)
+- Owned paths (exclusive write): `rust-toolchain.toml`, `deny.toml` (new). `.github/workflows/ci.yml` is integrator-only.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo fmt --all -- --check` and `cargo clippy --all-targets --locked -- -D warnings` both pass.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

@@ -32,8 +32,13 @@ Implement the visual flow editor, the flow IR storage, and one codegen target, s
 
 ## Dependencies
 
-- `high_chore-decide-visual-flow-ir-and-codegen-adr` must be accepted first.
-- `high_chore-establish-rust-security-and-release-quality-gates`.
+- `high_chore-decide-visual-flow-ir-and-codegen-adr`: accepted and done (ADR 0002).
+- Child tasks (this umbrella closes only when all three pass):
+  - `high_feature-implement-visual-flow-ir-core-in-rust`
+  - `high_feature-implement-visual-flow-rust-codegen-adapter`
+  - `high_feature-implement-visual-flow-dioxus-web-editor`
+
+Split on 2026-11-18 so each child owns disjoint paths and can run in its own worktree. This umbrella owns no code.
 
 ## Acceptance criteria
 
@@ -45,3 +50,11 @@ Implement the visual flow editor, the flow IR storage, and one codegen target, s
 - [ ] `cargo test --locked visual_flow` passes, and generated Rust compiles.
 - [ ] Retry, loop limits, and approval timeout follow the ADR 0002 values, checked by fixtures.
 - [ ] Rust core is locked, formatted, and passes Clippy and tests (R14).
+
+## Parallel execution
+
+- Lane: H (visual flow IR, codegen and editor (R16))
+- Owned paths (exclusive write): Integration only: no code ownership. The three child tasks own the code.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: None (integration task). Run the child tasks' checks.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

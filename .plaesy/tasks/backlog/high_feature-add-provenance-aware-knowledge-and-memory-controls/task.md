@@ -45,3 +45,11 @@ Implement provenance-aware knowledge/memory lifecycle for an owner-approved work
 - [ ] Rust toolchain, locked build, fmt, focused tests, Clippy and applicable security checks pass.
 
 - [ ] Update measured capability and acceptance crosswalk; do not mark complete based only on design/task existence.
+
+## Parallel execution
+
+- Lane: J (knowledge and memory controls)
+- Owned paths (exclusive write): `OWNERSHIP-UNASSIGNED`: the integrator assigns owned paths from the approved vertical-slice spec before any agent claims this task.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked provenance` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

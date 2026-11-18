@@ -41,3 +41,11 @@ If the selected workflow needs inter-agent communication, implement project-auth
 - [ ] No credentials or lease tokens leak in ordinary output/logs.
 
 - [ ] If not in first workflow, record explicit deferment and do not expand scope.
+
+## Parallel execution
+
+- Lane: C (shared messaging and delivery)
+- Owned paths (exclusive write): `src/relay.rs`, `src/relay_test.rs`, `src/relay/` (new service module), `tests/relay_cli.rs`. Local Relay semantics stay unchanged unless the acceptance criteria require otherwise.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked shared_messaging` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

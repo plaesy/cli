@@ -41,3 +41,11 @@ Enforce least-privilege agent/task/project/tool authorization for the selected w
 - [ ] Synthetic secret does not appear in unauthorized logs/errors/exports.
 
 - [ ] Focused security tests pass.
+
+## Parallel execution
+
+- Lane: B (identity, policy and secrets)
+- Owned paths (exclusive write): `OWNERSHIP-UNASSIGNED`: the integrator assigns owned paths from the approved vertical-slice spec before any agent claims this task.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked identity_policy` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

@@ -43,3 +43,11 @@ Demonstrate documented install/upgrade/backup/restore/rollback for the first dec
 - [ ] Secrets are excluded or handled by documented secure process.
 
 - [ ] Limits and untested profiles are explicit.
+
+## Parallel execution
+
+- Lane: E (test harness, evidence and release gates)
+- Owned paths (exclusive write): `tests/install_e2e.rs`, `scripts/install.sh`, `scripts/install.ps1`
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked --test install_e2e -- --list` must list at least one test.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

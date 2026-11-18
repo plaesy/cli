@@ -1,9 +1,13 @@
 {
   "id": "high_chore-implement-source-specific-migration-and-reconciliation-for-selected-workflow",
   "type": "task",
+  "depends_on": [
+    "high_chore-specify-data-portability-and-source-migration-contracts"
+  ],
   "labels": [
     "replacement",
     "migration",
-    "owner-decision-dependent"
+    "owner-decision-dependent",
+    "lane-D"
   ]
 }

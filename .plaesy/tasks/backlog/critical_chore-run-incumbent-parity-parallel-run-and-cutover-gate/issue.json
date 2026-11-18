@@ -9,6 +9,7 @@
   ],
   "labels": [
     "phase-4",
-    "release-gate"
+    "release-gate",
+    "lane-E"
   ]
 }

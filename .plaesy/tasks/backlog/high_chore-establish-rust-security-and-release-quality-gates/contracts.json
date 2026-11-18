@@ -4,7 +4,7 @@
     {
       "id": "task-file-present",
       "check": "Task file exists",
-      "run": "test -s .plaesy/tasks/backlog/high_chore-establish-rust-security-and-release-quality-gates/task.md",
+      "run": "test -s .plaesy/tasks/*/high_chore-establish-rust-security-and-release-quality-gates/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
@@ -12,7 +12,7 @@
     {
       "id": "acceptance-section-present",
       "check": "Task has acceptance criteria section",
-      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_chore-establish-rust-security-and-release-quality-gates/task.md",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/high_chore-establish-rust-security-and-release-quality-gates/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
@@ -28,10 +28,26 @@
     {
       "id": "frontmatter-present",
       "check": "task.md has spec, topic and status frontmatter",
-      "run": "head -1 .plaesy/tasks/backlog/high_chore-establish-rust-security-and-release-quality-gates/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_chore-establish-rust-security-and-release-quality-gates/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_chore-establish-rust-security-and-release-quality-gates/task.md",
+      "run": "head -1 .plaesy/tasks/*/high_chore-establish-rust-security-and-release-quality-gates/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/high_chore-establish-rust-security-and-release-quality-gates/task.md && grep -q '^status:' .plaesy/tasks/*/high_chore-establish-rust-security-and-release-quality-gates/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "fmt-clean",
+      "check": "cargo fmt is clean",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo fmt --all -- --check",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "test"
+    },
+    {
+      "id": "clippy-clean",
+      "check": "cargo clippy has no warnings (-D warnings)",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo clippy --all-targets --locked -- -D warnings",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "test"
     }
   ]
 }

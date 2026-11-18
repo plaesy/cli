@@ -43,3 +43,11 @@ Implementasikan durability dan recovery run store sesuai kontrak yang disetujui;
 - [ ] Shutdown drain/cancellation is bounded and tested; restart restores persistent state consistently, with interruption/restart tests.
 - [ ] Schema migration compatibility policy is specified; migration tests cover supported versions without production data.
 - [ ] Focused locked Rust tests and R14 format/Clippy gates pass; attach exact commands and results. No completion based only on task status or checklist presence.
+
+## Parallel execution
+
+- Lane: D (run and task persistence, recovery)
+- Owned paths (exclusive write): `src/runstore/` (new module: append, retry, torn-tail recovery, shutdown drain)
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked runstore` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

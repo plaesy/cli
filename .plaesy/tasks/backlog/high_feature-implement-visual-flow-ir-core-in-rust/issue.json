@@ -1,0 +1,13 @@
+{
+  "id": "high_feature-implement-visual-flow-ir-core-in-rust",
+  "type": "task",
+  "depends_on": [
+    "high_chore-establish-rust-security-and-release-quality-gates",
+    "high_chore-decide-visual-flow-ir-and-codegen-adr"
+  ],
+  "labels": [
+    "replacement",
+    "r16",
+    "lane-H"
+  ]
+}

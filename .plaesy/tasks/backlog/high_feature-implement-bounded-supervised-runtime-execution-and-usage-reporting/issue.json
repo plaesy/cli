@@ -1,8 +1,15 @@
 {
   "id": "high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting",
   "type": "task",
+  "depends_on": [
+    "high_chore-owner-decisions-for-first-replacement-slice",
+    "critical_feature-specify-first-replacement-vertical-slice",
+    "high_feature-define-runtime-adapter-and-fake-conformance-suite"
+  ],
   "labels": [
     "replacement",
-    "runtime"
+    "runtime",
+    "r9",
+    "lane-A"
   ]
 }

@@ -47,3 +47,11 @@ Implementasikan approval, secret references dan audit hanya untuk workflow dan m
 - [ ] Approval mencatat actor/scope/expiry/result; audit immutable sesuai kontrak dan aksesnya diuji.
 
 - [ ] Toolchain/lockfile/fmt/clippy/focused tests/security checks sesuai R14 lulus; test memakai fixture sintetis.
+
+## Parallel execution
+
+- Lane: B (identity, policy and secrets)
+- Owned paths (exclusive write): `src/policy/` (new: approvals, policy checks), `src/secrets/` (new: secret references, redaction)
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked approval_secret` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

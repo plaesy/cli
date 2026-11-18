@@ -41,3 +41,11 @@ Demonstrate first-workflow parity, migration integrity, operational recovery and
 - [ ] Rollback trigger, owner and procedure exercised.
 
 - [ ] No incumbent disabled before owner-approved gate passes.
+
+## Parallel execution
+
+- Lane: E (test harness, evidence and release gates)
+- Owned paths (exclusive write): `docs/platform/cutover-gate.md` (new evidence report)
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: Evidence file `docs/platform/cutover-gate.md` exists and is non-empty.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

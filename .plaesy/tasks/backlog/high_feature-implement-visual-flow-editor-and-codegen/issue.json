@@ -1,0 +1,16 @@
+{
+  "id": "high_feature-implement-visual-flow-editor-and-codegen",
+  "type": "task",
+  "depends_on": [
+    "high_chore-decide-visual-flow-ir-and-codegen-adr",
+    "high_chore-establish-rust-security-and-release-quality-gates",
+    "high_feature-implement-visual-flow-ir-core-in-rust",
+    "high_feature-implement-visual-flow-rust-codegen-adapter",
+    "high_feature-implement-visual-flow-dioxus-web-editor"
+  ],
+  "labels": [
+    "replacement",
+    "r16",
+    "lane-H"
+  ]
+}

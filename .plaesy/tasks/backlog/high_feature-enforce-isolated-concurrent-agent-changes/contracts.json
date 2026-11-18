@@ -4,7 +4,7 @@
     {
       "id": "task-file-present",
       "check": "Task file exists",
-      "run": "test -s .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
+      "run": "test -s .plaesy/tasks/*/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
@@ -12,7 +12,7 @@
     {
       "id": "acceptance-section-present",
       "check": "Task has acceptance criteria section",
-      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
@@ -28,10 +28,18 @@
     {
       "id": "frontmatter-present",
       "check": "task.md has spec, topic and status frontmatter",
-      "run": "head -1 .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
+      "run": "head -1 .plaesy/tasks/*/high_feature-enforce-isolated-concurrent-agent-changes/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/high_feature-enforce-isolated-concurrent-agent-changes/task.md && grep -q '^status:' .plaesy/tasks/*/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "cargo-focused-tests",
+      "check": "Focused tests matching 'isolation' run and at least one passes",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked isolation 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "expected": ">= 1",
+      "status": "pending",
+      "evidence": "test"
     }
   ]
 }

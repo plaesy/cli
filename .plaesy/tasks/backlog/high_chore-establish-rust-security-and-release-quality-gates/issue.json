@@ -1,4 +1,7 @@
 {
   "id": "high_chore-establish-rust-security-and-release-quality-gates",
-  "type": "task"
+  "type": "task",
+  "labels": [
+    "lane-E"
+  ]
 }

@@ -44,3 +44,11 @@ Implementasikan eksekusi backend yang supervised, bounded, cancellable dan melap
 - [ ] Approval deny has zero execution side effects; timeout/unanswerable contexts, session-vs-permanent grant, hardline-vs-user deny layers, and authorized-vs-unauthorized approvers have distinct tested outcomes. Keep secret-reference/audit requirements covered by their owning approval-controls task.
 - [ ] Runtime acceptance is scoped to the owner-approved workflow and selected adapters; documentation-only incumbent candidates are not parity evidence.
 - [ ] R14 toolchain/lockfile/fmt/clippy/focused tests/security gates lulus.
+
+## Parallel execution
+
+- Lane: A (adapter and runtime contract)
+- Owned paths (exclusive write): `src/runtime/` (new: supervisor, timeout, cancellation, usage mapping). Reads `src/adapter/` only.
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked bounded_runtime` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

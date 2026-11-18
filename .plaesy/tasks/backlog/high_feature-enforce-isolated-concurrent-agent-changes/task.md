@@ -41,3 +41,11 @@ Prevent unsafe overlapping file changes for the selected workflow using isolated
 - [ ] Worktree/branch/index side effects are isolated or serialized.
 
 - [ ] If concurrency is outside first workflow, defer with rationale.
+
+## Parallel execution
+
+- Lane: G (workspace isolation (R8))
+- Owned paths (exclusive write): `src/workspace/` (new: isolated workspace and conflict detection)
+- Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
+- Focused tests: `cargo test --locked isolation` passes with a non-zero test count.
+- Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

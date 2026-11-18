@@ -33,8 +33,7 @@ Record, as an owner-reviewed ADR, the language-neutral flow IR, the editor techn
 
 ## Dependencies
 
-- `high_chore-owner-decisions-for-first-replacement-slice` (owner decision on first workflow).
-- `high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries` (Rust core boundary, R14).
+- None. Owner decisions for R16 were recorded 2026-11-18 (see `docs/adr/0002-visual-flow-ir.md`, Status). The first replacement-slice decision (`high_chore-owner-decisions-for-first-replacement-slice`) does not gate this ADR, and the R14 Rust boundary is recorded in ADR 0002 itself.
 
 ## Acceptance criteria
 

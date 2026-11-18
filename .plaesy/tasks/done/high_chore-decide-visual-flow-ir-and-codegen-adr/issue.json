@@ -1,0 +1,9 @@
+{
+  "id": "high_chore-decide-visual-flow-ir-and-codegen-adr",
+  "type": "task",
+  "labels": [
+    "replacement",
+    "r16",
+    "adr"
+  ]
+}
