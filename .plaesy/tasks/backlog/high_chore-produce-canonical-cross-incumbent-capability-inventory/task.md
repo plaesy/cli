@@ -42,6 +42,16 @@ Deliver the canonical, deduplicated inventory of observable user and operator wo
 
 ## Acceptance criteria
 
+- [ ] The deliverable is a canonical, checked-in capability inventory with stable unique IDs, one row per auditable leaf capability (not product/page headings), and fields for source repo, pinned SHA, repository-relative source location, behavior/conditions/failure semantics, evidence class, requirement/scenario/task links, owner disposition, and next action.
+- [ ] All 11 incumbent products have a coverage ledger. Each product is either audited to the stated bounded scope or explicitly lists uninspected capability families as `UNKNOWN`; no product is represented as complete from a task count or source-page count.
+- [ ] Evidence classes distinguish documented, source-reviewed, test assertion reviewed, test executed, behavior reproduced, and unknown; each test-executed/reproduced claim links to exact command/result or reproduction evidence.
+- [ ] Every canonical R1–R15 requirement maps to capability IDs and an acceptance scenario/task, or has an explicit disposition and named owner decision still open.
+- [ ] Audit of ID uniqueness, source revision pinning, and referential integrity between capability, requirement, scenario, and task IDs is executable and its output is attached. The current Plaesy `tasks check` skips `spec.md` and `plan.md` with `[!] incomplete`; it cannot satisfy this acceptance criterion until that validator gap is fixed or a separate verified audit command is supplied.
+- [ ] RP-01–RP-16 supporting taxonomy and RP-001–RP-046 canonical IDs are not conflated; every provisional mapping is explicitly labeled and linked to a canonical task or `UNKNOWN`.
+- [ ] Implementation parity, product completeness, or owner approval is not claimed merely because the inventory is populated.
+
+### Per-product evidence criteria
+
 - [ ] All 11 product ledgers are linked, and each inventory row identifies its source revision/location or a specific evidence blocker; no unsupported source claim is promoted to fact.
 - [ ] Every inventory row has a unique stable ID, explicit evidence state, Plaesy baseline status/evidence or `UNKNOWN`, disposition status/provenance or `unresolved`, and a deduplicated task/dependency or concrete next action.
 - [ ] Shared capabilities are represented once with explicit incumbent mappings; materially different modes/roles/platform conditions remain separately traceable rather than falsely merged.

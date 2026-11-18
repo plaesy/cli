@@ -6,13 +6,9 @@
       "check": "Task file exists",
       "run": "test -s .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
       "expected": "pass",
-      "status": "passed",
+      "status": "pending",
       "histories": [],
-      "receipt": {
-        "output": ".plaesy/receipts/high_chore-produce-canonical-cross-incumbent-capability-inventory/task-file-present.out",
-        "exit_code": 0,
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
+      "receipt": null,
       "evidence": "doc"
     },
     {
@@ -20,13 +16,9 @@
       "check": "Task has acceptance criteria section",
       "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
       "expected": "pass",
-      "status": "passed",
+      "status": "pending",
       "histories": [],
-      "receipt": {
-        "output": ".plaesy/receipts/high_chore-produce-canonical-cross-incumbent-capability-inventory/acceptance-section-present.out",
-        "exit_code": 0,
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
+      "receipt": null,
       "evidence": "doc"
     },
     {
@@ -34,13 +26,9 @@
       "check": "All 11 incumbent ledger task files exist",
       "run": "python3 -c 'from pathlib import Path; ids=[\"hermes-agent\",\"paperclip\",\"deepseek-harness\",\"nimbalyst\",\"orca\",\"craft-anything\",\"figcraft\",\"deckcraft\",\"wordcraft\",\"herald-os\",\"openproject\"]; root=Path(\".plaesy/tasks/backlog\"); assert all((root/f\"high_chore-audit-{x}-capability-ledger/task.md\").is_file() for x in ids)'",
       "expected": "pass",
-      "status": "passed",
+      "status": "pending",
       "histories": [],
-      "receipt": {
-        "output": ".plaesy/receipts/high_chore-produce-canonical-cross-incumbent-capability-inventory/eleven-ledgers-present.out",
-        "exit_code": 0,
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
+      "receipt": null,
       "evidence": "doc"
     },
     {
@@ -48,13 +36,9 @@
       "check": "RP-004 maps to inventory task",
       "run": "grep -q '^| RP-004 | `high_chore-produce-canonical-cross-incumbent-capability-inventory`' docs/platform/replacement-backlog.md",
       "expected": "pass",
-      "status": "passed",
+      "status": "pending",
       "histories": [],
-      "receipt": {
-        "output": ".plaesy/receipts/high_chore-produce-canonical-cross-incumbent-capability-inventory/crosswalk-includes-rp004.out",
-        "exit_code": 0,
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
+      "receipt": null,
       "evidence": "doc"
     },
     {
@@ -62,13 +46,25 @@
       "check": "Acceptance requires per-row evidence and trace fields",
       "run": "grep -q 'explicit evidence state, Plaesy baseline status/evidence or `UNKNOWN`, disposition status/provenance' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
       "expected": "pass",
-      "status": "passed",
+      "status": "pending",
       "histories": [],
-      "receipt": {
-        "output": ".plaesy/receipts/high_chore-produce-canonical-cross-incumbent-capability-inventory/inventory-fields-specified.out",
-        "exit_code": 0,
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
+      "receipt": null,
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_chore-produce-canonical-cross-incumbent-capability-inventory' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_chore-produce-canonical-cross-incumbent-capability-inventory/task.md",
+      "expected": "pass",
+      "status": "pending",
       "evidence": "doc"
     }
   ]

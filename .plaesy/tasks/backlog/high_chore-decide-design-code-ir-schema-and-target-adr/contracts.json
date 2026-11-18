@@ -40,6 +40,14 @@
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/backlog/high_chore-decide-design-code-ir-schema-and-target-adr/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_chore-decide-design-code-ir-schema-and-target-adr/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_chore-decide-design-code-ir-schema-and-target-adr/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
     }
   ]
 }

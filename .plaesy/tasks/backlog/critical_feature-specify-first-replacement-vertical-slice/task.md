@@ -29,15 +29,14 @@ Produce an implementable child spec for one owner-selected workflow with observa
 
 ## Dependencies
 
-- Owner decision, incumbent research recovery, and repository baseline verification.
+- Owner decision, incumbent research recovery, and repository baseline verification. Keep owner-dependent workflow/profile choices UNKNOWN and do not claim this spec is ready until resolved.
 
 ## Acceptance criteria
 
-[ ] Scope identifies one workflow and deployment profile.
-
-- [ ] Every requirement has unique ID and Given/When/Then acceptance criterion.
-
-- [ ] Failure, authorization, cancellation/restart and evidence behavior are specified.
+- [ ] Scope identifies exactly one owner-selected workflow and deployment profile; if not yet selected, record UNKNOWN, owner, and review trigger and leave this task open.
+- [ ] Every requirement has a unique stable ID and a Given/When/Then acceptance scenario with observable expected outcome.
+- [ ] Failure, authorization, cancellation/restart, persistence, side effects, and evidence behavior are specified for the selected workflow.
 - [ ] Non-goals/open questions are explicit; no unsupported parity claims.
-
-- [ ] Every reference points to an existing file.
+- [ ] Acceptance test matrix maps every requirement ID to at least one focused test/evidence item, including denial and failure/recovery cases where applicable.
+- [ ] Child-spec artifact(s) are linked from the canonical spec/plan, and each local reference resolves to an existing file; out-of-repo references are explicitly identified.
+- [ ] No implementation begins until owner-dependent choices and all referenced contracts are resolved or explicitly scoped out.

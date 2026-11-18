@@ -16,6 +16,22 @@
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_feature-enforce-isolated-concurrent-agent-changes' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md && grep -q '^status:' .plaesy/tasks/backlog/high_feature-enforce-isolated-concurrent-agent-changes/task.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
     }
   ]
 }

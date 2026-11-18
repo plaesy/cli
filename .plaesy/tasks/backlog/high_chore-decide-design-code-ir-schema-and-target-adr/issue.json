@@ -1,13 +1,13 @@
 {
   "id": "high_chore-decide-design-code-ir-schema-and-target-adr",
-  "status": "backlog",
   "type": "task",
+  "depends_on": [
+    "high_chore-owner-decisions-for-first-replacement-slice",
+    "high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries"
+  ],
   "labels": [
     "replacement-program",
     "design-code",
     "chore"
-  ],
-  "depends_on": [
-    "high_chore-owner-decisions-for-first-replacement-slice"
   ]
 }

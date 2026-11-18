@@ -39,9 +39,11 @@ Record, as an owner-reviewed ADR, the canonical versioned intermediate represent
 
 ## Acceptance criteria
 
-- [ ] ADR states the IR schema version and the node set, with a stable ID rule for every node.
-- [ ] Every lowering direction names its inputs, outputs, and what is reported as lost.
-- [ ] Edit policy for each side of a round trip is written and has an owner decision recorded.
-- [ ] Target list is approved by the owner, or each unapproved target is listed as UNKNOWN.
-- [ ] Implementation and fidelity threshold are explicitly deferred to `high_feature-implement-design-code-ir-round-trip`.
+- [ ] ADR is owner-approved with approver and approval date, or remains explicitly proposed and this task remains open.
+- [ ] A versioned schema artifact or structured ADR section defines every node's fields and invariants, stable ID creation/preservation across edits/imports, and the source-map schema and coordinate/path semantics.
+- [ ] Every lowering direction names input/output, supported constructs, and structured loss behavior; no construct may be silently dropped.
+- [ ] Edit policy is owner-approved for each supported round-trip direction; unknown choices name an accountable owner and review trigger.
+- [ ] Target source and code target are owner-approved, or explicitly `UNKNOWN` with an accountable owner and review trigger; no implementation is authorized by a proposal.
+- [ ] The ADR defines the representative corpus version, measurable fidelity metric, aggregation rule, and owner-approved threshold, or records these as unresolved gates that block implementation.
+- [ ] An executable structured validator rejects missing schema fields, directions, mappings or loss semantics; keyword presence alone cannot pass acceptance.
 - [ ] No upstream source is modified; no build is required for this decision task.

@@ -37,6 +37,14 @@ Implement, in Rust, the importers, exporters, and code lowering/parsing for the 
 - `high_chore-decide-design-code-ir-schema-and-target-adr` must be accepted first.
 - `high_chore-establish-rust-security-and-release-quality-gates` (pinned toolchain, locked build, Clippy, fmt).
 - `high_feature-deliver-selected-design-and-prototyping-workflow` (owner selection of the design workflow).
+- Owner-approved ADR must explicitly select the design source and code target, edit policy, schema/lowering/loss contracts, and corpus metric/threshold before implementation starts. If any is unresolved, record `UNKNOWN`, name an accountable owner and review trigger, and keep this task blocked; measurement alone is not acceptance.
+
+- [ ] A linked ADR records approver and approval date, selected design source and code target, edit policy, schema and lowering/loss contracts, plus versioned corpus, metric, aggregation rule, and approved threshold; otherwise this task remains blocked.
+- [ ] Focused executable corpus tests run the approved conversion path and report deterministic per-fixture and aggregate results; they fail if any approved threshold is missed.
+- [ ] Coverage asserts stable ID preservation, defined source-map completeness, structured explicit losses for unsupported constructs, and no silent drops.
+- [ ] Negative tests prove malformed and configured size-boundary inputs return typed errors without panic or partial state/output.
+- [ ] End-to-end tests cover the selected design→IR→code→IR path; IR→design/export and re-import are tested if selected in the approved first slice, otherwise explicitly excluded by the ADR.
+- [ ] Feature-specific locked tests, format, and Clippy run against the IR crate/module; report broader workspace gates separately.
 
 ## Acceptance criteria
 
