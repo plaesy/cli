@@ -23,27 +23,41 @@ Users author flows in a visual editor. A flow is stored once as IR, then generat
 2. **Vendor flow format (copy another product's schema).** Rejected: copies a product, not a model we own.
 3. **Plaesy-owned IR with a fixed node catalogue.** Chosen.
 
-## Node catalogue (flow-ir/1)
+## Node catalogue (flow-ir/1, slice one)
 
-Each node has `id`, `kind`, `inputs` (typed), `outputs` (typed), `on_error` (`fail`, `continue`, or a failure-handler node ID), and `source` (editor position and label, not semantics).
+Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](https://github.com/windmill-labs/windmill/blob/main/openflow.openapi.yaml), schema version 1.835.0). Each module has `id`, `kind`, `inputs` and `outputs` (typed), and an error policy. Plaesy renames kinds and does not copy Windmill's JSON.
 
-| Kind | Purpose | Notes |
+### Module kinds included in slice one
+
+| Plaesy kind | Windmill equivalent | Purpose |
 | --- | --- | --- |
-| `trigger` | Starts the flow | Manual, schedule, or webhook. Exactly one per flow. |
-| `action` | Calls a named operation | Operation is a reference with a typed contract, never inline target code. |
-| `input` / `pass` | Passes or maps values | Pure data mapping with an expression language defined in the ADR. |
-| `branch_one` | If / else-if / else | First matching branch runs; a default branch is required. |
-| `branch_all` | Runs all branches | Parallel or sequential, chosen per node. Each branch has its own failure policy. |
-| `for_each` | Iterates a list | Has a bounded item limit and an explicit empty-list outcome. |
-| `while` | Loops while a condition holds | Requires a maximum iteration count. |
-| `subflow` | Calls another flow | Reference by ID and version; no inline copies. |
-| `approval` | Waits for a human decision | Approve or reject, with an explicit timeout outcome. |
-| `retry` | Wraps one node with retry policy | Count, backoff, and retryable error classes. |
-| `timeout` | Bounds one node's runtime | Duration and timeout outcome. |
-| `early_return` | Ends the flow with a value | Explicit output shape. |
-| `failure_handler` | Runs on unrecoverable failure | One per flow; receives the failing node ID and error. |
+| `action` | `script` (PathScript), `rawscript` | Calls a named operation with a typed contract. Inline code is not stored in the IR. |
+| `subflow` | `flow` (PathFlow) | Calls another flow by ID and version. |
+| `pass` | `identity` | Passes values through, for mapping and debugging. |
+| `branch_one` | `branchone` | First matching branch runs; a default branch is required. |
+| `branch_all` | `branchall` | Runs all branches, sequential or parallel, each with its own failure policy. |
+| `for_each` | `forloopflow` | Iterates a list with `iterator`, `parallel`, `parallelism`, and `skip_failures`. |
+| `while` | `whileloopflow` | Loops with `max_iterations` and `max_duration_secs`, both required. |
+| `approval` | a script with `suspend` | Waits for `required_events` approvals, with `timeout` and an outcome on timeout. |
 
-Edges connect output ports to input ports. Every edge is typed. Cycles are allowed only through `while` and `for_each`, never by raw edges.
+### Step-level settings included in slice one
+
+- `retry`: `constant` or `exponential`, with a `retry_if` expression.
+- `timeout`: maximum runtime in seconds.
+- `stop_after_if`: early termination after a step.
+- `skip_if`: conditional skip.
+- `continue_on_error`: flow continues when the step fails.
+- `early_return`: ends the flow with an explicit output.
+- `failure_handler`: one per flow; runs after retries are exhausted.
+- `preprocessor`: runs before the first step on external triggers; script or rawscript only.
+
+### Excluded from slice one (with reason)
+
+- `aiagent`, `aidecision`, memory settings, and AI transforms: AI nodes are a separate capability and need their own ADR.
+- `identity` used as an AI step: not needed.
+- `debounce` and per-step scopes: enterprise features in Windmill; not in slice one.
+- `mock`: kept as a test fixture concept, not a runtime node.
+- `sleep` and `cache_ttl`: deferred until the runtime exists.
 
 ## Codegen contract
 
@@ -57,10 +71,11 @@ Edges connect output ports to input ports. Every edge is typed. Cycles are allow
 - Negative: the catalogue is larger, so the first editor build is larger.
 - Neutral: no target language is chosen by this ADR.
 
-## Evidence and gaps
+## Evidence
 
-- Windmill's OpenFlow model uses branch, loop, subflow, and failure-handler module types ([Windmill OpenFlow](https://windmill.dev/docs/openflow)). Its `branch_all` with per-branch failure policy informed `branch_all` here.
-- Approval steps, early return, and per-step retry were not confirmed in the public Windmill page. They are included as Plaesy requirements, not as copies of Windmill behaviour. Verify against Windmill's OpenAPI definition before claiming parity.
+- Module kinds, step settings, retry, approval, timeout, early return and failure module are taken from Windmill's public OpenFlow schema, not from the marketing site. Verify again against the current version before any parity claim.
+- A community note reports that Windmill's exponential retry description disagrees with its formula ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy's retry must define the formula explicitly.
+- Windmill's approval docs disagree on the default timeout (30 minutes versus indefinite). Plaesy requires an explicit timeout for every `approval` node.
 
 ## Open questions (owner to decide)
 
