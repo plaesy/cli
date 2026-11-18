@@ -35,7 +35,7 @@ This is the canonical program-level specification, not approval to implement eve
 
 ## Task index
 
-All 52 active task folders under `.plaesy/tasks/` are indexed below; this count includes work in backlog and done, not just `.plaesy/tasks/backlog/`. This index is a directory inventory, not a mapping of task acceptance to each requirement; traceability remains incomplete until every requirement has an acceptance scenario and task or explicit disposition. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
+All 54 active task folders under `.plaesy/tasks/` are indexed below; this count includes work in backlog and done, not just `.plaesy/tasks/backlog/`. This index is a directory inventory, not a mapping of task acceptance to each requirement; traceability remains incomplete until every requirement has an acceptance scenario and task or explicit disposition. Conditional implementation work is gated on audited evidence and owner selection; task existence does not authorize implementation or assert parity.
 
 - `critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate`
 - `critical_feature-implement-authenticated-agent-identity-and-policy-boundary`
@@ -132,3 +132,26 @@ The evidence audit must refine capability families into deduplicated leaf tasks 
 - `docs/platform/automation.md` — autonomous execution, memory and policy requirements.
 - `docs/commands/tasks.md` — Plaesy task lifecycle, dependencies, validation and local storage behavior.
 - `spec/files-realtime-collaboration/spec.md` — existing narrower file collaboration spec; remains separate and is not superseded by this program spec.
+
+## Requirement traceability
+
+Each requirement maps to the tasks that deliver or verify it. A requirement with no task is a gap.
+
+| Requirement | Tasks |
+| --- | --- |
+| R1 | `high_chore-produce-canonical-cross-incumbent-capability-inventory`, `high_chore-verify-feature-baseline-across-repositories` |
+| R2 | `high_chore-owner-decisions-for-first-replacement-slice`, `critical_feature-specify-first-replacement-vertical-slice` |
+| R3 | `critical_feature-implement-durable-task-run-lifecycle-and-recovery` |
+| R4 | `high_feature-define-runtime-adapter-and-fake-conformance-suite` |
+| R5 | `critical_feature-implement-authenticated-agent-identity-and-policy-boundary`, `high_chore-specify-identity-tenancy-threat-model-and-authorization-contracts` |
+| R6 | `high_feature-add-authenticated-shared-messaging-and-session-delivery` |
+| R7 | `high_feature-add-authenticated-shared-messaging-and-session-delivery` |
+| R8 | `high_feature-enforce-isolated-concurrent-agent-changes` |
+| R9 | `high_feature-implement-approval-secret-reference-and-audit-controls`, `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting` |
+| R10 | `high_feature-add-operator-observability-and-recovery-controls` |
+| R11 | `high_chore-verify-install-backup-restore-and-rollback-lifecycle` |
+| R12 | `high_chore-recover-and-compare-incumbent-research`, `high_chore-complete-evidence-backed-feature-audit-for-11-incumbents` |
+| R13 | `critical_chore-run-incumbent-parity-parallel-run-and-cutover-gate` |
+| R14 | `high_chore-define-rust-domain-architecture-and-approved-deployment-boundaries`, `high_chore-establish-rust-security-and-release-quality-gates` |
+| R15 | `high_chore-decide-design-code-ir-schema-and-target-adr`, `high_feature-implement-design-code-ir-round-trip` |
+| R16 | `high_chore-decide-visual-flow-ir-and-codegen-adr`, `high_feature-implement-visual-flow-editor-and-codegen` |
