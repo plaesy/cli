@@ -49,3 +49,7 @@ Enforce least-privilege agent/task/project/tool authorization for the selected w
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked identity_policy` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.
+
+## Progress (2026-11-19)
+
+Implemented: principals, grants, revocation, audited authz (VS-04, VS-05, VS-14 project scope). Remaining: persistence of identity store and tenancy threat model review. Status stays backlog until every acceptance criterion passes.

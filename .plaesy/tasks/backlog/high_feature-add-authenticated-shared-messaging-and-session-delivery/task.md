@@ -49,3 +49,7 @@ If the selected workflow needs inter-agent communication, implement project-auth
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked shared_messaging` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.
+
+## Progress (2026-11-19)
+
+Implemented: in-memory shared inbox with idempotent delivery, lost-ack state, offline queueing, project isolation (VS-11 to VS-14). Remaining: authenticated transport and durable storage. Status stays backlog until every acceptance criterion passes.

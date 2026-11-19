@@ -55,3 +55,7 @@ Implementasikan approval, secret references dan audit hanya untuk workflow dan m
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked approval_secret` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.
+
+## Progress (2026-11-19)
+
+Implemented: secret store with redaction, external-effect approval gate (VS-15). Remaining: audit export and approval persistence. Status stays backlog until every acceptance criterion passes.

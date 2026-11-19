@@ -1,0 +1,190 @@
+//! Shared, project-scoped inbox with idempotent delivery (spec R6, R7, VS-11 to VS-14).
+//!
+//! Each message has a key. A repeated send with the same key has no second effect
+//! and returns the stored state. The service reports only what it observed: it never
+//! marks a message as read, and it never claims a session was woken.
+
+use std::collections::BTreeMap;
+
+/// Delivery state of one message, as observed by the service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageState {
+    /// Stored, waiting for the recipient to be reachable.
+    Queued,
+    /// The recipient was reachable when the message arrived.
+    Accepted,
+    /// The recipient acknowledged receipt.
+    Acknowledged,
+    /// Delivery failed.
+    Failed,
+    /// The service cannot tell whether delivery happened (for example a lost ack).
+    Unknown,
+}
+
+/// Liveness of the recipient, as observed by the service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecipientState {
+    Active,
+    Busy,
+    Offline,
+    Expired,
+    Terminated,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Entry {
+    state: MessageState,
+    body: String,
+    sends: u32,
+}
+
+/// In-memory inbox for tests and the first shared-profile slice.
+#[derive(Debug, Default)]
+pub struct SharedInbox {
+    entries: BTreeMap<(String, String, String), Entry>,
+    effects: u32,
+}
+
+impl SharedInbox {
+    /// Creates an empty inbox.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Number of messages that had a real effect (first stored copy of each key).
+    #[must_use]
+    pub fn effects(&self) -> u32 {
+        self.effects
+    }
+
+    /// Sends a message. A repeated key returns the stored state and adds no effect.
+    pub fn send(
+        &mut self,
+        project: &str,
+        recipient: &str,
+        recipient_state: RecipientState,
+        key: &str,
+        body: &str,
+    ) -> MessageState {
+        let id = (project.to_owned(), recipient.to_owned(), key.to_owned());
+        if let Some(entry) = self.entries.get_mut(&id) {
+            entry.sends += 1;
+            return entry.state;
+        }
+        let state = match recipient_state {
+            RecipientState::Active | RecipientState::Busy => MessageState::Accepted,
+            RecipientState::Offline | RecipientState::Expired | RecipientState::Terminated => {
+                MessageState::Queued
+            }
+        };
+        self.effects += 1;
+        self.entries.insert(
+            id,
+            Entry {
+                state,
+                body: body.to_owned(),
+                sends: 1,
+            },
+        );
+        state
+    }
+
+    /// Records that the acknowledgement was lost. The state becomes `Unknown`.
+    pub fn mark_ack_lost(
+        &mut self,
+        project: &str,
+        recipient: &str,
+        key: &str,
+    ) -> Option<MessageState> {
+        self.set_state(project, recipient, key, MessageState::Unknown)
+    }
+
+    /// Records a received acknowledgement.
+    pub fn mark_acknowledged(
+        &mut self,
+        project: &str,
+        recipient: &str,
+        key: &str,
+    ) -> Option<MessageState> {
+        self.set_state(project, recipient, key, MessageState::Acknowledged)
+    }
+
+    /// Returns the bodies visible to a recipient in a project. Other projects are never visible.
+    #[must_use]
+    pub fn visible(&self, project: &str, recipient: &str) -> Vec<&str> {
+        self.entries
+            .iter()
+            .filter(|((p, r, _), _)| p == project && r == recipient)
+            .map(|(_, entry)| entry.body.as_str())
+            .collect()
+    }
+
+    fn set_state(
+        &mut self,
+        project: &str,
+        recipient: &str,
+        key: &str,
+        state: MessageState,
+    ) -> Option<MessageState> {
+        let id = (project.to_owned(), recipient.to_owned(), key.to_owned());
+        let entry = self.entries.get_mut(&id)?;
+        entry.state = state;
+        Some(state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shared_messaging_duplicate_delivery_is_one_effect() {
+        let mut inbox = SharedInbox::new();
+        let first = inbox.send("p", "r", RecipientState::Active, "k1", "hello");
+        let second = inbox.send("p", "r", RecipientState::Active, "k1", "hello");
+        assert_eq!(first, MessageState::Accepted);
+        assert_eq!(second, MessageState::Accepted);
+        assert_eq!(inbox.effects(), 1);
+        assert_eq!(inbox.visible("p", "r"), vec!["hello"]);
+    }
+
+    #[test]
+    fn shared_messaging_lost_ack_stays_unknown_until_acknowledged() {
+        let mut inbox = SharedInbox::new();
+        inbox.send("p", "r", RecipientState::Active, "k1", "hello");
+        assert_eq!(
+            inbox.mark_ack_lost("p", "r", "k1"),
+            Some(MessageState::Unknown)
+        );
+        let retry = inbox.send("p", "r", RecipientState::Active, "k1", "hello");
+        assert_eq!(retry, MessageState::Unknown);
+        assert_eq!(inbox.effects(), 1);
+        assert_eq!(
+            inbox.mark_acknowledged("p", "r", "k1"),
+            Some(MessageState::Acknowledged)
+        );
+    }
+
+    #[test]
+    fn shared_messaging_offline_recipient_is_queued_not_read() {
+        let mut inbox = SharedInbox::new();
+        let state = inbox.send("p", "r", RecipientState::Offline, "k1", "hello");
+        assert_eq!(state, MessageState::Queued);
+        assert_ne!(state, MessageState::Acknowledged);
+    }
+
+    #[test]
+    fn shared_messaging_other_project_sees_nothing() {
+        let mut inbox = SharedInbox::new();
+        inbox.send(
+            "project-a",
+            "r",
+            RecipientState::Active,
+            "k1",
+            "secret plan",
+        );
+        assert!(inbox.visible("project-b", "r").is_empty());
+        assert_eq!(inbox.visible("project-a", "r"), vec!["secret plan"]);
+    }
+}
