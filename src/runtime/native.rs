@@ -118,65 +118,78 @@ impl ExecutionAdapter for NativeProcessAdapter {
         command
             .args(&self.args)
             .current_dir(&self.work_dir)
-            .env_clear()
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            .env_clear();
         for name in ENV_ALLOWLIST {
             if let Ok(value) = std::env::var(name) {
                 command.env(name, value);
             }
         }
-        let mut child = match command.spawn() {
-            Ok(child) => child,
-            Err(error) => {
-                return Outcome::Failed {
-                    reason: format!("spawn_failed: {error}"),
-                };
-            }
-        };
+        run_bounded(command, self.timeout, cancel, self.max_output_bytes)
+    }
+}
 
-        let cap = self.max_output_bytes;
-        let stdout_reader = child.stdout.take();
-        let stderr_reader = child.stderr.take();
-        let stdout_thread = thread::spawn(move || read_capped(stdout_reader, cap));
-        let stderr_thread = thread::spawn(move || read_capped(stderr_reader, cap));
-
-        let deadline = Instant::now() + self.timeout;
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(status)) => break Some(status),
-                Ok(None) => {}
-                Err(_) => break None,
-            }
-            let cancelled = cancel.is_cancelled();
-            if cancelled || Instant::now() >= deadline {
-                let _ = child.kill();
-                let _ = child.wait();
-                let _ = stdout_thread.join();
-                let _ = stderr_thread.join();
-                return if cancelled {
-                    Outcome::Cancelled
-                } else {
-                    Outcome::TimedOut
-                };
-            }
-            thread::sleep(Duration::from_millis(5));
-        };
-
-        let stdout = stdout_thread.join().unwrap_or_default();
-        let _ = stderr_thread.join();
-        match status {
-            Some(status) if status.success() => Outcome::Succeeded {
-                evidence: format!("exit=0 stdout_sha256={}", hex(&Sha256::digest(&stdout))),
-            },
-            Some(status) => Outcome::Failed {
-                reason: format!("exit_code={}", status.code().unwrap_or(-1)),
-            },
-            None => Outcome::Failed {
-                reason: "wait_failed".to_owned(),
-            },
+/// Spawns a prepared `command` and runs it under the bounded policy: stdin is null,
+/// stdout and stderr are capped at `cap` bytes each, and the child is killed when
+/// `timeout` passes or `cancel` is set. Shared with the containerized adapter so both
+/// kill and collect the same way.
+pub(super) fn run_bounded(
+    mut command: Command,
+    timeout: Duration,
+    cancel: &CancelFlag,
+    cap: usize,
+) -> Outcome {
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            return Outcome::Failed {
+                reason: format!("spawn_failed: {error}"),
+            };
         }
+    };
+
+    let stdout_reader = child.stdout.take();
+    let stderr_reader = child.stderr.take();
+    let stdout_thread = thread::spawn(move || read_capped(stdout_reader, cap));
+    let stderr_thread = thread::spawn(move || read_capped(stderr_reader, cap));
+
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) => {}
+            Err(_) => break None,
+        }
+        let cancelled = cancel.is_cancelled();
+        if cancelled || Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = stdout_thread.join();
+            let _ = stderr_thread.join();
+            return if cancelled {
+                Outcome::Cancelled
+            } else {
+                Outcome::TimedOut
+            };
+        }
+        thread::sleep(Duration::from_millis(5));
+    };
+
+    let stdout = stdout_thread.join().unwrap_or_default();
+    let _ = stderr_thread.join();
+    match status {
+        Some(status) if status.success() => Outcome::Succeeded {
+            evidence: format!("exit=0 stdout_sha256={}", hex(&Sha256::digest(&stdout))),
+        },
+        Some(status) => Outcome::Failed {
+            reason: format!("exit_code={}", status.code().unwrap_or(-1)),
+        },
+        None => Outcome::Failed {
+            reason: "wait_failed".to_owned(),
+        },
     }
 }
 

@@ -31,7 +31,7 @@ Host: Ubuntu 24.04, 2 vCPU, 7.4 GB RAM. Domain: `plaesy.mahbubzulkarnain.com`, s
 
 These still block a real deployment.
 
-1. **Container or VM isolation for the native runtime.** The native adapter is a host process. Docker is installed on the host, but no isolated image or run configuration exists yet. Owner: operations.
+1. **Container or VM isolation for the native runtime.** Still open. `ContainerizedAdapter` and `ContainerSpec` in `src/runtime/container.rs` build a `docker run` with no network, a read-only root, all capabilities dropped, `no-new-privileges`, a non-root user, pid, memory, and CPU limits, and a tmpfs work directory. The adapter refuses to run unless external effects are enabled. Verified by unit tests only (`cargo test --locked bounded_runtime_container`, 12 tests passing on 2026-11-19): the exact argument vector, user and limit validation, the disabled and image-allowlist refusals, spawn failure, and cancel before start. Not verified: a live container. The three live tests (isolation probe, timeout removes the container, cancel stops the run) skip when `docker info` fails. Docker was not available on the development machine, so they did not run. The gate stays open until those three pass on the target host. Owner: operations.
 2. **Operational restore drill.** The restore mechanics pass with synthetic data on this host. The inbox is in memory and no production data exists, so there is nothing to restore yet. A monthly drill against real data, timed against the 4-hour RTO, has not been run. Owner: operations.
 
 ## Sign-off

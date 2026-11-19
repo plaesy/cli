@@ -7,6 +7,7 @@
 use crate::adapter::{CancelFlag, Outcome};
 use crate::policy::{self, Block, Effect};
 
+pub mod container;
 pub mod native;
 pub mod usage;
 
