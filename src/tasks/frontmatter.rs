@@ -53,7 +53,7 @@ pub(crate) fn read_task_frontmatter(
     )
 }
 
-fn read_task_frontmatter_from_handle(
+pub(crate) fn read_task_frontmatter_from_handle(
     root: &crate::memory::fs_safety::DirHandle,
     relative: &Path,
 ) -> Result<HashMap<String, String>, io::Error> {
