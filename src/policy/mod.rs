@@ -3,6 +3,8 @@
 //! Internal actions always pass. An external effect passes only when the
 //! external-effect flag is on and the owner has approved that exact action.
 
+pub mod approvals;
+
 /// Whether an action changes anything outside the run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Effect {
