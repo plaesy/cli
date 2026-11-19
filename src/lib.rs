@@ -3,7 +3,9 @@
 //! Porting is incremental. Each Go package maps to one module here; see
 //! `PORTING.md` for the status of every package.
 
+pub mod adapter;
 pub mod analyze;
+pub mod authz;
 pub mod checklist;
 pub mod cli;
 pub mod common;
@@ -16,6 +18,7 @@ pub mod exclude;
 pub mod expected;
 pub mod files;
 pub mod graph;
+pub mod identity;
 pub mod imagegen;
 pub mod installer;
 pub mod loop_run;

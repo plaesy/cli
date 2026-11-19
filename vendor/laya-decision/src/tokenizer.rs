@@ -42,8 +42,8 @@ impl LayaTokenizer {
 
     /// Load a tokenizer directly from `tokenizer.json` bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let inner = HfTokenizer::from_bytes(bytes.to_vec())
-            .map_err(|e| LayaError::Tokenizer(e.to_string()))?;
+        let inner =
+            HfTokenizer::from_bytes(bytes).map_err(|e| LayaError::Tokenizer(e.to_string()))?;
         Ok(Self::from_hf(inner))
     }
 

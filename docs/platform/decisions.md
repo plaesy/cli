@@ -103,3 +103,11 @@ These items are not decided. Each has an accountable owner and a review trigger.
 | UI and Rust boundary beyond the decided Dioxus web surface | UNKNOWN | product owner with architecture owner | before the desktop or mobile surface is planned |
 
 Decided on 2026-11-19: first workflow, deployment profile, runtime strategy, identity direction (section above).
+
+## Comparison identity evidence (2026-11-19, evidence only, not a decision)
+
+Gathered for spec open question "exact DeepSeek Harness and Orca product/version". The owner still picks the comparison target.
+
+- **Orca:** the GitHub Releases page for `stablyai/orca` (fetched 2026-11-19) lists desktop tags up to `v1.4.263` (18 Nov 2026). An earlier secondary source cited `v1.4.180` (Aug 2026). That is superseded. Name clash: `araa47/orca` is a different CLI project. Source: https://github.com/stablyai/orca/releases
+- **DeepSeek Harness:** a news article (RuntimeWire, 14 Aug 2026) calls it "Harness v0.1". A separate article describes it as an open-source, plugin-based coding agent. The MIT license and the `dsh` / `@deepseek-ai/dsh` package name appear only in a search summary and are not confirmed by the articles fetched. Sources: https://runtimewire.com/article/deepseek-open-sources-agent-harness-v4-pro-api-price-hike and https://www.mindstudio.ai/blog/deepseek-harness-coding-agent/
+- **Next step (owner):** confirm the exact repository and version to compare. Until then the item stays UNKNOWN.
