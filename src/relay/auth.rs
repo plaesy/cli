@@ -28,6 +28,7 @@ pub enum AuthError {
 pub struct Opened {
     pub sender: String,
     pub project: String,
+    pub recipient: String,
     pub key_id: String,
     pub sent_at: u64,
     pub nonce: String,
@@ -66,28 +67,49 @@ fn to_hex(bytes: &[u8]) -> String {
 fn signed_text(
     sender: &str,
     project: &str,
+    recipient: &str,
     key_id: &str,
     sent_at: u64,
     nonce: &str,
     body: &str,
 ) -> String {
-    format!("{sender}\n{project}\n{key_id}\n{sent_at}\n{nonce}\n{body}")
+    format!(
+        "{sender}
+{project}
+{recipient}
+{key_id}
+{sent_at}
+{nonce}
+{body}"
+    )
 }
 
 /// Seals one message. The first line of the result is the tag, then the signed fields.
+/// The recipient is signed too, so an envelope cannot be redirected to another inbox.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn seal(
     key: &[u8],
     key_id: &str,
     sender: &str,
     project: &str,
+    recipient: &str,
     sent_at: u64,
     nonce: &str,
     body: &str,
 ) -> String {
-    let signed = signed_text(sender, project, key_id, sent_at, nonce, body);
+    let signed = signed_text(sender, project, recipient, key_id, sent_at, nonce, body);
     let tag = to_hex(&hmac_sha256(key, signed.as_bytes()));
-    format!("{tag}\n{signed}")
+    format!(
+        "{tag}
+{signed}"
+    )
+}
+
+/// Returns the key id of an envelope without verifying it, so the caller can pick the key.
+#[must_use]
+pub fn peek_key_id(envelope: &str) -> Option<&str> {
+    envelope.split('\n').nth(4)
 }
 
 /// Verifies the tag and returns the fields. Replay and time checks are separate, in [`ReplayGuard`].
@@ -97,8 +119,8 @@ pub fn seal(
 /// Returns [`AuthError::Malformed`] for a bad shape and [`AuthError::BadTag`] when the tag does not verify.
 pub fn open(key: &[u8], envelope: &str) -> Result<Opened, AuthError> {
     let (tag, signed) = envelope.split_once('\n').ok_or(AuthError::Malformed)?;
-    let fields: Vec<&str> = signed.splitn(6, '\n').collect();
-    let [sender, project, key_id, sent_at, nonce, body] = fields.as_slice() else {
+    let fields: Vec<&str> = signed.splitn(7, '\n').collect();
+    let [sender, project, recipient, key_id, sent_at, nonce, body] = fields.as_slice() else {
         return Err(AuthError::Malformed);
     };
     let sent_at: u64 = sent_at.parse().map_err(|_| AuthError::Malformed)?;
@@ -109,6 +131,7 @@ pub fn open(key: &[u8], envelope: &str) -> Result<Opened, AuthError> {
     Ok(Opened {
         sender: (*sender).to_owned(),
         project: (*project).to_owned(),
+        recipient: (*recipient).to_owned(),
         key_id: (*key_id).to_owned(),
         sent_at,
         nonce: (*nonce).to_owned(),

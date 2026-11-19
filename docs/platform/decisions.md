@@ -119,7 +119,7 @@ The owner asked for best-practice defaults for the open technical choices. These
 - **Native runtime:** bounded child-process adapter. Only programs on an explicit allowlist run. The environment is cleared except PATH, SYSTEMROOT, TEMP, TMP. stdin is closed. stdout and stderr are capped at 64 KiB each. Timeout and cancellation kill the process. External effects are off by default. This is a host process, not a sandbox. Container or VM isolation is required before real tools run.
 - **Key distribution:** one HMAC key per deployment and key id, stored in the OS credential store under one service name (`KeyringKeySource`). Keys never appear in envelopes, logs, or the repository. Rotation adds a new key id and retires the old one.
 - **Envelope freshness:** every envelope carries a send time and a random nonce. The receiver refuses nonces seen in the window and envelopes older or newer than 300 seconds. 300 seconds is a proposed default.
-- **Transport:** HTTPS only, TLS 1.2 or later through the existing rustls stack, with the HMAC envelope on top as defense in depth. Not yet implemented. This is the next engineering step.
+- **Transport:** HTTPS at the edge (TLS 1.2 or later, terminated by a proxy or the rustls stack), with the HMAC envelope on top as defense in depth. Implemented in `src/relay/transport.rs`: one route `POST /v1/messages`, loopback bind by default, and a non-loopback bind is refused unless the caller states TLS is terminated upstream. Recipient is signed in the envelope. Presence is not observed, so messages are queued, never reported as read.
 
 ## Delegated decisions (2026-11-19, revocable by the owner)
 

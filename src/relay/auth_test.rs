@@ -18,6 +18,7 @@ fn shared_messaging_envelope_round_trips_and_rejects_tampering() {
         "k1",
         "agent-1",
         "project-a",
+        "r-1",
         1000,
         "n-1",
         "hello | world",
@@ -25,6 +26,7 @@ fn shared_messaging_envelope_round_trips_and_rejects_tampering() {
     let opened = open(key, &envelope).unwrap();
     assert_eq!(opened.body, "hello | world");
     assert_eq!(opened.project, "project-a");
+    assert_eq!(opened.recipient, "r-1");
     let tampered = envelope.replace("project-a", "project-b");
     assert_eq!(open(key, &tampered), Err(AuthError::BadTag));
     assert_eq!(open(b"other-key", &envelope), Err(AuthError::BadTag));
@@ -33,7 +35,7 @@ fn shared_messaging_envelope_round_trips_and_rejects_tampering() {
 #[test]
 fn shared_messaging_replayed_nonce_is_rejected() {
     let key = b"deployment-key";
-    let envelope = seal(key, "k1", "agent-1", "project-a", 1000, "n-1", "hi");
+    let envelope = seal(key, "k1", "agent-1", "project-a", "r-1", 1000, "n-1", "hi");
     let opened = open(key, &envelope).unwrap();
     let mut guard = ReplayGuard::new(300);
     assert_eq!(guard.accept(&opened, 1000), Ok(()));
@@ -43,8 +45,28 @@ fn shared_messaging_replayed_nonce_is_rejected() {
 #[test]
 fn shared_messaging_stale_envelope_is_expired() {
     let key = b"deployment-key";
-    let envelope = seal(key, "k1", "agent-1", "project-a", 1000, "n-2", "hi");
+    let envelope = seal(key, "k1", "agent-1", "project-a", "r-1", 1000, "n-2", "hi");
     let opened = open(key, &envelope).unwrap();
     let mut guard = ReplayGuard::new(300);
     assert_eq!(guard.accept(&opened, 1000 + 301), Err(AuthError::Expired));
+}
+
+#[test]
+fn shared_messaging_recipient_is_signed() {
+    let key = b"deployment-key";
+    let envelope = seal(key, "k1", "agent-1", "project-a", "r-1", 1000, "n-3", "hi");
+    let redirected = envelope.replace(
+        "
+r-1
+", "
+r-2
+",
+    );
+    assert_eq!(open(key, &redirected), Err(AuthError::BadTag));
+}
+
+#[test]
+fn shared_messaging_peek_key_id_reads_key_before_verifying() {
+    let envelope = seal(b"k", "k9", "agent-1", "project-a", "r-1", 1000, "n-4", "hi");
+    assert_eq!(peek_key_id(&envelope), Some("k9"));
 }
