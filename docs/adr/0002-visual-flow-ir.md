@@ -112,4 +112,3 @@ Accepted on 2026-11-18: the proposals above (CEL, the retry formula, loop limits
 | 1 | Approver and acceptance date for this ADR | product owner | Accepted in chat on 2026-11-18; a named approver can be added if required. |
 | 2 | First codegen adapter | product owner | Decided 2026-11-18: Rust, for testing with Plaesy's own application. Go and JavaScript follow later as separate adapters. |
 | 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | Accepted 2026-11-18. |
-

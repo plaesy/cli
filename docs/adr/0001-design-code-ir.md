@@ -30,6 +30,7 @@ Plaesy must convert between design documents and code. Converting each design so
 ### Node model (ir/1)
 
 Every node has:
+
 - `id`: stable string, assigned once and preserved across imports and edits. Generated IDs must not reuse a retired ID.
 - `kind`: one of `frame`, `layout`, `component`, `variant`, `text`, `vector`, `image`, `token_ref`, `opaque`.
 - `props`: typed fields for the kind. Unknown keys are kept in `extensions` and never dropped.
@@ -61,6 +62,7 @@ An unsupported construct becomes an `opaque` node that keeps its original payloa
 ### Edit policy (decided: B)
 
 Chosen: B. Option A is too weak for the two-way goal; option C is rejected for ir/1.
+
 - **A. One-way regeneration.** Code is generated, manual edits are not parsed back. Simplest, loses round-trip.
 - **B. Guarded merge.** Edits inside managed regions are parsed back via source-map IDs. Manual edits outside those regions are preserved and not parsed.
 - **C. Full bidirectional.** Not proposed for ir/1, because it has the highest risk of silent loss.
