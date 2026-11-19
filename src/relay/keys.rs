@@ -68,6 +68,43 @@ impl KeySource for StaticKeySource {
     }
 }
 
+/// Reads keys from one file per key id in a directory. Intended for systemd `LoadCredential=`,
+/// where the directory is `$CREDENTIALS_DIRECTORY`. Headless servers without a secret service use this.
+#[derive(Debug, Clone)]
+pub struct FileKeySource {
+    dir: std::path::PathBuf,
+}
+
+impl FileKeySource {
+    /// Creates a source that reads `<dir>/<key_id>`.
+    #[must_use]
+    pub fn new(dir: impl Into<std::path::PathBuf>) -> Self {
+        Self { dir: dir.into() }
+    }
+}
+
+impl KeySource for FileKeySource {
+    fn key(&self, key_id: &str) -> Option<Vec<u8>> {
+        let safe = !key_id.is_empty()
+            && !key_id.starts_with('.')
+            && key_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+        if !safe {
+            return None;
+        }
+        let mut bytes = std::fs::read(self.dir.join(key_id)).ok()?;
+        while bytes.last().is_some_and(u8::is_ascii_whitespace) {
+            bytes.pop();
+        }
+        if bytes.is_empty() {
+            None
+        } else {
+            Some(bytes)
+        }
+    }
+}
+
 #[cfg(test)]
 #[path = "keys_test.rs"]
 mod keys_test;
