@@ -6,7 +6,13 @@
       "check": "Task file exists",
       "run": "test -s .plaesy/tasks/*/high_chore-audit-wordcraft-capability-ledger/task.md",
       "expected": "pass",
-      "status": "pending",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-wordcraft-capability-ledger/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     },
     {
@@ -14,7 +20,13 @@
       "check": "Task has acceptance section",
       "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/high_chore-audit-wordcraft-capability-ledger/task.md",
       "expected": "pass",
-      "status": "pending",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-wordcraft-capability-ledger/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     },
     {
@@ -22,7 +34,13 @@
       "check": "Spec task index lists this task",
       "run": "grep -q 'high_chore-audit-wordcraft-capability-ledger' .plaesy/spec/plaesy-agent-platform/spec.md",
       "expected": "pass",
-      "status": "pending",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-wordcraft-capability-ledger/spec-index-lists-task.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     },
     {
@@ -30,7 +48,13 @@
       "check": "task.md has spec, topic and status frontmatter",
       "run": "head -1 .plaesy/tasks/*/high_chore-audit-wordcraft-capability-ledger/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/high_chore-audit-wordcraft-capability-ledger/task.md && grep -q '^status:' .plaesy/tasks/*/high_chore-audit-wordcraft-capability-ledger/task.md",
       "expected": "pass",
-      "status": "pending",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-wordcraft-capability-ledger/frontmatter-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     },
     {
@@ -38,15 +62,39 @@
       "check": "Capability ledger exists at docs/platform/audits/wordcraft.md",
       "run": "test -s docs/platform/audits/wordcraft.md",
       "expected": "pass",
-      "status": "pending",
+      "status": "failed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:09Z",
+          "actual": "exit code 1",
+          "run": "test -s docs/platform/audits/wordcraft.md"
+        },
+        {
+          "at": "2026-11-19T17:29:54Z",
+          "actual": "exit code 1",
+          "run": "test -s docs/platform/audits/wordcraft.md"
+        }
+      ],
       "evidence": "doc"
     },
     {
       "id": "ledger-lint",
       "check": "Ledger passes the markdown linter (plaesy binary)",
-      "run": "plaesy validate markdown docs/platform/audits/wordcraft.md --no-baseline",
+      "run": "export PATH=\"$HOME/.local/bin:$PATH\" && plaesy validate markdown docs/platform/audits/wordcraft.md --no-baseline",
       "expected": "pass",
-      "status": "pending",
+      "status": "failed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:09Z",
+          "actual": "exit code 127",
+          "run": "plaesy validate markdown docs/platform/audits/wordcraft.md --no-baseline"
+        },
+        {
+          "at": "2026-11-19T17:29:54Z",
+          "actual": "exit code 127",
+          "run": "plaesy validate markdown docs/platform/audits/wordcraft.md --no-baseline"
+        }
+      ],
       "evidence": "test"
     },
     {
@@ -54,7 +102,19 @@
       "check": "Ledger has at least five capability rows",
       "run": "grep -cE '^\\| ' docs/platform/audits/wordcraft.md || true",
       "expected": ">= 5",
-      "status": "pending",
+      "status": "failed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:09Z",
+          "actual": "command printed nothing to compare with the expected",
+          "run": "grep -cE '^\\| ' docs/platform/audits/wordcraft.md || true"
+        },
+        {
+          "at": "2026-11-19T17:29:54Z",
+          "actual": "command printed nothing to compare with the expected",
+          "run": "grep -cE '^\\| ' docs/platform/audits/wordcraft.md || true"
+        }
+      ],
       "evidence": "doc"
     }
   ]
