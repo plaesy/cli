@@ -16,15 +16,23 @@ Use this before any deployment of the shared profile. Each gate names the comman
 | Process-kill recovery | `cargo test --locked --test run_crash_recovery` (kills a real worker process, then recovers) | Passes |
 | Restore drill, synthetic data | `cargo test --locked --test run_crash_recovery` (backup, delete primary, restore, verify) | Passes; the mechanics only, not an operational drill |
 
+## Evidence on the target host (ubuntu@43.157.205.91, 2026-11-19)
+
+Host: Ubuntu 24.04, 2 vCPU, 7.4 GB RAM. Domain: `plaesy.mahbubzulkarnain.com`, served by the existing Caddy. Service: `plaesy-messages` (systemd, `DynamicUser`, `LoadCredential` for the key, bound to 127.0.0.1:8787).
+
+| Gate | Evidence | Status |
+| --- | --- | --- |
+| Process-kill recovery on target host | `cargo test --locked --test run_crash_recovery` on the host, commit `f5d3e7e` | Passes |
+| Full test suite on Linux | `cargo test --locked --all` on the host: 827 passed, 0 failed | Passes |
+| TLS termination on target host | Caddy site `plaesy.mahbubzulkarnain.com`, TLS 1.2 accepted with a valid certificate, TLS 1.1 refused | Passes |
+| End-to-end through the proxy | Public HTTPS: valid envelope 202, replay 409, bad tag 401, expired 401, `GET` 404, body over 64 KB rejected with 400 | Passes |
+
 ## Gates that are not yet met
 
-These block any real deployment, not the test run.
+These still block a real deployment.
 
-1. **Container or VM isolation for the native runtime.** The native adapter is a bounded host process. Real tools must not run until it is inside a container or VM. Owner: operations.
-2. **Process-kill crash test on the target host.** The test passes here, but it runs on this machine only. Repeat it on the target host before release. Owner: engineering.
-3. **TLS termination on the target host.** The runbook in `messaging-transport.md` defines it. The host has not been configured or verified. Owner: operations.
-4. **End-to-end test over the transport.** The loopback round trip passes. A test through the proxy on the target host does not exist yet. Owner: engineering.
-5. **Operational restore drill.** The mechanics pass with synthetic data. The RPO and RTO in `decisions.md` require a monthly drill on the real deployment, timed against the 4-hour RTO. No such drill has been run. Owner: operations.
+1. **Container or VM isolation for the native runtime.** The native adapter is a host process. Docker is installed on the host, but no isolated image or run configuration exists yet. Owner: operations.
+2. **Operational restore drill.** The restore mechanics pass with synthetic data on this host. The inbox is in memory and no production data exists, so there is nothing to restore yet. A monthly drill against real data, timed against the 4-hour RTO, has not been run. Owner: operations.
 
 ## Sign-off
 
