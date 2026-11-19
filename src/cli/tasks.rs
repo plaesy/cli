@@ -43,7 +43,7 @@ pub enum TasksCommand {
     Next,
     /// Move a task from todo to doing
     Start { task: String },
-    /// Move a task from doing to done
+    /// Move a task from review to done (reviewer decision)
     Complete { task: String },
     /// Move a task from doing to blocked, recording a reason
     Block {
@@ -67,7 +67,7 @@ pub enum TasksCommand {
     Check { task: String },
     /// Hand todo tasks of the current spec to a delegate provider or chain
     Run(super::tasks_run::Args),
-    /// Run each task's checklist, record the results, and move finished tasks to done
+    /// Run each task's checklist and record the results; passing tasks move to review
     Validate(super::tasks_validate::Args),
 }
 
