@@ -118,4 +118,4 @@ harness = false
 esaxx-rs = { path = "vendor/esaxx-rs" }
 
 [workspace]
-members = ["crates/flow-editor"]
+members = ["crates/editor/flow"]

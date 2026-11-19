@@ -120,7 +120,7 @@ Practice references (community sources, not official Git guidance): one worktree
 - Decided by owner, 2026-11-19 (see `docs/platform/decisions.md`): workflow = agent execution and learning; profile = shared self-hosted; runtime = fake adapter, then bounded native runtime; identity = single organization with project-scoped agent principals.
 - Still open, owner: target cohort and success outcome, incumbent baseline version, NFR thresholds, cutover appetite, support model, DeepSeek and Orca identity. Tasks that need them stay blocked.
 - Next gate: the child vertical-slice spec (`critical_feature-specify-first-replacement-vertical-slice`). Owned paths for the blocked implementation tasks stay `OWNERSHIP-UNASSIGNED` until that spec is approved and the integrator assigns them.
-- Done, integrator, 2026-11-19: `crates/flow-editor` is registered as a skeleton workspace member, so the Dioxus task has its owned path.
+- Done, integrator, 2026-11-19: `crates/editor/flow` is registered as a skeleton workspace member, so the Dioxus task has its owned path.
 - Open, integrator: assign owned paths for the unassigned tasks after the vertical-slice spec is approved.
 
 ## Verification strategy

@@ -9,25 +9,31 @@ status: backlog
 # Implement visual flow Rust codegen adapter
 
 ## Goal
+
 Generate Rust code from the flow IR through the first codegen adapter, and report unsupported node kinds as explicit losses (spec R16, ADR 0002).
 
 ## Scope
+
 - Rust codegen adapter in `src/visual_flow/codegen/`.
 - Expected generated outputs in `tests/fixtures/flows/expected/`.
 - Loss report for unsupported node kinds.
 
 ## Non-goals
+
 - Go and JavaScript adapters (separate later tasks). Editor UI.
 
 ## Deliverables
+
 - Rust codegen adapter in `src/visual_flow/codegen/`.
 - Expected generated outputs in `tests/fixtures/flows/expected/`.
 - Loss report for unsupported node kinds.
 
 ## Dependencies
+
 - `high_feature-implement-visual-flow-ir-core-in-rust`
 
 ## Acceptance criteria
+
 - [ ] Generated Rust for each fixture compiles and produces the result the IR fixture expects.
 - [ ] Unsupported node kinds appear in the loss report, never dropped.
 - [ ] `cargo test --locked visual_flow_codegen` passes with a non-zero test count.
