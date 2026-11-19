@@ -117,10 +117,10 @@ The evidence audit must refine capability families into deduplicated leaf tasks 
 
 ## Open questions
 
-- UNKNOWN: Which single incumbent workflow is the first replacement target? Owner: product owner.
-- UNKNOWN: Which local/shared deployment profile must the first slice support? Owner: product owner.
-- UNKNOWN: Should Plaesy initially orchestrate external harnesses, or provide a native runtime first? Owner: product owner.
-- UNKNOWN: What organization/project/agent identity and ownership hierarchy should be canonical? Owner: product/architecture owner.
+- DECIDED 2026-11-19: first workflow is agent execution and learning (see docs/platform/decisions.md). Owner: product owner.
+- DECIDED 2026-11-19: shared self-hosted profile, local-first requirements still apply. Owner: product owner.
+- DECIDED 2026-11-19: deterministic fake adapter first, then bounded native runtime; external harnesses not enabled in the first slice. Owner: product owner.
+- DECIDED 2026-11-19: single organization, project-scoped agent principals with grants and revocation. Owner: product owner.
 - UNKNOWN: Which operational SLO, retention, backup, restore and support profile is required for first release? Owner: product/operations owner.
 - UNKNOWN: Exact DeepSeek harness and Orca product/version intended for comparison. Owner: research owner.
 - UNKNOWN: Whether earlier comparative research exists outside the inspected repository paths. Owner: research owner; link it before repeating research.

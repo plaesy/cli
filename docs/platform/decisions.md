@@ -75,3 +75,14 @@ Status: IR ADR (0001) accepted 2026-11-18 under the owner's delegation. Implemen
 - **Targets:** owner decision open. No design tool or code framework is approved yet.
 - **Fidelity threshold:** not set. It is UNKNOWN until owner approval, and no round-trip result may be reported as passing before then.
 - **Rust:** the IR and converters are core logic and must be Rust, per R14.
+
+## Owner decisions for the first replacement slice (2026-11-19)
+
+Source: product owner, answered in the Nimbalyst decision prompt on 2026-11-19. These are authorized decisions, not recommendations. Recommendations offered in the prompt were not all selected.
+
+1. **First workflow (spec open question 1):** agent execution and learning workflow. Links: R3, R4, R9. Task `high_feature-deliver-selected-agent-execution-and-learning-workflow` is the workflow task. Its child spec is still required (see the vertical-slice task).
+2. **Deployment profile (spec open question 2):** shared self-hosted. Links: R6, R7 (shared messaging is in scope). Local-first and offline requirements from `docs/platform/product.md` still apply. Remote trust boundaries must be defined explicitly. Lane C (shared messaging) is therefore in scope for the first slice.
+3. **Runtime strategy (spec open question 3):** deterministic fake adapter first, then a bounded native runtime. External harness orchestration (Claude Code, Codex) is not enabled in the first slice. Links: R4, R9. Tasks: `high_feature-define-runtime-adapter-and-fake-conformance-suite`, `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting`.
+4. **Identity hierarchy (spec open question 4):** single organization. Agent principals are scoped per project, with grants and revocation. Links: R5. Multi-tenant hierarchy is out of scope for the first slice.
+
+**Still UNKNOWN (owner and review trigger to be named by the owner):** target cohort and success outcome; incumbent baseline workflow and pinned version; NFR thresholds (performance, reliability, security, retention); migration and cutover appetite, rollback authority; support model; exact DeepSeek Harness and Orca identity and version. Do not infer thresholds for these.
