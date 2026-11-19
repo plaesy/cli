@@ -13,16 +13,18 @@ Use this before any deployment of the shared profile. Each gate names the comman
 | Markdown | `plaesy validate markdown docs .plaesy --no-baseline` | Passes |
 | Task references | `plaesy tasks check <task>` for every backlog task | Passes |
 | Lockfile | `cargo build --locked` | Passes |
+| Process-kill recovery | `cargo test --locked --test run_crash_recovery` (kills a real worker process, then recovers) | Passes |
+| Restore drill, synthetic data | `cargo test --locked --test run_crash_recovery` (backup, delete primary, restore, verify) | Passes; the mechanics only, not an operational drill |
 
 ## Gates that are not yet met
 
 These block any real deployment, not the test run.
 
 1. **Container or VM isolation for the native runtime.** The native adapter is a bounded host process. Real tools must not run until it is inside a container or VM. Owner: operations.
-2. **Process-kill crash test.** Crash recovery is tested in-process. A test that kills a real process mid-run and restarts it is still required. Owner: engineering.
+2. **Process-kill crash test on the target host.** The test passes here, but it runs on this machine only. Repeat it on the target host before release. Owner: engineering.
 3. **TLS termination on the target host.** The runbook in `messaging-transport.md` defines it. The host has not been configured or verified. Owner: operations.
 4. **End-to-end test over the transport.** The loopback round trip passes. A test through the proxy on the target host does not exist yet. Owner: engineering.
-5. **Restore drill.** The RPO and RTO in `decisions.md` require a monthly restore drill. No drill has been run. Owner: operations.
+5. **Operational restore drill.** The mechanics pass with synthetic data. The RPO and RTO in `decisions.md` require a monthly drill on the real deployment, timed against the 4-hour RTO. No such drill has been run. Owner: operations.
 
 ## Sign-off
 
