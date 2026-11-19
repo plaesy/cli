@@ -7,6 +7,7 @@
 use crate::adapter::{CancelFlag, Outcome};
 use crate::policy::{self, Block, Effect};
 
+pub mod native;
 pub mod usage;
 
 /// Step budget for one run.

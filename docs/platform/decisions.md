@@ -111,3 +111,12 @@ Gathered for spec open question "exact DeepSeek Harness and Orca product/version
 - **Orca:** the GitHub Releases page for `stablyai/orca` (fetched 2026-11-19) lists desktop tags up to `v1.4.263` (18 Nov 2026). An earlier secondary source cited `v1.4.180` (Aug 2026). That is superseded. Name clash: `araa47/orca` is a different CLI project. Source: https://github.com/stablyai/orca/releases
 - **DeepSeek Harness:** a news article (RuntimeWire, 14 Aug 2026) calls it "Harness v0.1". A separate article describes it as an open-source, plugin-based coding agent. The MIT license and the `dsh` / `@deepseek-ai/dsh` package name appear only in a search summary and are not confirmed by the articles fetched. Sources: https://runtimewire.com/article/deepseek-open-sources-agent-harness-v4-pro-api-price-hike and https://www.mindstudio.ai/blog/deepseek-harness-coding-agent/
 - **Next step (owner):** confirm the exact repository and version to compare. Until then the item stays UNKNOWN.
+
+## Default technical decisions applied (best practice, 2026-11-19, changeable by owner)
+
+The owner asked for best-practice defaults for the open technical choices. These defaults are engineering choices, not owner approvals. Business items (cohort, success outcome, baseline, NFR thresholds, cutover, support, DeepSeek/Orca) are not covered here and stay UNKNOWN.
+
+- **Native runtime:** bounded child-process adapter. Only programs on an explicit allowlist run. The environment is cleared except PATH, SYSTEMROOT, TEMP, TMP. stdin is closed. stdout and stderr are capped at 64 KiB each. Timeout and cancellation kill the process. External effects are off by default. This is a host process, not a sandbox. Container or VM isolation is required before real tools run.
+- **Key distribution:** one HMAC key per deployment and key id, stored in the OS credential store under one service name (`KeyringKeySource`). Keys never appear in envelopes, logs, or the repository. Rotation adds a new key id and retires the old one.
+- **Envelope freshness:** every envelope carries a send time and a random nonce. The receiver refuses nonces seen in the window and envelopes older or newer than 300 seconds. 300 seconds is a proposed default.
+- **Transport:** HTTPS only, TLS 1.2 or later through the existing rustls stack, with the HMAC envelope on top as defense in depth. Not yet implemented. This is the next engineering step.

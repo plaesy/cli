@@ -6,6 +6,7 @@ use std::path::Path;
 use thiserror::Error;
 
 pub mod auth;
+pub mod keys;
 pub mod shared;
 
 const MAX_BODY_BYTES: usize = 64 * 1024;

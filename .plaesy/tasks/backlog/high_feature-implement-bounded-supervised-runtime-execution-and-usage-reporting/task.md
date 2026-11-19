@@ -55,4 +55,4 @@ Implementasikan eksekusi backend yang supervised, bounded, cancellable dan melap
 
 ## Progress (2026-11-19)
 
-Implemented: step budget, cancellation, external-call gate (VS-06, VS-07, VS-08), usage reporting (steps and elapsed time). Cost is not computed: pricing is an owner decision. Remaining: a real native runtime, which needs owner approval of the runtime backend. Status stays backlog until every acceptance criterion passes.
+Implemented: step budget, cancellation, external-call gate (VS-06, VS-07, VS-08), usage reporting (steps and elapsed time), and a bounded native process adapter with allowlist, cleared environment, output cap, timeout, and cancel (external effects off by default). The host-process boundary still needs container or VM isolation before real tools run. Cost is not computed: pricing is an owner decision. Remaining: container or VM isolation and owner approval of the runtime backend. Status stays backlog until every acceptance criterion passes.
