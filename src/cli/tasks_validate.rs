@@ -167,16 +167,23 @@ pub fn is_exempt(item: &checklist::Item) -> bool {
     matches!(item.evidence.as_deref(), Some("build" | "doc"))
 }
 
-/// Whether a run command starts the plaesy binary: a segment of the command line, split on `&&`,
-/// `;`, or `|`, whose first word is `plaesy`, `plaesy.exe`, or `plaesy-repo.exe`.
+/// Whether a run command is behaviour-level evidence: it starts the plaesy binary (a segment whose
+/// first word is `plaesy`, `plaesy.exe`, or `plaesy-repo.exe`), or it runs the crate's tests
+/// (`cargo test`). Segments are split on `&&`, `;`, or `|`.
 #[must_use]
 pub fn invokes_plaesy(run: &str) -> bool {
     let split = run.replace("&&", "\n").replace([';', '|'], "\n");
     split.lines().any(|segment| {
-        segment.split_whitespace().next().is_some_and(|first| {
-            let word = first.trim_matches(|c| c == '"' || c == '\'');
-            word == "plaesy" || word.ends_with("plaesy.exe") || word.ends_with("plaesy-repo.exe")
-        })
+        let mut words = segment.split_whitespace();
+        let first = words
+            .next()
+            .unwrap_or("")
+            .trim_matches(|c| c == '"' || c == '\'');
+        let second = words.next().unwrap_or("");
+        first == "plaesy"
+            || first.ends_with("plaesy.exe")
+            || first.ends_with("plaesy-repo.exe")
+            || (first == "cargo" && second == "test")
     })
 }
 

@@ -46,7 +46,7 @@
       "evidence": "doc"
     },
     {
-      "id": "cargo-focused-tests",
+      "id": "focused-tests",
       "check": "Focused tests matching 'approval_secret' run and at least one passes",
       "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked approval_secret 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
       "expected": ">= 1",

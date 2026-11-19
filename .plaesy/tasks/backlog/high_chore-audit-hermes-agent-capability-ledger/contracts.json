@@ -32,6 +32,30 @@
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "ledger-present",
+      "check": "Capability ledger exists at docs/platform/audits/hermes-agent.md",
+      "run": "test -s docs/platform/audits/hermes-agent.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "ledger-lint",
+      "check": "Ledger passes the markdown linter (plaesy binary)",
+      "run": "plaesy validate markdown docs/platform/audits/hermes-agent.md --no-baseline",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "test"
+    },
+    {
+      "id": "ledger-rows",
+      "check": "Ledger has at least five capability rows",
+      "run": "grep -cE '^\\| ' docs/platform/audits/hermes-agent.md || true",
+      "expected": ">= 5",
+      "status": "pending",
+      "evidence": "doc"
     }
   ]
 }

@@ -30,3 +30,10 @@ fn a_plaesy_segment_counts_as_behaviour_evidence() {
     assert!(invokes_plaesy("\"plaesy.exe\" validate"));
     assert!(!invokes_plaesy("go test ./..."));
 }
+
+#[test]
+fn invokes_plaesy_accepts_cargo_test_runs() {
+    assert!(invokes_plaesy("export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked identity_policy 2>&1 | grep x"));
+    assert!(!invokes_plaesy("cargo build --locked"));
+    assert!(!invokes_plaesy("test -s docs/platform/audits/x.md"));
+}

@@ -32,6 +32,30 @@
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "ledger-present",
+      "check": "Capability ledger exists at docs/platform/audits/figcraft.md",
+      "run": "test -s docs/platform/audits/figcraft.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "ledger-lint",
+      "check": "Ledger passes the markdown linter (plaesy binary)",
+      "run": "plaesy validate markdown docs/platform/audits/figcraft.md --no-baseline",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "test"
+    },
+    {
+      "id": "ledger-rows",
+      "check": "Ledger has at least five capability rows",
+      "run": "grep -cE '^\\| ' docs/platform/audits/figcraft.md || true",
+      "expected": ">= 5",
+      "status": "pending",
+      "evidence": "doc"
     }
   ]
 }
