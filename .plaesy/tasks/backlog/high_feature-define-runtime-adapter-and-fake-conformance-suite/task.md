@@ -62,4 +62,4 @@ Define a minimal adapter contract and executable fake-adapter tests for the chos
 
 ## Progress (2026-11-19)
 
-Implemented: adapter contract, deterministic fake, conformance checks (VS-02, VS-03). Remaining: real backend conformance when one is approved. Status stays backlog until every acceptance criterion passes.
+Implemented: adapter contract, deterministic fake, conformance checks (VS-02, VS-03). Remaining: a real backend conformance run, which needs an owner-approved backend. Status stays backlog until every acceptance criterion passes.

@@ -54,4 +54,4 @@ Persist task/run identities and truthful state, and recover or reconcile interru
 
 ## Progress (2026-11-19)
 
-Implemented: run state machine, write-ahead logging, restart recovery within retry budget (VS-01, VS-02, VS-09, VS-16 partial). Remaining: evidence artifact storage (hash-linked) and operator visibility. Status stays backlog until every acceptance criterion passes.
+Implemented: run state machine, write-ahead log, restart recovery within the retry budget (VS-01, VS-02, VS-09), content-addressed evidence store with hash verification (VS-16 part), read-only status line. Remaining: operator control surface beyond read-only status. Status stays backlog until every acceptance criterion passes.

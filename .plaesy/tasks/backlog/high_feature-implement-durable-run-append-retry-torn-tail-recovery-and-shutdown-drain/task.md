@@ -54,4 +54,4 @@ Implementasikan durability dan recovery run store sesuai kontrak yang disetujui;
 
 ## Progress (2026-11-19)
 
-Implemented: checksummed append-only log, torn-tail report, corruption error (VS-10). Remaining: shutdown drain and retry queue. Status stays backlog until every acceptance criterion passes.
+Implemented: checksummed append-only log with torn-tail report and corruption error (VS-10), shutdown drain that refuses new records, ordered retry queue with dead letters. Remaining: crash tests against a real process kill. Status stays backlog until every acceptance criterion passes.

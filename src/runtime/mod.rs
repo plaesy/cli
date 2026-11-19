@@ -7,6 +7,8 @@
 use crate::adapter::{CancelFlag, Outcome};
 use crate::policy::{self, Block, Effect};
 
+pub mod usage;
+
 /// Step budget for one run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Budget {

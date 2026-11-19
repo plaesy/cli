@@ -58,4 +58,4 @@ Implementasikan approval, secret references dan audit hanya untuk workflow dan m
 
 ## Progress (2026-11-19)
 
-Implemented: secret store with redaction, external-effect approval gate (VS-15). Remaining: audit export and approval persistence. Status stays backlog until every acceptance criterion passes.
+Implemented: secret store with redaction, external-effect approval gate (VS-15), JSON-lines audit export with redaction. Remaining: persisted approval records and an owner-approved approval flow. Status stays backlog until every acceptance criterion passes.

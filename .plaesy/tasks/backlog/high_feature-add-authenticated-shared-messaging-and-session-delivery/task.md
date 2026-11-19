@@ -52,4 +52,4 @@ If the selected workflow needs inter-agent communication, implement project-auth
 
 ## Progress (2026-11-19)
 
-Implemented: in-memory shared inbox with idempotent delivery, lost-ack state, offline queueing, project isolation (VS-11 to VS-14). Remaining: authenticated transport and durable storage. Status stays backlog until every acceptance criterion passes.
+Implemented: shared inbox with idempotent delivery, lost-ack state, offline queueing, project isolation (VS-11 to VS-14), HMAC-SHA256 envelopes, JSON persistence. Remaining: network transport and key distribution. Status stays backlog until every acceptance criterion passes.

@@ -52,4 +52,4 @@ Enforce least-privilege agent/task/project/tool authorization for the selected w
 
 ## Progress (2026-11-19)
 
-Implemented: principals, grants, revocation, audited authz (VS-04, VS-05, VS-14 project scope). Remaining: persistence of identity store and tenancy threat model review. Status stays backlog until every acceptance criterion passes.
+Implemented: principals, grants, revocation, audited authz (VS-04, VS-05, VS-14), JSON persistence with restart test. Threat model draft: `.plaesy/spec/first-replacement-vertical-slice/threat-model.md` (owner review pending). Remaining: owner review of the threat model. Status stays backlog until every acceptance criterion passes.

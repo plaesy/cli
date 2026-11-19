@@ -10,6 +10,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
+pub mod drain;
+
 /// Errors from the run log.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunLogError {

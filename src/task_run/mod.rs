@@ -5,6 +5,8 @@
 
 use crate::runstore::{RunLog, RunLogError};
 
+pub mod status;
+
 /// Lifecycle state of one attempt of a run.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunState {

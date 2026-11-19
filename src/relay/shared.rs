@@ -4,10 +4,11 @@
 //! and returns the stored state. The service reports only what it observed: it never
 //! marks a message as read, and it never claims a session was woken.
 
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Delivery state of one message, as observed by the service.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MessageState {
     /// Stored, waiting for the recipient to be reachable.
     Queued,
@@ -134,9 +135,89 @@ impl SharedInbox {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct SavedEntry {
+    project: String,
+    recipient: String,
+    key: String,
+    state: MessageState,
+    body: String,
+    sends: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SavedInbox {
+    effects: u32,
+    entries: Vec<SavedEntry>,
+}
+
+impl SharedInbox {
+    /// Serializes the inbox for durable storage.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer error, if any.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        let entries = self
+            .entries
+            .iter()
+            .map(|((project, recipient, key), entry)| SavedEntry {
+                project: project.clone(),
+                recipient: recipient.clone(),
+                key: key.clone(),
+                state: entry.state,
+                body: entry.body.clone(),
+                sends: entry.sends,
+            })
+            .collect();
+        serde_json::to_string(&SavedInbox {
+            effects: self.effects,
+            entries,
+        })
+    }
+
+    /// Restores an inbox written by [`SharedInbox::to_json`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the parser error for malformed input.
+    pub fn from_json(text: &str) -> Result<Self, serde_json::Error> {
+        let saved: SavedInbox = serde_json::from_str(text)?;
+        let entries = saved
+            .entries
+            .into_iter()
+            .map(|item| {
+                (
+                    (item.project, item.recipient, item.key),
+                    Entry {
+                        state: item.state,
+                        body: item.body,
+                        sends: item.sends,
+                    },
+                )
+            })
+            .collect();
+        Ok(Self {
+            entries,
+            effects: saved.effects,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shared_messaging_inbox_survives_restart_without_second_effect() {
+        use super::*;
+        let mut inbox = SharedInbox::new();
+        inbox.send("p", "r", RecipientState::Active, "k1", "hello");
+        let mut restored = SharedInbox::from_json(&inbox.to_json().unwrap()).unwrap();
+        assert_eq!(restored.visible("p", "r"), vec!["hello"]);
+        restored.send("p", "r", RecipientState::Active, "k1", "hello");
+        assert_eq!(restored.effects(), 1);
+    }
 
     #[test]
     fn shared_messaging_duplicate_delivery_is_one_effect() {

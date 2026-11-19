@@ -3,10 +3,12 @@
 //! A principal is bound to one project. Grants name tools. A revoked grant stays
 //! recorded so a later denial can say why it was denied.
 
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Stable identifier of an agent principal.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct PrincipalId(String);
 
 impl PrincipalId {
@@ -24,7 +26,8 @@ impl PrincipalId {
 }
 
 /// Stable identifier of a project.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ProjectId(String);
 
 impl ProjectId {
@@ -42,7 +45,7 @@ impl ProjectId {
 }
 
 /// One agent principal, bound to one project.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Principal {
     project: ProjectId,
     grants: BTreeSet<String>,
@@ -90,7 +93,7 @@ impl std::fmt::Display for IdentityError {
 impl std::error::Error for IdentityError {}
 
 /// Holds principals and their grants for the organization.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct IdentityStore {
     principals: BTreeMap<PrincipalId, Principal>,
 }
@@ -160,9 +163,44 @@ impl IdentityStore {
     }
 }
 
+impl IdentityStore {
+    /// Serializes the store for durable storage.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer error, if any.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    /// Restores a store written by [`IdentityStore::to_json`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the parser error for malformed input.
+    pub fn from_json(text: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(text)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identity_policy_store_survives_restart_via_json() {
+        use super::*;
+        let mut store = IdentityStore::new();
+        let id = PrincipalId::new("agent-1");
+        store.register(id.clone(), ProjectId::new("x")).unwrap();
+        store.grant(&id, "shell").unwrap();
+        store.revoke(&id, "shell").unwrap();
+        let restored = IdentityStore::from_json(&store.to_json().unwrap()).unwrap();
+        let principal = restored.get(&id).unwrap();
+        assert!(!principal.has_grant("shell"));
+        assert!(principal.was_revoked("shell"));
+        assert_eq!(principal.project().as_str(), "x");
+    }
 
     #[test]
     fn identity_policy_grant_then_revoke_is_recorded() {

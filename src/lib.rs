@@ -14,6 +14,7 @@ pub mod decisions;
 pub mod delegate;
 pub mod designlint;
 pub mod evals;
+pub mod evidence;
 pub mod exclude;
 pub mod expected;
 pub mod files;
