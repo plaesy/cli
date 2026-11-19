@@ -80,3 +80,29 @@ fn shared_messaging_transport_round_trip_over_loopback() {
     assert!(body.contains("Queued"));
     assert_eq!(svc.effects(), 1);
 }
+
+#[test]
+fn shared_messaging_transport_key_rotation_overlap_then_retire() {
+    let mut keys = StaticKeySource::new();
+    keys.insert("k1", b"deployment-key");
+    keys.insert("k2", b"rotated-key");
+    let svc = Service::new(keys, 300);
+    let old = envelope("n-rot-1", 1000);
+    let new = seal(
+        b"rotated-key",
+        "k2",
+        "agent-1",
+        "project-a",
+        "agent-2",
+        1000,
+        "n-rot-2",
+        "hi",
+    );
+    assert_eq!(handle(&svc, &old, 1000).0, 202);
+    assert_eq!(handle(&svc, &new, 1000).0, 202);
+    let mut retired = StaticKeySource::new();
+    retired.insert("k2", b"rotated-key");
+    let svc2 = Service::new(retired, 300);
+    assert_eq!(handle(&svc2, &old, 1000).0, 401);
+    assert_eq!(handle(&svc2, &new, 1000).0, 202);
+}

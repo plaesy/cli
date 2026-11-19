@@ -55,6 +55,11 @@ impl StaticKeySource {
     pub fn insert(&mut self, key_id: &str, key: &[u8]) {
         self.keys.insert(key_id.to_owned(), key.to_vec());
     }
+
+    /// Retires a key. Envelopes signed with it are refused from now on.
+    pub fn remove(&mut self, key_id: &str) {
+        self.keys.remove(key_id);
+    }
 }
 
 impl KeySource for StaticKeySource {
