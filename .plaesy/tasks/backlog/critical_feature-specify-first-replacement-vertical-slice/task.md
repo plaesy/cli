@@ -1,6 +1,6 @@
 ---
 spec: plaesy-agent-platform
-topic: plaesy-agent-platform
+topic: first-replacement-vertical-slice
 title: Specify first replacement vertical slice
 phase: implement
 status: backlog
@@ -33,10 +33,14 @@ Produce an implementable child spec for one owner-selected workflow with observa
 
 ## Acceptance criteria
 
-- [ ] Scope identifies exactly one owner-selected workflow and deployment profile; if not yet selected, record UNKNOWN, owner, and review trigger and leave this task open.
-- [ ] Every requirement has a unique stable ID and a Given/When/Then acceptance scenario with observable expected outcome.
-- [ ] Failure, authorization, cancellation/restart, persistence, side effects, and evidence behavior are specified for the selected workflow.
-- [ ] Non-goals/open questions are explicit; no unsupported parity claims.
-- [ ] Acceptance test matrix maps every requirement ID to at least one focused test/evidence item, including denial and failure/recovery cases where applicable.
-- [ ] Child-spec artifact(s) are linked from the canonical spec/plan, and each local reference resolves to an existing file; out-of-repo references are explicitly identified.
+- [x] Scope identifies exactly one owner-selected workflow and deployment profile; if not yet selected, record UNKNOWN, owner, and review trigger and leave this task open.
+- [x] Every requirement has a unique stable ID and a Given/When/Then acceptance scenario with observable expected outcome.
+- [x] Failure, authorization, cancellation/restart, persistence, side effects, and evidence behavior are specified for the selected workflow.
+- [x] Non-goals/open questions are explicit; no unsupported parity claims.
+- [x] Acceptance test matrix maps every requirement ID to at least one focused test/evidence item, including denial and failure/recovery cases where applicable.
+- [x] Child-spec artifact(s) are linked from the canonical spec/plan, and each local reference resolves to an existing file; out-of-repo references are explicitly identified.
 - [ ] No implementation begins until owner-dependent choices and all referenced contracts are resolved or explicitly scoped out.
+
+## Status
+
+Draft written at `.plaesy/spec/first-replacement-vertical-slice/spec.md`. The task stays in backlog until the owner approves the draft. The last acceptance item is open until then.

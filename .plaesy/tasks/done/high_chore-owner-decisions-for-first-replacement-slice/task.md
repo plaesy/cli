@@ -4,7 +4,7 @@ topic: plaesy-agent-platform
 title: Owner decisions for first replacement slice
 phase: 0
 due: none
-status: backlog
+status: done
 ---
 
 # Owner decisions for first replacement slice
@@ -38,12 +38,12 @@ Record the product owner's first replacement workflow, target cohort, deployment
 
 ## Acceptance criteria
 
-- [ ] First workflow/order, target cohort, success outcome, and incumbent baseline/version are recorded or explicitly UNKNOWN with accountable owner and review trigger.
+- [x] First workflow/order, target cohort, success outcome, and incumbent baseline/version are recorded or explicitly UNKNOWN with accountable owner and review trigger.
 
-- [ ] Every listed product has an explicit replacement/integration/exclusion disposition, or remains UNKNOWN; no implied approval.
-- [ ] Deployment/platform, runtime, UI/Rust boundary, identity/tenancy, and support profile are recorded or explicitly UNKNOWN with owner.
+- [x] Every listed product has an explicit replacement/integration/exclusion disposition, or remains UNKNOWN; no implied approval.
+- [x] Deployment/platform, runtime, UI/Rust boundary, identity/tenancy, and support profile are recorded or explicitly UNKNOWN with owner.
 
-- [ ] Measurable NFRs, migration/cutover appetite, rollback authority, and exclusions are recorded or explicitly UNKNOWN with owner; do not invent thresholds.
-- [ ] Exact DeepSeek Harness and Orca identity/version are resolved from evidence or retained as UNKNOWN.
+- [x] Measurable NFRs, migration/cutover appetite, rollback authority, and exclusions are recorded or explicitly UNKNOWN with owner; do not invent thresholds.
+- [x] Exact DeepSeek Harness and Orca identity/version are resolved from evidence or retained as UNKNOWN.
 
-- [ ] Every authorized decision links to applicable spec requirements and preserves prior decision history; recommendations are clearly distinguished from decisions.
+- [x] Every authorized decision links to applicable spec requirements and preserves prior decision history; recommendations are clearly distinguished from decisions.

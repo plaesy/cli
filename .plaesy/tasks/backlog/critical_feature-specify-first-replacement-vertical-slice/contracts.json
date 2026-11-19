@@ -32,6 +32,30 @@
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"
+    },
+    {
+      "id": "child-spec-present",
+      "check": "Child vertical-slice spec exists",
+      "run": "test -s .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "child-spec-no-tbd",
+      "check": "Child spec has no TBD placeholders",
+      "run": "! grep -q 'TBD' .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": "pass",
+      "status": "pending",
+      "evidence": "doc"
+    },
+    {
+      "id": "child-spec-scenarios",
+      "check": "Child spec defines at least 16 VS scenarios",
+      "run": "grep -cE '^\\| VS-[0-9]+ ' .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": ">= 16",
+      "status": "pending",
+      "evidence": "doc"
     }
   ]
 }

@@ -86,3 +86,20 @@ Source: product owner, answered in the Nimbalyst decision prompt on 2026-11-19. 
 4. **Identity hierarchy (spec open question 4):** single organization. Agent principals are scoped per project, with grants and revocation. Links: R5. Multi-tenant hierarchy is out of scope for the first slice.
 
 **Still UNKNOWN (owner and review trigger to be named by the owner):** target cohort and success outcome; incumbent baseline workflow and pinned version; NFR thresholds (performance, reliability, security, retention); migration and cutover appetite, rollback authority; support model; exact DeepSeek Harness and Orca identity and version. Do not infer thresholds for these.
+
+## Owner decision status: remaining items recorded as UNKNOWN (2026-11-19)
+
+These items are not decided. Each has an accountable owner and a review trigger. No threshold or disposition is inferred.
+
+| Item | Status | Owner | Review trigger |
+| --- | --- | --- | --- |
+| Target cohort and success outcome | UNKNOWN | product owner | before the first implementation claim |
+| Incumbent baseline product and pinned version for agent execution | UNKNOWN | product owner with research owner | after `high_chore-recover-and-compare-incumbent-research` |
+| Replacement, integration, or exclusion for each listed product: Hermes Agent, Paperclip, DeepSeek Harness, Nimbalyst, Orca, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald-OS, OpenProject | UNKNOWN until each audit task closes | product owner | when each `high_chore-audit-*` task closes |
+| Measurable NFRs: performance, reliability, security, accessibility, retention | UNKNOWN | product and operations owner | before the NFR task closes |
+| Migration and cutover appetite, rollback authority | UNKNOWN | product owner | before R13 gate work |
+| Support model | UNKNOWN | product and operations owner | before the first release |
+| Exact DeepSeek Harness and Orca identity and version | UNKNOWN | research owner | when the audit tasks for those products start |
+| UI and Rust boundary beyond the decided Dioxus web surface | UNKNOWN | product owner with architecture owner | before the desktop or mobile surface is planned |
+
+Decided on 2026-11-19: first workflow, deployment profile, runtime strategy, identity direction (section above).

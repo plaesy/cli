@@ -134,6 +134,7 @@ The evidence audit must refine capability families into deduplicated leaf tasks 
 - `docs/platform/agent-collaboration.md` — local Relay, collaboration, presence and file-claim boundaries.
 - `docs/platform/automation.md` — autonomous execution, memory and policy requirements.
 - `docs/commands/tasks.md` — Plaesy task lifecycle, dependencies, validation and local storage behavior.
+- `.plaesy/spec/first-replacement-vertical-slice/spec.md` — child spec for the first replacement slice (draft for owner review; requirements VS-01 to VS-16 and acceptance matrix).
 - `spec/files-realtime-collaboration/spec.md` — existing narrower file collaboration spec; remains separate and is not superseded by this program spec.
 
 ## Requirement traceability

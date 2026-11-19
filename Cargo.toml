@@ -116,3 +116,6 @@ harness = false
 # esaxx-rs hard-codes a static MSVC CRT (/MT), which conflicts with the /MD objects of ort/cxx on Windows.
 [patch.crates-io]
 esaxx-rs = { path = "vendor/esaxx-rs" }
+
+[workspace]
+members = ["crates/flow-editor"]

@@ -24,7 +24,7 @@ Build the web visual flow editor in Dioxus on top of the Rust IR core, using a s
 
 ## Dependencies
 - `high_feature-implement-visual-flow-ir-core-in-rust`
-- Integrator adds the crate to the workspace before claim (see Parallel execution).
+- Workspace registration is done (2026-11-19): `crates/flow-editor` is a skeleton member of the workspace with no dependencies yet.
 
 ## Acceptance criteria
 - [ ] A flow saved from the editor loads back as the same IR.
@@ -34,7 +34,7 @@ Build the web visual flow editor in Dioxus on top of the Rust IR core, using a s
 ## Parallel execution
 
 - Lane: H (visual flow IR, codegen and editor (R16))
-- Owned paths (exclusive write): `crates/flow-editor/` (new crate). Integrator first adds it to `[workspace] members` in `Cargo.toml` and refreshes `Cargo.lock`.
+- Owned paths (exclusive write): `crates/flow-editor/` (skeleton exists, registered in the workspace). This task owns it from here on.
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked -p flow-editor` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

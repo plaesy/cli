@@ -35,7 +35,7 @@ The planning effort is not complete until every requested incumbent has an audit
 
 ### Phase 1 — specify a runnable vertical slice
 
-1. Create a child spec for the chosen workflow with concrete actors, state transitions, data, threat model, adapter behavior, failure recovery and exact acceptance tests.
+1. Create a child spec for the chosen workflow with concrete actors, state transitions, data, threat model, adapter behavior, failure recovery and exact acceptance tests. Draft: `.plaesy/spec/first-replacement-vertical-slice/spec.md` (awaiting owner approval).
 2. Define a minimal run/task/adapter contract and explicit supported capability matrix; separate backend-provided behavior from Plaesy-owned state/policy.
 3. Build a fake adapter and deterministic fixtures for success, denial, timeout, cancellation, crash, duplicate delivery, lost acknowledgement and restart recovery.
 
@@ -120,7 +120,8 @@ Practice references (community sources, not official Git guidance): one worktree
 - Decided by owner, 2026-11-19 (see `docs/platform/decisions.md`): workflow = agent execution and learning; profile = shared self-hosted; runtime = fake adapter, then bounded native runtime; identity = single organization with project-scoped agent principals.
 - Still open, owner: target cohort and success outcome, incumbent baseline version, NFR thresholds, cutover appetite, support model, DeepSeek and Orca identity. Tasks that need them stay blocked.
 - Next gate: the child vertical-slice spec (`critical_feature-specify-first-replacement-vertical-slice`). Owned paths for the blocked implementation tasks stay `OWNERSHIP-UNASSIGNED` until that spec is approved and the integrator assigns them.
-- Open, integrator: assign owned paths for the unassigned tasks after the vertical-slice spec. Add the planned flow-editor crate to the Cargo workspace before the Dioxus task is claimed.
+- Done, integrator, 2026-11-19: `crates/flow-editor` is registered as a skeleton workspace member, so the Dioxus task has its owned path.
+- Open, integrator: assign owned paths for the unassigned tasks after the vertical-slice spec is approved.
 
 ## Verification strategy
 
