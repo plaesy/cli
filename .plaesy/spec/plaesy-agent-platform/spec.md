@@ -121,7 +121,7 @@ The evidence audit must refine capability families into deduplicated leaf tasks 
 - DECIDED 2026-11-19: shared self-hosted profile, local-first requirements still apply. Owner: product owner.
 - DECIDED 2026-11-19: deterministic fake adapter first, then bounded native runtime; external harnesses not enabled in the first slice. Owner: product owner.
 - DECIDED 2026-11-19: single organization, project-scoped agent principals with grants and revocation. Owner: product owner.
-- UNKNOWN: Which operational SLO, retention, backup, restore and support profile is required for first release? Owner: product/operations owner.
+- UNKNOWN (owner to ratify): operational SLO, retention, backup, restore, and support profile. Proposed in docs/platform/proposed-defaults-2026-11-19.md; not ratified.
 - UNKNOWN (evidence gathered 2026-11-19, see docs/platform/decisions.md): exact DeepSeek Harness and Orca product/version intended for comparison. Owner: research owner to confirm.
 - UNKNOWN: Whether earlier comparative research exists outside the inspected repository paths. Owner: research owner; link it before repeating research.
 
