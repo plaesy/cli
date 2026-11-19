@@ -26,13 +26,13 @@ Host: Ubuntu 24.04, 2 vCPU, 7.4 GB RAM. Domain: `plaesy.mahbubzulkarnain.com`, s
 | Full test suite on Linux | `cargo test --locked --all` on the host: 827 passed, 0 failed | Passes |
 | TLS termination on target host | Caddy site `plaesy.mahbubzulkarnain.com`, TLS 1.2 accepted with a valid certificate, TLS 1.1 refused | Passes |
 | End-to-end through the proxy | Public HTTPS: valid envelope 202, replay 409, bad tag 401, expired 401, `GET` 404, body over 64 KB rejected with 400 | Passes |
+| Container isolation on target host | `cargo test --locked bounded_runtime_container` on ubuntu@43.157.205.91 (docker available): 15 passed, including live isolation, timeout, and cancel tests, commit `0421445` | Passes |
 
 ## Gates that are not yet met
 
 These still block a real deployment.
 
-1. **Container or VM isolation for the native runtime.** Still open. `ContainerizedAdapter` and `ContainerSpec` in `src/runtime/container.rs` build a `docker run` with no network, a read-only root, all capabilities dropped, `no-new-privileges`, a non-root user, pid, memory, and CPU limits, and a tmpfs work directory. The adapter refuses to run unless external effects are enabled. Verified by unit tests only (`cargo test --locked bounded_runtime_container`, 12 tests passing on 2026-11-19): the exact argument vector, user and limit validation, the disabled and image-allowlist refusals, spawn failure, and cancel before start. Not verified: a live container. The three live tests (isolation probe, timeout removes the container, cancel stops the run) skip when `docker info` fails. Docker was not available on the development machine, so they did not run. The gate stays open until those three pass on the target host. Owner: operations.
-2. **Operational restore drill.** The restore mechanics pass with synthetic data on this host. The inbox is in memory and no production data exists, so there is nothing to restore yet. A monthly drill against real data, timed against the 4-hour RTO, has not been run. Owner: operations.
+1. **Operational restore drill.** The restore mechanics pass with synthetic data on this host. The inbox is in memory and no production data exists, so there is nothing to restore yet. A monthly drill against real data, timed against the 4-hour RTO, has not been run. Owner: operations.
 
 ## Sign-off
 
