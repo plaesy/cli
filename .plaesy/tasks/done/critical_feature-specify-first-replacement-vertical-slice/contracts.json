@@ -1,0 +1,103 @@
+{
+  "id": "critical_feature-specify-first-replacement-vertical-slice",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/*/critical_feature-specify-first-replacement-vertical-slice/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/critical_feature-specify-first-replacement-vertical-slice/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'critical_feature-specify-first-replacement-vertical-slice' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/spec-index-lists-task.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/*/critical_feature-specify-first-replacement-vertical-slice/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/critical_feature-specify-first-replacement-vertical-slice/task.md && grep -q '^status:' .plaesy/tasks/*/critical_feature-specify-first-replacement-vertical-slice/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/frontmatter-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "child-spec-present",
+      "check": "Child vertical-slice spec exists",
+      "run": "test -s .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/child-spec-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "child-spec-no-tbd",
+      "check": "Child spec has no TBD placeholders",
+      "run": "! grep -q 'TBD' .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/child-spec-no-tbd.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "child-spec-scenarios",
+      "check": "Child spec defines at least 16 VS scenarios",
+      "run": "grep -cE '^\\| VS-[0-9]+ ' .plaesy/spec/first-replacement-vertical-slice/spec.md",
+      "expected": ">= 16",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-specify-first-replacement-vertical-slice/child-spec-scenarios.out",
+        "exit_code": 0,
+        "sha256": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017"
+      },
+      "evidence": "doc"
+    }
+  ]
+}
