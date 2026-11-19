@@ -45,7 +45,7 @@ Enforce least-privilege agent/task/project/tool authorization for the selected w
 ## Parallel execution
 
 - Lane: B (identity, policy and secrets)
-- Owned paths (exclusive write): `OWNERSHIP-UNASSIGNED`: the integrator assigns owned paths from the approved vertical-slice spec before any agent claims this task.
+- Owned paths (exclusive write): `src/identity/` (new: principals, grants, revocation), `src/authz/` (new: action checks). Assigned 2026-11-19 from the approved child spec, section 9.
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked identity_policy` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

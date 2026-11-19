@@ -1,6 +1,6 @@
 # Spec: first replacement vertical slice (agent execution)
 
-Status: draft for owner review. Not approved. Implementation claims stay blocked until the owner approves this draft. The integrator then assigns owned paths (section 9).
+Status: approved by the product owner on 2026-11-19. Owned paths in section 9 were assigned to their tasks on the same date. Owner open questions in section 10 stay UNKNOWN.
 Parent: `.plaesy/spec/plaesy-agent-platform/spec.md` (requirements R2–R7, R9).
 Task: `critical_feature-specify-first-replacement-vertical-slice`.
 
