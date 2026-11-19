@@ -1,6 +1,6 @@
 # Proposed defaults for owner items (2026-11-19)
 
-Status: PROPOSED by the assistant from public research. Not ratified. The product owner must accept, change, or reject each item. Until then the owner items in `docs/platform/decisions.md` and the spec stay open. The assistant does not record these as owner decisions.
+Status: ADOPTED as delegated decisions on 2026-11-19 (see `docs/platform/decisions.md`, section "Delegated decisions"). The owner may revoke any item. The original reasoning is kept below.
 
 Why these are proposals: the cohort, the incumbent in daily use, and the business meaning of success depend on facts only the owner has. Research gives patterns and ranges, not the owner's answer.
 

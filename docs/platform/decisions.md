@@ -120,3 +120,17 @@ The owner asked for best-practice defaults for the open technical choices. These
 - **Key distribution:** one HMAC key per deployment and key id, stored in the OS credential store under one service name (`KeyringKeySource`). Keys never appear in envelopes, logs, or the repository. Rotation adds a new key id and retires the old one.
 - **Envelope freshness:** every envelope carries a send time and a random nonce. The receiver refuses nonces seen in the window and envelopes older or newer than 300 seconds. 300 seconds is a proposed default.
 - **Transport:** HTTPS only, TLS 1.2 or later through the existing rustls stack, with the HMAC envelope on top as defense in depth. Not yet implemented. This is the next engineering step.
+
+## Delegated decisions (2026-11-19, revocable by the owner)
+
+The owner delegated all remaining decisions to the assistant: "semuanya otomatis, tidak ada yang menunggu keputusan user". Each decision below is recorded as delegated, not as a personal approval. The owner may revoke any of them, and a revocation reopens the affected work.
+
+1. **Target cohort:** 3 to 5 people who already run agent workflows on the same project, with one operator as primary user. Source of the proposal: `docs/platform/proposed-defaults-2026-11-19.md`, section 1.
+2. **Success outcome:** 100 synthetic runs with zero false successes, all ten failure injections passing, and one real recovery after an injected restart. Section 2 of the same document.
+3. **Incumbent baseline:** Hermes Agent, pinned at commit `40d1e95f37e409f9f618f32c170661c66b86a4f4`. Basis: the repository already holds the most complete evidence for this product (`docs/platform/hermes-capability-audit.md`, `hermes-api-acceptance.md`), and it is listed first in the spec. The repository cannot show which product the owner uses day to day. If that differs, revoke this decision and name the product.
+4. **Comparison targets:** Orca `stablyai/orca` at desktop tag `v1.4.263` (18 Nov 2026). DeepSeek Harness at `deepseek-ai/deepseek-harness`, npm `@deepseek-ai/dsh`. The latest published tag seen on 19 Nov 2026 is `v0.2.2-rc.5` (pre-release, 18 Nov). The baseline pins the exact tag when it is taken.
+5. **NFR thresholds:** control-plane availability 99.9% over 28 days. Read latency under 200 ms at p95, using threshold-count SLIs for the error budget. RPO at most 1 hour and RTO at most 4 hours for run state. Monthly restore drill. Run-log and evidence retention 30 days.
+6. **Cutover:** no big-bang cutover. Parallel run for 2 weeks. Rollback criteria and variance limits are written before the run starts. Reconcile after each batch and before cutover. Two or three rehearsals. Incumbent decommissioned 10 business days after a clean exit.
+7. **Support model:** business hours for the first slice, one named owner. Sev 1 gets a response within 4 hours on working days. Sev 2 gets the next business day.
+
+Not decided here: legal or compliance retention, which needs counsel input, and any product or pricing choice not listed above.
