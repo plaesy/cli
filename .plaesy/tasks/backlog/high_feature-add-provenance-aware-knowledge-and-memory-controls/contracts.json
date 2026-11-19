@@ -35,8 +35,8 @@
     },
     {
       "id": "ownership-assigned",
-      "check": "File ownership is assigned (no OWNERSHIP-UNASSIGNED marker)",
-      "run": "! grep -q 'OWNERSHIP-UNASSIGNED' .plaesy/tasks/*/high_feature-add-provenance-aware-knowledge-and-memory-controls/task.md",
+      "check": "File ownership is assigned (no OWNERSHIP-UNASSIGNED or DEFERRED marker)",
+      "run": "! grep -qE 'OWNERSHIP-UNASSIGNED|DEFERRED' .plaesy/tasks/*/high_feature-add-provenance-aware-knowledge-and-memory-controls/task.md",
       "expected": "pass",
       "status": "pending",
       "evidence": "doc"

@@ -47,7 +47,7 @@ Bangun migrasi dan rekonsiliasi sumber hanya setelah workflow, sumber, dan cutov
 ## Parallel execution
 
 - Lane: D (run and task persistence, recovery)
-- Owned paths (exclusive write): `OWNERSHIP-UNASSIGNED`: the integrator assigns owned paths from the approved vertical-slice spec before any agent claims this task.
+- Owned paths (exclusive write): `DEFERRED`: out of the first replacement slice (child spec section 3, approved 2026-11-19). The owner reactivates this task to assign owned paths. Until then no agent may claim it.
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
 - Focused tests: `cargo test --locked migration` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.
