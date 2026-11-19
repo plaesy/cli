@@ -104,15 +104,17 @@ pub enum Status {
     Backlog,
     Todo,
     Doing,
+    Review,
     Done,
     Blocked,
 }
 
 /// All statuses, in lifecycle order.
-pub const STATUSES: [Status; 5] = [
+pub const STATUSES: [Status; 6] = [
     Status::Backlog,
     Status::Todo,
     Status::Doing,
+    Status::Review,
     Status::Done,
     Status::Blocked,
 ];
@@ -125,6 +127,7 @@ impl Status {
             Self::Backlog => "backlog",
             Self::Todo => "todo",
             Self::Doing => "doing",
+            Self::Review => "review",
             Self::Done => "done",
             Self::Blocked => "blocked",
         }

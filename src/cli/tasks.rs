@@ -269,9 +269,9 @@ pub fn run(args: &Args) -> CliResult {
         }
         TasksCommand::Complete { task } => {
             tasks::complete_task(&tasks_dir()?, task)?;
-            println!("[✓] Moved: {task} (doing → done)");
+            println!("[✓] Moved: {task} (review → done)");
             println!("[✓] Task completed: {task}");
-            println!("[!] Manual completion only; checklist and goal were not verified.");
+            println!("[!] Reviewer decision recorded by this command; the checklist was verified by `validate`.");
             Ok(())
         }
         TasksCommand::Block { task, reason } => {

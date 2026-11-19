@@ -566,6 +566,11 @@ fn add_then_start_complete_moves_the_folder_and_status() {
     start_task(&tasks, &name).unwrap();
     let (status, _) = find_task(&tasks, &name).unwrap();
     assert_eq!(status, Status::Doing);
+    assert!(
+        complete_task(&tasks, &name).is_err(),
+        "complete must refuse a doing task"
+    );
+    move_task(&tasks, &name, Status::Doing, Status::Review).unwrap();
     complete_task(&tasks, &name).unwrap();
     let (status, path) = find_task(&tasks, &name).unwrap();
     assert_eq!(status, Status::Done);

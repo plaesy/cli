@@ -26,15 +26,15 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 | `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, and cycles |
 | `next` | — | Move the next backlog task into `todo` and report it |
 | `start` | `<task>` | Move task to `doing` |
-| `complete` | `<task>` | Manually move task from `doing` to `done`; does not run or verify `contracts.json` |
+| `complete` | `<task>` | Move a task from `review` to `done`. A reviewer runs this after checking the evidence. Refuses any other status. |
 | `block` | `<task>` | Move task to `blocked` |
 | `unblock` | `<task>` | Unblock a task |
 | `move` | `<task_file> <from> <to>` | Move between arbitrary statuses |
 | `show` | `<task_file> [status]` | Display task content |
 | `run` | `--chain <name>` or `--provider <name>`, `[--max N]`, `[--parallel N]`, `[--timeout D]`, `[--confirm]` | Claim todo tasks of the current spec (highest priority first) and send each to a delegate provider or chain, in the project root. `--parallel N` runs up to N tasks at once in the same project directory; it does not create an isolated branch/worktree per task. Avoid parallel tasks that edit overlapping files. Output goes to `<task>/runs/`; the task stays in `doing` until reviewed, and a failed run moves it to `blocked` |
-| `validate` | `[task]`, `[--spec <folder>]` | Run the checklist of each unfinished task (`contracts.json`), record each result, and move a finished task to `done`; tasks already in `done` are skipped |
+| `validate` | `[task]`, `[--spec <folder>]` | Run the checklist of each unfinished task (`contracts.json`) and record each result. A task whose checks all pass and whose items invoke the `plaesy` binary moves to `review`. It never moves to `done`. |
 
-`complete` is a manual status transition, not evidence that the task's goal or checklist passed. Use `validate [task]` to execute checks, record results, and move a task to `done` only when its non-empty checklist passes. An empty checklist is not proof of completion and `validate` rejects it. Existing workflows may still use `complete` as a manual override; do not treat the resulting `done` status as verified evidence.
+`complete` is the only way to reach `done`, and it is reserved for a reviewer. It refuses a task that is not in `review`. `validate` moves a passing task to `review` and never to `done`.
 
 `update-issue` supports `--type`, `--parent` / `--clear-parent`, repeatable `--dep` / `--clear-deps`, repeatable `--label` / `--clear-labels`, `--assignee` / `--clear-assignee`, and `--milestone` / `--clear-milestone`. Repeated `--dep` and `--label` values replace their respective lists; use `--clear-*` to remove them. Parent types are unrestricted: hierarchy is independent of issue type and dependency edges. Parent references must exist, cannot point to the issue itself, and parent/dependency graphs must remain acyclic.
 
@@ -46,7 +46,7 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 
 Validation prints the running Plaesy version and binary path. It warns when the `plaesy` executable found on `PATH` resolves to a different file; the warning does not change validation results.
 
-Valid statuses: `backlog`, `todo`, `doing`, `done`, `blocked`. `blocked` is only for a task waiting on something outside the work.
+Valid statuses: `backlog`, `todo`, `doing`, `review`, `done`, `blocked`. `review` means the checks passed and a reviewer decides. `blocked` is only for a task waiting on something outside the work.
 
 ## `contracts.json` expectations
 

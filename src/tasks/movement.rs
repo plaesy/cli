@@ -261,13 +261,13 @@ pub fn start_task(tasks_dir: &Path, task: &str) -> Result<(), TasksError> {
     move_task_as(tasks_dir, "start", task, Status::Todo, Status::Doing)
 }
 
-/// `doing` → `done`.
+/// `review` → `done`. Only a reviewer completes a task; `validate` never does.
 ///
 /// # Errors
 ///
 /// As [`move_task`], with the `complete` verb in messages.
 pub fn complete_task(tasks_dir: &Path, task: &str) -> Result<(), TasksError> {
-    move_task_as(tasks_dir, "complete", task, Status::Doing, Status::Done)
+    move_task_as(tasks_dir, "complete", task, Status::Review, Status::Done)
 }
 
 /// `doing` → `blocked`, appending the reason to `task.md`.

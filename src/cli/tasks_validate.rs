@@ -136,7 +136,7 @@ fn validate_task(
     if !checklist::is_done(&list) {
         return Err(Box::new(NotPassed::Unfinished));
     }
-    if contract.status != tasks::Status::Done {
+    if !matches!(contract.status, tasks::Status::Done | tasks::Status::Review) {
         let mut gaps = 0usize;
         for item in &list.checklist {
             if !is_exempt(item) && !invokes_plaesy(&item.run) {
@@ -154,9 +154,9 @@ fn validate_task(
             tasks_dir,
             &contract.task,
             contract.status,
-            tasks::Status::Done,
+            tasks::Status::Review,
         )?;
-        println!("  moved to done");
+        println!("  moved to review; a reviewer completes it with `plaesy tasks complete`");
     }
     Ok(())
 }
