@@ -3,7 +3,7 @@
 - Status: draft untuk persetujuan owner. Belum ada fase yang dimulai.
 - Tanggal: 2026-11-21
 - Dasar: ADR 0002, 0003, 0004, 0005, 0006, 0008, 0009, 0010, 0011
-- Sifat: rencana, bukan klaim bahwa ada yang sudah diimplementasi. Keadaan saat ini: skema dan contoh ada, validasi semantik hanya prototipe Node, `domain/*` dan crate Rust baru belum ada.
+- Sifat: rencana, bukan klaim bahwa ada yang sudah diimplementasi. Keadaan saat ini (2026-11-21): skema dan contoh ada; validator semantik Node adalah prototipe pembanding. Workspace `plaesy-*` di `crates/plaesy/` sudah ada (ADR 0003 langkah 10): `domain/*` berisi aturan semantik, `service` dan adapter `memory`, `relay`, `runtime`, `design-ir` ada. Belum ada: adapter sqlite terpisah, http-client, sync, codegen flow/data/api/app, interface http, ws, mcp, dan acp.
 
 ## Prinsip
 
