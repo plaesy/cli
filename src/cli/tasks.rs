@@ -268,10 +268,23 @@ pub fn run(args: &Args) -> CliResult {
             Ok(())
         }
         TasksCommand::Complete { task } => {
-            tasks::complete_task(&tasks_dir()?, task)?;
+            let dir = tasks_dir()?;
+            // A task with no checklist items has nothing `validate` could verify.
+            let unverified = match tasks::find_task(&dir, task) {
+                Some((_, path)) => match crate::checklist::load(&path.join(tasks::CONTRACT_FILE)) {
+                    Ok(list) => list.checklist.is_empty(),
+                    Err(_) => true,
+                },
+                None => true,
+            };
+            tasks::complete_task(&dir, task)?;
             println!("[✓] Moved: {task} (review → done)");
             println!("[✓] Task completed: {task}");
-            println!("[!] Reviewer decision recorded by this command; the checklist was verified by `validate`.");
+            if unverified {
+                println!("[!] Manual completion only; checklist and goal were not verified.");
+            } else {
+                println!("[!] Reviewer decision recorded by this command; the checklist was verified by `validate`.");
+            }
             Ok(())
         }
         TasksCommand::Block { task, reason } => {

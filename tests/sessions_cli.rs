@@ -35,6 +35,10 @@ fn tasks_complete_warns_that_manual_completion_is_unverified() {
     assert!(run(&["tasks", "--spec", "complete-test", "start", task])
         .status
         .success());
+    // `complete` is the reviewer step: the task must reach `review` first.
+    assert!(run(&["tasks", "move", task, "doing", "review"])
+        .status
+        .success());
 
     let output = run(&["tasks", "--spec", "complete-test", "complete", task]);
     assert!(
