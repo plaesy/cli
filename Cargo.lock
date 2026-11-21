@@ -3224,6 +3224,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-http-client"
+version = "0.0.1"
+dependencies = [
+ "plaesy-service",
+ "ureq 3.5.0",
+]
+
+[[package]]
 name = "plaesy-adapter-memory"
 version = "0.0.1"
 dependencies = [

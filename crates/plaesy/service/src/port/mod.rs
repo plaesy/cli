@@ -3,6 +3,8 @@
 //! Dokumen disimpan sebagai JSON per `kind` (nama IR atau konteks, misalnya `flow-ir/1`) dan
 //! `id`. Port ini tidak tahu tentang SQL atau berkas; itu urusan adapter.
 
+pub mod http;
+
 use serde_json::Value;
 use std::fmt;
 
