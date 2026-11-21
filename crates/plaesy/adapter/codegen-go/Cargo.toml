@@ -1,0 +1,15 @@
+[package]
+name = "plaesy-adapter-codegen-go"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Codegen flow-ir/1 ke paket Go dengan laporan kehilangan (ADR 0003: codegen-go)."
+
+[dependencies]
+plaesy-domain-flow = { path = "../../domain/flow" }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
