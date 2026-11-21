@@ -18,6 +18,7 @@ members = [
     "crates/plaesy/adapter/import-sql",
     "crates/plaesy/adapter/import-code-rust",
     "crates/plaesy/plugin/sdk",
+    "crates/plaesy/adapter/codegen-js",
     "crates/plaesy/interface/acp",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",

@@ -3210,6 +3210,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-codegen-js"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-flow",
+ "serde_json",
+]
+
+[[package]]
 name = "plaesy-adapter-design-ir"
 version = "0.0.1"
 dependencies = [
