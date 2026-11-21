@@ -1,6 +1,6 @@
 # ADR 0010: Design IR dan konversi desain-kode (design-ir/1)
 
-- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut). Bagian yang diwarisi dari ADR 0001 sudah diterima lewat delegasi owner (2026-11-18). Implementasi format token DTCG dijadwalkan di Fase 3 rencana.
+- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut). Bagian yang diwarisi dari ADR 0001 sudah diterima lewat delegasi owner (2026-11-18). Format token DTCG sudah diterapkan ke schema dan contoh; korpus 20 fixture sintetis ada (lihat Konfirmasi).
 - Tanggal: 2026-11-21
 - Pengambil keputusan: owner (belum ada persetujuan)
 - Berlaku untuk: `design-ir/1` dan konversi desain, kode, dan IR
@@ -61,7 +61,7 @@ Kind node: `frame`, `rect`, `text`, `image`, `vector`, `instance`, dan `opaque`.
 
 - `tokens`: kelompok `color`, `space`, `radius`, `font`, dan `shadow`. Nama berformat `kategori.nama`, misalnya `color.primary`.
 - Rujukan token harus ada dan kategorinya harus cocok dengan tempat pemakaian (misalnya `color.*` tidak boleh dipakai sebagai `radius`).
-- Keputusan (delegasi, 2026-11-21): format token mengikuti W3C DTCG 2025.10 (`$value`, `$type`, alias dengan `{...}`). Schema dan contoh `design-ir/1` diubah ke DTCG di Fase 3. Sampai itu, contoh di repo masih memakai bentuk internal dan dianggap tertinggal.
+- Keputusan (delegasi, 2026-11-21, sudah diterapkan): format token mengikuti W3C DTCG 2025.10 (`$value`, `$type`, alias dengan `{...}`). Schema dan contoh `design-ir/1` sudah diubah ke bentuk DTCG. Contoh lama dalam bentuk internal sudah dikonversi.
 
 ### Aturan semantik (domain/design)
 
@@ -132,7 +132,9 @@ Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 
 - `docs/adr/tools/check-ir.js` lulus untuk contoh positif dan fixture negatif design.
 - `tools/validate-ir.js` lulus untuk contoh design.
-- Setelah Phase 1 (lihat rencana), round trip struktural diuji pada korpus. Belum ada.
+- `tools/check-ir.js` juga memeriksa 20 fixture korpus (`corpus/design-ir-1/`): bentuk, semantik, dan round trip serialisasi kanonik (ID dan token tidak berubah). Ini bukan round trip ke kode.
+- Fixture negatif semantik (`examples-negative-semantic/design-ir-1/`) menguji aturan kategori token, token yang tidak ada, dan nilai dimension yang salah.
+- Round trip struktural ke kode (desain → IR → kode → IR) belum diuji: adapter codegen belum ada (Fase 3).
 
 ## Konsekuensi
 
@@ -151,5 +153,5 @@ Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 
 - Keputusan delegasi (dapat dicabut): format token DTCG; daftar kind node di bagian "Node".
 - Keputusan delegasi (dapat dicabut): sumber desain pertama adalah format JSON desain Plaesy sendiri (`design-ir/1`), tanpa alat desain pihak ketiga; target kode pertama adalah Rust dengan komponen Dioxus, sejalan dengan adapter codegen pertama di ADR 0002.
-- Isi korpus fixture (20) dan QA yang memverifikasinya.
+- Korpus saat ini sintetis (`tools/gen-design-corpus.js`). Korpus dari desain nyata dan QA yang memverifikasinya masih terbuka.
 - Impor dari format desain lain: ADR tersendiri.

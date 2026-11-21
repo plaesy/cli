@@ -1,6 +1,6 @@
 # ADR 0003: Struktur folder dan crate Rust (backend)
 
-- Status: diusulkan (belum disetujui). Bagian struktur klien dipindah ke ADR 0011.
+- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut; lihat `docs/platform/decisions.md`). Bagian yang masih terbuka ada di Open items. Bagian struktur klien dipindah ke ADR 0011.
 - Tanggal: 2026-11-21
 - Pengambil keputusan: owner (belum ada persetujuan)
 - Berlaku untuk: crate Rust backend, `domain/*`, `service`, `adapter/*`, `interface/*`

@@ -1,0 +1,200 @@
+{
+  "ir": "design-ir/1",
+  "id": "dsg_corpus_08",
+  "version": 1,
+  "name": "corpus-08",
+  "tokens": {
+    "color": {
+      "primary": {
+        "$type": "color",
+        "$value": "#2563EB"
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "#DC2626"
+      },
+      "surface": {
+        "$type": "color",
+        "$value": "#FFFFFF"
+      },
+      "text": {
+        "$type": "color",
+        "$value": "#111827"
+      },
+      "success": {
+        "$type": "color",
+        "$value": "#16A34A"
+      }
+    },
+    "space": {
+      "xs": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "8px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "16px"
+      }
+    },
+    "radius": {
+      "md": {
+        "$type": "dimension",
+        "$value": "4px"
+      }
+    },
+    "font": {
+      "body": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "Source Sans 3",
+          "fontSize": "16px",
+          "fontWeight": 400
+        }
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "color": "rgba(15,23,42,0.4)",
+          "offsetX": "0px",
+          "offsetY": "1px",
+          "blur": "2px",
+          "spread": "0px"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "cp_c8_0",
+      "name": "Komp0",
+      "root": {
+        "id": "nd_c8_0_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "horizontal",
+          "padding": "space.sm",
+          "gap": "space.sm",
+          "align": "center"
+        },
+        "style": {
+          "fill": "color.danger",
+          "radius": "radius.md"
+        },
+        "children": [
+          {
+            "id": "nd_c8_0_label",
+            "type": "text",
+            "text": "Label 0",
+            "style": {
+              "font": "font.body",
+              "text_color": "color.primary"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "tone": [
+          "primary",
+          "danger"
+        ],
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_p8_0",
+      "name": "Halaman 1",
+      "frames": [
+        {
+          "id": "nd_80_frame0",
+          "type": "frame",
+          "name": "Frame 1",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.success"
+          },
+          "children": [
+            {
+              "id": "nd_80_0",
+              "type": "frame",
+              "layout": {
+                "mode": "auto",
+                "direction": "vertical",
+                "padding": "space.sm",
+                "gap": "space.sm",
+                "align": "center"
+              },
+              "style": {
+                "fill": "color.surface"
+              },
+              "children": [
+                {
+                  "id": "nd_80_1",
+                  "type": "rect",
+                  "style": {
+                    "fill": "color.surface",
+                    "radius": "radius.md"
+                  }
+                },
+                {
+                  "id": "nd_80_2",
+                  "type": "frame",
+                  "layout": {
+                    "mode": "auto",
+                    "direction": "vertical",
+                    "padding": "space.sm",
+                    "gap": "space.sm",
+                    "align": "center"
+                  },
+                  "style": {
+                    "fill": "color.danger"
+                  },
+                  "children": [
+                    {
+                      "id": "nd_80_3",
+                      "type": "text",
+                      "text": "Teks 4",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.surface"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "nd_80_4",
+                  "type": "opaque",
+                  "construct": "video-embed",
+                  "source": {
+                    "location": "pages/80/video",
+                    "payload": "<video/>"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

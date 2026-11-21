@@ -237,7 +237,7 @@
         "id",
         "type"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/componentId"
@@ -272,6 +272,10 @@
         "visible_when": {
           "type": "string",
           "minLength": 1
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -282,7 +286,7 @@
         "route",
         "root"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/screenId"
@@ -321,6 +325,10 @@
         },
         "root": {
           "$ref": "#/$defs/component"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     }

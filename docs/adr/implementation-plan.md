@@ -83,18 +83,21 @@ Keputusan owner: dialek pertama; apakah subquery dan window function masuk.
 
 ## Fase 3: design-ir/1
 
-Masuk: Fase 0 keluar; ADR 0010 disetujui (bagian format dan token).
+Status sekarang: sudah dikerjakan sebagian (2026-11-21). Format DTCG sudah diterapkan ke schema dan contoh. Validator semantik dan korpus sintetis 20 fixture sudah ada. Yang belum: adapter codegen dan round trip ke kode.
+
+Masuk: Fase 0 keluar. ADR 0010 diterima lewat delegasi.
 
 Kerja:
 
-1. `domain/design`: node, komponen, variant, token, layout. Aturan di ADR 0010 bagian "Aturan semantik".
-2. Keputusan format token: DTCG atau bentuk internal. Jika DTCG, ubah contoh dan skema dan uji ulang.
-3. Korpus round trip: minimal 20 fixture (isi dan sumber ditetapkan owner dengan QA). Ukur round trip struktural: ID, hierarki, nilai token. Target 100%.
-4. `adapter` desain↔IR sesuai format desain yang dipilih (belum dipilih).
+1. `domain/design` di Rust: node, komponen, variant, token, layout. Aturan di ADR 0010 bagian "Aturan semantik". Validator Node sudah ada sebagai referensi.
+2. Format token DTCG: sudah diterapkan. Konversi contoh dilakukan oleh skrip sekali jalan (sudah selesai).
+3. Korpus: 20 fixture sintetis sudah ada di `docs/adr/corpus/design-ir-1/` (dibuat `tools/gen-design-corpus.js`). Ganti atau tambah dengan desain nyata saat tersedia.
+4. `adapter` desain↔IR dan codegen ke Rust/Dioxus. Belum ada.
+5. Round trip struktural ke kode (ID, hierarki, nilai token) pada korpus. Target 100%. Belum diukur.
 
-Keluar: korpus 20 fixture lulus round trip 100%; aturan semantik lulus uji negatif.
+Keluar: round trip struktural 100% pada korpus 20 fixture melalui adapter; aturan semantik di Rust lulus uji negatif.
 
-Keputusan delegasi: format token DTCG, sumber desain JSON Plaesy. Masih terbuka: isi korpus 20 fixture (perlu QA dan kriteria pemilihan).
+Keputusan delegasi: format token DTCG, sumber desain JSON Plaesy, target Rust/Dioxus (lihat `docs/platform/decisions.md`).
 
 ## Fase 4: api-ir/1
 

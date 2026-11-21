@@ -73,6 +73,7 @@
     "tokens": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Token dalam format W3C DTCG 2025.10 (ADR 0010): kelompok color, space, radius, font, shadow.",
       "properties": {
         "color": {
           "$ref": "#/$defs/tokenGroup"
@@ -101,41 +102,7 @@
         "$ref": "#/$defs/identifier"
       },
       "additionalProperties": {
-        "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          },
-          {
-            "type": "object",
-            "required": [
-              "family",
-              "size",
-              "weight"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "family": {
-                "type": "string"
-              },
-              "size": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "weight": {
-                "type": "integer",
-                "minimum": 100,
-                "maximum": 900
-              },
-              "extensions": {
-                "type": "object",
-                "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
-              }
-            }
-          }
-        ]
+        "$ref": "#/$defs/tokenNode"
       }
     },
     "value": {
@@ -157,7 +124,6 @@
     },
     "layout": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "mode": {
           "enum": [
@@ -211,7 +177,8 @@
             ]
           }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "style": {
       "type": "object",
@@ -255,7 +222,6 @@
         "id",
         "type"
       ],
-      "additionalProperties": true,
       "properties": {
         "id": {
           "$ref": "#/$defs/nodeId"
@@ -341,6 +307,15 @@
             }
           },
           "description": "Lokasi di sumber untuk kind opaque."
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Data path untuk kind vector (SVG path data). Tidak ditafsirkan oleh validator."
         }
       },
       "allOf": [
@@ -395,7 +370,8 @@
             ]
           }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "component": {
       "type": "object",
@@ -405,7 +381,7 @@
         "root",
         "variants"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/componentId"
@@ -430,6 +406,10 @@
               "minLength": 1
             }
           }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -440,7 +420,7 @@
         "name",
         "frames"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
@@ -455,8 +435,42 @@
           "items": {
             "$ref": "#/$defs/node"
           }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
+    },
+    "tokenNode": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "$value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$type": {
+              "enum": [
+                "color",
+                "dimension",
+                "fontFamily",
+                "fontWeight",
+                "typography",
+                "shadow"
+              ]
+            },
+            "$value": {},
+            "$description": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/tokenGroup"
+        }
+      ]
     }
   }
 }

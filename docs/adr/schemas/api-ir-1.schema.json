@@ -273,7 +273,7 @@
         "handler",
         "responses"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/endpointId"
@@ -389,6 +389,10 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 6000
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     }

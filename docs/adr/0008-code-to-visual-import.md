@@ -1,6 +1,6 @@
 # ADR 0008: Impor kode ke visual (import-code)
 
-- Status: diusulkan (belum disetujui).
+- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut; lihat `docs/platform/decisions.md`). Bagian yang masih terbuka ada di Open items.
 - Tanggal: 2026-11-21
 - Pengambil keputusan: owner (belum ada persetujuan)
 - Berlaku untuk: adapter `import-*` untuk membaca kode dan skema yang sudah ada

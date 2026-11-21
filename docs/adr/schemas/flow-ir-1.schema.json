@@ -181,7 +181,6 @@
         "kind",
         "max_attempts"
       ],
-      "additionalProperties": true,
       "properties": {
         "kind": {
           "enum": [
@@ -208,6 +207,10 @@
         },
         "retry_if": {
           "$ref": "#/$defs/expression"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       },
       "allOf": [
@@ -241,20 +244,25 @@
             ]
           }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "earlyReturn": {
       "type": "object",
       "required": [
         "outputs"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "when": {
           "$ref": "#/$defs/expression"
         },
         "outputs": {
           "$ref": "#/$defs/inputMap"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -264,7 +272,7 @@
         "kind",
         "operation"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "kind": {
           "const": "action"
@@ -275,6 +283,10 @@
         },
         "inputs": {
           "$ref": "#/$defs/inputMap"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -284,13 +296,17 @@
         "when",
         "modules"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "when": {
           "$ref": "#/$defs/expression"
         },
         "modules": {
           "$ref": "#/$defs/moduleIds"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -299,13 +315,17 @@
       "required": [
         "modules"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "modules": {
           "$ref": "#/$defs/moduleIds"
         },
         "on_error": {
           "$ref": "#/$defs/errorPolicy"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -315,7 +335,6 @@
         "id",
         "kind"
       ],
-      "additionalProperties": true,
       "properties": {
         "id": {
           "$ref": "#/$defs/moduleId"
@@ -363,6 +382,10 @@
         },
         "early_return": {
           "$ref": "#/$defs/earlyReturn"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       },
       "allOf": [
@@ -582,7 +605,8 @@
             }
           }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     }
   }
 }

@@ -178,7 +178,7 @@
         "name",
         "type"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "name": {
           "$ref": "#/$defs/identifier"
@@ -195,6 +195,10 @@
         },
         "unique": {
           "type": "boolean"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -204,7 +208,7 @@
         "name",
         "columns"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "name": {
           "$ref": "#/$defs/identifier"
@@ -214,6 +218,10 @@
         },
         "unique": {
           "type": "boolean"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -224,7 +232,7 @@
         "columns",
         "primary_key"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "name": {
           "$ref": "#/$defs/identifier"
@@ -245,6 +253,10 @@
           "items": {
             "$ref": "#/$defs/index"
           }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     },
@@ -274,7 +286,6 @@
         "id",
         "kind"
       ],
-      "additionalProperties": true,
       "properties": {
         "id": {
           "$ref": "#/$defs/relationId"
@@ -285,6 +296,10 @@
             "one_to_one",
             "many_to_many"
           ]
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       },
       "allOf": [
@@ -398,7 +413,8 @@
             }
           }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "paramType": {
       "anyOf": [
@@ -551,7 +567,6 @@
                 "left",
                 "op"
               ],
-              "additionalProperties": false,
               "properties": {
                 "left": {
                   "$ref": "#/$defs/operand"
@@ -606,7 +621,8 @@
                     ]
                   }
                 }
-              ]
+              ],
+              "unevaluatedProperties": false
             },
             "extensions": {
               "type": "object",
@@ -683,7 +699,7 @@
         "from",
         "select"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/queryId"
@@ -792,6 +808,10 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 1000
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
         }
       }
     }

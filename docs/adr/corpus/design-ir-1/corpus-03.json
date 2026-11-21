@@ -1,0 +1,435 @@
+{
+  "ir": "design-ir/1",
+  "id": "dsg_corpus_03",
+  "version": 1,
+  "name": "corpus-03",
+  "tokens": {
+    "color": {
+      "primary": {
+        "$type": "color",
+        "$value": "#2563EB"
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "#DC2626"
+      },
+      "surface": {
+        "$type": "color",
+        "$value": "#FFFFFF"
+      }
+    },
+    "space": {
+      "xs": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "8px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "16px"
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": "24px"
+      }
+    },
+    "radius": {
+      "md": {
+        "$type": "dimension",
+        "$value": "10px"
+      }
+    },
+    "font": {
+      "body": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "Inter",
+          "fontSize": "12px",
+          "fontWeight": 400
+        }
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "color": "rgba(15,23,42,0.4)",
+          "offsetX": "0px",
+          "offsetY": "1px",
+          "blur": "2px",
+          "spread": "0px"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "cp_c3_0",
+      "name": "Komp0",
+      "root": {
+        "id": "nd_c3_0_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "vertical",
+          "padding": "space.sm",
+          "gap": "space.sm",
+          "align": "center"
+        },
+        "style": {
+          "fill": "color.surface",
+          "radius": "radius.md"
+        },
+        "children": [
+          {
+            "id": "nd_c3_0_label",
+            "type": "text",
+            "text": "Label 0",
+            "style": {
+              "font": "font.body",
+              "text_color": "color.primary"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "tone": [
+          "primary",
+          "danger"
+        ],
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    },
+    {
+      "id": "cp_c3_1",
+      "name": "Komp1",
+      "root": {
+        "id": "nd_c3_1_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "horizontal",
+          "padding": "space.sm",
+          "gap": "space.sm",
+          "align": "center"
+        },
+        "style": {
+          "fill": "color.primary",
+          "radius": "radius.md"
+        },
+        "children": [
+          {
+            "id": "nd_c3_1_label",
+            "type": "text",
+            "text": "Label 1",
+            "style": {
+              "font": "font.body",
+              "text_color": "color.surface"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "tone": [
+          "primary",
+          "danger"
+        ],
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_p3_0",
+      "name": "Halaman 1",
+      "frames": [
+        {
+          "id": "nd_30_frame0",
+          "type": "frame",
+          "name": "Frame 1",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.surface"
+          },
+          "children": [
+            {
+              "id": "nd_30_0",
+              "type": "opaque",
+              "construct": "video-embed",
+              "source": {
+                "location": "pages/30/video",
+                "payload": "<video/>"
+              }
+            }
+          ]
+        },
+        {
+          "id": "nd_30_frame1",
+          "type": "frame",
+          "name": "Frame 2",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.primary"
+          },
+          "children": [
+            {
+              "id": "nd_30_1",
+              "type": "frame",
+              "layout": {
+                "mode": "auto",
+                "direction": "vertical",
+                "padding": "space.sm",
+                "gap": "space.sm",
+                "align": "center"
+              },
+              "style": {
+                "fill": "color.danger"
+              },
+              "children": [
+                {
+                  "id": "nd_30_2",
+                  "type": "text",
+                  "text": "Teks 3",
+                  "style": {
+                    "font": "font.body",
+                    "text_color": "color.surface"
+                  }
+                },
+                {
+                  "id": "nd_30_3",
+                  "type": "frame",
+                  "layout": {
+                    "mode": "auto",
+                    "direction": "horizontal",
+                    "padding": "space.sm",
+                    "gap": "space.sm",
+                    "align": "center"
+                  },
+                  "style": {
+                    "fill": "color.danger"
+                  },
+                  "children": [
+                    {
+                      "id": "nd_30_4",
+                      "type": "text",
+                      "text": "Teks 5",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.danger"
+                      }
+                    },
+                    {
+                      "id": "nd_30_5",
+                      "type": "text",
+                      "text": "Teks 6",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.danger"
+                      }
+                    },
+                    {
+                      "id": "nd_30_6",
+                      "type": "text",
+                      "text": "Teks 7",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.primary"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "nd_30_7",
+                  "type": "opaque",
+                  "construct": "video-embed",
+                  "source": {
+                    "location": "pages/30/video",
+                    "payload": "<video/>"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pg_p3_1",
+      "name": "Halaman 2",
+      "frames": [
+        {
+          "id": "nd_31_frame0",
+          "type": "frame",
+          "name": "Frame 1",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.primary"
+          },
+          "children": [
+            {
+              "id": "nd_31_0",
+              "type": "frame",
+              "layout": {
+                "mode": "auto",
+                "direction": "vertical",
+                "padding": "space.sm",
+                "gap": "space.sm",
+                "align": "center"
+              },
+              "style": {
+                "fill": "color.danger"
+              },
+              "children": [
+                {
+                  "id": "nd_31_1",
+                  "type": "frame",
+                  "layout": {
+                    "mode": "auto",
+                    "direction": "vertical",
+                    "padding": "space.sm",
+                    "gap": "space.sm",
+                    "align": "center"
+                  },
+                  "style": {
+                    "fill": "color.surface"
+                  },
+                  "children": [
+                    {
+                      "id": "nd_31_2",
+                      "type": "text",
+                      "text": "Teks 3",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.surface"
+                      }
+                    },
+                    {
+                      "id": "nd_31_3",
+                      "type": "text",
+                      "text": "Teks 4",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.danger"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nd_31_frame1",
+          "type": "frame",
+          "name": "Frame 2",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.surface"
+          },
+          "children": [
+            {
+              "id": "nd_31_4",
+              "type": "frame",
+              "layout": {
+                "mode": "auto",
+                "direction": "vertical",
+                "padding": "space.sm",
+                "gap": "space.sm",
+                "align": "center"
+              },
+              "style": {
+                "fill": "color.danger"
+              },
+              "children": [
+                {
+                  "id": "nd_31_5",
+                  "type": "instance",
+                  "component": "cp_c3_1",
+                  "variant": {
+                    "tone": "primary",
+                    "size": "md"
+                  }
+                },
+                {
+                  "id": "nd_31_6",
+                  "type": "frame",
+                  "layout": {
+                    "mode": "none"
+                  },
+                  "style": {
+                    "fill": "color.danger"
+                  },
+                  "children": [
+                    {
+                      "id": "nd_31_7",
+                      "type": "text",
+                      "text": "Teks 8",
+                      "style": {
+                        "font": "font.body",
+                        "text_color": "color.danger"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "nd_31_8",
+                  "type": "opaque",
+                  "construct": "video-embed",
+                  "source": {
+                    "location": "pages/31/video",
+                    "payload": "<video/>"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

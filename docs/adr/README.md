@@ -1,39 +1,40 @@
 # ADR Plaesy
 
-Folder ini berisi keputusan arsitektur untuk IR (representasi antara), struktur crate, dan konversi desain ↔ kode. Ini tempat yang benar untuk mencari **apa yang sudah diputuskan**. Untuk **apa yang akan dikerjakan dan urutannya**, lihat [implementation-plan.md](implementation-plan.md).
+Folder ini berisi keputusan arsitektur untuk IR (representasi antara), struktur crate, klien, dan konversi desain ↔ kode. Ini tempat untuk mencari **apa yang sudah diputuskan**. Untuk **apa yang akan dikerjakan dan urutannya**, lihat [implementation-plan.md](implementation-plan.md).
 
 ## Mulai dari sini
 
-1. [ADR 0009](0009-ir-conventions.md): aturan yang berlaku untuk semua IR (versi, field tambahan, ID, laporan kehilangan, batas input).
-2. [ADR 0002](0002-visual-flow-ir.md): flow. Bagian keputusan sudah diterima; format JSON-nya masih usulan.
+1. [ADR 0009](0009-ir-conventions.md): aturan yang berlaku untuk semua IR (versi, field tambahan, ID, laporan kehilangan, batas input, validasi).
+2. [ADR 0002](0002-visual-flow-ir.md): flow.
 3. [ADR 0010](0010-design-ir.md): desain dan konversi desain ↔ kode.
 4. [ADR 0003](0003-crate-structure.md) dan [ADR 0011](0011-client-structure.md): struktur crate backend dan klien.
-5. ADR 0004, 0005, 0006, 0008: IR data, API, app, dan impor kode. Semuanya masih usulan.
+5. ADR 0004, 0005, 0006, 0008: IR data, API, app, dan impor kode.
 
 ## Status: artinya apa
 
 | Status | Arti |
 |---|---|
-| `diusulkan` (proposed) | Belum disetujui owner. Boleh dibaca dan dikritik, belum mengikat. |
-| `diterima` (accepted) | Disetujui owner. Mengikat sampai digantikan. |
-| `diterima sebagian` | Sebagian bagian sudah diterima; bagian lain masih usulan. Setiap bagian menyebut statusnya sendiri. |
-| `digantikan` (superseded) | Tidak berlaku. Ada penggantinya di header. Isi asli tetap ada di riwayat git. |
+| `diusulkan` (proposed) | Belum diterima. Boleh dibaca dan dikritik, belum mengikat. |
+| `diterima` (accepted) | Diterima. Mengikat sampai digantikan atau dicabut. |
+| `diterima lewat delegasi` | Diterima oleh asisten atas delegasi owner (2026-11-19 dan 2026-11-21). Setiap keputusan bisa dicabut oleh owner; daftarnya di `docs/platform/decisions.md`. |
+| `diterima sebagian` | Sebagian bagian diterima; bagian lain masih terbuka. Setiap ADR menyebut bagian mana di Open items. |
+| `digantikan` (superseded) | Tidak berlaku. Ada penggantinya di header. Isi asli ada di riwayat git. |
 
 ## Daftar
 
-| ADR | Judul | Status | Yang sudah diterima | Yang masih usulan |
+| ADR | Judul | Status | Yang diterima | Yang masih terbuka |
 |---|---|---|---|---|
 | [0001](0001-design-code-ir.md) | Canonical IR desain-kode | digantikan (0009, 0010) | - | - |
-| [0002](0002-visual-flow-ir.md) | Visual flow IR (flow-ir/1) | diterima | Katalog node, CEL, rumus retry, batas loop, kanal approval, Rust sebagai adapter pertama, bentuk JSON dan aturan validasi (delegasi) | Verifikasi ulang klaim paritas dengan Windmill |
-| [0003](0003-crate-structure.md) | Struktur crate backend | diusulkan | - | Seluruh struktur crate |
-| [0004](0004-data-ir.md) | Data IR (data-ir/1) | diusulkan | - | Seluruh isi |
-| [0005](0005-api-ir.md) | API IR (api-ir/1) | diusulkan | - | Seluruh isi; OpenAPI 3.1 sebagai keluaran |
-| [0006](0006-app-ir.md) | App IR (app-ir/1) | diusulkan | - | Seluruh isi |
+| [0002](0002-visual-flow-ir.md) | Visual flow IR (flow-ir/1) | diterima (katalog dan keputusan di chat; format lewat delegasi) | Katalog node, CEL, retry, batas loop, kanal approval, Rust sebagai adapter pertama, format JSON | Verifikasi ulang klaim paritas dengan Windmill; codegen dan validator Rust |
+| [0003](0003-crate-structure.md) | Struktur crate backend | diterima lewat delegasi | Lapisan crate dan aturan dependensi | Implementasi `domain/*`; pemeriksaan `use` |
+| [0004](0004-data-ir.md) | Data IR (data-ir/1) | diterima lewat delegasi | Format JSON, tabel, relasi, query sebagai pohon | Dialek SQL pertama; subquery dan window function |
+| [0005](0005-api-ir.md) | API IR (api-ir/1) | diterima lewat delegasi | Format JSON, endpoint merujuk flow | Generator OpenAPI 3.1 dan pin versinya; hubungan tipe dengan data |
+| [0006](0006-app-ir.md) | App IR (app-ir/1) | diterima lewat delegasi | Layar, komponen, binding, aksi merujuk flow | Daftar tipe komponen; validasi lintas-file di CI |
 | [0007](0007-design-ir.md) | Design IR (design-ir/1) | digantikan (0010) | - | - |
-| [0008](0008-code-to-visual-import.md) | Impor kode ke visual | diusulkan | - | Bahasa pertama, parser |
-| [0009](0009-ir-conventions.md) | Konvensi bersama untuk semua IR | diterima (delegasi) | Versi, `extensions`, ID, laporan kehilangan, batas input, validasi | Mode lenient (belum diimplementasi) |
-| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diterima (delegasi) | Format token DTCG, kind node, sumber desain (JSON Plaesy), target kode (Rust/Dioxus), edit B, fidelity 100% pada 20 fixture | Implementasi DTCG dan korpus 20 fixture (Fase 3) |
-| [0011](0011-client-structure.md) | Struktur klien | diusulkan | - | Seluruh isi |
+| [0008](0008-code-to-visual-import.md) | Impor kode ke visual | diterima lewat delegasi | Arah impor, laporan pemetaan dan kehilangan | Bahasa pertama; parser; urutan impor database |
+| [0009](0009-ir-conventions.md) | Konvensi bersama untuk semua IR | diterima lewat delegasi | Versi, `extensions`, skema tertutup, ID, laporan kehilangan, batas input, pemisahan validasi | Mode lenient di Rust |
+| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diterima lewat delegasi | Format DTCG (sudah diterapkan), kind node, sumber desain JSON Plaesy, target Rust/Dioxus, edit B, korpus sintetis 20 fixture | Round trip ke kode (butuh adapter); korpus dari desain nyata |
+| [0011](0011-client-structure.md) | Struktur klien | diterima lewat delegasi | Struktur fitur, aturan dependensi | Library WebSocket; format diff; sinkronisasi real-time |
 
 ## Istilah
 
@@ -43,16 +44,17 @@ Folder ini berisi keputusan arsitektur untuk IR (representasi antara), struktur 
 - **Opaque**: node yang menyimpan konstruksi tak terpetakan beserta lokasi sumbernya, supaya ekspor ulang bisa mengembalikannya.
 - **MAJOR / MINOR**: versi IR. MAJOR berubah bila arti berubah. MINOR berubah bila hanya menambah.
 - **`extensions`**: tempat data tambahan yang tidak dikenal versi ini (ADR 0009).
-- **Round trip**: impor lalu ekspor (atau sebaliknya) menghasilkan IR yang sama.
+- **Mode lenient**: pembaca yang memindahkan field tak dikenal ke `extensions` dan memberi peringatan.
+- **DTCG**: W3C Design Tokens Community Group, format token yang dipakai di `design-ir/1`.
+- **Round trip serialisasi**: JSON diurutkan, diparse ulang, hasilnya sama. Ini belum sama dengan round trip ke kode.
 - **Fixture negatif**: contoh yang sengaja salah dan harus ditolak validator.
 
-## Yang sudah dan belum bisa diperiksa
+## Yang bisa dan belum bisa diperiksa
 
-Dijalankan dari `docs/adr/tools/` (`npm ci` dulu):
+Dari `docs/adr/tools/` (jalankan `npm ci` sekali):
 
 ```sh
-npm run check                              # bentuk: contoh harus VALID, fixture negatif harus INVALID
-node validate-ir.js ../examples/*/*.json   # semantik (prototipe Node)
+npm run check     # bentuk (ajv), semantik (validate-ir.js), lenient, dan round trip serialisasi korpus
 ```
 
 Dari root repo:
@@ -61,23 +63,27 @@ Dari root repo:
 plaesy validate markdown docs/adr --no-baseline
 ```
 
-Belum ada langkah CI untuk pemeriksaan di atas. Ditunda sesuai keputusan owner; lihat Fase 0 di rencana.
+Belum ada langkah CI yang menjalankan keduanya. Ditunda sesuai keputusan owner; lihat Fase 0 di rencana.
+
+Yang belum bisa diperiksa: round trip ke kode, validator Rust, dan mode lenient di Rust.
 
 ## Struktur folder
 
-- `0001`-`0011`: ADR. Nomor berikutnya: `0012`.
-- `schemas/`: JSON Schema draft 2020-12, satu per IR.
-- `examples/`: contoh positif. Harus VALID.
-- `examples-negative/`: fixture negatif. Harus INVALID.
-- `tools/`: pemeriksa bentuk (`check-ir.js`) dan prototipe semantik (`validate-ir.js`).
-- `implementation-plan.md`: rencana fase dan keputusan owner yang dibutuhkan.
-- `template.md`: templat ADR baru. Salin ke `NNNN-judul.md` dan isi semua bagiannya.
+- `0001`-`0011`: ADR. `template.md`: templat ADR baru. Nomor berikutnya: `0012`.
+- `schemas/`: JSON Schema draft 2020-12, satu per IR. Objek tertutup dengan `unevaluatedProperties: false` dan `extensions`.
+- `examples/`: contoh positif. Harus VALID dan lolos semantik.
+- `examples-negative/`: fixture negatif bentuk. Harus INVALID.
+- `examples-negative-semantic/`: fixture yang lolos bentuk tetapi gagal semantik. Harus gagal `validate-ir.js`.
+- `examples-lenient/`: dokumen dengan field dari versi lebih baru. Harus INVALID dengan skema ketat dan VALID setelah lenient.
+- `corpus/design-ir-1/`: 20 fixture desain sintetis, dibuat oleh `tools/gen-design-corpus.js`. Bukan data desain nyata.
+- `tools/`: `check-ir.js` (pemeriksa utama), `validate-ir.js` (semantik), `lenient.js` (mode lenient), `gen-design-corpus.js` (generator korpus).
+- `implementation-plan.md`: rencana fase dan keputusan yang dibutuhkan.
 
 ## Menulis atau mengganti ADR
 
 1. Ambil nomor berikutnya. Nomor tidak dipakai ulang.
-2. Isi header dengan urutan yang sama seperti ADR lain: `Status`, `Tanggal`, `Pengambil keputusan`, `Berlaku untuk`, `Menggantikan`, `Digantikan oleh`, `Terkait`.
-3. Bagian wajib: Konteks, Dorongan keputusan, Opsi yang dipertimbangkan, Keputusan, Konsekuensi, Konfirmasi, Open items.
+2. Salin `template.md`. Isi header: `Status`, `Tanggal`, `Pengambil keputusan`, `Berlaku untuk`, `Menggantikan`, `Digantikan oleh`, `Terkait`.
+3. Bagian wajib: Ringkasan, Konteks, Dorongan keputusan, Opsi yang dipertimbangkan, Keputusan, Konsekuensi, Konfirmasi, Kriteria penerimaan, Open items.
 4. Tulis klaim verifikasi hanya jika bisa dijalankan dari repo. Jika belum, tulis "belum diperiksa".
 5. Aturan lintas-IR merujuk ADR 0009, jangan disalin.
 6. Untuk mengganti keputusan: ubah status lama menjadi `digantikan` dan tunjuk penggantinya. Jangan menghapus keputusan lama diam-diam.

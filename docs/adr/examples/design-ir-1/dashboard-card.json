@@ -4,11 +4,74 @@
   "version": 1,
   "name": "dashboard-card",
   "tokens": {
-    "color": { "primary": "#0F766E", "warning": "#B45309", "surface": "#F8FAFC", "muted": "#64748B" },
-    "space": { "xs": 4, "sm": 8, "md": 16 },
-    "radius": { "lg": 12 },
-    "font": { "title": { "family": "Inter", "size": 18, "weight": 600 }, "caption": { "family": "Inter", "size": 12, "weight": 400 } },
-    "shadow": { "card": "0 4px 12px rgba(15,23,42,0.08)" }
+    "color": {
+      "primary": {
+        "$type": "color",
+        "$value": "#0F766E"
+      },
+      "warning": {
+        "$type": "color",
+        "$value": "#B45309"
+      },
+      "surface": {
+        "$type": "color",
+        "$value": "#F8FAFC"
+      },
+      "muted": {
+        "$type": "color",
+        "$value": "#64748B"
+      }
+    },
+    "space": {
+      "xs": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "8px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "16px"
+      }
+    },
+    "radius": {
+      "lg": {
+        "$type": "dimension",
+        "$value": "12px"
+      }
+    },
+    "font": {
+      "title": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "Inter",
+          "fontSize": "18px",
+          "fontWeight": 600
+        }
+      },
+      "caption": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "Inter",
+          "fontSize": "12px",
+          "fontWeight": 400
+        }
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "color": "rgba(15,23,42,0.08)",
+          "offsetX": "0px",
+          "offsetY": "0px",
+          "blur": "12px",
+          "spread": "0px"
+        }
+      }
+    }
   },
   "components": [
     {
@@ -17,15 +80,43 @@
       "root": {
         "id": "nd_card_root",
         "type": "frame",
-        "layout": { "mode": "auto", "direction": "vertical", "padding": "space.md", "gap": "space.sm" },
-        "style": { "fill": "color.surface", "radius": "radius.lg", "shadow": "shadow.card" },
+        "layout": {
+          "mode": "auto",
+          "direction": "vertical",
+          "padding": "space.md",
+          "gap": "space.sm"
+        },
+        "style": {
+          "fill": "color.surface",
+          "radius": "radius.lg",
+          "shadow": "shadow.card"
+        },
         "children": [
-          { "id": "nd_card_title", "type": "text", "text": "Judul", "style": { "font": "font.title", "text_color": "color.primary" } },
-          { "id": "nd_card_body", "type": "text", "text": "Isi", "style": { "font": "font.caption", "text_color": "color.muted" } }
+          {
+            "id": "nd_card_title",
+            "type": "text",
+            "text": "Judul",
+            "style": {
+              "font": "font.title",
+              "text_color": "color.primary"
+            }
+          },
+          {
+            "id": "nd_card_body",
+            "type": "text",
+            "text": "Isi",
+            "style": {
+              "font": "font.caption",
+              "text_color": "color.muted"
+            }
+          }
         ]
       },
       "variants": {
-        "state": ["normal", "warning"]
+        "state": [
+          "normal",
+          "warning"
+        ]
       }
     },
     {
@@ -36,10 +127,16 @@
         "type": "rect",
         "width": 8,
         "height": 8,
-        "style": { "fill": "color.warning", "radius": "radius.lg" }
+        "style": {
+          "fill": "color.warning",
+          "radius": "radius.lg"
+        }
       },
       "variants": {
-        "size": ["sm", "md"]
+        "size": [
+          "sm",
+          "md"
+        ]
       }
     }
   ],
@@ -56,21 +153,34 @@
           "y": 0,
           "width": 960,
           "height": 540,
-          "layout": { "mode": "auto", "direction": "horizontal", "padding": "space.md", "gap": "space.md", "align": "start", "wrap": true },
-          "style": { "fill": "color.surface" },
+          "layout": {
+            "mode": "auto",
+            "direction": "horizontal",
+            "padding": "space.md",
+            "gap": "space.md",
+            "align": "start",
+            "wrap": true
+          },
+          "style": {
+            "fill": "color.surface"
+          },
           "children": [
             {
               "id": "nd_card_stock",
               "type": "instance",
               "component": "cp_card",
-              "variant": { "state": "warning" },
+              "variant": {
+                "state": "warning"
+              },
               "children": []
             },
             {
               "id": "nd_card_orders",
               "type": "instance",
               "component": "cp_card",
-              "variant": { "state": "normal" }
+              "variant": {
+                "state": "normal"
+              }
             },
             {
               "id": "nd_logo",
@@ -86,13 +196,18 @@
               "y": 240,
               "width": 960,
               "height": 1,
-              "style": { "stroke": "color.muted", "stroke_width": 1 }
+              "style": {
+                "stroke": "color.muted",
+                "stroke_width": 1
+              }
             },
             {
               "id": "nd_badge_instance",
               "type": "instance",
               "component": "cp_badge",
-              "variant": { "size": "sm" }
+              "variant": {
+                "size": "sm"
+              }
             }
           ]
         }

@@ -1,0 +1,246 @@
+{
+  "ir": "design-ir/1",
+  "id": "dsg_corpus_01",
+  "version": 1,
+  "name": "corpus-01",
+  "tokens": {
+    "color": {
+      "primary": {
+        "$type": "color",
+        "$value": "#2563EB"
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "#DC2626"
+      },
+      "surface": {
+        "$type": "color",
+        "$value": "#FFFFFF"
+      },
+      "text": {
+        "$type": "color",
+        "$value": "#111827"
+      }
+    },
+    "space": {
+      "xs": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "8px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "16px"
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": "24px"
+      }
+    },
+    "radius": {
+      "md": {
+        "$type": "dimension",
+        "$value": "6px"
+      }
+    },
+    "font": {
+      "body": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "Roboto",
+          "fontSize": "14px",
+          "fontWeight": 400
+        }
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "color": "rgba(15,23,42,0.2)",
+          "offsetX": "0px",
+          "offsetY": "1px",
+          "blur": "2px",
+          "spread": "0px"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "cp_c1_0",
+      "name": "Komp0",
+      "root": {
+        "id": "nd_c1_0_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "vertical",
+          "padding": "space.sm",
+          "gap": "space.sm",
+          "align": "center"
+        },
+        "style": {
+          "fill": "color.danger",
+          "radius": "radius.md"
+        },
+        "children": [
+          {
+            "id": "nd_c1_0_label",
+            "type": "text",
+            "text": "Label 0",
+            "style": {
+              "font": "font.body",
+              "text_color": "color.surface"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "tone": [
+          "primary",
+          "danger"
+        ],
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    },
+    {
+      "id": "cp_c1_1",
+      "name": "Komp1",
+      "root": {
+        "id": "nd_c1_1_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "vertical",
+          "padding": "space.sm",
+          "gap": "space.sm",
+          "align": "center"
+        },
+        "style": {
+          "fill": "color.surface",
+          "radius": "radius.md"
+        },
+        "children": [
+          {
+            "id": "nd_c1_1_label",
+            "type": "text",
+            "text": "Label 1",
+            "style": {
+              "font": "font.body",
+              "text_color": "color.danger"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "tone": [
+          "primary",
+          "danger"
+        ],
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_p1_0",
+      "name": "Halaman 1",
+      "frames": [
+        {
+          "id": "nd_10_frame0",
+          "type": "frame",
+          "name": "Frame 1",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.text"
+          },
+          "children": [
+            {
+              "id": "nd_10_0",
+              "type": "frame",
+              "layout": {
+                "mode": "none"
+              },
+              "style": {
+                "fill": "color.text"
+              },
+              "children": [
+                {
+                  "id": "nd_10_1",
+                  "type": "instance",
+                  "component": "cp_c1_0",
+                  "variant": {
+                    "tone": "primary",
+                    "size": "sm"
+                  }
+                },
+                {
+                  "id": "nd_10_2",
+                  "type": "instance",
+                  "component": "cp_c1_1",
+                  "variant": {
+                    "tone": "danger",
+                    "size": "sm"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pg_p1_1",
+      "name": "Halaman 2",
+      "frames": [
+        {
+          "id": "nd_11_frame0",
+          "type": "frame",
+          "name": "Frame 1",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": {
+            "mode": "auto",
+            "direction": "vertical",
+            "padding": "space.md",
+            "gap": "space.sm"
+          },
+          "style": {
+            "fill": "color.primary"
+          },
+          "children": [
+            {
+              "id": "nd_11_0",
+              "type": "rect",
+              "style": {
+                "fill": "color.danger",
+                "radius": "radius.md"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

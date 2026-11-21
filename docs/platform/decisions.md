@@ -91,14 +91,16 @@ The owner's standing delegation of 2026-11-19 covers open technical choices in t
 5. **First design source (ADR 0010):** the Plaesy JSON design format (`design-ir/1` itself). No third-party design tool is selected; this avoids a vendor format dependency.
 6. **First code target (ADR 0010):** Rust with Dioxus components, consistent with the first codegen adapter in ADR 0002.
 
-Not delegated here: ADR 0003, 0004, 0005, 0006, 0008, 0011 remain proposed. The design fixture corpus (20 fixtures) and the Rust validators are implementation work.
+7. **Structure and scope ADRs (0003, 0004, 0005, 0006, 0008, 0011):** accepted as proposed, with their open items kept open. ADR 0003 (crate layering), 0004 (data IR, SQL dialect still open), 0005 (API IR, OpenAPI 3.1 output), 0006 (app IR), 0008 (code-to-visual import, first language and parser open), 0011 (client structure, WebSocket library and diff format open).
+
+Still open after these delegations: the Rust validators and round trip to code (ADR 0010, Phase 3), the Rust implementation of lenient mode (ADR 0009), CI for the checks (deferred by the owner), and a corpus from real designs. The 20-fixture corpus in `docs/adr/corpus/` is synthetic and tests shape, semantics, and serialisation only.
 
 ## Architecture ADR index (2026-11-21)
 
 Full index, status meanings, and reading order: `docs/adr/README.md`. Summary of status for the IR and crate decisions:
 
-- ADR 0003 (crate structure): proposed. Client structure split to ADR 0011.
-- ADR 0004 (data IR), 0005 (API IR), 0006 (app IR), 0008 (code-to-visual import): proposed.
+- ADR 0003 (crate structure): accepted under delegation (2026-11-21, revocable). Client structure split to ADR 0011.
+- ADR 0004 (data IR), 0005 (API IR), 0006 (app IR), 0008 (code-to-visual import), 0011 (client structure): accepted under delegation (2026-11-21, revocable); open items remain in each ADR.
 - ADR 0009 (cross-IR conventions): accepted under delegation (2026-11-21, revocable). Includes the `extensions` rule and closed root schemas.
 - ADR 0010 (design IR): accepted under delegation (2026-11-21, revocable): DTCG token format, node kinds, JSON design source, Rust/Dioxus first target. DTCG implementation and the 20-fixture corpus are Phase 3 work.
 - ADR 0011 (client structure): proposed.

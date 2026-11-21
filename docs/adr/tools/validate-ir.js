@@ -245,25 +245,74 @@ function validateApp(doc) {
 }
 
 // ---------- design-ir/1 ----------
+// Token DTCG (ADR 0010): daun adalah objek yang punya $value; grup adalah objek lain.
+function flattenTokens(node, prefix, out) {
+  if (node && typeof node === "object" && "$value" in node) {
+    out.set(prefix, node);
+    return;
+  }
+  if (node && typeof node === "object") {
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "extensions") continue;
+      flattenTokens(v, prefix ? `${prefix}.${k}` : k, out);
+    }
+  }
+}
+
+// Kategori token yang boleh dipakai di tiap properti (ADR 0010, "Aturan semantik").
+const USE_CATEGORY = {
+  fill: "color",
+  stroke: "color",
+  text_color: "color",
+  radius: "radius",
+  shadow: "shadow",
+  font: "font",
+  padding: "space",
+  gap: "space",
+};
+
+const TOKEN_REF = /^(color|space|radius|font|shadow)\.[A-Za-z0-9_.-]+$/;
+
+function checkTokenValue(errors, name, tok) {
+  const v = tok.$value;
+  switch (tok.$type) {
+    case "color":
+      check(errors, typeof v === "string" && /^(#[0-9A-Fa-f]{3,8}|rgba?\(.*\))$/.test(v), `token ${name}: nilai color tidak valid`);
+      break;
+    case "dimension":
+      check(errors, typeof v === "string" && /^-?\d+(\.\d+)?px$/.test(v), `token ${name}: nilai dimension harus angka dengan satuan px`);
+      break;
+    case "typography":
+      check(errors, !!v && typeof v === "object" && ["fontFamily", "fontSize", "fontWeight"].every(k => k in v), `token ${name}: typography wajib fontFamily, fontSize, fontWeight`);
+      break;
+    case "shadow":
+      check(errors, !!v && typeof v === "object" && ["color", "offsetX", "offsetY", "blur"].every(k => k in v), `token ${name}: shadow wajib color, offsetX, offsetY, blur`);
+      break;
+    default:
+      check(errors, false, `token ${name}: $type tidak dikenal (${tok.$type})`);
+  }
+}
+
 function validateDesign(doc) {
   const errors = [];
-  const tokenSet = new Set();
-  for (const [cat, group] of Object.entries(doc.tokens || {})) {
-    for (const name of Object.keys(group)) tokenSet.add(`${cat}.${name}`);
-  }
+  const tokenMap = new Map();
+  flattenTokens(doc.tokens || {}, "", tokenMap);
+  const tokenSet = new Set(tokenMap.keys());
+  for (const [name, tok] of tokenMap) checkTokenValue(errors, name, tok);
+
   const compIds = new Set((doc.components || []).map(c => c.id));
   const compMap = new Map((doc.components || []).map(c => [c.id, c]));
   const nodeIds = new Set();
   const checkNode = (n, where) => {
     check(errors, !nodeIds.has(n.id), `node duplikat: ${n.id}`);
     nodeIds.add(n.id);
-    const tokenFields = [
-      ...Object.values(n.style || {}),
-      ...Object.values((n.layout || {})).filter(v => typeof v === "string"),
-    ];
-    for (const v of tokenFields) {
-      if (typeof v === "string" && /^(color|space|radius|font|shadow)\./.test(v)) {
-        check(errors, tokenSet.has(v), `${where}: token ${v} tidak ada`);
+    const refs = [...Object.entries(n.style || {}), ...Object.entries(n.layout || {})];
+    for (const [key, v] of refs) {
+      if (typeof v !== "string" || !TOKEN_REF.test(v)) continue;
+      check(errors, tokenSet.has(v), `${where}: token ${v} tidak ada`);
+      const want = USE_CATEGORY[key];
+      if (want) {
+        check(errors, v.startsWith(want + "."), `${where}: properti ${key} memakai token kategori ${v.split(".")[0]}, seharusnya ${want}`);
       }
     }
     if (n.type === "instance") {

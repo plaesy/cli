@@ -37,7 +37,7 @@ Lima IR dan satu jalur impor ditulis di ADR terpisah. Aturan yang sama (versi, f
 
 - Skema bersifat tertutup (`additionalProperties: false`) di setiap objek, termasuk akar dokumen. Field yang tidak dikenal menjadi error validasi bentuk.
 - Penulis yang ingin membawa data tambahan memakai objek `extensions` pada objek yang memilikinya. Isi `extensions` tidak diinterpretasi oleh validator, tetapi disimpan dan ditulis ulang apa adanya.
-- Pembaca dari versi lama yang menerima dokumen versi lebih baru memakai mode lenient: field tidak dikenal dipindahkan ke `extensions` dan dicatat sebagai peringatan. Mode ini belum diimplementasi (lihat rencana, fase 0).
+- Pembaca dari versi lama yang menerima dokumen versi lebih baru memakai mode lenient: field tidak dikenal dipindahkan ke `extensions` dan dicatat sebagai peringatan. Mode ini ada sebagai alat Node (`docs/adr/tools/lenient.js`) dan diuji di `check-ir.js`. Implementasi di `domain/*` (Rust) belum ada.
 - Dengan aturan ini, typo tetap tertangkap, dan data baru tidak hilang.
 
 ### 3. ID
@@ -89,9 +89,9 @@ Istilah "opaque" dipakai untuk node buram. Istilah "blok buram" di ADR 0008 adal
 - **Bentuk**: JSON Schema draft 2020-12 di `schemas/`.
 - **Semantik**: aturan per-IR di `domain/*` (Rust). Sampai `domain/*` ada, prototipe `tools/validate-ir.js` dipakai.
 - **Fixture**: contoh positif di `examples/` harus VALID. Fixture negatif di `examples-negative/` harus INVALID. Setiap aturan yang diklaim di ADR per-IR wajib punya minimal satu fixture negatif.
-- Pemeriksaan bentuk dijalankan oleh `docs/adr/tools/check-ir.js` (`npm run check`, dengan `ajv` versi tetap di `package.json`).
+- Pemeriksaan dijalankan oleh `docs/adr/tools/check-ir.js` (`npm run check`, dengan `ajv` versi tetap di `package.json`). Mencakup bentuk, semantik, mode lenient, dan round trip serialisasi korpus.
 
-Keadaan saat ADR ini ditulis: pemeriksaan bentuk lulus untuk 10 contoh positif dan 7 fixture negatif. Pemeriksaan semantik lulus untuk 10 contoh. Belum ada langkah CI yang menjalankan keduanya.
+Keadaan terakhir (2026-11-21): `npm run check` lulus untuk 10 contoh positif, 20 fixture korpus, 7 fixture negatif bentuk, 3 fixture negatif semantik, 1 fixture lenient, dan round trip 20 korpus. Belum ada langkah CI yang menjalankan pemeriksaan ini.
 
 ### 7. Migrasi
 
@@ -116,17 +116,17 @@ Keadaan saat ADR ini ditulis: pemeriksaan bentuk lulus untuk 10 contoh positif d
 
 - Positif: satu tempat untuk aturan lintas-IR. ADR per-IR menjadi lebih pendek dan tidak saling bertentangan.
 - Negatif: skema yang sebelumnya terbuka di akar (`additionalProperties: true`) menjadi tertutup. Dokumen yang memakai field baru harus menunggu MINOR atau memakai `extensions`.
-- Netral: mode lenient belum ada, sehingga pembaca versi lama belum bisa membaca dokumen versi baru secara otomatis.
+- Netral: mode lenient di Rust belum ada; alat Node yang ada sudah dipakai pemeriksa.
 
 ## Kriteria penerimaan
 
 1. `docs/adr/tools/check-ir.js` lulus untuk semua contoh dan fixture negatif (sudah lulus saat ini).
 2. Langkah CI menjalankan `npm run check` dan `tools/validate-ir.js` pada setiap perubahan `docs/adr/`. Belum ada.
-3. Mode lenient diimplementasi di `domain/*`. Belum ada.
+3. Mode lenient lulus pemeriksaan sebagai alat Node (ada). Implementasi di `domain/*` (Rust) belum ada.
 4. Setiap ADR per-IR tidak lagi mendefinisikan ulang aturan di bagian ini, kecuali dengan merujuk ADR ini.
 
 ## Open items
 
 - Aturan `extensions` dan penutupan skema akar (bagian 2) diterima lewat delegasi. Owner dapat mencabut.
 - Daftar kode `reason` awal untuk setiap IR.
-- Tempat mode lenient: library Rust atau CLI.
+- Tempat mode lenient di Rust: library `domain/*` atau CLI. Keputusan ini tidak mengubah perilaku alat Node.
