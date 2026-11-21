@@ -3232,6 +3232,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-import-code-rust"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-api",
+ "proc-macro2",
+ "serde_json",
+ "syn 2.0.119",
+ "uuid",
+]
+
+[[package]]
 name = "plaesy-adapter-import-sql"
 version = "0.0.1"
 dependencies = [

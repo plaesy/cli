@@ -16,6 +16,7 @@ members = [
     "crates/plaesy/adapter/sync",
     "crates/plaesy/adapter/http-client",
     "crates/plaesy/adapter/import-sql",
+    "crates/plaesy/adapter/import-code-rust",
     "crates/plaesy/interface/acp",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",
@@ -43,6 +44,8 @@ default-members = ["crates/plaesy/plaesy"]
 axum = { version = "0.8", features = ["json"] }
 tower = { version = "0.5", features = ["util"] }
 tokio-tungstenite = "0.26"
+syn = { version = "2", features = ["full", "extra-traits", "parsing"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
