@@ -151,7 +151,7 @@ fn map_type(
     spec: &TypeSpec,
     source: &str,
     defined: &BTreeSet<String>,
-    enum_values: &BTreeMap<String, Vec<String>>,
+    enum_values: &BTreeMap<String, Option<Vec<String>>>,
     types: &mut Map<String, Value>,
     report: &mut Report,
 ) {
@@ -183,7 +183,7 @@ fn map_type(
             ),
         },
         Expression::Ident(ident) if ident.name == "string" => match enum_values.get(&name) {
-            Some(values) if !values.is_empty() => {
+            Some(Some(values)) if !values.is_empty() => {
                 types.insert(name.clone(), json!({ "enum": values }));
                 report.mapped.push(Mapping {
                     line: line_of(source, line_pos),
@@ -273,8 +273,10 @@ fn field_schema(typ: &Expression, defined: &BTreeSet<String>) -> Option<(Value, 
 }
 
 /// Nilai const per tipe enum. Blok const memakai tipe terakhir yang ditulis (iota).
-fn collect_enum_values(file: &File) -> BTreeMap<String, Vec<String>> {
-    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+fn collect_enum_values(file: &File) -> BTreeMap<String, Option<Vec<String>>> {
+    // Nilai enum adalah isi string konstanta (`"draft"`), bukan nama konstanta (`StatusDraft`).
+    // Bila ada anggota yang bukan string literal, enum itu dicatat `None` dan tidak dipetakan.
+    let mut out: BTreeMap<String, Option<Vec<String>>> = BTreeMap::new();
     for decl in &file.decl {
         let Declaration::Const(group) = decl else {
             continue;
@@ -284,11 +286,20 @@ fn collect_enum_values(file: &File) -> BTreeMap<String, Vec<String>> {
             if let Some(Expression::Ident(ident)) = &spec.typ {
                 current = Some(ident.name.clone());
             }
-            if let Some(owner) = &current {
-                for ident in &spec.name {
-                    out.entry(owner.clone())
-                        .or_default()
-                        .push(ident.name.clone());
+            let Some(owner) = &current else {
+                continue;
+            };
+            for index in 0..spec.name.len() {
+                let wire = match spec.values.get(index) {
+                    Some(Expression::BasicLit(lit)) if lit.value.starts_with('"') => {
+                        serde_json::from_str::<String>(&lit.value).ok()
+                    }
+                    _ => None,
+                };
+                let entry = out.entry(owner.clone()).or_insert_with(|| Some(Vec::new()));
+                match (entry.as_mut(), wire) {
+                    (Some(values), Some(value)) => values.push(value),
+                    _ => *entry = None,
                 }
             }
         }

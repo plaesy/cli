@@ -55,8 +55,20 @@ fn go_maps_string_type_with_const_block_to_enum() {
     let imported = import(SAMPLE, "orders").unwrap();
     assert_eq!(
         imported.ir["types"]["Status"],
-        json!({ "enum": ["StatusDraft", "StatusPaid", "StatusShipped"] })
+        json!({ "enum": ["draft", "paid", "shipped"] })
     );
+}
+
+#[test]
+fn go_enum_with_non_string_member_is_lost_not_guessed() {
+    let source = "package orders\n\ntype Level string\n\nconst (\n\tLow Level = \"low\"\n\tHigh Level = 2\n)\n";
+    let imported = import(source, "orders").unwrap();
+    assert!(imported.ir["types"].get("Level").is_none());
+    assert!(imported
+        .report
+        .lost
+        .iter()
+        .any(|loss| loss.reason.contains("string tanpa const enum")));
 }
 
 #[test]
