@@ -136,11 +136,13 @@ fn gap(oldest_available: u64) -> Value {
 async fn send_json<S>(
     ws: &mut tokio_tungstenite::WebSocketStream<S>,
     value: &Value,
-) -> Result<(), tokio_tungstenite::tungstenite::Error>
+) -> Result<(), Box<tokio_tungstenite::tungstenite::Error>>
 where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
-    ws.send(Message::Text(value.to_string().into())).await
+    ws.send(Message::Text(value.to_string().into()))
+        .await
+        .map_err(Box::new)
 }
 
 #[cfg(test)]

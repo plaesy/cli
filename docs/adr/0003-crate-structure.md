@@ -363,7 +363,7 @@ Setiap modul lama dipindah ke crate berikut tanpa mengubah isi logika. Di tiap `
 | `plaesy-interface-client` | (dari `crates/editor/flow`) | interface/client (ADR 0011) |
 | `plaesy` (facade) | `lib.rs`, `main.rs`, `tests/`, `benches/`, `examples/`, `build.rs` | plaesy (facade) |
 
-Yang belum ada dan tidak dibuat sekarang (agar rencana tidak tampak selesai): `interface/http`, `ws`, `mcp`, `acp`, `plugin/sdk`, `adapter/sqlite` sebagai crate terpisah, `adapter/http-client`, `adapter/sync`, `adapter/codegen-*`, `adapter/import-*`, dan konteks `app`/`api`/`data` di service. Semuanya tetap rencana di `docs/adr/implementation-plan.md`.
+Yang belum ada (tetap rencana di `docs/adr/implementation-plan.md`): `plugin/sdk`, `adapter/http-client`, `adapter/codegen-*`, `adapter/import-*`, dan konteks `app`/`api`/`data` di service. Crate `http`, `ws`, `mcp`, `acp`, `sqlite`, dan `sync` dibangun setelah keputusan scope, lihat bagian "Hasil migrasi" di bawah.
 
 Bukti kriteria penerimaan:
 
@@ -390,10 +390,10 @@ Keterbatasan dan keputusannya:
   - `adapter/sqlite` (`plaesy-adapter-sqlite`): port `DocumentStore` di `plaesy-service`, implementasi SQLite, migrasi lewat `user_version`.
   - `interface/http` (`plaesy-interface-http`): REST `/v1/documents/{kind}/{id}` di atas port. `kind` dengan `/` di-encode sebagai `%2F`.
   - `interface/mcp` (`plaesy-interface-mcp`): server JSON-RPC 2.0 stdio dengan `initialize`, `tools/list`, `tools/call`. Ditulis tanpa `rmcp`, agar kontrak stdout eksplisit.
-  - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, buffer replay, `Gap` bila tertinggal). Keputusan default: tidak ada socket di crate ini. Binding WebSocket menunggu pilihan library (ADR 0011, open item).
-  - `adapter/sync` (`plaesy-adapter-sync`): keputusan default: log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log masih di memori; persistensinya belum ada.
+  - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, replay, `Gap`) dan server WebSocket memakai `tokio-tungstenite`. Pilihan library ini keputusan default yang didelegasikan.
+  - `adapter/sync` (`plaesy-adapter-sync`): log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log bertahan di SQLite (`SqliteChangeLog`), dan `MemoryChangeLog` dipakai untuk tes.
   - `interface/acp` (`plaesy-interface-acp`): ADR tidak merinci protokol ACP. Bentuk metode `initialize` dan `document/*` adalah default sementara dan harus dicocokkan dengan spesifikasi owner.
-- Yang masih terbuka dari crate-crate itu: binding socket untuk `ws`, persistensi log untuk `sync`, dan spesifikasi ACP yang sebenarnya.
+- Yang masih terbuka: spesifikasi ACP yang sebenarnya (hanya owner yang bisa memberikannya).
 
 ## Open items
 
