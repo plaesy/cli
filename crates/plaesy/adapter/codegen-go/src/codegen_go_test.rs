@@ -78,3 +78,29 @@ fn go_unsupported_expression_makes_the_module_a_loss() {
         .iter()
         .any(|l| l.module == "m7" && l.reason.contains("di luar cakupan")));
 }
+
+/// Memeriksa sintaks dengan `gofmt -e` bila Go tersedia. Tanpa Go, tes ini dilewati dengan pesan.
+#[test]
+fn go_generated_package_has_valid_syntax_when_go_is_available() {
+    if std::process::Command::new("gofmt")
+        .arg("-h")
+        .output()
+        .is_err()
+    {
+        eprintln!("LEWAT: gofmt tidak terpasang, pemeriksaan sintaks Go dilewati");
+        return;
+    }
+    let generated = generate(&example("kirim-faktur.json")).unwrap();
+    let path = std::env::temp_dir().join("plaesy-codegen-go-syntax.go");
+    std::fs::write(&path, &generated.source).unwrap();
+    let output = std::process::Command::new("gofmt")
+        .arg("-e")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "gofmt -e gagal: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

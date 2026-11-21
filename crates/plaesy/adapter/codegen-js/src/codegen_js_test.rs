@@ -82,3 +82,29 @@ fn js_unsupported_expression_makes_the_module_a_loss() {
         .iter()
         .any(|l| l.module == "m7" && l.reason.contains("di luar cakupan")));
 }
+
+/// Memeriksa sintaks dengan `node --check` bila Node tersedia. Tanpa Node, tes ini dilewati dengan pesan.
+#[test]
+fn js_generated_module_has_valid_syntax_when_node_is_available() {
+    if std::process::Command::new("node")
+        .arg("--version")
+        .output()
+        .is_err()
+    {
+        eprintln!("LEWAT: node tidak terpasang, pemeriksaan sintaks JavaScript dilewati");
+        return;
+    }
+    let generated = generate(&example("kirim-faktur.json")).unwrap();
+    let path = std::env::temp_dir().join("plaesy-codegen-js-syntax.mjs");
+    std::fs::write(&path, &generated.source).unwrap();
+    let output = std::process::Command::new("node")
+        .arg("--check")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "node --check gagal: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
