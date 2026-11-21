@@ -1,0 +1,88 @@
+{
+  "ir": "data-ir/1",
+  "id": "dat_01JA0CRM",
+  "version": 1,
+  "name": "crm",
+  "tables": [
+    {
+      "name": "customers",
+      "columns": [
+        { "name": "id", "type": "uuid", "nullable": false },
+        { "name": "name", "type": "text", "nullable": false },
+        { "name": "email", "type": "text", "nullable": false, "unique": true },
+        { "name": "tier", "type": { "enum": ["basic", "pro", "enterprise"] }, "nullable": false, "default": "basic" },
+        { "name": "created_at", "type": "timestamp", "nullable": false }
+      ],
+      "primary_key": ["id"],
+      "indexes": [{ "name": "customers_tier_idx", "columns": ["tier"], "unique": false }]
+    },
+    {
+      "name": "orders",
+      "columns": [
+        { "name": "id", "type": "uuid", "nullable": false },
+        { "name": "customer_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": { "enum": ["draft", "paid", "shipped", "cancelled"] }, "nullable": false, "default": "draft" },
+        { "name": "total", "type": { "decimal": { "precision": 12, "scale": 2 } }, "nullable": false },
+        { "name": "created_at", "type": "timestamp", "nullable": false }
+      ],
+      "primary_key": ["id"],
+      "indexes": [{ "name": "orders_customer_idx", "columns": ["customer_id"], "unique": false }]
+    },
+    {
+      "name": "products",
+      "columns": [
+        { "name": "id", "type": "uuid", "nullable": false },
+        { "name": "sku", "type": "text", "nullable": false, "unique": true },
+        { "name": "price", "type": { "decimal": { "precision": 12, "scale": 2 } }, "nullable": false }
+      ],
+      "primary_key": ["id"]
+    },
+    {
+      "name": "order_items",
+      "columns": [
+        { "name": "order_id", "type": "uuid", "nullable": false },
+        { "name": "product_id", "type": "uuid", "nullable": false },
+        { "name": "quantity", "type": "integer", "nullable": false, "default": 1 }
+      ],
+      "primary_key": ["order_id", "product_id"]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel_customer_orders",
+      "kind": "one_to_many",
+      "parent": { "table": "customers", "columns": ["id"] },
+      "child": { "table": "orders", "columns": ["customer_id"] },
+      "on_delete": "restrict"
+    },
+    {
+      "id": "rel_orders_products",
+      "kind": "many_to_many",
+      "left": { "table": "orders", "columns": ["id"] },
+      "right": { "table": "products", "columns": ["id"] },
+      "junction": {
+        "table": "order_items",
+        "left_columns": ["order_id"],
+        "right_columns": ["product_id"]
+      }
+    }
+  ],
+  "queries": [
+    {
+      "id": "qry_customer_order_totals",
+      "name": "customer_order_totals",
+      "from": "customers",
+      "params": { "status": { "enum": ["draft", "paid", "shipped", "cancelled"] } },
+      "joins": [{ "relation": "rel_customer_orders", "type": "left" }],
+      "select": [
+        { "table": "customers", "column": "name" },
+        { "agg": "count", "table": "orders", "column": "id", "alias": "order_count" },
+        { "agg": "sum", "table": "orders", "column": "total", "alias": "total_spent" }
+      ],
+      "where": { "cmp": { "left": { "table": "orders", "column": "status" }, "op": "eq", "right": { "param": "status" } } },
+      "group_by": [{ "table": "customers", "column": "name" }],
+      "order_by": [{ "alias": "total_spent", "dir": "desc" }],
+      "limit": 50
+    }
+  ]
+}

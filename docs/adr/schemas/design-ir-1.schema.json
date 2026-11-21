@@ -1,0 +1,462 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plaesy.dev/schemas/design-ir-1.schema.json",
+  "title": "Plaesy design IR (design-ir/1)",
+  "description": "Skema bentuk untuk design-ir/1 (ADR 0007): halaman, frame, node, komponen dengan variant, dan token. Validasi semantik (referensi komponen, token, variant, dan aturan layout) dilakukan di domain/design.",
+  "type": "object",
+  "required": [
+    "ir",
+    "id",
+    "version",
+    "name",
+    "tokens",
+    "components",
+    "pages"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ir": {
+      "const": "design-ir/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^dsg_[0-9A-Za-z_]{1,60}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "tokens": {
+      "$ref": "#/$defs/tokens"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,62}$"
+    },
+    "nodeId": {
+      "type": "string",
+      "pattern": "^nd_[a-z0-9_]{1,60}$"
+    },
+    "componentId": {
+      "type": "string",
+      "pattern": "^cp_[a-z0-9_]{1,60}$"
+    },
+    "tokenRef": {
+      "description": "Rujukan ke token, dengan format kategori.nama, misalnya color.primary.",
+      "type": "string",
+      "pattern": "^(color|space|radius|font|shadow)\\.[a-z0-9_.-]+$"
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/tokenGroup"
+        },
+        "space": {
+          "$ref": "#/$defs/tokenGroup"
+        },
+        "radius": {
+          "$ref": "#/$defs/tokenGroup"
+        },
+        "font": {
+          "$ref": "#/$defs/tokenGroup"
+        },
+        "shadow": {
+          "$ref": "#/$defs/tokenGroup"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "tokenGroup": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "object",
+            "required": [
+              "family",
+              "size",
+              "weight"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "family": {
+                "type": "string"
+              },
+              "size": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "weight": {
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 900
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+              }
+            }
+          }
+        ]
+      }
+    },
+    "value": {
+      "description": "Nilai properti visual: token atau literal.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/tokenRef"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "auto"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ]
+        },
+        "gap": {
+          "$ref": "#/$defs/value"
+        },
+        "padding": {
+          "$ref": "#/$defs/value"
+        },
+        "align": {
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        },
+        "wrap": {
+          "type": "boolean"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "auto"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "direction"
+            ]
+          }
+        }
+      ]
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/value"
+        },
+        "stroke": {
+          "$ref": "#/$defs/value"
+        },
+        "stroke_width": {
+          "$ref": "#/$defs/value"
+        },
+        "radius": {
+          "$ref": "#/$defs/value"
+        },
+        "shadow": {
+          "$ref": "#/$defs/value"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "font": {
+          "$ref": "#/$defs/value"
+        },
+        "text_color": {
+          "$ref": "#/$defs/value"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nodeId"
+        },
+        "type": {
+          "enum": [
+            "frame",
+            "rect",
+            "text",
+            "image",
+            "vector",
+            "instance",
+            "opaque"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layout": {
+          "$ref": "#/$defs/layout"
+        },
+        "style": {
+          "$ref": "#/$defs/style"
+        },
+        "text": {
+          "type": "string"
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1
+        },
+        "component": {
+          "$ref": "#/$defs/componentId"
+        },
+        "variant": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "construct": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nama konstruksi sumber yang tidak dipetakan (ADR 0010, kind opaque)."
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "location"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "location": {
+              "type": "string",
+              "minLength": 1
+            },
+            "payload": {
+              "type": "string"
+            }
+          },
+          "description": "Lokasi di sumber untuk kind opaque."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "text"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "src"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "instance"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "component"
+            ]
+          }
+        }
+      ]
+    },
+    "component": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "root",
+        "variants"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/componentId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "$ref": "#/$defs/node"
+        },
+        "variants": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "page": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "frames"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^pg_[a-z0-9_]{1,60}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
+      }
+    }
+  }
+}

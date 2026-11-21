@@ -1,10 +1,10 @@
 # ADR 0002: Language-neutral visual flow IR
 
-- Status: accepted in full. Accepted by the owner in chat on 2026-11-18: node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. Implementation may start.
+- Status: accepted for the decisions listed (node catalogue, CEL expressions, retry formula, loop limits, approval channel, Rust as first codegen adapter), accepted in chat by the owner on 2026-11-18. Bagian "IR format (flow-ir/1)" dan "Validasi" adalah usulan dan belum disetujui owner. Versi tetap `flow-ir/1`.
 - Approver: owner, by chat approval on 2026-11-18 (no named person recorded).
-- Version: flow-ir/1 (accepted)
+- Version: flow-ir/1 (accepted untuk keputusan di atas; bagian "IR format" masih usulan)
 - Governs: spec R16; tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen`
-- Related: ADR 0001 (design-code IR). Flow IR is separate because flows are logic, not layout.
+- Related: ADR 0009 (konvensi IR), ADR 0010 (design IR). Flow IR is separate because flows are logic, not layout.
 
 ## Context
 
@@ -66,6 +66,115 @@ Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](http
 - Each target is an adapter implementing one trait: generate per node kind, or report a loss.
 - The adapter must support every kind it claims. A kind it cannot express is listed in its loss report.
 - Generated code passes the same flow fixtures as the IR for that adapter.
+
+## IR format (flow-ir/1)
+
+Usulan format di dalam `flow-ir/1`. Versi tidak berubah. Owner perlu mengonfirmasi bagian ini.
+
+### Serialisasi
+
+- **Kanonik: JSON** (UTF-8). Disimpan di database dan dikirim lewat API sebagai JSON.
+- **Validasi: JSON Schema** (draft 2020-12). Editor dan backend memakai schema yang sama.
+- **YAML opsional** untuk dibaca dan diedit manusia. Dikonversi ke JSON sebelum diproses. Tidak ada dua bentuk yang diproses berbeda.
+- **Tidak ada** field yang menyebut bahasa target, runtime, atau library.
+
+### Bentuk dokumen
+
+```json
+{
+  "ir": "flow-ir/1",
+  "id": "flw_01J9Z3K8",
+  "version": 3,
+  "name": "kirim-faktur",
+  "inputs": { "invoice_id": { "type": "string" } },
+  "outputs": { "status": { "type": "string" } },
+  "scope": ["billing:read", "billing:write"],
+  "modules": [
+    {
+      "id": "m1",
+      "kind": "action",
+      "operation": "billing.get_invoice",
+      "inputs": { "id": "flow.input.invoice_id" },
+      "outputs": { "invoice": { "type": "object" } },
+      "retry": { "kind": "exponential", "max_attempts": 3, "base_secs": 1, "multiplier": 2, "cap_secs": 60, "retry_if": "error.code != 'not_found'" },
+      "timeout_secs": 30,
+      "on_error": "fail"
+    },
+    {
+      "id": "m2",
+      "kind": "branch_one",
+      "branches": [
+        { "when": "m1.invoice.status == 'draft'", "modules": ["m3"] }
+      ],
+      "default": ["m4"]
+    },
+    { "id": "m3", "kind": "action", "operation": "billing.send_invoice", "inputs": { "id": "m1.invoice.id" }, "outputs": {} },
+    { "id": "m4", "kind": "pass", "inputs": { "status": "'skipped'" }, "outputs": {} }
+  ],
+  "failure_handler": "m5",
+  "early_return": null
+}
+```
+
+### Aturan bentuk
+
+- **`id` dokumen** dan **`id` module** tidak pernah berubah saat diedit, diurutkan ulang, atau diimpor ulang.
+- **Module** memiliki `id`, `kind`, `inputs`, dan `outputs`, serta kebijakan error `on_error`: `fail`, `continue`, atau id module penanganan.
+- **Referensi data** memakai jalur: `flow.input.<nama>` untuk input flow, dan `<id_module>.<output>` untuk output module yang sudah dijalankan sebelumnya. Referensi ke module yang belum dijalankan adalah error validasi.
+- **Ekspresi** (`when`, `retry_if`, `stop_after_if`, `skip_if`) berupa string CEL sesuai usulan di atas.
+- **Tipe** memakai subset JSON Schema: `string`, `number`, `boolean`, `object`, `array`, dan `null`. Tipe lain didefinisikan sebagai object dengan `$ref`.
+- **Field yang tidak dikenal** disimpan apa adanya saat dibaca dan ditulis ulang. Tidak dibuang.
+- **Konstruksi yang tidak dipetakan** oleh adapter codegen tercatat di laporan kehilangan. Tidak dilewati diam-diam.
+- **Inline code** tidak disimpan di IR. Langkah `action` hanya merujuk operasi bernama.
+
+### Pemetaan kind ke field
+
+| `kind` | Field khusus |
+| --- | --- |
+| `action` | `operation`, `inputs`, `outputs` |
+| `subflow` | `flow_id`, `flow_version`, `inputs`, `outputs` |
+| `pass` | `inputs`, `outputs` |
+| `branch_one` | `branches` (daftar `when` dan `modules`), `default` (wajib) |
+| `branch_all` | `branches`, `parallel` (bool), `on_error` per cabang |
+| `for_each` | `iterator`, `modules`, `parallel`, `parallelism`, `skip_failures` |
+| `while` | `condition`, `modules`, `max_iterations` (wajib), `max_duration_secs` (wajib) |
+| `approval` | `required_events`, `timeout_secs` (wajib), `on_timeout`, `on_reject` |
+
+### Pemicu
+
+Pemicu flow (event UI dari `domain/app`, atau endpoint dari `domain/api`) disimpan di konteks itu, bukan di dokumen flow.
+
+### Berkas pendukung
+
+- Skema bentuk (JSON Schema draft 2020-12): `schemas/flow-ir-1.schema.json`
+- Contoh lengkap yang memakai semua kind: `examples/flow-ir-1/kirim-faktur.json`
+
+Skema hanya memeriksa bentuk. Aturan berikut wajib dicek di `domain/flow` (fungsi `validate`):
+
+- **Id module unik** dalam satu flow.
+- **Referensi data** (`<id_module>.<output>`, `flow.input.<nama>`) hanya boleh merujuk input flow atau module yang dijalankan sebelumnya.
+- **Tidak ada siklus** dalam urutan module, kecuali lewat `while` dan `for_each` yang punya batas.
+- **Ekspresi CEL** harus bisa diparse. Ekspresi di `retry_if`, `when`, `condition`, `stop_after_if`, dan `skip_if` diperiksa saat validasi.
+- **Scope langkah** hanya boleh menyempitkan scope flow, tidak boleh melebarkannya.
+- **`failure_handler`** harus merujuk id module yang ada.
+- **Batas loop** (`max_iterations`, `max_duration_secs`, `parallelism`) tidak boleh dilampaui meskipun skema membolehkannya.
+- **Subflow** harus merujuk flow dan versi yang ada, dan tidak boleh membentuk rekursi.
+- **Kehilangan** saat codegen dicatat per module. Tidak ada module yang dilewati diam-diam.
+
+Status validasi: contoh `kirim-faktur.json` lolos `ajv validate --spec=draft2020` terhadap `flow-ir-1.schema.json`. Uji negatif (module tanpa `default`, `max_iterations` di atas batas, dan `kind` yang salah) ditolak dengan benar. Validasi semantik di `domain/flow` belum ada.
+
+## Confirmation
+
+- `examples/flow-ir-1/kirim-faktur.json` dan `retry-parallel-branches.json` lolos `ajv validate --spec=draft2020` terhadap `flow-ir-1.schema.json`.
+- Uji negatif: id module duplikat, referensi module yang tidak ada, `kind` tidak dikenal, dan `integer` sebagai tipe port ditolak.
+- `tools/validate-ir.js` melaporkan OK untuk contoh dan error untuk kesalahan yang disisipkan.
+
+## Acceptance criteria (implementasi `flow-ir/1`)
+
+1. `domain/flow::validate` mengimplementasikan semua aturan di bagian "Validasi" dan lulus uji untuk setiap aturan, termasuk uji negatif.
+2. `domain/flow::eval` menjalankan kedua contoh dan menghasilkan output yang sama dengan fixture yang ditulis bersama contoh.
+3. Codegen Rust menghasilkan kode yang dikompilasi dan lulus fixture yang sama dengan interpreter (uji konformansi).
+4. Versi tetap `flow-ir/1`. Perubahan semantik membutuhkan ADR baru dan versi baru.
 
 ## Consequences
 

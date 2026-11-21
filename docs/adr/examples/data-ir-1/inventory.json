@@ -1,0 +1,123 @@
+{
+  "ir": "data-ir/1",
+  "id": "dat_01JA1INV",
+  "version": 2,
+  "name": "inventory",
+  "tables": [
+    {
+      "name": "warehouses",
+      "columns": [
+        { "name": "id", "type": "uuid", "nullable": false },
+        { "name": "code", "type": "text", "nullable": false, "unique": true },
+        { "name": "region", "type": { "enum": ["north", "south", "east", "west"] }, "nullable": false },
+        { "name": "capacity_m3", "type": { "decimal": { "precision": 10, "scale": 2 } }, "nullable": true }
+      ],
+      "primary_key": ["id"]
+    },
+    {
+      "name": "stock_levels",
+      "columns": [
+        { "name": "warehouse_id", "type": "uuid", "nullable": false },
+        { "name": "sku", "type": "text", "nullable": false },
+        { "name": "on_hand", "type": "integer", "nullable": false, "default": 0 },
+        { "name": "reserved", "type": "integer", "nullable": false, "default": 0 },
+        { "name": "updated_at", "type": "timestamp", "nullable": false }
+      ],
+      "primary_key": ["warehouse_id", "sku"],
+      "indexes": [{ "name": "stock_sku_idx", "columns": ["sku"], "unique": false }]
+    },
+    {
+      "name": "warehouse_profiles",
+      "columns": [
+        { "name": "warehouse_id", "type": "uuid", "nullable": false, "unique": true },
+        { "name": "manager_email", "type": "text", "nullable": true },
+        { "name": "timezone", "type": "text", "nullable": false, "default": "UTC" }
+      ],
+      "primary_key": ["warehouse_id"]
+    },
+    {
+      "name": "transfers",
+      "columns": [
+        { "name": "id", "type": "uuid", "nullable": false },
+        { "name": "from_warehouse_id", "type": "uuid", "nullable": false },
+        { "name": "to_warehouse_id", "type": "uuid", "nullable": false },
+        { "name": "sku", "type": "text", "nullable": false },
+        { "name": "quantity", "type": "integer", "nullable": false },
+        { "name": "moved_at", "type": "timestamp", "nullable": true }
+      ],
+      "primary_key": ["id"]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel_warehouse_stock",
+      "kind": "one_to_many",
+      "parent": { "table": "warehouses", "columns": ["id"] },
+      "child": { "table": "stock_levels", "columns": ["warehouse_id"] },
+      "on_delete": "cascade"
+    },
+    {
+      "id": "rel_warehouse_profile",
+      "kind": "one_to_one",
+      "parent": { "table": "warehouses", "columns": ["id"] },
+      "child": { "table": "warehouse_profiles", "columns": ["warehouse_id"] },
+      "on_delete": "cascade"
+    },
+    {
+      "id": "rel_transfer_origin",
+      "kind": "one_to_many",
+      "parent": { "table": "warehouses", "columns": ["id"] },
+      "child": { "table": "transfers", "columns": ["from_warehouse_id"] },
+      "on_delete": "restrict"
+    }
+  ],
+  "queries": [
+    {
+      "id": "qry_low_stock",
+      "name": "low_stock",
+      "from": "warehouses",
+      "params": {
+        "threshold": "integer",
+        "region": { "enum": ["north", "south", "east", "west"] }
+      },
+      "joins": [{ "relation": "rel_warehouse_stock", "type": "inner" }],
+      "select": [
+        { "table": "warehouses", "column": "code", "alias": "warehouse_code" },
+        { "table": "stock_levels", "column": "sku" },
+        { "agg": "min", "table": "stock_levels", "column": "on_hand", "alias": "lowest_on_hand" },
+        { "agg": "avg", "table": "stock_levels", "column": "reserved", "alias": "avg_reserved" }
+      ],
+      "where": {
+        "and": [
+          { "cmp": { "left": { "table": "warehouses", "column": "region" }, "op": "eq", "right": { "param": "region" } } },
+          { "cmp": { "left": { "table": "stock_levels", "column": "on_hand" }, "op": "lte", "right": { "param": "threshold" } } },
+          { "not": { "cmp": { "left": { "table": "stock_levels", "column": "sku" }, "op": "is_null" } } }
+        ]
+      },
+      "group_by": [
+        { "table": "warehouses", "column": "code" },
+        { "table": "stock_levels", "column": "sku" }
+      ],
+      "order_by": [{ "alias": "lowest_on_hand", "dir": "asc" }],
+      "limit": 100
+    },
+    {
+      "id": "qry_pending_transfers",
+      "name": "pending_transfers",
+      "from": "transfers",
+      "params": { "skus": { "array": "text" } },
+      "select": [
+        { "table": "transfers", "column": "id" },
+        { "table": "transfers", "column": "sku" },
+        { "table": "transfers", "column": "quantity" }
+      ],
+      "where": {
+        "and": [
+          { "cmp": { "left": { "table": "transfers", "column": "moved_at" }, "op": "is_null" } },
+          { "cmp": { "left": { "table": "transfers", "column": "sku" }, "op": "in", "right": { "param": "skus" } } }
+        ]
+      },
+      "limit": 500
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 # ADR 0001: Canonical IR for design-to-code and code-to-design conversion
 
-- Status: accepted 2026-11-18 under the owner's delegation ("lakukan yang terbaik"). The owner may revoke any decision below. Approver recorded as the owner's delegation, not a named person.
+- Status: superseded oleh ADR 0010 (design-code IR). Sebelumnya accepted 2026-11-18 under the owner's delegation; isi keputusan yang masih berlaku dipindahkan ke ADR 0010 dan ADR 0009.
+- Superseded by: ADR 0010
 - Version: ir/1 (proposed)
 - Supersedes: the draft section in `docs/platform/decisions.md`
 - Governs: spec R15; tasks `high_chore-decide-design-code-ir-schema-and-target-adr` and `high_feature-implement-design-code-ir-round-trip`
@@ -37,7 +38,7 @@ Every node has:
 - `children`: ordered list of node IDs.
 - `source`: source map entry, `{ format, path_or_span, revision }`.
 
-Tokens (colour, font, spacing) are stored by intent, with the name and value, not by a source tool's storage layout. This follows the principle of representing what the designer meant ([JSIR design](https://github-users.yhajoa.workers.dev/google/jsir/blob/main/docs/intermediate_representation_design.md) for lossless lifting as a goal).
+Tokens (colour, font, spacing) are stored by intent, with the name and value, not by a source tool's storage layout. This follows the principle of representing what the designer meant ([JSIR design](https://github.com/google/jsir/blob/main/docs/intermediate_representation_design.md) for lossless lifting as a goal).
 
 ### Unsupported constructs
 

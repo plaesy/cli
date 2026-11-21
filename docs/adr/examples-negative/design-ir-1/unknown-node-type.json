@@ -1,0 +1,182 @@
+{
+  "ir": "design-ir/1",
+  "id": "dsg_dashboard",
+  "version": 1,
+  "name": "dashboard-card",
+  "tokens": {
+    "color": {
+      "primary": "#0F766E",
+      "warning": "#B45309",
+      "surface": "#F8FAFC",
+      "muted": "#64748B"
+    },
+    "space": {
+      "xs": 4,
+      "sm": 8,
+      "md": 16
+    },
+    "radius": {
+      "lg": 12
+    },
+    "font": {
+      "title": {
+        "family": "Inter",
+        "size": 18,
+        "weight": 600
+      },
+      "caption": {
+        "family": "Inter",
+        "size": 12,
+        "weight": 400
+      }
+    },
+    "shadow": {
+      "card": "0 4px 12px rgba(15,23,42,0.08)"
+    }
+  },
+  "components": [
+    {
+      "id": "cp_card",
+      "name": "Card",
+      "root": {
+        "id": "nd_card_root",
+        "type": "frame",
+        "layout": {
+          "mode": "auto",
+          "direction": "vertical",
+          "padding": "space.md",
+          "gap": "space.sm"
+        },
+        "style": {
+          "fill": "color.surface",
+          "radius": "radius.lg",
+          "shadow": "shadow.card"
+        },
+        "children": [
+          {
+            "id": "nd_card_title",
+            "type": "text",
+            "text": "Judul",
+            "style": {
+              "font": "font.title",
+              "text_color": "color.primary"
+            }
+          },
+          {
+            "id": "nd_card_body",
+            "type": "text",
+            "text": "Isi",
+            "style": {
+              "font": "font.caption",
+              "text_color": "color.muted"
+            }
+          }
+        ]
+      },
+      "variants": {
+        "state": [
+          "normal",
+          "warning"
+        ]
+      }
+    },
+    {
+      "id": "cp_badge",
+      "name": "Badge",
+      "root": {
+        "id": "nd_badge_root",
+        "type": "rect",
+        "width": 8,
+        "height": 8,
+        "style": {
+          "fill": "color.warning",
+          "radius": "radius.lg"
+        }
+      },
+      "variants": {
+        "size": [
+          "sm",
+          "md"
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_dashboard",
+      "name": "Dashboard",
+      "frames": [
+        {
+          "id": "nd_dashboard_frame",
+          "type": "frame",
+          "name": "Dashboard",
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 540,
+          "layout": {
+            "mode": "auto",
+            "direction": "horizontal",
+            "padding": "space.md",
+            "gap": "space.md",
+            "align": "start",
+            "wrap": true
+          },
+          "style": {
+            "fill": "color.surface"
+          },
+          "children": [
+            {
+              "id": "nd_card_stock",
+              "type": "instance",
+              "component": "cp_card",
+              "variant": {
+                "state": "warning"
+              },
+              "children": []
+            },
+            {
+              "id": "nd_card_orders",
+              "type": "instance",
+              "component": "cp_card",
+              "variant": {
+                "state": "normal"
+              }
+            },
+            {
+              "id": "nd_logo",
+              "type": "image",
+              "src": "assets/logo.png",
+              "width": 120,
+              "height": 40
+            },
+            {
+              "id": "nd_divider",
+              "type": "vector",
+              "x": 0,
+              "y": 240,
+              "width": 960,
+              "height": 1,
+              "style": {
+                "stroke": "color.muted",
+                "stroke_width": 1
+              }
+            },
+            {
+              "id": "nd_badge_instance",
+              "type": "instance",
+              "component": "cp_badge",
+              "variant": {
+                "size": "sm"
+              }
+            },
+            {
+              "id": "nd_bad",
+              "type": "video"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

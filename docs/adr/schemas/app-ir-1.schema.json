@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plaesy.dev/schemas/app-ir-1.schema.json",
+  "title": "Plaesy app IR (app-ir/1)",
+  "description": "Skema bentuk untuk app-ir/1 (ADR 0006): layar, pohon komponen, binding data, dan binding event ke flow. Validasi semantik (referensi layar, komponen, query, flow, dan parameter) dilakukan di domain/app.",
+  "type": "object",
+  "required": [
+    "ir",
+    "id",
+    "version",
+    "name",
+    "screens"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ir": {
+      "const": "app-ir/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^app_[0-9A-Za-z]{1,64}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "start_screen": {
+      "$ref": "#/$defs/screenId"
+    },
+    "screens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/screen"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$"
+    },
+    "screenId": {
+      "type": "string",
+      "pattern": "^scr_[a-z0-9_]{1,60}$"
+    },
+    "componentId": {
+      "type": "string",
+      "pattern": "^cmp_[a-z0-9_]{1,60}$"
+    },
+    "flowId": {
+      "type": "string",
+      "pattern": "^flw_[0-9A-Za-z]{1,64}$"
+    },
+    "queryId": {
+      "type": "string",
+      "pattern": "^qry_[a-z0-9_]{1,60}$"
+    },
+    "designRef": {
+      "type": "string",
+      "pattern": "^dsg_[0-9A-Za-z_]{1,60}(#cp_[0-9A-Za-z_]{1,60})?$",
+      "description": "Rujukan desain: dsg_<id>, atau dsg_<id>#cp_<id> untuk komponen di dalam desain."
+    },
+    "valueSource": {
+      "description": "Nilai prop: literal, parameter layar, hasil query, atau output flow.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "literal"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "literal": {},
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "param"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "query",
+            "column"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "$ref": "#/$defs/queryId"
+            },
+            "column": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "flow_output",
+            "flow_id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "flow_id": {
+              "$ref": "#/$defs/flowId"
+            },
+            "flow_output": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "flow_id",
+        "inputs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "flow_id": {
+          "$ref": "#/$defs/flowId"
+        },
+        "flow_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "inputs": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/valueSource"
+          }
+        },
+        "on_success": {
+          "$ref": "#/$defs/navigation"
+        },
+        "on_failure": {
+          "$ref": "#/$defs/navigation"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "required": [
+        "screen"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "screen": {
+          "$ref": "#/$defs/screenId"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/valueSource"
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "on",
+        "action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "enum": [
+            "click",
+            "change",
+            "submit",
+            "load"
+          ]
+        },
+        "action": {
+          "$ref": "#/$defs/action"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/componentId"
+        },
+        "type": {
+          "$ref": "#/$defs/identifier"
+        },
+        "design_ref": {
+          "$ref": "#/$defs/designRef"
+        },
+        "props": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/valueSource"
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        },
+        "visible_when": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "screen": {
+      "type": "object",
+      "required": [
+        "id",
+        "route",
+        "root"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/screenId"
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/([a-z0-9_-]+(/[a-z0-9_-]+|/:[a-z][a-z0-9_]*)*)?$"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean"
+                ]
+              }
+            }
+          }
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/queryId"
+          }
+        },
+        "root": {
+          "$ref": "#/$defs/component"
+        }
+      }
+    }
+  }
+}

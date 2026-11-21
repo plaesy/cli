@@ -1,0 +1,93 @@
+{
+  "ir": "app-ir/1",
+  "id": "app_01JA3LOGIN",
+  "version": 2,
+  "name": "stock-console",
+  "start_screen": "scr_login",
+  "screens": [
+    {
+      "id": "scr_login",
+      "route": "/login",
+      "params": { "email": { "type": "string" } },
+      "root": {
+        "id": "cmp_login_page",
+        "type": "page",
+        "design_ref": "dsg_order_desk",
+        "children": [
+          {
+            "id": "cmp_email",
+            "type": "text_field",
+            "props": {
+              "label": { "literal": "Email" },
+              "value": { "param": "email" }
+            },
+            "events": [
+              {
+                "on": "change",
+                "action": {
+                  "flow_id": "flw_01J9VALIDMAIL",
+                  "flow_version": 1,
+                  "inputs": { "email": { "param": "email" } }
+                }
+              }
+            ]
+          },
+          {
+            "id": "cmp_submit",
+            "type": "button",
+            "props": { "label": { "literal": "Masuk" } },
+            "events": [
+              {
+                "on": "submit",
+                "action": {
+                  "flow_id": "flw_01J9SIGNIN",
+                  "flow_version": 2,
+                  "inputs": { "email": { "param": "email" } },
+                  "on_success": { "screen": "scr_stock" },
+                  "on_failure": { "screen": "scr_login" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "scr_stock",
+      "route": "/stock/:warehouse_id",
+      "params": { "warehouse_id": { "type": "string" } },
+      "queries": ["qry_low_stock"],
+      "root": {
+        "id": "cmp_stock_page",
+        "type": "page",
+        "design_ref": "dsg_order_desk",
+        "children": [
+          {
+            "id": "cmp_low_stock_table",
+            "type": "table",
+            "props": {
+              "rows": { "query": "qry_low_stock", "column": "warehouse_code" },
+              "count": { "flow_output": "count", "flow_id": "flw_01J9COUNTLOW" }
+            },
+            "events": [
+              {
+                "on": "load",
+                "action": {
+                  "flow_id": "flw_01J9COUNTLOW",
+                  "flow_version": 1,
+                  "inputs": { "warehouse": { "param": "warehouse_id" } }
+                }
+              }
+            ]
+          },
+          {
+            "id": "cmp_restock_banner",
+            "type": "banner",
+            "visible_when": "params.warehouse_id != ''",
+            "props": { "text": { "literal": "Stok rendah terdeteksi" } }
+          }
+        ]
+      }
+    }
+  ]
+}

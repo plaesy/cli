@@ -1,0 +1,588 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plaesy.dev/schemas/flow-ir-1.schema.json",
+  "title": "Plaesy flow IR (flow-ir/1)",
+  "description": "Skema bentuk untuk flow-ir/1 (ADR 0002). Batas default dari usulan ADR ditulis sebagai maksimum di sini. Validasi semantik (referensi, siklus, ekspresi CEL, scope) dilakukan di domain/flow dan tidak bisa dinyatakan dalam JSON Schema. Field yang tidak dikenal dibiarkan untuk forward compatibility.",
+  "type": "object",
+  "required": [
+    "ir",
+    "id",
+    "version",
+    "name",
+    "modules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ir": {
+      "const": "flow-ir/1"
+    },
+    "id": {
+      "$ref": "#/$defs/flowId"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "inputs": {
+      "$ref": "#/$defs/ports"
+    },
+    "outputs": {
+      "$ref": "#/$defs/ports"
+    },
+    "scope": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/scope"
+      }
+    },
+    "preprocessor": {
+      "$ref": "#/$defs/preprocessor"
+    },
+    "failure_handler": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/moduleId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+    }
+  },
+  "$defs": {
+    "flowId": {
+      "type": "string",
+      "pattern": "^flw_[0-9A-Za-z]{1,64}$"
+    },
+    "moduleId": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$"
+    },
+    "moduleIds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/moduleId"
+      }
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*:[a-z][a-z0-9_.-]*(:[A-Za-z0-9_.*-]+)?$"
+    },
+    "primitiveType": {
+      "type": "string",
+      "enum": [
+        "string",
+        "number",
+        "boolean",
+        "object",
+        "array",
+        "null"
+      ]
+    },
+    "type": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/primitiveType"
+            },
+            "items": {
+              "$ref": "#/$defs/type"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "$ref"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_./#-]+$"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "ports": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/identifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/type"
+      }
+    },
+    "expression": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Ekspresi CEL. Hanya sintaks string di sini; parsing dan evaluasi dilakukan di domain/flow."
+    },
+    "inputMap": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/identifier"
+      },
+      "description": "Nilai berupa literal JSON, atau ekspresi CEL sebagai string."
+    },
+    "errorPolicy": {
+      "anyOf": [
+        {
+          "enum": [
+            "fail",
+            "continue"
+          ]
+        },
+        {
+          "$ref": "#/$defs/moduleId"
+        }
+      ]
+    },
+    "retry": {
+      "type": "object",
+      "required": [
+        "kind",
+        "max_attempts"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "enum": [
+            "constant",
+            "exponential"
+          ]
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "base_secs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "multiplier": {
+          "type": "number",
+          "minimum": 1
+        },
+        "cap_secs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "retry_if": {
+          "$ref": "#/$defs/expression"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "constant"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_secs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "exponential"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_secs",
+              "multiplier",
+              "cap_secs"
+            ]
+          }
+        }
+      ]
+    },
+    "earlyReturn": {
+      "type": "object",
+      "required": [
+        "outputs"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/expression"
+        },
+        "outputs": {
+          "$ref": "#/$defs/inputMap"
+        }
+      }
+    },
+    "preprocessor": {
+      "type": "object",
+      "required": [
+        "kind",
+        "operation"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "const": "action"
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "$ref": "#/$defs/inputMap"
+        }
+      }
+    },
+    "branch": {
+      "type": "object",
+      "required": [
+        "when",
+        "modules"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/expression"
+        },
+        "modules": {
+          "$ref": "#/$defs/moduleIds"
+        }
+      }
+    },
+    "parallelBranch": {
+      "type": "object",
+      "required": [
+        "modules"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "modules": {
+          "$ref": "#/$defs/moduleIds"
+        },
+        "on_error": {
+          "$ref": "#/$defs/errorPolicy"
+        }
+      }
+    },
+    "module": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/moduleId"
+        },
+        "kind": {
+          "enum": [
+            "action",
+            "subflow",
+            "pass",
+            "branch_one",
+            "branch_all",
+            "for_each",
+            "while",
+            "approval"
+          ]
+        },
+        "inputs": {
+          "$ref": "#/$defs/inputMap"
+        },
+        "outputs": {
+          "$ref": "#/$defs/ports"
+        },
+        "retry": {
+          "$ref": "#/$defs/retry"
+        },
+        "timeout_secs": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400
+        },
+        "on_error": {
+          "$ref": "#/$defs/errorPolicy"
+        },
+        "continue_on_error": {
+          "type": "boolean"
+        },
+        "stop_after_if": {
+          "$ref": "#/$defs/expression"
+        },
+        "skip_if": {
+          "$ref": "#/$defs/expression"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "early_return": {
+          "$ref": "#/$defs/earlyReturn"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "action"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "operation"
+            ],
+            "properties": {
+              "operation": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "subflow"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "flow_id",
+              "flow_version"
+            ],
+            "properties": {
+              "flow_id": {
+                "$ref": "#/$defs/flowId"
+              },
+              "flow_version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "pass"
+              }
+            }
+          },
+          "then": {
+            "required": []
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "branch_one"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "branches",
+              "default"
+            ],
+            "properties": {
+              "branches": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/branch"
+                }
+              },
+              "default": {
+                "$ref": "#/$defs/moduleIds"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "branch_all"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "branches",
+              "parallel"
+            ],
+            "properties": {
+              "branches": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/parallelBranch"
+                }
+              },
+              "parallel": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "for_each"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "iterator",
+              "modules"
+            ],
+            "properties": {
+              "iterator": {
+                "$ref": "#/$defs/expression"
+              },
+              "modules": {
+                "$ref": "#/$defs/moduleIds"
+              },
+              "parallel": {
+                "type": "boolean"
+              },
+              "parallelism": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50
+              },
+              "skip_failures": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "while"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "condition",
+              "modules",
+              "max_iterations",
+              "max_duration_secs"
+            ],
+            "properties": {
+              "condition": {
+                "$ref": "#/$defs/expression"
+              },
+              "modules": {
+                "$ref": "#/$defs/moduleIds"
+              },
+              "max_iterations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "max_duration_secs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "approval"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "required_events",
+              "timeout_secs",
+              "on_timeout",
+              "on_reject"
+            ],
+            "properties": {
+              "required_events": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "timeout_secs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2592000
+              },
+              "on_timeout": {
+                "enum": [
+                  "reject",
+                  "fail"
+                ]
+              },
+              "on_reject": {
+                "$ref": "#/$defs/moduleId"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,799 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plaesy.dev/schemas/data-ir-1.schema.json",
+  "title": "Plaesy data IR (data-ir/1)",
+  "description": "Skema bentuk untuk data-ir/1 (ADR 0004): tabel, kolom, relasi, indeks, dan query. Tipe bersifat netral database; pemetaan ke dialek SQL dilakukan oleh codegen-sql. Validasi semantik (nama, referensi, kompatibilitas tipe) dilakukan di domain/data.",
+  "type": "object",
+  "required": [
+    "ir",
+    "id",
+    "version",
+    "name",
+    "tables"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ir": {
+      "const": "data-ir/1"
+    },
+    "id": {
+      "$ref": "#/$defs/dataId"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/table"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    },
+    "queries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/query"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+    }
+  },
+  "$defs": {
+    "dataId": {
+      "type": "string",
+      "pattern": "^dat_[0-9A-Za-z]{1,64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$"
+    },
+    "relationId": {
+      "type": "string",
+      "pattern": "^rel_[a-z0-9_]{1,60}$"
+    },
+    "queryId": {
+      "type": "string",
+      "pattern": "^qry_[a-z0-9_]{1,60}$"
+    },
+    "identifierList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "primitiveType": {
+      "enum": [
+        "text",
+        "integer",
+        "decimal",
+        "boolean",
+        "timestamp",
+        "date",
+        "uuid",
+        "json",
+        "binary"
+      ]
+    },
+    "columnType": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/primitiveType"
+        },
+        {
+          "type": "object",
+          "required": [
+            "enum"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enum": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "decimal"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decimal": {
+              "type": "object",
+              "required": [
+                "precision",
+                "scale"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "precision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 38
+                },
+                "scale": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "extensions": {
+                  "type": "object",
+                  "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+                }
+              }
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "literal": {
+      "description": "Nilai default: string, number, boolean, atau null.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "column": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/identifier"
+        },
+        "type": {
+          "$ref": "#/$defs/columnType"
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": false
+        },
+        "default": {
+          "$ref": "#/$defs/literal"
+        },
+        "unique": {
+          "type": "boolean"
+        }
+      }
+    },
+    "index": {
+      "type": "object",
+      "required": [
+        "name",
+        "columns"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/identifier"
+        },
+        "columns": {
+          "$ref": "#/$defs/identifierList"
+        },
+        "unique": {
+          "type": "boolean"
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "required": [
+        "name",
+        "columns",
+        "primary_key"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/identifier"
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/column"
+          }
+        },
+        "primary_key": {
+          "$ref": "#/$defs/identifierList"
+        },
+        "indexes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/index"
+          }
+        }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "required": [
+        "table",
+        "columns"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "table": {
+          "$ref": "#/$defs/identifier"
+        },
+        "columns": {
+          "$ref": "#/$defs/identifierList"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/relationId"
+        },
+        "kind": {
+          "enum": [
+            "one_to_many",
+            "one_to_one",
+            "many_to_many"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "one_to_many"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parent",
+              "child",
+              "on_delete"
+            ],
+            "properties": {
+              "parent": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "child": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "on_delete": {
+                "enum": [
+                  "restrict",
+                  "cascade",
+                  "set_null"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "one_to_one"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parent",
+              "child",
+              "on_delete"
+            ],
+            "properties": {
+              "parent": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "child": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "on_delete": {
+                "enum": [
+                  "restrict",
+                  "cascade",
+                  "set_null"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "many_to_many"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "left",
+              "right",
+              "junction"
+            ],
+            "properties": {
+              "left": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "right": {
+                "$ref": "#/$defs/endpoint"
+              },
+              "junction": {
+                "type": "object",
+                "required": [
+                  "table",
+                  "left_columns",
+                  "right_columns"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "table": {
+                    "$ref": "#/$defs/identifier"
+                  },
+                  "left_columns": {
+                    "$ref": "#/$defs/identifierList"
+                  },
+                  "right_columns": {
+                    "$ref": "#/$defs/identifierList"
+                  },
+                  "extensions": {
+                    "type": "object",
+                    "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "paramType": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/columnType"
+        },
+        {
+          "type": "object",
+          "required": [
+            "array"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "array": {
+              "$ref": "#/$defs/columnType"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "operand": {
+      "description": "Kolom (table.column), parameter (param), atau literal.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "table",
+            "column"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "table": {
+              "$ref": "#/$defs/identifier"
+            },
+            "column": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "param"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "literal"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "literal": {
+              "$ref": "#/$defs/literal"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "predicate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "and"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "and": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/predicate"
+              }
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "or"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "or": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/predicate"
+              }
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/predicate"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "cmp"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "cmp": {
+              "type": "object",
+              "required": [
+                "left",
+                "op"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "left": {
+                  "$ref": "#/$defs/operand"
+                },
+                "op": {
+                  "enum": [
+                    "eq",
+                    "ne",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                    "in",
+                    "like",
+                    "is_null",
+                    "is_not_null"
+                  ]
+                },
+                "right": {
+                  "$ref": "#/$defs/operand"
+                },
+                "extensions": {
+                  "type": "object",
+                  "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "op": {
+                        "enum": [
+                          "is_null",
+                          "is_not_null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op"
+                    ]
+                  },
+                  "then": {
+                    "not": {
+                      "required": [
+                        "right"
+                      ]
+                    }
+                  },
+                  "else": {
+                    "required": [
+                      "right"
+                    ]
+                  }
+                }
+              ]
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "selectItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "table",
+            "column"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "table": {
+              "$ref": "#/$defs/identifier"
+            },
+            "column": {
+              "$ref": "#/$defs/identifier"
+            },
+            "alias": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "agg",
+            "alias"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "agg": {
+              "enum": [
+                "count",
+                "sum",
+                "avg",
+                "min",
+                "max"
+              ]
+            },
+            "table": {
+              "$ref": "#/$defs/identifier"
+            },
+            "column": {
+              "$ref": "#/$defs/identifier"
+            },
+            "alias": {
+              "$ref": "#/$defs/identifier"
+            },
+            "extensions": {
+              "type": "object",
+              "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+            }
+          }
+        }
+      ]
+    },
+    "query": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "from",
+        "select"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/queryId"
+        },
+        "name": {
+          "$ref": "#/$defs/identifier"
+        },
+        "from": {
+          "$ref": "#/$defs/identifier"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/paramType"
+          }
+        },
+        "joins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "relation",
+              "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "relation": {
+                "$ref": "#/$defs/relationId"
+              },
+              "type": {
+                "enum": [
+                  "inner",
+                  "left"
+                ]
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+              }
+            }
+          }
+        },
+        "select": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/selectItem"
+          }
+        },
+        "where": {
+          "$ref": "#/$defs/predicate"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "table",
+              "column"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "table": {
+                "$ref": "#/$defs/identifier"
+              },
+              "column": {
+                "$ref": "#/$defs/identifier"
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+              }
+            }
+          }
+        },
+        "order_by": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "alias",
+              "dir"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "alias": {
+                "$ref": "#/$defs/identifier"
+              },
+              "dir": {
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Field tidak dikenal dari versi lebih baru. Dibawa apa adanya; tidak diinterpretasi (ADR 0009)."
+              }
+            }
+          }
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    }
+  }
+}

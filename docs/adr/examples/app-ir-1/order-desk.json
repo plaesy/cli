@@ -1,0 +1,76 @@
+{
+  "ir": "app-ir/1",
+  "id": "app_01JA0DESK",
+  "version": 1,
+  "name": "order-desk",
+  "start_screen": "scr_orders",
+  "screens": [
+    {
+      "id": "scr_orders",
+      "route": "/orders",
+      "params": {
+        "customer_id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "queries": ["qry_customer_order_totals"],
+      "root": {
+        "id": "cmp_page",
+        "type": "page",
+        "children": [
+          {
+            "id": "cmp_table",
+            "type": "table",
+            "props": {
+              "rows": { "query": "qry_customer_order_totals", "column": "customer_name" },
+              "title": { "literal": "Total pesanan per pelanggan" }
+            },
+            "events": [
+              {
+                "on": "click",
+                "action": {
+                  "flow_id": "flw_01J9OPENROW",
+                  "flow_version": 1,
+                  "inputs": { "customer": { "param": "customer_id" } },
+                  "on_success": { "screen": "scr_customer", "params": { "customer_id": { "flow_output": "customer_id", "flow_id": "flw_01J9OPENROW" } } }
+                }
+              }
+            ]
+          },
+          {
+            "id": "cmp_cancel_button",
+            "type": "button",
+            "design_ref": "dsg_order_desk#cp_button",
+            "props": { "label": { "literal": "Batalkan pesanan" } },
+            "visible_when": "params.status == 'draft'",
+            "events": [
+              {
+                "on": "click",
+                "action": {
+                  "flow_id": "flw_01J9CANCEL",
+                  "flow_version": 3,
+                  "inputs": { "order_id": { "param": "order_id" } },
+                  "on_success": { "screen": "scr_orders" },
+                  "on_failure": { "screen": "scr_orders" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "scr_customer",
+      "route": "/customers/:customer_id",
+      "params": { "customer_id": { "type": "string" } },
+      "queries": [],
+      "root": {
+        "id": "cmp_customer_page",
+        "type": "page",
+        "props": {
+          "name": { "flow_output": "name", "flow_id": "flw_01J9OPENROW" }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "ir": "flow-ir/1",
+  "id": "flw_01J9RETRY",
+  "version": 1,
+  "name": "sinkron-stok-paralel",
+  "inputs": {
+    "warehouse_id": { "type": "string" }
+  },
+  "outputs": {
+    "synced": { "type": "boolean" }
+  },
+  "scope": ["inventory:read", "inventory:write"],
+  "preprocessor": {
+    "kind": "action",
+    "operation": "inventory.acquire_lock",
+    "inputs": { "warehouse": "flow.input.warehouse_id" }
+  },
+  "modules": [
+    {
+      "id": "m1",
+      "kind": "branch_all",
+      "parallel": true,
+      "branches": [
+        {
+          "modules": ["m2"],
+          "on_error": "continue"
+        },
+        {
+          "modules": ["m3"],
+          "on_error": "fail"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "kind": "action",
+      "operation": "inventory.pull_supplier_feed",
+      "inputs": { "warehouse": "flow.input.warehouse_id" },
+      "outputs": { "rows": { "type": "array" } },
+      "retry": {
+        "kind": "constant",
+        "max_attempts": 5,
+        "base_secs": 2,
+        "retry_if": "error.code == 'timeout'"
+      },
+      "timeout_secs": 120,
+      "stop_after_if": "error.code == 'auth_failed'",
+      "early_return": {
+        "when": "error.code == 'auth_failed'",
+        "outputs": { "synced": false }
+      }
+    },
+    {
+      "id": "m3",
+      "kind": "subflow",
+      "flow_id": "flw_01J9HITPOS",
+      "flow_version": 4,
+      "inputs": { "warehouse": "flow.input.warehouse_id" },
+      "outputs": { "updated": { "type": "number" } },
+      "skip_if": "flow.input.warehouse_id == ''"
+    },
+    {
+      "id": "m4",
+      "kind": "pass",
+      "inputs": { "synced": "true" },
+      "outputs": { "synced": { "type": "boolean" } },
+      "continue_on_error": true
+    },
+    {
+      "id": "m5",
+      "kind": "action",
+      "operation": "inventory.release_lock",
+      "inputs": { "warehouse": "flow.input.warehouse_id" },
+      "outputs": {}
+    },
+    {
+      "id": "m6",
+      "kind": "action",
+      "operation": "ops.page_on_call",
+      "inputs": { "warehouse": "flow.input.warehouse_id" },
+      "outputs": {}
+    }
+  ],
+  "failure_handler": "m6"
+}

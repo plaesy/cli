@@ -1,0 +1,100 @@
+{
+  "ir": "api-ir/1",
+  "id": "api_01JA2AUTH",
+  "version": 2,
+  "name": "auth-and-stock",
+  "base_path": "/v1/stock",
+  "types": {
+    "StockItem": {
+      "object": {
+        "properties": {
+          "sku": { "type": "string" },
+          "on_hand": { "type": "integer" },
+          "status": { "enum": ["in_stock", "low", "out"] }
+        },
+        "required": ["sku", "on_hand", "status"]
+      }
+    },
+    "StockPatch": {
+      "object": {
+        "properties": {
+          "on_hand": { "type": "integer" }
+        },
+        "required": []
+      }
+    },
+    "StockList": {
+      "object": {
+        "properties": {
+          "items": { "array": { "$ref": "StockItem" } },
+          "next_cursor": { "type": "string" }
+        },
+        "required": ["items"]
+      }
+    },
+    "ErrorBody": {
+      "object": {
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "retry_after_secs": { "type": "integer" }
+        },
+        "required": ["code", "message"]
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "id": "ep_list_stock",
+      "method": "GET",
+      "path": "/",
+      "query_params": {
+        "warehouse": { "type": "string" },
+        "status": { "enum": ["in_stock", "low", "out"] },
+        "cursor": { "type": "string" },
+        "limit": { "type": "integer" }
+      },
+      "auth": { "scope": ["inventory:read"] },
+      "handler": { "flow_id": "flw_01J9LISTSTK", "flow_version": 1 },
+      "responses": {
+        "200": { "$ref": "StockList" },
+        "401": { "$ref": "ErrorBody" },
+        "429": { "$ref": "ErrorBody" }
+      },
+      "rate_limit_per_minute": 300
+    },
+    {
+      "id": "ep_patch_stock",
+      "method": "PATCH",
+      "path": "/{warehouse_id}/{sku}",
+      "path_params": {
+        "warehouse_id": { "type": "string" },
+        "sku": { "type": "string" }
+      },
+      "body": { "$ref": "StockPatch" },
+      "auth": { "scope": ["inventory:write"] },
+      "handler": { "flow_id": "flw_01J9PATCHSTK", "flow_version": 2 },
+      "responses": {
+        "200": { "$ref": "StockItem" },
+        "404": { "$ref": "ErrorBody" },
+        "409": { "$ref": "ErrorBody" }
+      },
+      "rate_limit_per_minute": 120
+    },
+    {
+      "id": "ep_delete_stock",
+      "method": "DELETE",
+      "path": "/{warehouse_id}/{sku}",
+      "path_params": {
+        "warehouse_id": { "type": "string" },
+        "sku": { "type": "string" }
+      },
+      "auth": { "scope": ["inventory:write", "inventory:admin"] },
+      "handler": { "flow_id": "flw_01J9DELSTK", "flow_version": 1 },
+      "responses": {
+        "204": { "type": "null" },
+        "404": { "$ref": "ErrorBody" }
+      }
+    }
+  ]
+}

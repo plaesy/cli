@@ -1,0 +1,55 @@
+{
+  "ir": "design-ir/1",
+  "id": "dsg_order_desk",
+  "version": 1,
+  "name": "order-desk-ui",
+  "tokens": {
+    "color": { "primary": "#2563EB", "danger": "#DC2626", "surface": "#FFFFFF", "text": "#111827" },
+    "space": { "sm": 8, "md": 16, "lg": 24 },
+    "radius": { "md": 8 },
+    "font": { "body": { "family": "Inter", "size": 14, "weight": 400 } },
+    "shadow": { "card": "0 1px 2px rgba(0,0,0,0.1)" }
+  },
+  "components": [
+    {
+      "id": "cp_button",
+      "name": "Button",
+      "root": {
+        "id": "nd_button_root",
+        "type": "frame",
+        "layout": { "mode": "auto", "direction": "horizontal", "padding": "space.sm", "gap": "space.sm", "align": "center" },
+        "style": { "fill": "color.primary", "radius": "radius.md", "text_color": "color.surface" },
+        "children": [
+          { "id": "nd_button_label", "type": "text", "text": "Label", "style": { "font": "font.body", "text_color": "color.surface" } }
+        ]
+      },
+      "variants": {
+        "tone": ["primary", "danger"],
+        "size": ["sm", "md"]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "pg_orders",
+      "name": "Orders",
+      "frames": [
+        {
+          "id": "nd_orders_frame",
+          "type": "frame",
+          "name": "Orders",
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800,
+          "layout": { "mode": "auto", "direction": "vertical", "padding": "space.lg", "gap": "space.md" },
+          "style": { "fill": "color.surface" },
+          "children": [
+            { "id": "nd_title", "type": "text", "text": "Total pesanan per pelanggan", "style": { "font": "font.body", "text_color": "color.text" } },
+            { "id": "nd_cancel", "type": "instance", "component": "cp_button", "variant": { "tone": "danger", "size": "md" } }
+          ]
+        }
+      ]
+    }
+  ]
+}
