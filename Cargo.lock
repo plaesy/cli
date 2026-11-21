@@ -3185,6 +3185,7 @@ dependencies = [
  "plaesy-adapter-design-ir",
  "plaesy-adapter-memory",
  "plaesy-adapter-relay",
+ "plaesy-adapter-runstore",
  "plaesy-adapter-runtime",
  "plaesy-analysis",
  "plaesy-common",
@@ -3266,6 +3267,15 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "uuid",
+]
+
+[[package]]
+name = "plaesy-adapter-runstore"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-workflow",
+ "sha2 0.10.9",
+ "tempfile",
 ]
 
 [[package]]
@@ -3381,10 +3391,6 @@ dependencies = [
 [[package]]
 name = "plaesy-domain-workflow"
 version = "0.0.1"
-dependencies = [
- "sha2 0.10.9",
- "tempfile",
-]
 
 [[package]]
 name = "plaesy-dto"

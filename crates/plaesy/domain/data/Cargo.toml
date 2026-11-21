@@ -9,3 +9,6 @@ description = "Plaesy domain data: validasi semantik (ADR 0003). Tanpa I/O."
 plaesy-kernel = { path = "../../kernel" }
 plaesy-domain-flow = { path = "../flow" }
 serde_json = "1"
+
+[lints]
+workspace = true

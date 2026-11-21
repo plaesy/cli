@@ -378,13 +378,15 @@ Celah yang ditemukan dan ditutup pada migrasi ini:
 - `src/bin/cli.rs` tidak pernah dibangun (`autobins = false`) dan memanggil API yang ada. Berkas dihapus; isi terakhirnya ada di commit `551afd3`.
 - Tes `designir`, `irvalidate`, dan `domain/*` memakai `CARGO_MANIFEST_DIR/docs/adr`; path sudah disesuaikan ke kedalaman crate baru.
 
-Keterbatasan yang masih terbuka (dicatat, bukan disembunyikan):
+Keterbatasan dan keputusannya:
 
 - Validator semantik flow, data, api, dan app sekarang hanya ada di `plaesy-domain-*`. `irvalidate` (di `plaesy-adapter-design-ir`) hanya memetakan galatnya ke pesan, dan uji paritas Rust-Node (`irvalidate_test.rs`) tetap lulus. Sebelumnya empat modul di `irvalidate` adalah salinan; sudah dihapus.
-- `plaesy-domain-identity` dan `plaesy-domain-workflow` masih memakai `std::fs` dan `sha2`. Lolos kriteria `cargo tree`, tetapi I/O belum dipindah ke port `service`.
-- `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang `pub` dengan `#[doc(hidden)]`, karena dipakai tes lintas crate. Sebaiknya dipindah ke modul uji bersama.
-- Pembagian `support/*` bukan konteks ADR. Pemetaan itu perlu keputusan lanjutan (usulan: konteks `tooling`, atau masuk konteks yang ada).
-- Delegasi: pemetaan di atas dan penghapusan `src/bin/cli.rs` didelegasikan dan dapat dicabut.
+- I/O run log dipisah dari domain. `plaesy-domain-workflow` sekarang hanya berisi port `RunSink`, galat, `Recovered`, `MemoryLog` (untuk tes dan dry run), serta `DrainingLog`, `ApprovalStore`, dan `task_run` yang generik terhadap port. Implementasi berkas dan checksum SHA-256 ada di `plaesy-adapter-runstore`. `plaesy-domain-workflow` tidak lagi memakai `std::fs` atau `sha2`.
+- `plaesy-domain-identity` sudah tanpa I/O sejak awal (hanya `serde` dan `serde_json`); tidak perlu perubahan.
+- `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang di balik fitur `test-support` di `plaesy-tasks`. Fitur ini hanya diaktifkan sebagai dev-dependency oleh `plaesy-interface-cli`. Produk tidak memakainya.
+- Pengelompokan `support/*` (common, mdlint, tasks, analysis, designlint, loop) adalah keputusan sementara yang didelegasikan. Modul-modul itu belum punya konteks di ADR ini. Jika owner ingin konteks baru (mis. `tooling`), itu dipindah dengan perubahan path saja, tanpa mengubah kode.
+- Lints: `[workspace.lints]` berisi `unsafe_op_in_unsafe_fn = "warn"`. Semua member mewarisinya lewat `[lints] workspace = true`. Lint tambahan belum ditambahkan karena banyak modul memakai `libc` dan `unsafe`.
+- Yang tetap di luar ADR ini: crate dari rencana (`http`, `ws`, `mcp`, `acp`, `sync`, `adapter/sqlite` terpisah, dan seterusnya). Semuanya fitur yang belum ada di kode, sehingga tidak dibuat sebagai scaffolding kosong.
 
 ## Open items
 

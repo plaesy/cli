@@ -6,3 +6,6 @@ publish = false
 description = "Permukaan editor flow visual (web dulu, Dioxus). Kerangka: belum ada UI (ADR 0011)."
 
 [dependencies]
+
+[lints]
+workspace = true

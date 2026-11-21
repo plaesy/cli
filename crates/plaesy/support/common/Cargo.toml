@@ -27,3 +27,6 @@ tempfile = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 winreg = { workspace = true }
+
+[lints]
+workspace = true

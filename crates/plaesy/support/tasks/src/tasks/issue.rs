@@ -384,9 +384,8 @@ impl IssueGraphLock {
     }
 }
 
-/// Raw metadata writer used by test fixtures in sibling crates. It takes no lock: do not use it
-/// in product code.
-#[doc(hidden)]
+/// Raw metadata writer for test fixtures. It takes no lock: do not use it in product code.
+#[cfg(any(test, feature = "test-support"))]
 pub fn write_metadata_unlocked(task_dir: &Path, issue: &Issue) -> Result<(), String> {
     write_metadata_unlocked_inner(task_dir, issue)
 }

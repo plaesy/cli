@@ -9,3 +9,6 @@ description = "Plaesy domain design: validasi semantik design-ir/1 (ADR 0010). T
 plaesy-kernel = { path = "../../kernel" }
 plaesy-domain-flow = { path = "../flow" }
 serde_json = "1"
+
+[lints]
+workspace = true

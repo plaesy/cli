@@ -28,4 +28,8 @@ toml = { workspace = true }
 ureq = { workspace = true }
 
 [dev-dependencies]
+plaesy-tasks = { path = "../../support/tasks", features = ["test-support"] }
 tempfile = { workspace = true }
+
+[lints]
+workspace = true

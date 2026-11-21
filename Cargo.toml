@@ -8,6 +8,7 @@ members = [
     "crates/plaesy/adapter/design-ir",
     "crates/plaesy/adapter/memory",
     "crates/plaesy/adapter/relay",
+    "crates/plaesy/adapter/runstore",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",
     "crates/plaesy/domain/app",
@@ -87,6 +88,10 @@ inherits = "release"
 
 [profile.dev]
 opt-level = 1
+
+[workspace.lints.rust]
+# Shared lints for every member (inherit with `[lints] workspace = true`).
+unsafe_op_in_unsafe_fn = "warn"
 
 # esaxx-rs hard-codes a static MSVC CRT (/MT), which conflicts with the /MD objects of ort/cxx on Windows.
 [patch.crates-io]
