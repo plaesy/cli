@@ -433,10 +433,12 @@ fn acp_terminal_runs_create_wait_output_release() {
     let (_cwd_dir, cwd) = cwd_string();
     let agent = Agent::with_model(&store, Box::new(TerminalModel));
     let mut io = Scripted::with(vec![
-        json!({ "jsonrpc": "2.0", "id": "agent-1", "result": { "terminalId": "t1" } }),
-        json!({ "jsonrpc": "2.0", "id": "agent-2", "result": { "exitCode": 0 } }),
-        json!({ "jsonrpc": "2.0", "id": "agent-3", "result": { "output": "hai\n", "truncated": false } }),
-        json!({ "jsonrpc": "2.0", "id": "agent-4", "result": null }),
+        // Izin pengguna dulu: perintah dari model tidak dijalankan tanpa persetujuan.
+        json!({ "jsonrpc": "2.0", "id": "agent-1", "result": { "outcome": { "outcome": "selected", "optionId": "allow" } } }),
+        json!({ "jsonrpc": "2.0", "id": "agent-2", "result": { "terminalId": "t1" } }),
+        json!({ "jsonrpc": "2.0", "id": "agent-3", "result": { "exitCode": 0 } }),
+        json!({ "jsonrpc": "2.0", "id": "agent-4", "result": { "output": "hai\n", "truncated": false } }),
+        json!({ "jsonrpc": "2.0", "id": "agent-5", "result": null }),
     ]);
     agent
         .handle(
@@ -465,6 +467,30 @@ fn acp_terminal_runs_create_wait_output_release() {
             "terminal/release"
         ]
     );
+}
+
+#[test]
+fn acp_terminal_denied_by_user_is_not_created() {
+    let (_store_dir, store) = store();
+    let (_cwd_dir, cwd) = cwd_string();
+    let agent = Agent::with_model(&store, Box::new(TerminalModel));
+    let mut io = Scripted::with(vec![
+        json!({ "jsonrpc": "2.0", "id": "agent-1", "result": { "outcome": { "outcome": "cancelled" } } }),
+    ]);
+    agent
+        .handle(
+            &request(1, "initialize", json!({ "protocolVersion": 1, "clientCapabilities": client_caps(false, false, true) })),
+            &mut io,
+        )
+        .unwrap();
+    let session = new_session(&agent, &mut io, &cwd);
+    prompt(&agent, &mut io, &session, "x");
+    let created = io
+        .sent
+        .iter()
+        .filter_map(|m| m.get("method").and_then(Value::as_str))
+        .any(|m| m == "terminal/create");
+    assert!(!created, "perintah tidak boleh dibuat setelah izin ditolak");
 }
 
 #[test]

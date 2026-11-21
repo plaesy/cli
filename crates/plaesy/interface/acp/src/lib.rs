@@ -423,6 +423,7 @@ impl ToolHost for SessionTools<'_> {
             return Err("klien tidak mendukung fs/write_text_file".to_owned());
         }
         check_path(&self.cwd, path)?;
+        self.require_permission(&format!("Tulis berkas {path}"))?;
         self.call(
             "fs/write_text_file",
             json!({ "sessionId": self.session_id, "path": path, "content": content }),
@@ -431,6 +432,28 @@ impl ToolHost for SessionTools<'_> {
     }
 
     fn request_permission(
+        &mut self,
+        title: &str,
+        options: &[(&str, &str)],
+    ) -> Result<Option<String>, String> {
+        self.request_permission_inner(title, options)
+    }
+
+    fn run_command(&mut self, command: &str, args: &[String]) -> Result<CommandResult, String> {
+        self.run_command_inner(command, args)
+    }
+}
+
+impl SessionTools<'_> {
+    /// Meminta izin pengguna. Tanpa izin, tindakan berdampak ditolak.
+    fn require_permission(&mut self, title: &str) -> Result<(), String> {
+        match self.request_permission_inner(title, &[("allow", "Izinkan")])? {
+            Some(_) => Ok(()),
+            None => Err("ditolak pengguna".to_owned()),
+        }
+    }
+
+    fn request_permission_inner(
         &mut self,
         title: &str,
         options: &[(&str, &str)],
@@ -455,10 +478,16 @@ impl ToolHost for SessionTools<'_> {
         }
     }
 
-    fn run_command(&mut self, command: &str, args: &[String]) -> Result<CommandResult, String> {
+    /// Menjalankan perintah di terminal klien setelah izin pengguna diterima.
+    fn run_command_inner(
+        &mut self,
+        command: &str,
+        args: &[String],
+    ) -> Result<CommandResult, String> {
         if !self.capability(&["terminal"]) {
             return Err("klien tidak mendukung terminal".to_owned());
         }
+        self.require_permission(&format!("Jalankan perintah {command} {}", args.join(" ")))?;
         let created = self.call(
             "terminal/create",
             json!({ "sessionId": self.session_id, "command": command, "args": args, "cwd": self.cwd }),
@@ -503,6 +532,21 @@ fn check_path(cwd: &str, path: &str) -> Result<(), String> {
     }
     if cwd.is_empty() || !candidate.starts_with(cwd) {
         return Err("path di luar cwd sesi".to_owned());
+    }
+    // Symlink di dalam cwd bisa menunjuk ke luar. Bandingkan path nyata dari induk yang sudah ada.
+    if let Ok(root) = std::fs::canonicalize(cwd) {
+        let mut probe = candidate;
+        while !probe.exists() {
+            match probe.parent() {
+                Some(parent) => probe = parent,
+                None => break,
+            }
+        }
+        if let Ok(real) = std::fs::canonicalize(probe) {
+            if !real.starts_with(&root) {
+                return Err("path di luar cwd sesi (lewat symlink)".to_owned());
+            }
+        }
     }
     Ok(())
 }
