@@ -3298,6 +3298,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-sync"
+version = "0.0.1"
+dependencies = [
+ "plaesy-adapter-sqlite",
+ "plaesy-service",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "plaesy-analysis"
 version = "0.0.1"
 dependencies = [

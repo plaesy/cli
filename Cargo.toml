@@ -13,6 +13,7 @@ members = [
     "crates/plaesy/interface/http",
     "crates/plaesy/interface/mcp",
     "crates/plaesy/interface/ws",
+    "crates/plaesy/adapter/sync",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",
     "crates/plaesy/domain/app",
