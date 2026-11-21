@@ -359,6 +359,10 @@ fn for_each(
     in_loop: bool,
 ) -> Result<String, String> {
     let pad = indent(depth);
+    // Loop bertingkat memakai nama `item` yang sama, sehingga `item` luar tertutup. Dicatat sebagai kehilangan.
+    if in_loop {
+        return Err("for_each bersarang belum didukung".to_owned());
+    }
     if module
         .get("skip_failures")
         .and_then(Value::as_bool)
