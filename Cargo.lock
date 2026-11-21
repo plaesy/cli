@@ -3459,6 +3459,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-interface-ws"
+version = "0.0.1"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "plaesy-kernel"
 version = "0.0.1"
 dependencies = [
