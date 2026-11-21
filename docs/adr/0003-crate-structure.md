@@ -386,7 +386,14 @@ Keterbatasan dan keputusannya:
 - `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang di balik fitur `test-support` di `plaesy-tasks`. Fitur ini hanya diaktifkan sebagai dev-dependency oleh `plaesy-interface-cli`. Produk tidak memakainya.
 - Pengelompokan `support/*` (common, mdlint, tasks, analysis, designlint, loop) adalah keputusan sementara yang didelegasikan. Modul-modul itu belum punya konteks di ADR ini. Jika owner ingin konteks baru (mis. `tooling`), itu dipindah dengan perubahan path saja, tanpa mengubah kode.
 - Lints: `[workspace.lints]` berisi `unsafe_op_in_unsafe_fn = "warn"`. Semua member mewarisinya lewat `[lints] workspace = true`. Lint tambahan belum ditambahkan karena banyak modul memakai `libc` dan `unsafe`.
-- Yang tetap di luar ADR ini: crate dari rencana (`http`, `ws`, `mcp`, `acp`, `sync`, `adapter/sqlite` terpisah, dan seterusnya). Semuanya fitur yang belum ada di kode, sehingga tidak dibuat sebagai scaffolding kosong.
+- Crate dari rencana, dibangun atas perintah owner ("selesaikan semuanya"), dengan keputusan default yang didelegasikan dan bisa dicabut:
+  - `adapter/sqlite` (`plaesy-adapter-sqlite`): port `DocumentStore` di `plaesy-service`, implementasi SQLite, migrasi lewat `user_version`.
+  - `interface/http` (`plaesy-interface-http`): REST `/v1/documents/{kind}/{id}` di atas port. `kind` dengan `/` di-encode sebagai `%2F`.
+  - `interface/mcp` (`plaesy-interface-mcp`): server JSON-RPC 2.0 stdio dengan `initialize`, `tools/list`, `tools/call`. Ditulis tanpa `rmcp`, agar kontrak stdout eksplisit.
+  - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, buffer replay, `Gap` bila tertinggal). Keputusan default: tidak ada socket di crate ini. Binding WebSocket menunggu pilihan library (ADR 0011, open item).
+  - `adapter/sync` (`plaesy-adapter-sync`): keputusan default: log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log masih di memori; persistensinya belum ada.
+  - `interface/acp` (`plaesy-interface-acp`): ADR tidak merinci protokol ACP. Bentuk metode `initialize` dan `document/*` adalah default sementara dan harus dicocokkan dengan spesifikasi owner.
+- Yang masih terbuka dari crate-crate itu: binding socket untuk `ws`, persistensi log untuk `sync`, dan spesifikasi ACP yang sebenarnya.
 
 ## Open items
 
