@@ -3,11 +3,14 @@
 //! perubahan setelah versi terakhirnya dan menerapkannya dengan last-writer-wins per
 //! `(kind, id)` berdasarkan versi. Perubahan yang lebih tua dari yang sudah diterapkan dibuang.
 //!
-//! Batasan: log perubahan ada di memori. Persistensinya dan pengiriman lewat socket belum ada.
+//! Log perubahan lewat trait [`ChangeLog`]. Ada dua implementasi: [`MemoryChangeLog`] untuk
+//! tes dan dry run, dan [`SqliteChangeLog`] yang bertahan setelah proses berhenti.
 
 use plaesy_service::port::{check_key, DocumentStore, StoreError};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Mutex;
 
 /// Operasi pada satu dokumen.
@@ -28,28 +31,206 @@ pub struct Change {
     pub op: Op,
 }
 
-/// Sumber perubahan: menerapkan operasi ke `store` dan mencatatnya dalam log.
-#[derive(Debug)]
-pub struct Source<S: DocumentStore> {
-    store: S,
-    log: Mutex<Vec<Change>>,
+/// Penyimpanan log perubahan. Versi harus naik monoton dan tidak boleh ada dua perubahan
+/// dengan versi yang sama.
+pub trait ChangeLog {
+    /// Menambahkan perubahan. Harus sudah tersimpan saat fungsi kembali.
+    ///
+    /// # Errors
+    ///
+    /// Penyimpanan gagal.
+    fn append(&self, change: &Change) -> Result<(), StoreError>;
+
+    /// Versi tertinggi dalam log, atau 0 bila kosong.
+    ///
+    /// # Errors
+    ///
+    /// Penyimpanan gagal.
+    fn head(&self) -> Result<u64, StoreError>;
+
+    /// Perubahan dengan versi lebih besar dari `since`, dalam urutan versi.
+    ///
+    /// # Errors
+    ///
+    /// Penyimpanan gagal.
+    fn since(&self, since: u64) -> Result<Vec<Change>, StoreError>;
 }
 
-impl<S: DocumentStore> Source<S> {
-    /// Membungkus `store`. Log dimulai kosong.
+/// Log di memori. Hilang saat proses berhenti.
+#[derive(Debug, Default)]
+pub struct MemoryChangeLog {
+    changes: Mutex<Vec<Change>>,
+}
+
+impl ChangeLog for MemoryChangeLog {
+    fn append(&self, change: &Change) -> Result<(), StoreError> {
+        self.changes
+            .lock()
+            .map_err(|_| poisoned())?
+            .push(change.clone());
+        Ok(())
+    }
+
+    fn head(&self) -> Result<u64, StoreError> {
+        let changes = self.changes.lock().map_err(|_| poisoned())?;
+        Ok(changes.last().map_or(0, |change| change.version))
+    }
+
+    fn since(&self, since: u64) -> Result<Vec<Change>, StoreError> {
+        let changes = self.changes.lock().map_err(|_| poisoned())?;
+        Ok(changes
+            .iter()
+            .filter(|change| change.version > since)
+            .cloned()
+            .collect())
+    }
+}
+
+/// Log di SQLite. Setiap perubahan disinkronkan ke disk sebelum `append` kembali.
+#[derive(Debug)]
+pub struct SqliteChangeLog {
+    conn: Mutex<Connection>,
+}
+
+impl SqliteChangeLog {
+    /// Membuka atau membuat log di `path`. Tabel dibuat bila belum ada.
+    ///
+    /// # Errors
+    ///
+    /// Galat penyimpanan.
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, StoreError> {
+        let conn = Connection::open(path.as_ref()).map_err(|e| backend(&e))?;
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS sync_changes (
+                 version INTEGER PRIMARY KEY,
+                 kind TEXT NOT NULL,
+                 id TEXT NOT NULL,
+                 op TEXT NOT NULL CHECK (op IN ('put', 'delete')),
+                 body TEXT
+             );",
+        )
+        .map_err(|e| backend(&e))?;
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
+    }
+}
+
+impl ChangeLog for SqliteChangeLog {
+    fn append(&self, change: &Change) -> Result<(), StoreError> {
+        let (op, body) = match &change.op {
+            Op::Put(document) => (
+                "put",
+                Some(serde_json::to_string(document).map_err(|e| {
+                    StoreError::Backend(format!("perubahan tidak bisa ditulis: {e}"))
+                })?),
+            ),
+            Op::Delete => ("delete", None),
+        };
+        let conn = self.conn.lock().map_err(|_| poisoned())?;
+        conn.execute(
+            "INSERT INTO sync_changes (version, kind, id, op, body) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                i64::try_from(change.version)
+                    .map_err(|_| StoreError::Backend("versi terlalu besar".to_owned()))?,
+                change.kind,
+                change.id,
+                op,
+                body
+            ],
+        )
+        .map(|_| ())
+        .map_err(|e| backend(&e))
+    }
+
+    fn head(&self) -> Result<u64, StoreError> {
+        let conn = self.conn.lock().map_err(|_| poisoned())?;
+        let head: Option<i64> = conn
+            .query_row("SELECT MAX(version) FROM sync_changes", [], |row| {
+                row.get(0)
+            })
+            .optional()
+            .map_err(|e| backend(&e))?
+            .flatten();
+        Ok(head.map_or(0, |v| u64::try_from(v).unwrap_or(0)))
+    }
+
+    fn since(&self, since: u64) -> Result<Vec<Change>, StoreError> {
+        let conn = self.conn.lock().map_err(|_| poisoned())?;
+        let since = i64::try_from(since).unwrap_or(i64::MAX);
+        let mut statement = conn
+            .prepare(
+                "SELECT version, kind, id, op, body FROM sync_changes
+                 WHERE version > ?1 ORDER BY version",
+            )
+            .map_err(|e| backend(&e))?;
+        let rows = statement
+            .query_map(params![since], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                ))
+            })
+            .map_err(|e| backend(&e))?;
+        let mut changes = Vec::new();
+        for row in rows {
+            let (version, kind, id, op, body) = row.map_err(|e| backend(&e))?;
+            let op = match (op.as_str(), body) {
+                ("put", Some(text)) => Op::Put(
+                    serde_json::from_str(&text)
+                        .map_err(|e| StoreError::Backend(format!("perubahan rusak: {e}")))?,
+                ),
+                ("delete", None) => Op::Delete,
+                _ => {
+                    return Err(StoreError::Backend(
+                        "baris log perubahan tidak valid".to_owned(),
+                    ))
+                }
+            };
+            changes.push(Change {
+                version: u64::try_from(version).unwrap_or(0),
+                kind,
+                id,
+                op,
+            });
+        }
+        Ok(changes)
+    }
+}
+
+/// Sumber perubahan: menerapkan operasi ke `store` dan mencatatnya di `log`.
+#[derive(Debug)]
+pub struct Source<S: DocumentStore, L: ChangeLog = MemoryChangeLog> {
+    store: S,
+    log: L,
+}
+
+impl<S: DocumentStore> Source<S, MemoryChangeLog> {
+    /// Membungkus `store` dengan log di memori.
     #[must_use]
     pub fn new(store: S) -> Self {
         Self {
             store,
-            log: Mutex::new(Vec::new()),
+            log: MemoryChangeLog::default(),
         }
+    }
+}
+
+impl<S: DocumentStore, L: ChangeLog> Source<S, L> {
+    /// Membungkus `store` dengan log yang diberikan. Versi berikutnya melanjutkan `log.head()`.
+    #[must_use]
+    pub fn with_log(store: S, log: L) -> Self {
+        Self { store, log }
     }
 
     /// Menyimpan dokumen dan mencatat perubahannya. Mengembalikan versi perubahan.
     ///
     /// # Errors
     ///
-    /// Kunci tidak valid, atau penyimpanan gagal. Log tidak berubah bila penyimpanan gagal.
+    /// Kunci tidak valid, atau penyimpanan gagal.
     pub fn put(&self, kind: &str, id: &str, document: &Value) -> Result<u64, StoreError> {
         self.store.put(kind, id, document)?;
         self.record(kind, id, Op::Put(document.clone()))
@@ -65,28 +246,22 @@ impl<S: DocumentStore> Source<S> {
         self.record(kind, id, Op::Delete)
     }
 
-    /// Versi terakhir dalam log, atau 0 bila kosong.
+    /// Versi terakhir dalam log.
     ///
     /// # Errors
     ///
-    /// Kunci log terkunci karena panik sebelumnya.
+    /// Penyimpanan log gagal.
     pub fn head(&self) -> Result<u64, StoreError> {
-        let log = self.log.lock().map_err(|_| poisoned())?;
-        Ok(log.last().map_or(0, |change| change.version))
+        self.log.head()
     }
 
     /// Perubahan dengan versi lebih besar dari `since`, dalam urutan.
     ///
     /// # Errors
     ///
-    /// Kunci log terkunci karena panik sebelumnya.
+    /// Penyimpanan log gagal.
     pub fn changes_since(&self, since: u64) -> Result<Vec<Change>, StoreError> {
-        let log = self.log.lock().map_err(|_| poisoned())?;
-        Ok(log
-            .iter()
-            .filter(|change| change.version > since)
-            .cloned()
-            .collect())
+        self.log.since(since)
     }
 
     /// Penyimpanan yang dibungkus.
@@ -95,14 +270,13 @@ impl<S: DocumentStore> Source<S> {
     }
 
     fn record(&self, kind: &str, id: &str, op: Op) -> Result<u64, StoreError> {
-        let mut log = self.log.lock().map_err(|_| poisoned())?;
-        let version = log.last().map_or(1, |change| change.version + 1);
-        log.push(Change {
+        let version = self.log.head()? + 1;
+        self.log.append(&Change {
             version,
             kind: kind.to_owned(),
             id: id.to_owned(),
             op,
-        });
+        })?;
         Ok(version)
     }
 }
@@ -170,6 +344,10 @@ impl<S: DocumentStore> Replica<S> {
     pub fn store(&self) -> &S {
         &self.store
     }
+}
+
+fn backend(error: &rusqlite::Error) -> StoreError {
+    StoreError::Backend(error.to_string())
 }
 
 fn poisoned() -> StoreError {

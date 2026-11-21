@@ -9,6 +9,7 @@ description = "Sinkronisasi dokumen: log perubahan bernomor versi dan replikasi 
 
 [dependencies]
 plaesy-service = { path = "../../service" }
+rusqlite = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]

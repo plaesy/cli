@@ -107,3 +107,27 @@ fn sync_invalid_key_is_refused_by_replica() {
         Err(StoreError::InvalidKey(_))
     ));
 }
+
+#[test]
+fn sync_change_log_survives_reopen_and_versions_continue() {
+    let dir = tempfile::tempdir().unwrap();
+    let log_path = dir.path().join("changes.sqlite");
+    let (_src_dir, src_store) = sqlite();
+    {
+        let source = Source::with_log(src_store, SqliteChangeLog::open(&log_path).unwrap());
+        source.put("flow-ir/1", "a", &json!({"v": 1})).unwrap();
+        source.delete("flow-ir/1", "a").unwrap();
+    }
+    // Proses baru membuka log yang sama: versi harus lanjut dari 2, tidak mulai dari 1.
+    let (_store_dir, store) = sqlite();
+    let source = Source::with_log(store, SqliteChangeLog::open(&log_path).unwrap());
+    assert_eq!(source.head().unwrap(), 2);
+    assert_eq!(source.put("flow-ir/1", "b", &json!(2)).unwrap(), 3);
+    let all = source.changes_since(0).unwrap();
+    assert_eq!(
+        all.iter().map(|c| c.version).collect::<Vec<_>>(),
+        vec![1, 2, 3]
+    );
+    assert_eq!(all[1].op, Op::Delete);
+    assert_eq!(all[0].op, Op::Put(json!({"v": 1})));
+}
