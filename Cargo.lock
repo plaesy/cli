@@ -3417,6 +3417,16 @@ name = "plaesy-dto"
 version = "0.0.1"
 
 [[package]]
+name = "plaesy-interface-acp"
+version = "0.0.1"
+dependencies = [
+ "plaesy-adapter-sqlite",
+ "plaesy-service",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "plaesy-interface-cli"
 version = "0.0.1"
 dependencies = [
