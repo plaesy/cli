@@ -69,6 +69,16 @@ fn go_branch_not_equal_keeps_the_operator() {
 }
 
 #[test]
+fn go_numeric_condition_compares_as_float64_like_json_decoding() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.count == 2");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .source
+        .contains("if lookup(scope, \"m1\", \"invoice\", \"count\") == float64(2) {"));
+}
+
+#[test]
 fn go_branch_condition_outside_scope_loses_branch_and_its_members() {
     let mut doc = example("kirim-faktur.json");
     doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.total > 3");

@@ -527,6 +527,13 @@ fn condition(when: &str) -> Result<String, String> {
     let (left, op, right) = split_comparison(when).ok_or_else(unsupported)?;
     let left = expression(left, false).map_err(|_| unsupported())?;
     let right = literal(right).ok_or_else(unsupported)?;
+    // encoding/json mendekode angka sebagai float64. Konstanta tanpa tipe menjadi int di dalam any,
+    // jadi perbandingan harus memakai float64 agar nilai numerik bisa cocok.
+    let right = if right.parse::<f64>().is_ok() {
+        format!("float64({right})")
+    } else {
+        right
+    };
     Ok(format!("{left} {op} {right}"))
 }
 
