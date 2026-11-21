@@ -8,18 +8,24 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002, 0003, 0004, 0005, 0006, 0008, 0010
 
-## Context
+## Ringkasan
+
+- Aturan yang berlaku untuk semua IR: versi MAJOR/MINOR, field tambahan di `extensions`, ID dengan prefiks, satu bentuk laporan kehilangan, batas input 5 MB dan kedalaman 64.
+- Validasi dibagi tiga: bentuk (JSON Schema), semantik (`domain/*`), dan fixture negatif.
+- Status: diusulkan.
+
+## Konteks
 
 Lima IR dan satu jalur impor ditulis di ADR terpisah. Aturan yang sama (versi, field tidak dikenal, ID, laporan kehilangan, batas input, pemisahan validasi bentuk dan semantik) ditulis berulang dengan detail yang berbeda. Akibatnya beberapa ADR mengklaim perilaku yang tidak sama, dan belum ada satu skema laporan kehilangan. ADR ini menjadi satu sumber untuk aturan lintas-IR. ADR per-IR hanya menyebut hal yang khusus untuk IR itu.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Satu aturan untuk satu hal. Setiap IR merujuk ADR ini, tidak menyalin aturannya.
 - Field tidak dikenal tidak boleh hilang diam-diam dan tidak boleh diterima diam-diam.
 - Input dari luar (file desain, skema database, kode sumber) tidak tepercaya: ada batas ukuran dan kedalaman, dan error berupa error bertipe, bukan panik.
 - Setiap klaim verifikasi harus bisa dijalankan dari repo. Klaim yang belum bisa dijalankan ditandai sebagai belum.
 
-## Decision
+## Keputusan
 
 ### 1. Versi
 
@@ -102,13 +108,13 @@ Keadaan saat ADR ini ditulis: pemeriksaan bentuk lulus untuk 10 contoh positif d
 | Loss tidak boleh dilewati diam-diam | ADR 0002 dan 0008 | Dibakukan ke satu bentuk (bagian 4) |
 | ID stabil dan tidak dipakai ulang | ADR 0001 dan 0002 | Dibakukan dengan prefiks (bagian 3) |
 
-## Consequences
+## Konsekuensi
 
 - Positif: satu tempat untuk aturan lintas-IR. ADR per-IR menjadi lebih pendek dan tidak saling bertentangan.
 - Negatif: skema yang sebelumnya terbuka di akar (`additionalProperties: true`) menjadi tertutup. Dokumen yang memakai field baru harus menunggu MINOR atau memakai `extensions`.
 - Netral: mode lenient belum ada, sehingga pembaca versi lama belum bisa membaca dokumen versi baru secara otomatis.
 
-## Acceptance criteria
+## Kriteria penerimaan
 
 1. `docs/adr/tools/check-ir.js` lulus untuk semua contoh dan fixture negatif (sudah lulus saat ini).
 2. Langkah CI menjalankan `npm run check` dan `tools/validate-ir.js` pada setiap perubahan `docs/adr/`. Belum ada.

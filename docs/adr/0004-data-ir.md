@@ -8,18 +8,25 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002 (flow), 0003 (crate), 0009 (konvensi IR)
 
-## Context
+## Ringkasan
+
+- Skema database disimpan sebagai JSON dengan validasi JSON Schema. Tabel dan relasi dinyatakan eksplisit.
+- Query disusun sebagai pohon JSON, lalu dikompilasi ke SQL berparameter. Tidak ada SQL mentah di IR.
+- Dialek SQL dan subset query belum dipilih.
+- Status: diusulkan.
+
+## Konteks
 
 Pengguna perlu melihat dan mengubah skema database secara visual, memetakan relasi antar-tabel, dan menyusun query secara visual. Hasilnya harus bisa diubah ke kode (DDL dan SQL) dan sebaliknya (impor dari database yang sudah ada). Seperti flow, data disimpan sekali sebagai IR netral, lalu diproyeksikan ke tampilan visual dan ke kode.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Tipe bersifat netral database. Pemetaan ke dialek SQL dilakukan oleh adapter `codegen-sql`.
 - Relasi dinyatakan eksplisit (satu-ke-banyak, satu-ke-satu, banyak-ke-banyak), supaya bisa digambar sebagai diagram dan dibuat sebagai kunci asing.
 - Query disusun dari struktur, bukan dari SQL mentah, supaya bisa dibuat secara visual dan divalidasi.
 - Tidak ada field yang menyebut database tertentu.
 
-## Decision
+## Keputusan
 
 ### Format
 
@@ -82,7 +89,7 @@ Skema hanya memeriksa bentuk. Aturan berikut dicek di `domain/data`:
 - Uji negatif (`on_delete` tidak dikenal, `limit` di atas 1000, dan `primary_key` kosong) ditolak dengan benar.
 - Validasi semantik belum ada.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -92,20 +99,20 @@ Skema hanya memeriksa bentuk. Aturan berikut dicek di `domain/data`:
 
 Riset: pola yang umum adalah UI menghasilkan pohon JSON, lalu kompiler mengubahnya menjadi SQL dengan parameter terikat, bukan penyambungan string nilai. [react-querybuilder: export](https://react-querybuilder.js.org/docs/utils/export) menunjukkan format parameter terpisah dari SQL. 
 
-## Confirmation
+## Konfirmasi
 
 - `codegen-sql` tidak pernah menyambung nilai ke string SQL. Setiap nilai menjadi parameter. Diperiksa dengan uji yang mencari string literal di hasil kompilasi.
 - Setiap contoh di `examples/data-ir-1/` dikompilasi ke minimal dua dialek (SQLite dan PostgreSQL), lalu dijalankan pada data uji. Hasilnya harus sama.
 - Bentuk diperiksa oleh `docs/adr/tools/check-ir.js` (ajv, versi tetap). Semantik diperiksa oleh `tools/validate-ir.js`. Keduanya dijalankan secara lokal; belum ada di CI (lihat rencana implementasi).
 
-## Acceptance criteria (implementasi `data-ir/1`)
+## Kriteria penerimaan (implementasi `data-ir/1`)
 
 1. `domain/data::validate` mengimplementasikan semua aturan di bagian "Validasi semantik" dan lulus uji negatif untuk setiap aturan.
 2. `codegen-sql` menghasilkan query berparameter untuk SQLite dan PostgreSQL; uji memastikan tidak ada nilai yang tersambung ke string SQL.
 3. Contoh `crm.json` dan `inventory.json` menghasilkan hasil query yang sama di kedua dialek pada data uji.
 4. `import-sql` mengimpor skema contoh, lalu `codegen-sql` mengekspornya kembali. IR yang dihasilkan sama dengan IR asli.
 
-## Consequences
+## Konsekuensi
 
 - Positif: satu IR untuk diagram, query, dan DDL. Relasi eksplisit bisa diperiksa.
 - Negatif: query visual terbatas pada subset SQL yang dinyatakan di atas. Fitur seperti subquery, window function, dan CTE belum tercakup.

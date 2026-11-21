@@ -8,18 +8,24 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002 (flow), 0003 (crate), 0004 (data), 0009 (konvensi IR)
 
-## Context
+## Ringkasan
+
+- Endpoint API disimpan sebagai JSON dengan validasi JSON Schema. Logika endpoint adalah flow yang dirujuk, bukan kode.
+- Keluaran yang direncanakan: OpenAPI 3.1 (usulan).
+- Status: diusulkan.
+
+## Konteks
 
 Pengguna perlu mendefinisikan endpoint API secara visual: method, path, tipe request dan response, auth, dan logika yang dijalankan. Logika endpoint adalah flow (ADR 0002). Tipe request dan response menjadi DTO di `dto/` dan dipakai server maupun klien.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Satu sumber untuk kontrak API: dari sini dibentuk OpenAPI, tipe DTO, dan route di `interface/http`.
 - Logika endpoint hanya merujuk flow yang ada dengan versi yang jelas. Endpoint tidak menyimpan kode.
 - Tipe menggunakan grammar yang sama dengan DTO, tanpa tipe bahasa tertentu.
 - Auth dinyatakan sebagai scope, konsisten dengan scope flow.
 
-## Decision
+## Keputusan
 
 ### Format
 
@@ -68,7 +74,7 @@ Pengguna perlu mendefinisikan endpoint API secara visual: method, path, tipe req
 - Uji negatif (method `FETCH` dan `responses` kosong) ditolak dengan benar.
 - Aturan semantik di atas belum diimplementasi.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -80,20 +86,20 @@ Riset: OpenAPI 3.1 sejajar dengan JSON Schema draft 2020-12, dan skema di `api-i
 
 Keputusan: keluaran utama adalah OpenAPI 3.1. OpenAPI 3.0 tidak dihasilkan.
 
-## Confirmation
+## Konfirmasi
 
 - Setiap endpoint di `examples/api-ir-1/` menghasilkan dokumen OpenAPI yang valid menurut validator OpenAPI yang dipilih.
 - Setiap `handler.flow_id` harus ada dan inputnya cocok dengan parameter endpoint. Diperiksa oleh `domain/api`.
 - Route dinamis di `interface/http` hanya meneruskan request ke `service/api`. Diperiksa dengan uji yang memastikan tidak ada logika bisnis di handler.
 
-## Acceptance criteria (implementasi `api-ir/1`)
+## Kriteria penerimaan (implementasi `api-ir/1`)
 
 1. `domain/api::validate` mengimplementasikan semua aturan di bagian "Aturan semantik" dan lulus uji negatif.
 2. Contoh `orders.json` dan `auth-and-errors.json` menghasilkan dokumen OpenAPI 3.1 yang lolos validator OpenAPI.
 3. Setiap `handler.flow_id` yang dirujuk harus ada. Uji memastikan endpoint dengan flow yang tidak ada ditolak.
 4. Route dinamis di `interface/http` hanya meneruskan request ke `service/api`. Uji memastikan tidak ada logika bisnis di handler.
 
-## Consequences
+## Konsekuensi
 
 - Positif: kontrak API, tipe DTO, dan route dibentuk dari satu sumber.
 - Negatif: setiap perubahan tipe di `types` bisa mengubah banyak endpoint. Versi API perlu dikelola (`/v1`, `/v2`).

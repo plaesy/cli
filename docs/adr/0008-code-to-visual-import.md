@@ -8,18 +8,24 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002, 0004, 0005, 0006, 0009, 0010
 
-## Context
+## Ringkasan
+
+- Kode dan skema yang sudah ada diimpor lewat satu adapter per sumber. Setiap adapter menghasilkan IR yang sama dengan laporan pemetaan dan kehilangan.
+- Bahasa pertama dan parser belum dipilih.
+- Status: diusulkan.
+
+## Konteks
 
 Plaesy harus bisa membaca kode yang sudah ada dan menampilkannya sebagai visual (kode ke visual), selain menghasilkan kode dari visual (visual ke kode). Tanpa arah ini, pengguna dengan basis kode yang sudah ada tidak bisa masuk ke Plaesy tanpa menulis ulang.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Impor menghasilkan IR yang sudah didefinisikan (flow, data, api, app, design), bukan format baru.
 - Setiap konstruksi yang tidak bisa dipetakan dicatat sebagai blok buram dengan lokasi sumber. Tidak ada yang dibuang diam-diam.
 - Impor dan ekspor harus berbalik: impor lalu ekspor ulang menghasilkan IR yang sama. Ini diuji.
 - Parser per bahasa adalah adapter terpisah, sehingga tidak ada bahasa yang masuk ke domain.
 
-## Decision
+## Keputusan
 
 ### Arsitektur
 
@@ -52,7 +58,7 @@ Setiap impor menghasilkan:
 
 - Belum ada implementasi impor. Belum ada contoh sumber yang diuji.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -64,19 +70,19 @@ Riset: tree-sitter dirancang untuk editor. Ia membangun syntax tree konkret dan 
 
 Keputusan: opsi B (parser per bahasa). Usulan untuk Rust: parser resmi atau `syn`. Pilihan bahasa pertama dan parser belum disetujui owner (lihat Open items). Untuk bahasa lain, tree-sitter boleh dipakai sebagai kandidat bila tidak ada parser resmi, dan pilihan itu dicatat per bahasa di ADR baru. Tree-sitter tidak dipakai untuk membuat IR langsung tanpa validasi semantik.
 
-## Confirmation
+## Konfirmasi
 
 - Setiap impor menghasilkan laporan pemetaan dan kehilangan. Diuji dengan contoh kode yang sengaja berisi konstruksi tidak didukung; konstruksi itu harus muncul di laporan.
 - Impor lalu ekspor ulang menghasilkan IR yang sama. Diuji pada contoh yang didukung.
 
-## Acceptance criteria (implementasi impor kode)
+## Kriteria penerimaan (implementasi impor kode)
 
 1. Untuk bahasa pertama (Rust), impor menghasilkan IR dan laporan pemetaan/kehilangan. Setiap konstruksi yang tidak didukung muncul di laporan dengan lokasi sumbernya.
 2. Impor lalu ekspor ulang pada contoh yang didukung menghasilkan IR yang sama (uji idempoten).
 3. Konstruksi yang tidak didukung disimpan sebagai blok buram. Uji memastikan tidak ada konstruksi yang hilang tanpa tercatat.
 4. Bahasa kedua dan seterusnya tidak dimulai sebelum bahasa pertama lolos kriteria 1 sampai 3.
 
-## Consequences
+## Konsekuensi
 
 - Positif: basis kode yang sudah ada bisa dibawa masuk secara bertahap, dengan laporan jelas tentang apa yang belum tercakup.
 - Negatif: setiap bahasa butuh parser sendiri, dan biayanya besar.

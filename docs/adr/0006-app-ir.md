@@ -8,17 +8,23 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002 (flow), 0003 (crate), 0004 (data), 0005 (api), 0009 (konvensi IR), 0010 (design)
 
-## Context
+## Ringkasan
+
+- Aplikasi terdiri dari layar, komponen, binding data, dan aksi.
+- Aksi hanya merujuk flow yang ada. Data hanya merujuk query. Tampilan hanya merujuk desain.
+- Status: diusulkan.
+
+## Konteks
 
 Pengguna membangun aplikasi secara visual: layar, komponen, data yang ditampilkan, dan aksi yang dijalankan ketika tombol diklik. Aksi adalah flow (ADR 0002), data berasal dari query (ADR 0004), dan tampilan komponen merujuk desain (ADR 0001 dan konteks `design`).
 
-## Decision drivers
+## Dorongan keputusan
 
 - Aksi tombol dan perubahan input hanya merujuk flow dan query yang sudah ada.
 - Tampilan dan logika dipisah: komponen merujuk desain, bukan menyimpan gaya sendiri.
 - Aplikasi bisa dijalankan di klien (pratinjau) dan diekspor ke kode, dengan IR yang sama.
 
-## Decision
+## Keputusan
 
 ### Format
 
@@ -63,7 +69,7 @@ Pengguna membangun aplikasi secara visual: layar, komponen, data yang ditampilka
 - Uji negatif (route tanpa `/`, event `hover` yang tidak dikenal, dan tipe parameter yang salah) ditolak dengan benar.
 - Aturan semantik di atas belum diimplementasi.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -75,20 +81,20 @@ Riset: belum ada standar terbuka yang diakui badan standar untuk app builder. Ya
 
 Keputusan: `app-ir/1` adalah format milik Plaesy, karena tidak ada standar yang bisa diadopsi. Bentuk binding dan aksi mengikuti pola A2UI (event, tipe aksi, payload). Prinsip dari json-render dipakai juga: komposer tidak menjalankan aksi; aksi dijalankan oleh interpreter flow.
 
-## Confirmation
+## Konfirmasi
 
 - Setiap event (`click`, `change`, `submit`, `load`) di contoh merujuk flow yang ada. Diperiksa oleh `tools/validate-ir.js`.
 - Setiap komponen `design_ref` merujuk komponen desain yang ada (lintas-file; belum diperiksa, perlu validator gabungan).
 - Pratinjau di `client/*` menjalankan app-ir yang sama dengan hasil ekspor kode. Diuji dengan contoh yang sama.
 
-## Acceptance criteria (implementasi `app-ir/1`)
+## Kriteria penerimaan (implementasi `app-ir/1`)
 
 1. `domain/app::validate` mengimplementasikan semua aturan di bagian "Aturan semantik" dan lulus uji negatif.
 2. Contoh `order-desk.json` dan `login-and-stock.json` dijalankan di pratinjau klien. Setiap aksi memanggil flow yang benar, diuji dengan Transport palsu.
 3. Hasil ekspor kode untuk contoh yang sama menghasilkan perilaku yang sama dengan pratinjau pada fixture uji.
 4. Validasi gabungan lintas-file (`design_ref` terhadap `design-ir/1`) belum ada (lihat rencana implementasi).
 
-## Consequences
+## Konsekuensi
 
 - Positif: satu model untuk layar, data, dan aksi. Pratinjau dan ekspor memakai IR yang sama.
 - Negatif: aplikasi bergantung pada flow, query, dan desain yang sudah ada. Urutan pembuatan menjadi penting.

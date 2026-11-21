@@ -8,11 +8,17 @@
 - Digantikan oleh: -
 - Terkait: ADR 0006, 0008, 0009
 
-## Context
+## Ringkasan
+
+- IR desain gabungan yang menggantikan ADR 0001 dan 0007: node, komponen dan variant, token.
+- Kebijakan edit B (guarded merge) dan fidelity struktural 100% pada 20 fixture berasal dari ADR 0001 dan berstatus diterima lewat delegasi.
+- Format token dan kind node masih usulan.
+
+## Konteks
 
 Plaesy harus mengubah desain menjadi kode dan kode menjadi desain. Dua ADR sebelumnya mendefinisikan dua IR desain yang berbeda: ADR 0001 dengan kind `frame, layout, component, variant, text, vector, image, token_ref, opaque`, dan ADR 0007 dengan kind `frame, rect, text, image, vector, instance`. ADR 0007 juga mengklaim berlaku untuk seluruh desain. Satu IR desain harus ada, dan ADR ini menggabungkan keduanya.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Satu IR desain, satu converter per format (bukan per pasangan format).
 - Token adalah sumber nilai visual. Nilai literal hanya dipakai bila tidak ada token yang cocok.
@@ -21,7 +27,7 @@ Plaesy harus mengubah desain menjadi kode dan kode menjadi desain. Dua ADR sebel
 - Netral terhadap renderer: tidak ada field yang menyebut Figma, Dioxus, CSS, atau platform.
 - Konstruksi yang tidak didukung dicatat, tidak dibuang (ADR 0009, bagian 4).
 
-## Decision
+## Keputusan
 
 ### Format
 
@@ -112,7 +118,7 @@ Bagian berikut berasal dari ADR 0001 yang diterima lewat delegasi owner pada 202
 - Fixture negatif `examples-negative/design-ir-1/unknown-node-type.json` ditolak.
 - Konversi (desain ↔ IR ↔ kode) belum diimplementasi.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -122,19 +128,19 @@ Bagian berikut berasal dari ADR 0001 yang diterima lewat delegasi owner pada 202
 
 Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 
-## Confirmation
+## Konfirmasi
 
 - `docs/adr/tools/check-ir.js` lulus untuk contoh positif dan fixture negatif design.
 - `tools/validate-ir.js` lulus untuk contoh design.
 - Setelah Phase 1 (lihat rencana), round trip struktural diuji pada korpus. Belum ada.
 
-## Consequences
+## Konsekuensi
 
 - Positif: satu IR desain untuk app (ADR 0006) dan konversi kode.
 - Negatif: contoh dan skema dari ADR 0007 perlu penyesuaian kind (`rect` dan `instance` tetap, `layout` dipindah ke frame).
 - Netral: tidak ada renderer yang dipilih.
 
-## Acceptance criteria
+## Kriteria penerimaan
 
 1. `domain/design::validate` mengimplementasikan aturan semantik di atas dan lulus fixture negatif per aturan.
 2. Round trip struktural lulus pada korpus minimal 20 fixture.

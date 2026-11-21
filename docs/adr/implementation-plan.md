@@ -53,7 +53,7 @@ Kerja:
 
 1. Buat `crates/plaesy/kernel`, `crates/plaesy/dto`, dan `crates/plaesy/domain/flow` dengan `members` eksplisit di `Cargo.toml` (ADR 0003, langkah 2).
 2. `domain/flow::ir`: tipe dari skema `flow-ir-1`. Dengan `serde` dan `deny_unknown_fields`, sesuai ADR 0009 bagian 2 (`extensions` untuk field tambahan).
-3. `domain/flow::validate`: semua aturan di ADR 0002 bagian "Validasi". Satu fixture negatif per aturan.
+3. `domain/flow::validate`: semua aturan di ADR 0002 bagian "Aturan semantik (domain/flow)". Satu fixture negatif per aturan.
 4. `domain/flow::eval`: interpreter murni tanpa I/O. Ekspresi memakai CEL (keputusan ADR 0002).
 5. Codegen Rust: satu adapter (`adapter/codegen-rust`). Uji konformansi: output kode dan interpreter menghasilkan hasil sama pada fixture yang sama.
 6. Uji retry dan batas loop memakai rumus di ADR 0002 (sudah diverifikasi aritmetikanya).
@@ -148,7 +148,7 @@ Kerja:
 
 1. Ganti nama `crates/editor/flow` (`flow-editor`) menjadi `plaesy-interface-client`, pindahkan ke `crates/plaesy/interface/client/`. Perbarui referensi di `CLAUDE.md` dan task backlog.
 2. Buat struktur di ADR 0011 bertahap: `shell`, `ui`, `state`, `adapter`, `shared`, lalu `features/flow`.
-3. Tambah pemeriksaan `use` antar-modul (ADR 0011, bagian "Confirmation") sebagai langkah CI. Bentuk pemeriksaan (skrip atau lint) dipilih saat fase ini.
+3. Tambah pemeriksaan `use` antar-modul (ADR 0011, bagian "Konfirmasi") sebagai langkah CI. Bentuk pemeriksaan (skrip atau lint) dipilih saat fase ini.
 4. Transport WebSocket: pilih library per platform (ADR 0011 open items).
 
 Keluar: `cargo build` untuk fitur `web`, `desktop`, `mobile`; pemeriksaan `use` lulus di CI.

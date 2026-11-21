@@ -8,11 +8,17 @@
 - Digantikan oleh: -
 - Terkait: ADR 0003, 0009, 0010
 
-## Context
+## Ringkasan
+
+- Klien adalah satu crate `plaesy-interface-client` dengan fitur `web`, `desktop`, dan `mobile`.
+- Struktur dibagi `shell`, `ui`, `state`, `adapter`, `shared`, `features`, dan `platform`, dengan aturan dependensi yang jelas.
+- Status: diusulkan.
+
+## Konteks
 
 ADR 0003 memuat struktur klien dalam satu bagian yang panjang. Bagian itu memakai keputusan yang berbeda dari crate backend (fitur Cargo, transport WebSocket, pemisahan platform) dan punya open items sendiri. Dipisah agar setiap ADR punya satu keputusan utama.
 
-## Decision
+## Keputusan
 
 Klien adalah satu crate `plaesy-interface-client` dengan fitur Cargo `web`, `desktop`, dan `mobile`. Struktur di bawah berlaku sejak awal. Fitur baru ditambahkan di tempat yang sudah disediakan.
 
@@ -127,7 +133,7 @@ interface/client/
 
 **Pemecahan ke crate sendiri:** fitur yang sudah besar bisa dipindah ke crate `plaesy-interface-client-<fitur>` tanpa mengubah fitur lain, karena fitur lain sudah tidak boleh memakainya secara langsung.
 
-## Confirmation
+## Konfirmasi
 
 - Belum diperiksa. Tidak ada pemeriksaan path di CI; ditambahkan di rencana implementasi.
 - Tidak ada `use` dari `features/*` ke `features/*` lain.

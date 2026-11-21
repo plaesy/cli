@@ -8,9 +8,16 @@
 - Digantikan oleh: -
 - Terkait: ADR 0002, 0004, 0005, 0006, 0008, 0009, 0010, 0011
 
-Cara membaca dokumen ini: bagian "Decision" berisi keputusan yang akan diimplementasi. Bagian "Considered options" menjelaskan alternatif yang ditolak dan alasannya. Bagian "Confirmation" menjelaskan cara memeriksa bahwa implementasi mengikuti keputusan ini.
+Cara membaca dokumen ini: bagian "Keputusan" berisi keputusan yang akan diimplementasi. Bagian "Considered options" menjelaskan alternatif yang ditolak dan alasannya. Bagian "Confirmation" menjelaskan cara memeriksa bahwa implementasi mengikuti keputusan ini.
 
-## Context
+## Ringkasan
+
+- Backend dibagi per lapisan di bawah `crates/plaesy/`: `kernel`, `domain/<konteks>`, `dto`, `service`, `adapter/<nama>`, `interface/*`, `plugin`.
+- `domain/*` tidak boleh bergantung pada I/O. Ini diperiksa dengan `cargo tree` setelah crate ada.
+- Struktur klien dipindah ke ADR 0011.
+- Status: diusulkan.
+
+## Konteks
 
 Plaesy menggantikan banyak produk (Hermes Agent, Paperclip, DeepSeek Harness, Nimbalyst, Orca, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald OS, OpenProject) dan menjadi satu kesatuan. Cakupannya:
 
@@ -24,7 +31,7 @@ Struktur harus memisahkan aturan bisnis, penyimpanan, transport, DTO, dan klien,
 
 Repo saat ini: satu package Rust di `src/` (355 file) dan crate skeleton flow editor di `crates/editor/flow` (nama paket `flow-editor`). Crate ini akan dipindah ke `crates/plaesy/interface/client/` sesuai ADR 0011.
 
-## Decision drivers
+## Dorongan keputusan
 
 - Satu model domain dan satu identitas untuk semua kapabilitas.
 - Visual dan kode adalah dua tampilan dari satu model, lewat IR.
@@ -34,7 +41,7 @@ Repo saat ini: satu package Rust di `src/` (355 file) dan crate skeleton flow ed
 - DTO tidak berada di bawah transport tertentu.
 - Struktur klien berbasis fitur, dengan ukuran besar sejak awal agar tidak perlu dipindah.
 
-## Decision: struktur level atas
+## Keputusan: struktur level atas
 
 ```text
 cli/
@@ -106,7 +113,7 @@ Validasi semantik untuk kelima IR: `tools/validate-ir.js` (prototipe Node).
 | `import-sql` | skema database yang ada menjadi IR data (kode ke visual) |
 | `import-code-<bahasa>` | kode sumber menjadi IR (kode ke visual), ditambahkan per bahasa (ADR 0008) |
 
-## Decision: struktur di dalam crate
+## Keputusan: struktur di dalam crate
 
 Aturan umum: satu modul per konteks, dan nama modul sama di setiap crate yang menyentuh konteks itu.
 
@@ -236,7 +243,7 @@ Dipindah ke ADR 0011 (struktur klien). Crate `plaesy-interface-client` mengikuti
 
 Pola sama seperti sebelumnya.
 
-## Considered options
+## Opsi yang dipertimbangkan
 
 | Opsi | Keuntungan | Kerugian | Keputusan |
 |---|---|---|---|
@@ -246,9 +253,9 @@ Pola sama seperti sebelumnya.
 | D. Dioxus fullstack (satu framework untuk server dan klien) | Satu bahasa dan satu toolchain | Klien terikat ke runtime server; `service` mudah bocor ke klien | Ditolak |
 | E. Klien sebagai repo terpisah | Rilis klien independen | Kontrak API harus disinkronkan di dua repo | Ditunda: klien tetap di monorepo sampai ada alasan rilis terpisah |
 
-Riset yang mendasari pilihan: batas crate sebagai penegak dependensi oleh compiler (lihat bagian "Decision drivers"); flat vs berkelompok ([matklad: Large Rust Workspaces](https://matklad.github.io/2021/08/22/large-rust-workspaces.html)).
+Riset yang mendasari pilihan: batas crate sebagai penegak dependensi oleh compiler (lihat bagian "Dorongan keputusan"); flat vs berkelompok ([matklad: Large Rust Workspaces](https://matklad.github.io/2021/08/22/large-rust-workspaces.html)).
 
-## Confirmation
+## Konfirmasi
 
 Cara memeriksa implementasi mengikuti ADR ini:
 
@@ -271,7 +278,7 @@ Urutan yang disarankan. Setiap langkah harus lulus `cargo build` dan `cargo test
 9. Buat klien: `interface/client` dengan fitur Cargo `web`, `desktop`, `mobile`. Mulai dari `shell`, `ui`, dan satu fitur (`features/flow`).
 10. Pindahkan kode dari `src/` secara bertahap per modul, dengan build dan test di setiap langkah. Jangan memindahkan semua sekaligus.
 
-Setiap langkah yang melanggar aturan dependensi di bagian "Confirmation" harus diperbaiki sebelum lanjut.
+Setiap langkah yang melanggar aturan dependensi di bagian "Konfirmasi" harus diperbaiki sebelum lanjut.
 
 ## Visual ↔ kode
 
@@ -318,7 +325,7 @@ Aturan konversi:
 | Fitur dipecah jadi crate sendiri | Lulus: pindahkan `features/<nama>` ke crate sendiri, fitur lain tidak berubah |
 | Konstruksi kode tidak didukung saat impor | Disimpan sebagai blok buram, tidak hilang |
 
-## Consequences
+## Konsekuensi
 
 - Sekitar 30 crate saat semua konteks dan adapter terisi. Crate baru dibuat hanya saat ada kebutuhan nyata.
 - Klien satu crate dengan struktur besar. Ukuran build klien bertambah seiring fitur, dan pemecahan ke crate sendiri disiapkan lewat aturan dependensi.
@@ -327,7 +334,7 @@ Aturan konversi:
 - Pengelompokan per konteks mengikuti konsep, bukan produk. Produk lama dipetakan ke konteks ini.
 - Topologi deployment dan matriks OS tidak mengubah struktur crate.
 
-## Acceptance criteria (implementasi struktur)
+## Kriteria penerimaan (implementasi struktur)
 
 1. `cargo build --workspace` dan `cargo test --workspace` lulus pada setiap langkah di "Implementation checklist".
 2. `cargo tree` untuk setiap `domain/*` tidak memuat `tokio`, `axum`, `rusqlite`, atau crate I/O lain.
@@ -335,7 +342,7 @@ Aturan konversi:
 
 ## Open items
 
-- Owner menyetujui batas layering di bagian "Decision: struktur di dalam crate" dan "Decision: struktur level atas".
+- Owner menyetujui batas layering di bagian "Keputusan: struktur di dalam crate" dan "Decision: struktur level atas".
 - Urutan pengerjaan: flow lebih dulu (ADR 0002 sudah diterima), lalu data, desain, dan aplikasi. Urutan ini belum disetujui owner.
 - Nama paket `flow-editor` di-rename menjadi `plaesy-interface-client` (modul `features/flow`). Referensi di `CLAUDE.md` dan task backlog ikut diperbarui saat rename.
 - `plugins/hermes-plugin/` di root adalah integrasi Python untuk runtime Hermes. Usulan: tetap di luar pohon crate, dan dipindah ke `integrations/hermes/` hanya jika owner memutuskan.
