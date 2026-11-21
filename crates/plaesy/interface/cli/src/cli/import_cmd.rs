@@ -34,7 +34,12 @@ pub struct Args {
 pub fn run(args: &Args) -> CliResult {
     let (ir, report) = match args.from {
         From::Sql => {
-            let conn = rusqlite::Connection::open(&args.path)?;
+            // Baca-saja dan tanpa membuat berkas: path yang salah harus gagal, bukan menghasilkan
+            // database kosong.
+            let conn = rusqlite::Connection::open_with_flags(
+                &args.path,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )?;
             let ir =
                 plaesy_adapter_import_sql::import(&conn, &args.name).map_err(|e| e.to_string())?;
             (
