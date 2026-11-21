@@ -56,5 +56,5 @@ MiniLM is slightly ahead on semantic R@1/R@3 and hybrid R@1/R@3/R@5/MRR; E5 is s
 ## Open items
 
 - Measure generated-answer accuracy, token cost, latency, and end-to-end task success before changing the embedder default.
-- Tests that must pass before switching: `cargo test --test relevance_eval` with the chosen default.
+- Tests that must pass before switching: `cargo test -p plaesy --test relevance_eval` with the chosen default.
 - Prefix behaviour: `multilingual-e5-small` gets `query: `/`passage: ` automatically (name contains "e5"), which matches its training.

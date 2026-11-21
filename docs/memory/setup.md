@@ -7,7 +7,7 @@
 
 ```bash
 cargo build --release --locked
-cargo test --locked           # real-ONNX tests run only if the model is installed
+cargo test --workspace --locked  # real-ONNX tests run only if the model is installed
 ```
 
 ## Embedding model (one-time)

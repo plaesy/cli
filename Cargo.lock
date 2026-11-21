@@ -3208,6 +3208,10 @@ version = "0.0.1"
 dependencies = [
  "dioxus",
  "dioxus-ssr",
+ "plaesy-domain-api",
+ "plaesy-domain-app",
+ "plaesy-domain-data",
+ "plaesy-domain-flow",
  "serde_json",
  "thiserror 1.0.69",
 ]

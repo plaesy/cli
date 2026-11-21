@@ -380,7 +380,7 @@ Celah yang ditemukan dan ditutup pada migrasi ini:
 
 Keterbatasan yang masih terbuka (dicatat, bukan disembunyikan):
 
-- `irvalidate` (validator semantik untuk flow, data, api, app) tumpang tindih dengan `domain/*` dan `service/validate.rs`. Keduanya belum digabung; perlu ADR sendiri dan uji paritas Rust-Node tetap hijau.
+- Validator semantik flow, data, api, dan app sekarang hanya ada di `plaesy-domain-*`. `irvalidate` (di `plaesy-adapter-design-ir`) hanya memetakan galatnya ke pesan, dan uji paritas Rust-Node (`irvalidate_test.rs`) tetap lulus. Sebelumnya empat modul di `irvalidate` adalah salinan; sudah dihapus.
 - `plaesy-domain-identity` dan `plaesy-domain-workflow` masih memakai `std::fs` dan `sha2`. Lolos kriteria `cargo tree`, tetapi I/O belum dipindah ke port `service`.
 - `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang `pub` dengan `#[doc(hidden)]`, karena dipakai tes lintas crate. Sebaiknya dipindah ke modul uji bersama.
 - Pembagian `support/*` bukan konteks ADR. Pemetaan itu perlu keputusan lanjutan (usulan: konteks `tooling`, atau masuk konteks yang ada).

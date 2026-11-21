@@ -30,11 +30,11 @@ Both installer scripts accept `PLAESY_BUNDLE_PATH` and `PLAESY_SHA256SUMS_PATH` 
 a local bundle while retaining the same checksum, extraction, and CLI install steps. CI uses this
 path so it can test an unpublished build without a network release.
 
-The opt-in post-install test is `cargo test --locked --test install_e2e -- --ignored --nocapture`.
+The opt-in post-install test is `cargo test --locked -p plaesy --test install_e2e -- --ignored --nocapture`.
 It writes the current user's persistent PATH and briefly creates a uniquely named sentinel in
 Plaesy's user data directory, so run it only on a disposable CI runner or when intentionally testing
 that account. It requires `PLAESY_INSTALL_E2E=1` and `PLAESY_E2E_BINARY` to point to the extracted
-bundle binary; the platform installer must have run first. Ordinary `cargo test --locked` skips this
+bundle binary; the platform installer must have run first. Ordinary `cargo test --workspace --locked` skips this
 test.
 
 For local development, `make reload` builds the debug binary and runs its `install` command. This

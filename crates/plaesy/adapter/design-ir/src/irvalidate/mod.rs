@@ -1,7 +1,8 @@
 //! Semantic validators in Rust for `flow-ir/1`, `data-ir/1`, `api-ir/1`, and `app-ir/1`
-//! (ADR 0002, 0004, 0005, 0006). Each module is a port of the matching function in
-//! `docs/adr/tools/validate-ir.js`, and both must agree on every example and fixture.
-//! The design IR lives in `crate::designir`.
+//! (ADR 0002, 0004, 0005, 0006). The rules live in the `plaesy-domain-*` crates; each module
+//! here only maps their errors to messages. The Rust and Node validators
+//! (`docs/adr/tools/validate-ir.js`) must agree on every example and fixture, which
+//! `irvalidate_test.rs` checks. The design IR lives in `crate::designir`.
 //!
 //! Shape checks (JSON Schema) are not repeated here. They are done by `check-ir.js`
 //! and, for lenient reading, by `lenient`.

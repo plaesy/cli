@@ -114,7 +114,7 @@ find "$VAULT" -name '*.md' | wc -l   # expect 10
 
 # 3. Crash recovery: kill -9 the daemon, then confirm the automated test rather than
 #    waiting 10 real minutes — tests/crash_recovery_test.rs backdates the lock mtime.
-cargo test --test crash_recovery_test
+cargo test -p plaesy --test crash_recovery_test
 ```
 
 Do not run multiple `plaesy memory serve` processes against the same vault at once — only the daemon lock itself prevents that, and two daemons racing each other's background watcher is unsupported.

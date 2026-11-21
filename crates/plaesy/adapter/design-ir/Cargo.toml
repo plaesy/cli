@@ -12,6 +12,10 @@ description = "Validator dan codegen design-ir/1 serta irvalidate (ADR 0010)."
 designir-dioxus = ["dep:dioxus", "dep:dioxus-ssr"]
 
 [dependencies]
+plaesy-domain-api = { path = "../../domain/api" }
+plaesy-domain-app = { path = "../../domain/app" }
+plaesy-domain-data = { path = "../../domain/data" }
+plaesy-domain-flow = { path = "../../domain/flow" }
 dioxus = { workspace = true, optional = true }
 dioxus-ssr = { workspace = true, optional = true }
 serde_json = { workspace = true }
