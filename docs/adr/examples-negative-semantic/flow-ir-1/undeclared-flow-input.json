@@ -1,0 +1,152 @@
+{
+  "ir": "flow-ir/1",
+  "id": "flw_01J9Z3K8",
+  "version": 3,
+  "name": "kirim-faktur",
+  "inputs": {
+    "invoice_id": {
+      "type": "string"
+    },
+    "approver": {
+      "type": "string"
+    }
+  },
+  "outputs": {
+    "status": {
+      "type": "string"
+    }
+  },
+  "scope": [
+    "billing:read",
+    "billing:write"
+  ],
+  "modules": [
+    {
+      "id": "m1",
+      "kind": "action",
+      "operation": "billing.get_invoice",
+      "inputs": {
+        "id": "flow.input.tidak_ada"
+      },
+      "outputs": {
+        "invoice": {
+          "type": "object"
+        }
+      },
+      "retry": {
+        "kind": "exponential",
+        "max_attempts": 3,
+        "base_secs": 1,
+        "multiplier": 2,
+        "cap_secs": 60,
+        "retry_if": "error.code != 'not_found'"
+      },
+      "timeout_secs": 30,
+      "on_error": "fail"
+    },
+    {
+      "id": "m2",
+      "kind": "branch_one",
+      "branches": [
+        {
+          "when": "m1.invoice.status == 'draft'",
+          "modules": [
+            "m3",
+            "m4"
+          ]
+        }
+      ],
+      "default": [
+        "m7"
+      ]
+    },
+    {
+      "id": "m3",
+      "kind": "approval",
+      "required_events": 1,
+      "timeout_secs": 86400,
+      "on_timeout": "reject",
+      "on_reject": "m7"
+    },
+    {
+      "id": "m4",
+      "kind": "for_each",
+      "iterator": "m1.invoice.lines",
+      "modules": [
+        "m5"
+      ],
+      "parallel": true,
+      "parallelism": 10,
+      "skip_failures": false
+    },
+    {
+      "id": "m5",
+      "kind": "action",
+      "operation": "billing.check_line",
+      "inputs": {
+        "line": "item.value"
+      },
+      "outputs": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "on_error": "continue"
+    },
+    {
+      "id": "m6",
+      "kind": "while",
+      "condition": "m6.result.pending == true",
+      "modules": [
+        "m8"
+      ],
+      "max_iterations": 1000,
+      "max_duration_secs": 3600
+    },
+    {
+      "id": "m7",
+      "kind": "pass",
+      "inputs": {
+        "status": "'skipped'"
+      },
+      "outputs": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "id": "m8",
+      "kind": "subflow",
+      "flow_id": "flw_01J9Y1AA",
+      "flow_version": 2,
+      "inputs": {
+        "id": "m1.invoice.id"
+      },
+      "outputs": {
+        "result": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "id": "m9",
+      "kind": "action",
+      "operation": "billing.send_invoice",
+      "inputs": {
+        "id": "m1.invoice.id"
+      },
+      "outputs": {}
+    },
+    {
+      "id": "m10",
+      "kind": "action",
+      "operation": "billing.notify_failure",
+      "inputs": {
+        "invoice_id": "flow.input.invoice_id"
+      },
+      "outputs": {}
+    }
+  ],
+  "failure_handler": "m10"
+}

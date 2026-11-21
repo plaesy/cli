@@ -209,7 +209,7 @@ Yang sudah dijalankan (2026-11-21):
 - Fixture negatif `examples-negative/flow-ir-1/unknown-module-kind.json` dan `integer-port-type.json` INVALID (`check-ir.js`).
 - `tools/validate-ir.js` melaporkan semantik OK untuk kedua contoh.
 
-Belum ada: validasi semantik di Rust, interpreter, dan codegen.
+Validasi semantik di Rust ada (`src/irvalidate/flow.rs`) dan lolos contoh serta fixture negatif. Belum ada: interpreter dan codegen Rust untuk flow.
 
 ## Kriteria penerimaan (implementasi flow-ir/1)
 

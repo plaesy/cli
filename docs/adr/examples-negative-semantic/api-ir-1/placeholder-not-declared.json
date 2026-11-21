@@ -1,0 +1,145 @@
+{
+  "ir": "api-ir/1",
+  "id": "api_01JA0ORD",
+  "version": 1,
+  "name": "orders",
+  "base_path": "/v1/orders",
+  "types": {
+    "Order": {
+      "object": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customer_id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "paid",
+              "shipped",
+              "cancelled"
+            ]
+          },
+          "total": {
+            "type": "number"
+          },
+          "lines": {
+            "array": {
+              "$ref": "OrderLine"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "status",
+          "total"
+        ]
+      }
+    },
+    "OrderLine": {
+      "object": {
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "quantity"
+        ]
+      }
+    },
+    "CreateOrder": {
+      "object": {
+        "properties": {
+          "customer_id": {
+            "type": "string"
+          },
+          "lines": {
+            "array": {
+              "$ref": "OrderLine"
+            }
+          }
+        },
+        "required": [
+          "customer_id",
+          "lines"
+        ]
+      }
+    },
+    "ErrorBody": {
+      "object": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "id": "ep_get_order",
+      "method": "GET",
+      "path": "/{order_id}",
+      "path_params": {},
+      "auth": {
+        "scope": [
+          "billing:read"
+        ]
+      },
+      "handler": {
+        "flow_id": "flw_01J9GETORD",
+        "flow_version": 1
+      },
+      "responses": {
+        "200": {
+          "$ref": "Order"
+        },
+        "404": {
+          "$ref": "ErrorBody"
+        }
+      },
+      "rate_limit_per_minute": 600
+    },
+    {
+      "id": "ep_create_order",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "$ref": "CreateOrder"
+      },
+      "auth": {
+        "scope": [
+          "billing:write"
+        ]
+      },
+      "handler": {
+        "flow_id": "flw_01J9CRTORD",
+        "flow_version": 2
+      },
+      "responses": {
+        "201": {
+          "$ref": "Order"
+        },
+        "422": {
+          "$ref": "ErrorBody"
+        }
+      },
+      "rate_limit_per_minute": 60
+    }
+  ]
+}

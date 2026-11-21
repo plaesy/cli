@@ -66,7 +66,7 @@ Pengguna membangun aplikasi secara visual: layar, komponen, data yang ditampilka
 
 - `examples/app-ir-1/order-desk.json` lolos `ajv validate --spec=draft2020` terhadap `app-ir-1.schema.json`.
 - Uji negatif (route tanpa `/`, event `hover` yang tidak dikenal, dan tipe parameter yang salah) ditolak dengan benar.
-- Aturan semantik di atas belum diimplementasi.
+- Aturan semantik ada di Rust (`src/irvalidate/app.rs`) dan lolos contoh serta fixture negatif. Validasi lintas-file dan pratinjau belum ada.
 
 ## Opsi yang dipertimbangkan
 

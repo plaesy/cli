@@ -17,19 +17,34 @@ function resolve(root, node) {
 }
 
 // Kumpulkan semua skema objek yang berlaku untuk node ini (termasuk cabang oneOf/anyOf/allOf).
-function objectSchemas(root, schema, out = []) {
+// Cabang "then" hanya berlaku jika "if"-nya cocok dengan nilai objek (ADR 0009, lenient).
+function objectSchemas(root, schema, instance, out = []) {
   const s = resolve(root, schema);
   if (!s || typeof s !== "object") return out;
   if (s.properties || s.additionalProperties === false || s.unevaluatedProperties === false) out.push(s);
   for (const key of ["oneOf", "anyOf", "allOf"]) {
-    for (const branch of s[key] || []) objectSchemas(root, branch, out);
+    for (const branch of s[key] || []) objectSchemas(root, branch, instance, out);
   }
-  if (s.then) objectSchemas(root, s.then, out);
+  if (s.if && s.then && matchesIf(s.if, instance)) objectSchemas(root, s.then, instance, out);
   return out;
 }
 
-function allowedKeys(root, schema) {
-  const branches = objectSchemas(root, schema);
+// Subset "if" yang dipakai skema: properties (const, enum) dan required. Kata kunci lain dianggap cocok.
+function matchesIf(cond, instance) {
+  if (instance === null || typeof instance !== "object" || Array.isArray(instance)) return false;
+  for (const name of cond.required || []) {
+    if (!(name in instance)) return false;
+  }
+  for (const [key, sub] of Object.entries(cond.properties || {})) {
+    if (!(key in instance)) return false;
+    if ("const" in sub && instance[key] !== sub.const) return false;
+    if (Array.isArray(sub.enum) && !sub.enum.includes(instance[key])) return false;
+  }
+  return true;
+}
+
+function allowedKeys(root, schema, instance) {
+  const branches = objectSchemas(root, schema, instance);
   const keys = new Set();
   let closed = false;
   for (const b of branches) {
@@ -56,7 +71,7 @@ function lenientNode(root, value, schema, where, warnings) {
     const itemSchema = s && s.items;
     return value.map((v, i) => lenientNode(root, v, itemSchema, `${where}/${i}`, warnings));
   }
-  const { keys, closed, branches } = allowedKeys(root, s);
+  const { keys, closed, branches } = allowedKeys(root, s, value);
   const out = {};
   const unknown = {};
   for (const [k, v] of Object.entries(value)) {
