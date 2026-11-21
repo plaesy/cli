@@ -3449,6 +3449,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-interface-mcp"
+version = "0.0.1"
+dependencies = [
+ "plaesy-adapter-sqlite",
+ "plaesy-service",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "plaesy-kernel"
 version = "0.0.1"
 dependencies = [
