@@ -207,8 +207,16 @@ fn render_hits(hits: &[SearchHit]) -> String {
     out
 }
 
+/// Tool yang menulis ke vault. Ditolak bila engine berjalan dengan `serve --read-only`.
+const WRITE_TOOLS: &[&str] = &["memory_remember", "memory_resolve_gap"];
+
 #[cfg(test)]
 async fn call_tool(engine: &SearchEngine, name: &str, args: &Value) -> Value {
+    if engine.is_read_only() && WRITE_TOOLS.contains(&name) {
+        return tool_error(format!(
+            "`{name}` ditolak: server berjalan dengan --read-only"
+        ));
+    }
     match run_tool(engine, name, args).await {
         Ok(v) => v,
         Err(ToolError::Invalid(m)) => tool_error(format!("invalid arguments: {m}")),
@@ -683,10 +691,20 @@ impl ServerHandler for PlaesyMcpServer {
             .arguments
             .map(Value::Object)
             .unwrap_or_else(|| json!({}));
-        let result = match run_tool(&self.engine, &request.name, &args).await {
-            Ok(result) => result,
-            Err(ToolError::Invalid(message)) => tool_error(format!("invalid arguments: {message}")),
-            Err(ToolError::Engine(error)) => tool_error(error.to_string()),
+        let tool_name: &str = &request.name;
+        let result = if self.engine.is_read_only() && WRITE_TOOLS.contains(&tool_name) {
+            tool_error(format!(
+                "`{}` ditolak: server berjalan dengan --read-only",
+                request.name
+            ))
+        } else {
+            match run_tool(&self.engine, &request.name, &args).await {
+                Ok(result) => result,
+                Err(ToolError::Invalid(message)) => {
+                    tool_error(format!("invalid arguments: {message}"))
+                }
+                Err(ToolError::Engine(error)) => tool_error(error.to_string()),
+            }
         };
         let result: CallToolResult = serde_json::from_value(result)
             .map_err(|e| McpError::internal_error(format!("invalid MCP tool result: {e}"), None))?;

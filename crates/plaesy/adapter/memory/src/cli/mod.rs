@@ -149,10 +149,11 @@ async fn run(cli: Cli) -> Result<()> {
         transport,
         port,
         auth_token,
+        read_only,
     } = cli.command
     {
         let auth_token = auth_token.or_else(|| std::env::var("PLAESY_MCP_TOKEN").ok());
-        return serve::run(config, mcp, transport, port, auth_token).await;
+        return serve::run(config, mcp, transport, port, auth_token, read_only).await;
     }
 
     if let Command::Schedule {

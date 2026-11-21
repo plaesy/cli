@@ -47,6 +47,7 @@ pub async fn run(
     transport: Transport,
     port: u16,
     auth_token: Option<String>,
+    read_only: bool,
 ) -> Result<()> {
     if let Some(token) = auth_token.as_deref() {
         if !mcp || transport != Transport::Http {
@@ -68,7 +69,8 @@ pub async fn run(
         );
     }
 
-    let daemon_lock = if config.watch_dir.is_dir() {
+    // Read-only tidak mengambil lock daemon, sehingga vault yang sudah dimiliki daemon lain tetap bisa dibaca.
+    let daemon_lock = if config.watch_dir.is_dir() && !read_only {
         Some(WriteLock::acquire_named(
             &config.watch_dir,
             ".plaesy-memory-daemon.lock",
@@ -79,11 +81,14 @@ pub async fn run(
     let engine = Arc::new(SearchEngine::from_config(&config).await?);
     engine.set_watch_root(config.watch_dir.clone());
     engine.set_daemon_mode(daemon_lock.is_some());
+    engine.set_read_only(read_only);
     // Keep the ownership lock alive until the protocol server exits.
     let _daemon_lock = daemon_lock;
 
     let root = config.watch_dir.clone();
-    if root.is_dir() {
+    if read_only {
+        tracing::info!("read-only: serving the existing index without sync or watching");
+    } else if root.is_dir() {
         // The watcher starts first so edits made during the initial sync are not lost.
         // Sync + watching run in the background: the service answers requests immediately
         // (searches see whatever is indexed so far) instead of blocking on a long first index.

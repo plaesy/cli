@@ -161,6 +161,8 @@ pub struct SearchEngine {
     watch_root: std::sync::OnceLock<PathBuf>,
     /// True when this engine is owned by the long-running daemon.
     daemon_mode: std::sync::atomic::AtomicBool,
+    /// Mode baca-saja (`serve --read-only`): tool penulisan MCP ditolak.
+    read_only: std::sync::atomic::AtomicBool,
 }
 
 impl SearchEngine {
@@ -239,6 +241,7 @@ impl SearchEngine {
             vector_index_ready: AtomicBool::new(vector_index_ready),
             watch_root: std::sync::OnceLock::new(),
             daemon_mode: std::sync::atomic::AtomicBool::new(false),
+            read_only: std::sync::atomic::AtomicBool::new(false),
         })
     }
 
@@ -370,6 +373,15 @@ impl SearchEngine {
 
     pub(crate) fn daemon_mode(&self) -> bool {
         self.daemon_mode.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    pub(crate) fn set_read_only(&self, enabled: bool) {
+        self.read_only
+            .store(enabled, std::sync::atomic::Ordering::Release);
+    }
+
+    pub(crate) fn is_read_only(&self) -> bool {
+        self.read_only.load(std::sync::atomic::Ordering::Acquire)
     }
 
     // -- Indexing ----------------------------------------------------------

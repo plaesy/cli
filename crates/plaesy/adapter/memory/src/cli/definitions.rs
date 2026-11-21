@@ -233,6 +233,10 @@ pub(super) enum Command {
         /// Require this bearer token for MCP HTTP requests. Alternatively set PLAESY_MCP_TOKEN.
         #[arg(long)]
         auth_token: Option<String>,
+        /// Serve the existing index without taking the daemon lock or syncing/watching the vault.
+        /// Lets a client read a vault that another daemon already owns.
+        #[arg(long)]
+        read_only: bool,
     },
     /// First-run setup: vault folder, settings.json, model download, first index.
     Onboard {
