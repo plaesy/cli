@@ -118,3 +118,28 @@ fn lenient_leaves_example_documents_unchanged() {
         }
     }
 }
+
+#[test]
+fn rust_validators_agree_with_node_on_every_recorded_file() {
+    // Hasil Node dicatat oleh docs/adr/tools/gen-semantic-expected.js.
+    let expected: Vec<Value> = serde_json::from_str(
+        &std::fs::read_to_string(adr("tools/semantic-expected.json"))
+            .expect("baca semantic-expected.json"),
+    )
+    .expect("json semantic-expected.json");
+    assert!(
+        expected.len() >= 38,
+        "berkas yang dicatat kurang: {}",
+        expected.len()
+    );
+    let mut disagreements = Vec::new();
+    for entry in &expected {
+        let file = entry["file"].as_str().expect("file");
+        let node_ok = entry["semanticOk"].as_bool().expect("semanticOk");
+        let rust_ok = validate(&load(&adr(file))).is_empty();
+        if node_ok != rust_ok {
+            disagreements.push(format!("{file}: node={node_ok} rust={rust_ok}"));
+        }
+    }
+    assert!(disagreements.is_empty(), "{disagreements:?}");
+}

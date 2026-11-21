@@ -1,0 +1,154 @@
+[
+  {
+    "file": "examples/flow-ir-1/kirim-faktur.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/flow-ir-1/retry-parallel-branches.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/data-ir-1/crm.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/data-ir-1/inventory.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/api-ir-1/auth-and-errors.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/api-ir-1/orders.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/app-ir-1/login-and-stock.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/app-ir-1/order-desk.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/design-ir-1/dashboard-card.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples/design-ir-1/order-desk-ui.json",
+    "semanticOk": true
+  },
+  {
+    "file": "examples-negative-semantic/flow-ir-1/missing-on-error-target.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/flow-ir-1/undeclared-flow-input.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/data-ir-1/relation-missing-table.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/api-ir-1/placeholder-not-declared.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/app-ir-1/missing-start-screen.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/design-ir-1/bad-dimension.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/design-ir-1/category-mismatch.json",
+    "semanticOk": false
+  },
+  {
+    "file": "examples-negative-semantic/design-ir-1/missing-token.json",
+    "semanticOk": false
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-01.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-02.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-03.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-04.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-05.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-06.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-07.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-08.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-09.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-10.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-11.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-12.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-13.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-14.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-15.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-16.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-17.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-18.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-19.json",
+    "semanticOk": true
+  },
+  {
+    "file": "corpus/design-ir-1/corpus-20.json",
+    "semanticOk": true
+  }
+]
