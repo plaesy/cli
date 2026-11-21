@@ -83,7 +83,7 @@ Keputusan owner: dialek pertama; apakah subquery dan window function masuk.
 
 ## Fase 3: design-ir/1
 
-Status sekarang: sudah dikerjakan sebagian (2026-11-21). Format DTCG sudah diterapkan ke schema dan contoh. Validator semantik dan korpus sintetis 20 fixture sudah ada. Yang belum: adapter codegen dan round trip ke kode.
+Status sekarang (2026-11-21): format DTCG diterapkan; validator semantik dan lenient di Rust (`src/designir/`); codegen ke modul Rust dengan tabel konstanta; round trip struktural ke kode lulus untuk 20 korpus. Yang belum: codegen Dioxus `rsx!`, dan korpus dari desain nyata.
 
 Masuk: Fase 0 keluar. ADR 0010 diterima lewat delegasi.
 
@@ -93,7 +93,7 @@ Kerja:
 2. Format token DTCG: sudah diterapkan. Konversi contoh dilakukan oleh skrip sekali jalan (sudah selesai).
 3. Korpus: 20 fixture sintetis sudah ada di `docs/adr/corpus/design-ir-1/` (dibuat `tools/gen-design-corpus.js`). Ganti atau tambah dengan desain nyata saat tersedia.
 4. `adapter` desain↔IR dan codegen ke Rust/Dioxus. Belum ada.
-5. Round trip struktural ke kode (ID, hierarki, nilai token) pada korpus. Target 100%. Belum diukur.
+5. Round trip struktural ke modul Rust (ID, hierarki, kind, scope, nilai token) pada korpus: 100% (sudah diukur, lulus). Round trip ke komponen Dioxus belum ada.
 
 Keluar: round trip struktural 100% pada korpus 20 fixture melalui adapter; aturan semantik di Rust lulus uji negatif.
 

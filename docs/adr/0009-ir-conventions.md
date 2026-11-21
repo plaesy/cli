@@ -116,17 +116,17 @@ Keadaan terakhir (2026-11-21): `npm run check` lulus untuk 10 contoh positif, 20
 
 - Positif: satu tempat untuk aturan lintas-IR. ADR per-IR menjadi lebih pendek dan tidak saling bertentangan.
 - Negatif: skema yang sebelumnya terbuka di akar (`additionalProperties: true`) menjadi tertutup. Dokumen yang memakai field baru harus menunggu MINOR atau memakai `extensions`.
-- Netral: mode lenient di Rust belum ada; alat Node yang ada sudah dipakai pemeriksa.
+- Netral: mode lenient ada di dua tempat: alat Node (`tools/lenient.js`, skema JSON) dan modul Rust `src/designir/lenient.rs` (khusus design-ir/1, daftar kunci). Versi Rust untuk IR lain belum ada.
 
 ## Kriteria penerimaan
 
 1. `docs/adr/tools/check-ir.js` lulus untuk semua contoh dan fixture negatif (sudah lulus saat ini).
 2. Langkah CI menjalankan `npm run check` dan `tools/validate-ir.js` pada setiap perubahan `docs/adr/`. Belum ada.
-3. Mode lenient lulus pemeriksaan sebagai alat Node (ada). Implementasi di `domain/*` (Rust) belum ada.
+3. Mode lenient lulus pemeriksaan sebagai alat Node dan sebagai modul Rust untuk design-ir/1 (ada, diuji). Versi Rust untuk flow, data, api, dan app belum ada.
 4. Setiap ADR per-IR tidak lagi mendefinisikan ulang aturan di bagian ini, kecuali dengan merujuk ADR ini.
 
 ## Open items
 
 - Aturan `extensions` dan penutupan skema akar (bagian 2) diterima lewat delegasi. Owner dapat mencabut.
 - Daftar kode `reason` awal untuk setiap IR.
-- Tempat mode lenient di Rust: library `domain/*` atau CLI. Keputusan ini tidak mengubah perilaku alat Node.
+- Versi Rust yang menggeneralisasi ke semua IR (berbasis skema) belum dibuat. Keputusan ini tidak mengubah perilaku alat Node.

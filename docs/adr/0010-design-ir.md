@@ -134,7 +134,7 @@ Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 - `tools/validate-ir.js` lulus untuk contoh design.
 - `tools/check-ir.js` juga memeriksa 20 fixture korpus (`corpus/design-ir-1/`): bentuk, semantik, dan round trip serialisasi kanonik (ID dan token tidak berubah). Ini bukan round trip ke kode.
 - Fixture negatif semantik (`examples-negative-semantic/design-ir-1/`) menguji aturan kategori token, token yang tidak ada, dan nilai dimension yang salah.
-- Round trip struktural ke kode (desain → IR → kode → IR) belum diuji: adapter codegen belum ada (Fase 3).
+- Round trip struktural ke kode (desain → IR → modul Rust → IR) diuji di `src/designir/roundtrip.rs` untuk 20 korpus dan contoh: ID, hierarki, kind, scope, dan nilai token. Ini tes `cargo test --locked --lib designir` (10 tes, lulus). Keluaran kodenya modul Rust berisi tabel konstanta, bukan komponen Dioxus `rsx!`; adapter Dioxus belum ada.
 
 ## Konsekuensi
 

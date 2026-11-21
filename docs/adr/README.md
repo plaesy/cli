@@ -33,7 +33,7 @@ Folder ini berisi keputusan arsitektur untuk IR (representasi antara), struktur 
 | [0007](0007-design-ir.md) | Design IR (design-ir/1) | digantikan (0010) | - | - |
 | [0008](0008-code-to-visual-import.md) | Impor kode ke visual | diterima lewat delegasi | Arah impor, laporan pemetaan dan kehilangan | Bahasa pertama; parser; urutan impor database |
 | [0009](0009-ir-conventions.md) | Konvensi bersama untuk semua IR | diterima lewat delegasi | Versi, `extensions`, skema tertutup, ID, laporan kehilangan, batas input, pemisahan validasi | Mode lenient di Rust |
-| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diterima lewat delegasi | Format DTCG (sudah diterapkan), kind node, sumber desain JSON Plaesy, target Rust/Dioxus, edit B, korpus sintetis 20 fixture | Round trip ke kode (butuh adapter); korpus dari desain nyata |
+| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diterima lewat delegasi | Format DTCG (sudah diterapkan), kind node, sumber desain JSON Plaesy, target Rust/Dioxus, edit B, korpus sintetis 20 fixture | Codegen Dioxus `rsx!` (sekarang modul Rust tabel konstanta); korpus dari desain nyata |
 | [0011](0011-client-structure.md) | Struktur klien | diterima lewat delegasi | Struktur fitur, aturan dependensi | Library WebSocket; format diff; sinkronisasi real-time |
 
 ## Istilah
@@ -65,7 +65,7 @@ plaesy validate markdown docs/adr --no-baseline
 
 Belum ada langkah CI yang menjalankan keduanya. Ditunda sesuai keputusan owner; lihat Fase 0 di rencana.
 
-Yang belum bisa diperiksa: round trip ke kode, validator Rust, dan mode lenient di Rust.
+Kode Rust untuk design-ir/1 ada di `src/designir/` dan diuji dengan `cargo test --locked --lib designir`. Belum ada: validator dan lenient Rust untuk IR lain, codegen Dioxus, dan korpus dari desain nyata.
 
 ## Struktur folder
 
@@ -77,6 +77,7 @@ Yang belum bisa diperiksa: round trip ke kode, validator Rust, dan mode lenient 
 - `examples-lenient/`: dokumen dengan field dari versi lebih baru. Harus INVALID dengan skema ketat dan VALID setelah lenient.
 - `corpus/design-ir-1/`: 20 fixture desain sintetis, dibuat oleh `tools/gen-design-corpus.js`. Bukan data desain nyata.
 - `tools/`: `check-ir.js` (pemeriksa utama), `validate-ir.js` (semantik), `lenient.js` (mode lenient), `gen-design-corpus.js` (generator korpus).
+- `src/designir/` (kode Rust, di paket utama): validasi, codegen, round trip, dan lenient untuk design-ir/1.
 - `implementation-plan.md`: rencana fase dan keputusan yang dibutuhkan.
 
 ## Menulis atau mengganti ADR

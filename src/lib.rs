@@ -11,6 +11,7 @@ pub mod cli;
 pub mod common;
 pub mod config;
 pub mod decisions;
+pub mod designir;
 pub mod delegate;
 pub mod designlint;
 pub mod evals;

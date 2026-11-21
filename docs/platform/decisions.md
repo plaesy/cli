@@ -93,7 +93,7 @@ The owner's standing delegation of 2026-11-19 covers open technical choices in t
 
 7. **Structure and scope ADRs (0003, 0004, 0005, 0006, 0008, 0011):** accepted as proposed, with their open items kept open. ADR 0003 (crate layering), 0004 (data IR, SQL dialect still open), 0005 (API IR, OpenAPI 3.1 output), 0006 (app IR), 0008 (code-to-visual import, first language and parser open), 0011 (client structure, WebSocket library and diff format open).
 
-Still open after these delegations: the Rust validators and round trip to code (ADR 0010, Phase 3), the Rust implementation of lenient mode (ADR 0009), CI for the checks (deferred by the owner), and a corpus from real designs. The 20-fixture corpus in `docs/adr/corpus/` is synthetic and tests shape, semantics, and serialisation only.
+Implemented in `src/designir/` (design-ir/1 only): semantic validator, Rust module codegen, structural round trip (IDs, hierarchy, kinds, scope, token values), and lenient reading. Covered by `cargo test --locked --lib designir` (10 tests). Still open: Dioxus `rsx!` codegen (ADR 0010), Rust validators and lenient reading for flow, data, api, and app IRs, CI for the checks (deferred by the owner), and a corpus from real designs. The 20-fixture corpus in `docs/adr/corpus/` is synthetic.
 
 ## Architecture ADR index (2026-11-21)
 
