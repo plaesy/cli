@@ -23,11 +23,8 @@ pub fn handle(store: &dyn DocumentStore, request: &Value) -> Option<Value> {
         return Some(error_reply(id, INVALID_REQUEST, "pesan tanpa method"));
     };
     let params = request.get("params").cloned().unwrap_or(Value::Null);
-    let id = match id {
-        // Notifikasi (tanpa id) tidak dibalas.
-        None => return None,
-        Some(id) => id,
-    };
+    // Notifikasi (tanpa id) tidak dibalas.
+    let id = id?;
     let outcome = match method {
         "initialize" => Ok(json!({
             "protocolVersion": PROTOCOL_VERSION,
