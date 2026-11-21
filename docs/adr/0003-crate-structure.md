@@ -392,8 +392,8 @@ Keterbatasan dan keputusannya:
   - `interface/mcp` (`plaesy-interface-mcp`): server JSON-RPC 2.0 stdio dengan `initialize`, `tools/list`, `tools/call`. Ditulis tanpa `rmcp`, agar kontrak stdout eksplisit.
   - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, replay, `Gap`) dan server WebSocket memakai `tokio-tungstenite`. Pilihan library ini keputusan default yang didelegasikan.
   - `adapter/sync` (`plaesy-adapter-sync`): log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log bertahan di SQLite (`SqliteChangeLog`), dan `MemoryChangeLog` dipakai untuk tes.
-  - `interface/acp` (`plaesy-interface-acp`): agen ACP v1 lewat stdio, subset `initialize`, `session/new`, `session/prompt` (dijawab `end_turn` dengan pesan bahwa belum ada model), dan `session/cancel`. Sumber: https://agentclientprotocol.com/protocol/v1/overview. Operasi dokumen ada sebagai ekstensi `_plaesy/document/*`; aturan penamaan ekstensi ACP belum diverifikasi.
-- ACP: subset v1 sudah diimplementasikan. Yang belum: metode klien-ke-agen (`fs/*`, `terminal/*`, `session/request_permission`), `session/load`, dan model bahasa sungguhan.
+  - `interface/acp` (`plaesy-interface-acp`): agen ACP v1 lewat stdio, sumber https://agentclientprotocol.com/protocol/v1/overview. Mencakup `initialize`, `session/new`, `session/load` (riwayat dari penyimpanan, dikirim ulang sebagai `session/update`), `session/prompt`, `session/cancel`, dan panggilan ke klien `fs/read_text_file`, `fs/write_text_file`, `terminal/*`, serta `session/request_permission`. Panggilan ke klien hanya dibuat bila klien menyatakan kapabilitasnya. Model dipasang lewat `ModelBackend`; `plaesy acp --provider <nama>` membaca penyedia dari `delegate.providers`. Operasi dokumen ada sebagai `_plaesy/document/*`, aturan penamaan ekstensinya belum diverifikasi.
+- ACP: metode v1 sudah diimplementasikan di sisi agen. Panggilan ke klien (`fs/*`, `terminal/*`, izin) sudah tersedia lewat `ToolHost`, tetapi penyedia model yang ada hanya teks sehingga belum ada yang memanggilnya di produksi.
 
 ## Open items
 

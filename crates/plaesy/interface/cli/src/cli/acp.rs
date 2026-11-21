@@ -11,7 +11,7 @@ use super::CliResult;
 use crate::delegate::providers::Getenv;
 use crate::delegate::{self, Request};
 use plaesy_adapter_sqlite::SqliteStore;
-use plaesy_interface_acp::{serve, Agent, ModelBackend};
+use plaesy_interface_acp::{serve, Agent, ModelBackend, ToolHost};
 
 /// Melayani ACP lewat stdio. Stdout hanya berisi JSON-RPC.
 #[derive(Debug, clap::Args)]
@@ -33,7 +33,7 @@ struct ProviderModel {
 }
 
 impl ModelBackend for ProviderModel {
-    fn complete(&self, prompt: &str) -> Result<String, String> {
+    fn complete(&self, prompt: &str, _tools: &mut dyn ToolHost) -> Result<String, String> {
         let request = Request {
             prompt: prompt.to_owned(),
             max_output_tokens: 0,

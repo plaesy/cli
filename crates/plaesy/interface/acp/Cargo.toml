@@ -10,6 +10,7 @@ description = "Agen ACP v1 lewat stdio (ADR 0003: interface/acp). Subset: initia
 [dependencies]
 plaesy-service = { path = "../../service" }
 serde_json = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
