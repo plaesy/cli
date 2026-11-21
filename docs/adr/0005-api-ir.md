@@ -12,7 +12,6 @@
 
 - Endpoint API disimpan sebagai JSON dengan validasi JSON Schema. Logika endpoint adalah flow yang dirujuk, bukan kode.
 - Keluaran yang direncanakan: OpenAPI 3.1 (usulan).
-- Status: diusulkan.
 
 ## Konteks
 

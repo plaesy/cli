@@ -13,7 +13,6 @@
 - Skema database disimpan sebagai JSON dengan validasi JSON Schema. Tabel dan relasi dinyatakan eksplisit.
 - Query disusun sebagai pohon JSON, lalu dikompilasi ke SQL berparameter. Tidak ada SQL mentah di IR.
 - Dialek SQL dan subset query belum dipilih.
-- Status: diusulkan.
 
 ## Konteks
 

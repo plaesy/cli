@@ -15,7 +15,6 @@ Cara membaca dokumen ini: bagian "Keputusan" berisi keputusan yang akan diimplem
 - Backend dibagi per lapisan di bawah `crates/plaesy/`: `kernel`, `domain/<konteks>`, `dto`, `service`, `adapter/<nama>`, `interface/*`, `plugin`.
 - `domain/*` tidak boleh bergantung pada I/O. Ini diperiksa dengan `cargo tree` setelah crate ada.
 - Struktur klien dipindah ke ADR 0011.
-- Status: diusulkan.
 
 ## Konteks
 

@@ -80,6 +80,17 @@ Status: ADR 0001 (design-code IR) and ADR 0007 (design IR) are superseded by ADR
 
 Status: accepted on 2026-11-18 in chat by the owner for the node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. The JSON document format and validation rules are still a proposal in ADR 0002 and need owner approval. Version `flow-ir/1`. Spec R16 and tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen` govern this record.
 
+## Architecture ADR index (2026-11-21)
+
+Full index, status meanings, and reading order: `docs/adr/README.md`. Summary of status for the IR and crate decisions:
+
+- ADR 0003 (crate structure): proposed. Client structure split to ADR 0011.
+- ADR 0004 (data IR), 0005 (API IR), 0006 (app IR), 0008 (code-to-visual import): proposed.
+- ADR 0009 (cross-IR conventions): proposed. Owner approval needed for the `extensions` rule and closed root schemas.
+- ADR 0010 (design IR): proposed for format and nodes; inherited edit policy B and structural fidelity from ADR 0001 are delegated, revocable.
+- ADR 0011 (client structure): proposed.
+- Open with owner: flow JSON format (ADR 0002), design token format and node kinds (ADR 0010), and first design source and code target.
+
 ## Owner decisions for the first replacement slice (2026-11-19)
 
 Source: product owner, answered in the Nimbalyst decision prompt on 2026-11-19. These are authorized decisions, not recommendations. Recommendations offered in the prompt were not all selected.

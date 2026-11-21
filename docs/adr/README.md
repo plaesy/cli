@@ -71,6 +71,7 @@ Belum ada langkah CI untuk pemeriksaan di atas. Ditunda sesuai keputusan owner; 
 - `examples-negative/`: fixture negatif. Harus INVALID.
 - `tools/`: pemeriksa bentuk (`check-ir.js`) dan prototipe semantik (`validate-ir.js`).
 - `implementation-plan.md`: rencana fase dan keputusan owner yang dibutuhkan.
+- `template.md`: templat ADR baru. Salin ke `NNNN-judul.md` dan isi semua bagiannya.
 
 ## Menulis atau mengganti ADR
 

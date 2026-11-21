@@ -12,7 +12,6 @@
 
 - Aplikasi terdiri dari layar, komponen, binding data, dan aksi.
 - Aksi hanya merujuk flow yang ada. Data hanya merujuk query. Tampilan hanya merujuk desain.
-- Status: diusulkan.
 
 ## Konteks
 

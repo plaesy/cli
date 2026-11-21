@@ -12,7 +12,6 @@
 
 - Kode dan skema yang sudah ada diimpor lewat satu adapter per sumber. Setiap adapter menghasilkan IR yang sama dengan laporan pemetaan dan kehilangan.
 - Bahasa pertama dan parser belum dipilih.
-- Status: diusulkan.
 
 ## Konteks
 

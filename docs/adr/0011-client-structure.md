@@ -12,7 +12,6 @@
 
 - Klien adalah satu crate `plaesy-interface-client` dengan fitur `web`, `desktop`, dan `mobile`.
 - Struktur dibagi `shell`, `ui`, `state`, `adapter`, `shared`, `features`, dan `platform`, dengan aturan dependensi yang jelas.
-- Status: diusulkan.
 
 ## Konteks
 

@@ -12,7 +12,6 @@
 
 - Aturan yang berlaku untuk semua IR: versi MAJOR/MINOR, field tambahan di `extensions`, ID dengan prefiks, satu bentuk laporan kehilangan, batas input 5 MB dan kedalaman 64.
 - Validasi dibagi tiga: bentuk (JSON Schema), semantik (`domain/*`), dan fixture negatif.
-- Status: diusulkan.
 
 ## Konteks
 
@@ -45,18 +44,23 @@ Lima IR dan satu jalur impor ditulis di ADR terpisah. Aturan yang sama (versi, f
 
 - ID dokumen dan ID node/module ditetapkan sekali dan tidak berubah saat diedit, diurutkan ulang, atau diimpor ulang.
 - ID yang sudah pensiun (dihapus) tidak dipakai lagi. Pembuat ID wajib memeriksa daftar ID pensiun.
-- Prefiks tetap:
+- Prefiks tetap. Kolom "Dibatasi skema" menunjukkan apakah pola ID dijamin JSON Schema. Yang "tidak" hanya dipakai di contoh.
 
-| Prefiks | Dipakai untuk |
-|---|---|
-| `flw_` | dokumen flow |
-| `rel_` | relasi data |
-| `qry_` | query data |
-| `dsg_` | dokumen desain |
-| `cp_` | komponen desain |
-| `nd_` | node desain |
-| `scr_` | layar aplikasi |
-| `cmp_` | komponen aplikasi |
+| Prefiks | Dipakai untuk | Dibatasi skema |
+|---|---|---|
+| `flw_` | dokumen flow; rujukan flow dari api dan app | ya |
+| `api_` | dokumen API | ya |
+| `ep_` | endpoint API | ya |
+| `app_` | dokumen aplikasi | ya |
+| `scr_` | layar aplikasi | ya |
+| `cmp_` | komponen aplikasi | ya |
+| `dat_` | dokumen data (skema database) | ya |
+| `rel_` | relasi data | ya |
+| `qry_` | query data | ya |
+| `dsg_` | dokumen desain; rujukan desain dari app | ya |
+| `cp_` | komponen di dalam desain | ya (sebagai bagian `dsg_<id>#cp_<id>`) |
+| `pg_` | halaman di dalam desain | tidak |
+| `nd_` | node di dalam desain | tidak |
 
 - Module flow memakai `m<angka>` atau ID lain yang unik dalam flow. Aturannya tetap: unik, dan tidak berubah.
 
