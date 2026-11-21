@@ -15,6 +15,7 @@ members = [
     "crates/plaesy/interface/ws",
     "crates/plaesy/adapter/sync",
     "crates/plaesy/adapter/http-client",
+    "crates/plaesy/adapter/import-sql",
     "crates/plaesy/interface/acp",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",

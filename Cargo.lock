@@ -3232,6 +3232,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-import-sql"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-data",
+ "rusqlite",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "plaesy-adapter-memory"
 version = "0.0.1"
 dependencies = [
