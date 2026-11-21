@@ -34,16 +34,55 @@ fn go_pass_module_is_translated_with_string_literal() {
 }
 
 #[test]
-fn go_unsupported_modules_are_reported_and_return_an_error() {
+fn go_branch_one_becomes_if_and_unsupported_member_returns_inside_it() {
     let generated = generate(&example("kirim-faktur.json")).unwrap();
-    let lost: Vec<&str> = generated
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m2" && m.kind == "branch_one"));
+    assert!(generated
+        .source
+        .contains("if lookup(scope, \"m1\", \"invoice\", \"status\") == \"draft\" {"));
+    assert!(generated.source.contains("} else {"));
+    assert!(generated
         .report
         .lost
         .iter()
-        .map(|l| l.module.as_str())
-        .collect();
-    assert!(lost.contains(&"m2"), "branch_one harus tercatat: {lost:?}");
-    assert!(lost.contains(&"m3"), "approval harus tercatat: {lost:?}");
+        .any(|l| l.module == "m3" && l.kind == "approval"));
+    assert!(generated
+        .source
+        .contains("return nil, fmt.Errorf(\"modul m3 (approval) belum didukung"));
+    assert!(generated
+        .source
+        .contains("scope[\"m7\"] = map[string]any{\"status\": \"skipped\"}"));
+}
+
+#[test]
+fn go_branch_not_equal_keeps_the_operator() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.status != 'paid'");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .source
+        .contains("if lookup(scope, \"m1\", \"invoice\", \"status\") != \"paid\" {"));
+}
+
+#[test]
+fn go_branch_condition_outside_scope_loses_branch_and_its_members() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.total > 3");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m2" && l.reason.contains("di luar cakupan")));
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m3" && l.reason.contains("m2")));
     assert!(generated
         .source
         .contains("return nil, fmt.Errorf(\"modul m2 (branch_one) belum didukung"));
@@ -103,4 +142,72 @@ fn go_generated_package_has_valid_syntax_when_go_is_available() {
         "gofmt -e gagal: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn go_for_each_translates_when_its_body_is_supported() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][4]["on_error"] = json!("fail");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m4" && m.kind == "for_each"));
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m5" && m.kind == "action"));
+    assert!(generated
+        .source
+        .contains(r#"for _, item := range lookupList(scope, "m1", "invoice", "lines") {"#));
+    assert!(generated.source.contains(
+        r#"scope["m5"], err = ctx.Action("billing.check_line", map[string]any{"line": item}, ActionOptions{TimeoutSecs: 0})"#
+    ));
+    assert!(generated.source.contains("parallelism 10 dicatat"));
+}
+
+#[test]
+fn go_for_each_stays_lost_when_body_uses_on_error_continue() {
+    let generated = generate(&example("kirim-faktur.json")).unwrap();
+    let m4 = generated
+        .report
+        .lost
+        .iter()
+        .find(|l| l.module == "m4")
+        .expect("m4 harus kehilangan");
+    assert!(m4.reason.contains("on_error"), "{}", m4.reason);
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m5" && l.reason.contains("anggota m4")));
+}
+
+#[test]
+fn go_for_each_with_skip_failures_is_a_loss() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][4]["on_error"] = json!("fail");
+    doc["modules"][3]["skip_failures"] = json!(true);
+    let generated = generate(&doc).unwrap();
+    let m4 = generated
+        .report
+        .lost
+        .iter()
+        .find(|l| l.module == "m4")
+        .unwrap();
+    assert!(m4.reason.contains("skip_failures"));
+}
+
+#[test]
+fn go_item_value_outside_a_loop_is_refused() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][6]["inputs"]["status"] = json!("item.value");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m7" && l.reason.contains("di luar cakupan")));
 }

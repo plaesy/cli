@@ -434,7 +434,7 @@ Jobs are configured in `[[schedule.jobs]]`; see [operations](operations.md#sched
 ### onboard
 
 ```bash
-plaesy memory onboard [--vault PATH] [--root PATH] [--yes] [--no-model] [--rerank] [--no-index]
+plaesy onboard [--vault PATH] [--root PATH] [--yes] [--no-model] [--rerank] [--no-index]
 ```
 
 Options: `--vault PATH`, `--root PATH`, `--yes`, `--no-model`, `--rerank`, and `--no-index`.
@@ -663,5 +663,5 @@ Environment variable overrides: `PLAESY_*`, `MEMORY_*`.
 - **One SQLite connection per daemon** behind an async mutex: concurrent SQL readers within one daemon currently serialize. Use one daemon per vault; do not open SQLite/HNSW directly from multiple agents.
 - **Single writer boundary**: SQLite WAL permits concurrent reads but still has one writer. Multi-host or sustained high-write workloads should migrate the metadata store to a client/server database.
 - **Multilingual default model**: multilingual-e5-small. all-MiniLM-L6-v2 remains available for English-focused vaults.
-- **No network at runtime**: model download once by `make model` or `plaesy memory onboard`.
+- **No network at runtime**: model download once by `make model` or `plaesy onboard`.
 - **ONNX RC version**: 2.0.0-rc.14 (stable release pending).

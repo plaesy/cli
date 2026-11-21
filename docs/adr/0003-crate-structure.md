@@ -363,7 +363,7 @@ Setiap modul lama dipindah ke crate berikut tanpa mengubah isi logika. Di tiap `
 | `plaesy-interface-client` | (dari `crates/editor/flow`) | interface/client (ADR 0011) |
 | `plaesy` (facade) | `lib.rs`, `main.rs`, `tests/`, `benches/`, `examples/`, `build.rs` | plaesy (facade) |
 
-Yang belum ada (tetap rencana di `docs/adr/implementation-plan.md`): `plugin/sdk`, `adapter/http-client`, `adapter/codegen-*`, `adapter/import-*`, dan konteks `app`/`api`/`data` di service. Crate `http`, `ws`, `mcp`, `acp`, `sqlite`, dan `sync` dibangun setelah keputusan scope, lihat bagian "Hasil migrasi" di bawah.
+Yang belum ada: tidak ada. Semua item di rencana sudah dibangun atau diberi keputusan default (lihat daftar berikut dan bagian "Keputusan default").
 
 Bukti kriteria penerimaan:
 
@@ -394,6 +394,29 @@ Keterbatasan dan keputusannya:
   - `adapter/sync` (`plaesy-adapter-sync`): log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log bertahan di SQLite (`SqliteChangeLog`), dan `MemoryChangeLog` dipakai untuk tes.
   - `interface/acp` (`plaesy-interface-acp`): agen ACP v1 lewat stdio, sumber https://agentclientprotocol.com/protocol/v1/overview. Mencakup `initialize`, `session/new`, `session/load` (riwayat dari penyimpanan, dikirim ulang sebagai `session/update`), `session/prompt`, `session/cancel`, dan panggilan ke klien `fs/read_text_file`, `fs/write_text_file`, `terminal/*`, serta `session/request_permission`. Panggilan ke klien hanya dibuat bila klien menyatakan kapabilitasnya. Model dipasang lewat `ModelBackend`; `plaesy acp --provider <nama>` membaca penyedia dari `delegate.providers`. Operasi dokumen ada sebagai `_plaesy/document/*`, aturan penamaan ekstensinya belum diverifikasi.
 - ACP: metode v1 sudah diimplementasikan di sisi agen. Panggilan ke klien (`fs/*`, `terminal/*`, izin) sudah tersedia lewat `ToolHost`, tetapi penyedia model yang ada hanya teks sehingga belum ada yang memanggilnya di produksi.
+
+## Keputusan default (didelegasikan, bisa dicabut)
+
+Crate berikut dibangun atas perintah owner untuk menyelesaikan semuanya. Setiap keputusan dicatat di sini dan bisa dicabut.
+
+- `plaesy-adapter-sqlite` (ADR 0005/0002 penyimpanan): port `DocumentStore` di `service`, SQLite dengan migrasi `user_version`.
+- `plaesy-interface-http`, `plaesy-interface-mcp`, `plaesy-interface-ws`, `plaesy-interface-acp`: interface atas port yang sama. ACP mengikuti spesifikasi v1 resmi, dengan sisi klien (`fs/*`, `terminal/*`, `session/request_permission`) lewat transport dua arah.
+- `plaesy-adapter-sync`: log perubahan bernomor versi, LWW per `(kind, id)`, log bertahan di SQLite.
+- `plaesy-adapter-http-client`: port `HttpClient` dengan ureq.
+- `plaesy-adapter-import-sql`: SQLite ke data-ir/1. Galat untuk tipe tanpa padanan (`REAL`).
+- `plaesy-adapter-import-code-rust`: struct dan enum Rust (syn) ke api-ir/1, dengan laporan kehilangan.
+- `plaesy-adapter-import-code-python`: kelas dan enum Python (rustpython-parser) ke api-ir/1, dengan laporan kehilangan. Dipilih karena parser-nya tersedia.
+- `plaesy-plugin-sdk`: plugin mendeklarasikan kapabilitas; host memberi izin per plugin; plugin hanya boleh memakai kapabilitas yang dideklarasikan DAN diizinkan.
+- `plaesy-service` (documents): save/load/list/remove untuk dokumen flow, data, api, dan app, dengan validasi.
+- `plaesy-adapter-codegen-js` dan `plaesy-adapter-codegen-go`: flow-ir ke JavaScript dan Go. Cakupan: modul action dan pass. Modul lain menjadi kehilangan dan membuat kode melempar galat di titik itu. Sintaks dicek dengan node dan gofmt.
+- `plaesy-adapter-model-ollama`: loop pemanggilan alat lewat Ollama lokal (`/api/chat`). Penyedia anthropic dan openai tetap teks saja, karena keduanya API cloud dan melanggar aturan offline di CLAUDE.md.
+- OpenAPI 3.1 dari api-ir ada di `plaesy-domain-api` (`openapi`).
+
+Batasan yang diketahui:
+
+- Tool-calling terhadap model Ollama sungguhan belum diuji. Ollama tidak terpasang di mesin pengembangan ini, dan tes memakai server palsu.
+- Cakupan codegen dan impor sempit seperti dijelaskan di atas. Kehilangan dicatat, tidak ditebak.
+- Blok buram ADR 0008 belum punya node di IR; kehilangan disimpan di laporan.
 
 ## Open items
 

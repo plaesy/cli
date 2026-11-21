@@ -86,6 +86,16 @@ pub fn run(args: &Args) -> CliResult {
             model: entry.model.clone(),
             timeout: Duration::from_secs(120),
         })
+    } else if entry.kind == "openai" {
+        if entry.endpoint.is_empty() {
+            return Err("penyedia openai butuh endpoint".into());
+        }
+        Box::new(plaesy_adapter_model_openai_tools::OpenAiToolModel {
+            endpoint: entry.endpoint.clone(),
+            model: entry.model.clone(),
+            api_key_env: entry.api_key_env.clone(),
+            timeout: Duration::from_secs(120),
+        })
     } else {
         let provider = delegate::build(entry, getenv).map_err(|error| error.to_string())?;
         Box::new(ProviderModel { provider })

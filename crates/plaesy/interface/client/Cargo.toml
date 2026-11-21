@@ -3,9 +3,16 @@ name = "plaesy-interface-client"
 version = "0.0.1"
 edition = "2021"
 publish = false
-description = "Permukaan editor flow visual (web dulu, Dioxus). Kerangka: belum ada UI (ADR 0011)."
+description = "Permukaan klien (ADR 0011): adapter HTTP/WS, router shell, dan guard. Fitur web, desktop, mobile."
+
+[features]
+default = []
+web = []
+desktop = []
+mobile = []
 
 [dependencies]
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

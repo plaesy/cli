@@ -86,3 +86,83 @@ async fn http_control_character_in_id_is_bad_request() {
         .unwrap()
         .contains("kunci tidak valid"));
 }
+
+fn example(folder: &str, name: &str) -> Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../docs/adr/examples")
+        .join(folder)
+        .join(name);
+    serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn http_validate_reports_valid_and_errors() {
+    let (_dir, app) = app();
+    let doc = example("data-ir-1", "crm.json");
+    let (status, body) = send(&app, "POST", "/v1/validate", Some(doc.clone())).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["ir"], "data-ir/1");
+    assert_eq!(body["valid"], true);
+
+    let mut broken = doc;
+    broken["tables"][0]["primary_key"] = json!(["tidak_ada"]);
+    let (status, body) = send(&app, "POST", "/v1/validate", Some(broken)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["valid"], false);
+    assert!(!body["errors"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn http_openapi_returns_spec_or_422() {
+    let (_dir, app) = app();
+    let (status, body) = send(
+        &app,
+        "POST",
+        "/v1/openapi",
+        Some(example("api-ir-1", "orders.json")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["openapi"], "3.1.0");
+
+    let mut broken = example("api-ir-1", "orders.json");
+    broken["endpoints"][0]["path_params"] = json!({});
+    let (status, body) = send(&app, "POST", "/v1/openapi", Some(broken)).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(body["errors"].is_array());
+}
+
+#[tokio::test]
+async fn http_codegen_flow_js_and_go_return_source_and_report() {
+    let (_dir, app) = app();
+    let flow = example("flow-ir-1", "kirim-faktur.json");
+    let (status, body) = send(&app, "POST", "/v1/codegen/flow/js", Some(flow.clone())).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body["source"]
+        .as_str()
+        .unwrap()
+        .contains("export async function"));
+    assert!(body["report"]["mapped"].is_array());
+
+    let (status, body) = send(&app, "POST", "/v1/codegen/flow/go", Some(flow)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body["source"].as_str().unwrap().contains("package flows"));
+}
+
+#[tokio::test]
+async fn http_codegen_flow_invalid_or_unknown_language_is_refused() {
+    let (_dir, app) = app();
+    let mut flow = example("flow-ir-1", "kirim-faktur.json");
+    flow["modules"] = json!([]);
+    let (status, _) = send(&app, "POST", "/v1/codegen/flow/js", Some(flow)).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+    let (status, _) = send(
+        &app,
+        "POST",
+        "/v1/codegen/flow/rust",
+        Some(example("flow-ir-1", "kirim-faktur.json")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}

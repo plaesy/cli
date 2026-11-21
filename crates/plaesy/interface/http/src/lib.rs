@@ -12,7 +12,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use plaesy_service::port::{DocumentStore, StoreError};
@@ -31,6 +31,9 @@ pub fn router(store: SharedStore) -> Router {
             "/v1/documents/{kind}/{id}",
             get(get_document).put(put_document).delete(delete_document),
         )
+        .route("/v1/validate", post(validate_ir))
+        .route("/v1/openapi", post(openapi))
+        .route("/v1/codegen/flow/{lang}", post(codegen_flow))
         .with_state(store)
 }
 
@@ -78,6 +81,59 @@ async fn delete_document(
     match store.delete(&kind, &id) {
         Ok(existed) => Json(json!({ "deleted": existed })).into_response(),
         Err(error) => error_response(&error),
+    }
+}
+
+async fn validate_ir(Json(doc): Json<Value>) -> Response {
+    let report = plaesy_service::validate::validate_document(&doc);
+    let valid = report.errors.is_empty();
+    let errors: Vec<String> = report.errors.iter().map(ToString::to_string).collect();
+    Json(json!({ "ir": report.ir, "valid": valid, "errors": errors })).into_response()
+}
+
+async fn openapi(Json(doc): Json<Value>) -> Response {
+    match plaesy_domain_api::openapi::to_openapi(&doc) {
+        Ok(spec) => Json(spec).into_response(),
+        Err(errors) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({ "errors": errors })),
+        )
+            .into_response(),
+    }
+}
+
+async fn codegen_flow(Path(lang): Path<String>, Json(doc): Json<Value>) -> Response {
+    // Setiap bahasa punya tipe Report sendiri, jadi laporan diubah ke JSON per arm.
+    macro_rules! report_json {
+        ($report:expr) => {
+            json!({
+                "mapped": $report.mapped.iter().map(|m| json!({ "module": m.module, "kind": m.kind })).collect::<Vec<_>>(),
+                "lost": $report.lost.iter().map(|l| json!({ "module": l.module, "kind": l.kind, "reason": l.reason })).collect::<Vec<_>>(),
+            })
+        };
+    }
+    let generated: Result<(String, Value), String> = match lang.as_str() {
+        "js" => plaesy_adapter_codegen_js::generate(&doc)
+            .map(|g| (g.source, report_json!(g.report)))
+            .map_err(|error| error.to_string()),
+        "go" => plaesy_adapter_codegen_go::generate(&doc)
+            .map(|g| (g.source, report_json!(g.report)))
+            .map_err(|error| error.to_string()),
+        other => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": format!("bahasa {other:?} tidak didukung") })),
+            )
+                .into_response();
+        }
+    };
+    match generated {
+        Ok((source, report)) => Json(json!({ "source": source, "report": report })).into_response(),
+        Err(error) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({ "errors": [error] })),
+        )
+            .into_response(),
     }
 }
 

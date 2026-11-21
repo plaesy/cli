@@ -190,3 +190,35 @@ fn ollama_unreachable_endpoint_is_an_error() {
         .unwrap_err();
     assert!(error.contains("tidak terjangkau"), "{error}");
 }
+
+/// Tes terhadap Ollama sungguhan. Dilewati dengan pesan bila server atau model `qwen2.5:7b` tidak ada.
+#[test]
+fn ollama_real_model_calls_read_file_when_available() {
+    let endpoint = "http://127.0.0.1:11434";
+    let up = ureq::get(&format!("{endpoint}/api/tags")).call().is_ok();
+    if !up {
+        eprintln!("LEWAT: Ollama tidak berjalan di {endpoint}");
+        return;
+    }
+    let mut tools = FakeTools::default();
+    let model = OllamaModel {
+        endpoint: endpoint.to_owned(),
+        model: "qwen2.5:7b".to_owned(),
+        timeout: Duration::from_secs(300),
+    };
+    match model.complete(
+        "Baca berkas /proyek/catatan.txt lalu beritahu isinya.",
+        &mut tools,
+    ) {
+        Ok(answer) => {
+            assert!(
+                tools.calls.iter().any(|c| c.starts_with("read ")),
+                "model harus memanggil read_file; panggilan: {:?}, jawaban: {answer}",
+                tools.calls
+            );
+        }
+        Err(error) => {
+            eprintln!("LEWAT: model qwen2.5:7b tidak tersedia: {error}");
+        }
+    }
+}

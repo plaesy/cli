@@ -35,18 +35,59 @@ fn js_pass_module_is_translated_with_string_literal() {
 }
 
 #[test]
-fn js_unsupported_modules_are_reported_and_throw_at_runtime() {
+fn js_branch_one_becomes_if_and_unsupported_member_throws_inside_it() {
     let generated = generate(&example("kirim-faktur.json")).unwrap();
-    let lost: Vec<&str> = generated
+    // m2 diterjemahkan: kondisi equality menjadi if, dan default menjadi else.
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m2" && m.kind == "branch_one"));
+    assert!(generated
+        .source
+        .contains("if (scope.m1.invoice.status === \"draft\") {"));
+    assert!(generated.source.contains("} else {"));
+    // m3 (approval) tidak didukung: tercatat kehilangan, dan melempar galat di dalam if-nya.
+    assert!(generated
         .report
         .lost
         .iter()
-        .map(|l| l.module.as_str())
-        .collect();
-    assert!(lost.contains(&"m2"), "branch_one harus tercatat: {lost:?}");
-    assert!(lost.contains(&"m3"), "approval harus tercatat: {lost:?}");
-    // Tidak ada modul yang dilewati diam-diam: setiap yang hilang punya throw di kodenya.
-    assert!(generated.source.contains("belum didukung codegen-js"));
+        .any(|l| l.module == "m3" && l.kind == "approval"));
+    assert!(generated
+        .source
+        .contains("throw new Error(\"modul m3 (approval) belum didukung"));
+    // m7 (pass, anggota default) tetap diterjemahkan.
+    assert!(generated
+        .source
+        .contains("scope.m7 = { status: \"skipped\" };"));
+}
+
+#[test]
+fn js_branch_not_equal_becomes_strict_inequality() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.status != 'paid'");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .source
+        .contains("if (scope.m1.invoice.status !== \"paid\") {"));
+}
+
+#[test]
+fn js_branch_condition_outside_scope_loses_branch_and_its_members() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][1]["branches"][0]["when"] = json!("m1.invoice.total > 3");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m2" && l.reason.contains("di luar cakupan")));
+    // Anggota cabang yang gagal ikut tercatat kehilangan, tidak ada yang lolos diam-diam.
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m3" && l.reason.contains("m2")));
     assert!(generated
         .source
         .contains("throw new Error(\"modul m2 (branch_one) belum didukung"));
@@ -107,4 +148,73 @@ fn js_generated_module_has_valid_syntax_when_node_is_available() {
         "node --check gagal: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn js_for_each_translates_when_its_body_is_supported() {
+    let mut doc = example("kirim-faktur.json");
+    // m5 (anggota m4) memakai on_error "fail", yang didukung.
+    doc["modules"][4]["on_error"] = json!("fail");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m4" && m.kind == "for_each"));
+    assert!(generated
+        .report
+        .mapped
+        .iter()
+        .any(|m| m.module == "m5" && m.kind == "action"));
+    assert!(generated
+        .source
+        .contains("for (const item of scope.m1.invoice.lines) {"));
+    assert!(generated
+        .source
+        .contains(r#"scope.m5 = await ctx.action("billing.check_line", { line: item });"#));
+    assert!(generated.source.contains("parallelism 10 dicatat"));
+}
+
+#[test]
+fn js_for_each_stays_lost_when_body_uses_on_error_continue() {
+    let generated = generate(&example("kirim-faktur.json")).unwrap();
+    let m4 = generated
+        .report
+        .lost
+        .iter()
+        .find(|l| l.module == "m4")
+        .expect("m4 harus kehilangan");
+    assert!(m4.reason.contains("on_error"), "{}", m4.reason);
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m5" && l.reason.contains("anggota m4")));
+}
+
+#[test]
+fn js_for_each_with_skip_failures_is_a_loss() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][4]["on_error"] = json!("fail");
+    doc["modules"][3]["skip_failures"] = json!(true);
+    let generated = generate(&doc).unwrap();
+    let m4 = generated
+        .report
+        .lost
+        .iter()
+        .find(|l| l.module == "m4")
+        .unwrap();
+    assert!(m4.reason.contains("skip_failures"));
+}
+
+#[test]
+fn js_item_value_outside_a_loop_is_refused() {
+    let mut doc = example("kirim-faktur.json");
+    doc["modules"][6]["inputs"]["status"] = json!("item.value");
+    let generated = generate(&doc).unwrap();
+    assert!(generated
+        .report
+        .lost
+        .iter()
+        .any(|l| l.module == "m7" && l.reason.contains("di luar cakupan")));
 }

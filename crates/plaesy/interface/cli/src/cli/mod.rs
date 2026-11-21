@@ -4,17 +4,20 @@
 pub mod acp;
 pub mod advisor;
 pub mod analyze;
+pub mod codegen_cmd;
 pub mod common;
 pub mod decisions;
 pub mod delegate;
 pub mod doctor;
 pub mod files;
 pub mod images;
+pub mod import_cmd;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
+pub mod openapi_cmd;
 pub mod projects;
 pub mod reach;
 pub mod relay;
@@ -69,6 +72,12 @@ pub enum Command {
     Reach(reach::Args),
     /// Send a prompt to a configured model provider or chain
     Delegate(delegate::Args),
+    /// Generate code from a flow-ir/1 document (js or go)
+    Codegen(codegen_cmd::Args),
+    /// Import a SQLite schema or Rust/Python source as an IR document
+    Import(import_cmd::Args),
+    /// Generate an OpenAPI 3.1 document from an api-ir/1 document
+    Openapi(openapi_cmd::Args),
     /// Serve the ACP v1 agent over stdio, answering prompts with a configured provider
     Acp(acp::Args),
     /// Check health of reach platforms and delegate providers
@@ -87,6 +96,8 @@ pub enum Command {
     Sessions(sessions::Args),
     /// Manage the local Markdown memory index and notes
     Memory(memory::Args),
+    /// First-run setup: vault folder, settings.json, model download, first index
+    Onboard(memory::OnboardArgs),
     /// Task lifecycle under .plaesy/tasks/ (backlog/todo/doing/done/blocked)
     Tasks(tasks::Args),
     /// Validate a constitution, memory, Markdown, local links, or an OOXML document
@@ -129,6 +140,9 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Loop(args) => loop_cmd::run(&args),
         Command::Reach(args) => reach::run(&args),
         Command::Delegate(args) => delegate::run(&args),
+        Command::Codegen(args) => codegen_cmd::run(&args),
+        Command::Import(args) => import_cmd::run(&args),
+        Command::Openapi(args) => openapi_cmd::run(&args),
         Command::Acp(args) => acp::run(&args),
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
@@ -138,6 +152,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Projects(args) => projects::run(&args),
         Command::Sessions(args) => sessions::run(&args),
         Command::Memory(args) => memory::run(&args),
+        Command::Onboard(args) => memory::run_onboard(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),
     }

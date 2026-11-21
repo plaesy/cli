@@ -32,14 +32,14 @@ pub struct Args {
 ///
 /// The selected vault cannot be resolved, the runtime cannot start, or the memory engine fails.
 pub fn run(args: &Args) -> CliResult {
+    if is_onboard_command(&args.args) {
+        return Err("onboarding moved to `plaesy onboard`".into());
+    }
     let displays_help_or_version = args
         .args
         .iter()
         .any(|arg| matches!(arg.as_str(), "-h" | "--help" | "-V" | "--version"));
-    if !displays_help_or_version
-        && !is_onboard_command(&args.args)
-        && !is_schedule_uninstall(&args.args)
-    {
+    if !displays_help_or_version && !is_schedule_uninstall(&args.args) {
         let cli_selected_vault = args.vault.is_some() || args.project;
         let has_config = has_config_arg(&args.args);
         let config_path = config_path_arg(&args.args);
@@ -68,8 +68,7 @@ pub fn run(args: &Args) -> CliResult {
             let has_config_db = config_defaults
                 .as_ref()
                 .is_some_and(|defaults| defaults.database_is_explicit)
-                || (!has_config && has_settings_database_override()?)
-                || (!has_config && has_standard_toml_database_override()?);
+                || (!has_config && has_standard_config_database_override()?);
             if !has_config_db {
                 let vault = selected
                     .or_else(|| config_defaults.map(|defaults| defaults.watch_dir))
@@ -86,11 +85,10 @@ pub fn run(args: &Args) -> CliResult {
                 std::env::set_var("MEMORY_DB_PATH", db_path);
             }
         }
-    } else if !is_onboard_command(&args.args)
-        && args
-            .args
-            .iter()
-            .any(|arg| matches!(arg.as_str(), "-h" | "--help"))
+    } else if args
+        .args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "-h" | "--help"))
     {
         println!("Vault selection (place before the memory subcommand):");
         println!("  --vault <PATH>   Use a specific shared vault");
@@ -102,6 +100,30 @@ pub fn run(args: &Args) -> CliResult {
         .enable_all()
         .build()?;
     runtime.block_on(crate::memory::cli::run_args(args.args.clone()))?;
+    Ok(())
+}
+
+/// Arguments for the top-level `plaesy onboard`, forwarded to the memory engine's onboarding flow.
+#[derive(Debug, Parser)]
+#[command(disable_help_flag = true)]
+pub struct OnboardArgs {
+    /// Onboarding options (for example `-y --vault C:/notes`, or `--help`).
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
+    pub args: Vec<String>,
+}
+
+/// `plaesy onboard`: first-run setup for the memory engine. Writes `<root>/Plaesy/settings.json`.
+///
+/// # Errors
+///
+/// The memory engine's onboarding fails (for example the vault folder is missing).
+pub fn run_onboard(args: &OnboardArgs) -> CliResult {
+    let mut forwarded = vec!["onboard".to_string()];
+    forwarded.extend(args.args.iter().cloned());
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(crate::memory::cli::run_args(forwarded))?;
     Ok(())
 }
 
@@ -200,18 +222,18 @@ fn read_config_vault_defaults(
     path: &Path,
 ) -> Result<ConfigVaultDefaults, Box<dyn std::error::Error>> {
     let source = std::fs::read_to_string(path)
-        .map_err(|error| format!("cannot read memory config {}: {error}", path.display()))?;
-    let config: toml::Value = toml::from_str(&source)
-        .map_err(|error| format!("invalid memory config {}: {error}", path.display()))?;
+        .map_err(|error| format!("cannot read settings {}: {error}", path.display()))?;
+    let config: serde_json::Value = serde_json::from_str(&source)
+        .map_err(|error| format!("invalid settings {}: {error}", path.display()))?;
     let configured_watch_dir = config
         .get("watch_dir")
-        .and_then(toml::Value::as_str)
+        .and_then(serde_json::Value::as_str)
         .map(PathBuf::from);
     let watch_dir_is_explicit = configured_watch_dir.is_some();
     let watch_dir = configured_watch_dir.unwrap_or_else(|| PathBuf::from(".plaesy"));
     let database_is_explicit = config
         .get("database")
-        .and_then(toml::Value::as_table)
+        .and_then(serde_json::Value::as_object)
         .is_some_and(|database| database.contains_key("db_path"));
     Ok(ConfigVaultDefaults {
         watch_dir,
@@ -220,34 +242,20 @@ fn read_config_vault_defaults(
     })
 }
 
+/// The vault set by a settings file. The user file (`plaesy onboard`) always applies; the project
+/// file applies only without `--config`, because a supplied `--config` replaces the standard files
+/// and is handled directly by the memory loader.
 fn standard_config_watch_dir(args: &Args) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
+    let user_path = crate::memory::settings::default_path();
     let mut watch_dir = None;
-    if let Some(path) = crate::memory::settings::default_path() {
-        if let Some(settings) = crate::memory::settings::load(&path)? {
-            watch_dir = settings.notes_dir;
-        }
-    }
-
-    let user_config = std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(|home| PathBuf::from(home).join(".hermes").join("memory.toml"));
-    if let Some(path) = user_config.filter(|path| path.is_file()) {
-        let defaults = read_config_vault_defaults(&path)?;
-        if defaults.watch_dir_is_explicit {
-            watch_dir = Some(defaults.watch_dir);
-        }
-    }
-
-    // The project memory config loads only when using standard configuration, and it overrides
-    // the home config. A supplied `--config` replaces the standard TOML files and is handled
-    // directly by the memory loader.
-    if has_config_arg(&args.args) {
-        return Ok(watch_dir);
-    }
-    for path in standard_config_paths()
+    for path in crate::memory::config::standard_config_paths()
         .into_iter()
         .filter(|path| path.is_file())
     {
+        let is_user_file = user_path.as_deref() == Some(path.as_path());
+        if !is_user_file && has_config_arg(&args.args) {
+            continue;
+        }
         let defaults = read_config_vault_defaults(&path)?;
         if defaults.watch_dir_is_explicit {
             watch_dir = Some(defaults.watch_dir);
@@ -256,19 +264,8 @@ fn standard_config_watch_dir(args: &Args) -> Result<Option<PathBuf>, Box<dyn std
     Ok(watch_dir)
 }
 
-fn has_settings_database_override() -> Result<bool, Box<dyn std::error::Error>> {
-    if let Some(path) = crate::memory::settings::default_path() {
-        if crate::memory::settings::load(&path)?.is_some_and(|settings| settings.db_path.is_some())
-        {
-            return Ok(true);
-        }
-    }
-
-    Ok(false)
-}
-
-fn has_standard_toml_database_override() -> Result<bool, Box<dyn std::error::Error>> {
-    for path in standard_config_paths()
+fn has_standard_config_database_override() -> Result<bool, Box<dyn std::error::Error>> {
+    for path in crate::memory::config::standard_config_paths()
         .into_iter()
         .filter(|path| path.is_file())
     {
@@ -277,15 +274,6 @@ fn has_standard_toml_database_override() -> Result<bool, Box<dyn std::error::Err
         }
     }
     Ok(false)
-}
-
-fn standard_config_paths() -> Vec<PathBuf> {
-    let mut paths = Vec::new();
-    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
-        paths.push(PathBuf::from(home).join(".hermes").join("memory.toml"));
-    }
-    paths.push(PathBuf::from(".plaesy").join("memory.toml"));
-    paths
 }
 
 fn existing_directory(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
