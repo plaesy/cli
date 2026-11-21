@@ -1,10 +1,12 @@
 //! Inti protokol realtime (ADR 0011, bagian `adapter/ws/protocol`): envelope bernomor urut,
 //! buffer replay terbatas, dan langganan. Tidak ada I/O di sini. Binding socket (WebSocket)
-//! belum dipilih libraries-nya (ADR 0011, open items), jadi belum ada di crate ini.
+//! ada di modul `server`, memakai tokio-tungstenite.
 //!
 //! Klien mengirim `last_seq` terakhir yang diterimanya. Hub mengembalikan event setelah nomor
 //! itu. Bila event yang diminta sudah keluar dari buffer, hub menyatakannya eksplisit
 //! (`Replay::Gap`) agar klien memuat ulang keadaan penuh, tidak diam-diam kehilangan data.
+
+pub mod server;
 
 use serde_json::Value;
 use std::collections::VecDeque;

@@ -5,10 +5,16 @@ edition = "2021"
 rust-version = "1.92"
 license = "MIT"
 publish = false
-description = "Inti protokol realtime: envelope bernomor, buffer replay, dan langganan (ADR 0011). Tanpa socket."
+description = "Protokol realtime (ADR 0011): envelope bernomor, replay, gap, dan server WebSocket."
 
 [dependencies]
+futures-util = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
 
 [lints]
 workspace = true
