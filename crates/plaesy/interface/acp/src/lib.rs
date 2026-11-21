@@ -37,19 +37,42 @@ const SERVER_ERROR: i64 = -32000;
 
 type Failure = (i64, String);
 
+/// Model bahasa yang dipanggil untuk satu pesan pengguna. Implementasinya ada di interface
+/// (misalnya `plaesy acp`), yang membaca penyedia dari konfigurasi.
+pub trait ModelBackend: Send + Sync {
+    /// Menghasilkan jawaban untuk `prompt`. Galat dikembalikan sebagai pesan.
+    ///
+    /// # Errors
+    ///
+    /// Pesan galat yang bisa ditampilkan ke pengguna.
+    fn complete(&self, prompt: &str) -> Result<String, String>;
+}
+
 /// Agen ACP di atas sebuah penyimpanan dokumen. Menyimpan sesi yang aktif.
 pub struct Agent<'a> {
     store: &'a dyn DocumentStore,
     sessions: Mutex<Vec<String>>,
+    model: Option<Box<dyn ModelBackend + 'a>>,
 }
 
 impl<'a> Agent<'a> {
-    /// Agen baru tanpa sesi.
+    /// Agen baru tanpa sesi dan tanpa model. `session/prompt` memakai pesan "belum ada model".
     #[must_use]
     pub fn new(store: &'a dyn DocumentStore) -> Self {
         Self {
             store,
             sessions: Mutex::new(Vec::new()),
+            model: None,
+        }
+    }
+
+    /// Agen dengan model bahasa. `session/prompt` meneruskan teks pengguna ke `model`.
+    #[must_use]
+    pub fn with_model(store: &'a dyn DocumentStore, model: Box<dyn ModelBackend + 'a>) -> Self {
+        Self {
+            store,
+            sessions: Mutex::new(Vec::new()),
+            model: Some(model),
         }
     }
 
@@ -137,6 +160,15 @@ impl<'a> Agent<'a> {
         if !params.get("prompt").is_some_and(Value::is_array) {
             return Err((INVALID_PARAMS, "params.prompt harus array".to_owned()));
         }
+        let reply_text = match &self.model {
+            None => NO_MODEL_TEXT.to_owned(),
+            Some(model) => {
+                let prompt = prompt_text(params);
+                model
+                    .complete(&prompt)
+                    .map_err(|message| (SERVER_ERROR, format!("model gagal: {message}")))?
+            }
+        };
         let update = json!({
             "jsonrpc": "2.0",
             "method": "session/update",
@@ -144,12 +176,25 @@ impl<'a> Agent<'a> {
                 "sessionId": session_id,
                 "update": {
                     "sessionUpdate": "agent_message_chunk",
-                    "content": { "type": "text", "text": NO_MODEL_TEXT }
+                    "content": { "type": "text", "text": reply_text }
                 }
             }
         });
         Ok((vec![update], json!({ "stopReason": "end_turn" })))
     }
+}
+
+/// Teks dari blok `text` dalam `params.prompt`, dipisah baris baru. Blok lain diabaikan.
+fn prompt_text(params: &Value) -> String {
+    params
+        .get("prompt")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|block| block.get("type").and_then(Value::as_str) == Some("text"))
+        .filter_map(|block| block.get("text").and_then(Value::as_str))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Melayani pesan baris demi baris dari `input` dan menulis balasan ke `output`.

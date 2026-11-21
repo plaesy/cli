@@ -8,6 +8,8 @@ publish = false
 description = "Antarmuka baris perintah (ADR 0003: interface/cli)."
 
 [dependencies]
+plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
+plaesy-interface-acp = { path = "../acp" }
 plaesy-adapter-memory = { path = "../../adapter/memory" }
 plaesy-adapter-relay = { path = "../../adapter/relay" }
 plaesy-analysis = { path = "../../support/analysis" }

@@ -162,3 +162,68 @@ fn acp_serve_writes_only_json_lines_and_reports_parse_errors() {
     assert_eq!(lines[0]["id"], 1);
     assert_eq!(lines[1]["error"]["code"], PARSE_ERROR);
 }
+
+struct Echo;
+
+impl ModelBackend for Echo {
+    fn complete(&self, prompt: &str) -> Result<String, String> {
+        Ok(format!("gema: {prompt}"))
+    }
+}
+
+struct Broken;
+
+impl ModelBackend for Broken {
+    fn complete(&self, _prompt: &str) -> Result<String, String> {
+        Err("kunci API tidak ada".to_owned())
+    }
+}
+
+fn session(agent: &Agent<'_>) {
+    let dir = tempfile::tempdir().unwrap();
+    let cwd = dir.keep().to_string_lossy().to_string();
+    agent.handle(&request(
+        "session/new",
+        json!({ "cwd": cwd, "mcpServers": [] }),
+    ));
+}
+
+#[test]
+fn acp_prompt_text_goes_to_the_configured_model() {
+    let (_dir, store) = store();
+    let agent = Agent::with_model(&store, Box::new(Echo));
+    session(&agent);
+    let messages = agent.handle(&request(
+        "session/prompt",
+        json!({
+            "sessionId": "sess-1",
+            "prompt": [
+                { "type": "text", "text": "satu" },
+                { "type": "image", "data": "abc" },
+                { "type": "text", "text": "dua" }
+            ]
+        }),
+    ));
+    assert_eq!(
+        messages[0]["params"]["update"]["content"]["text"],
+        "gema: satu\ndua"
+    );
+    assert_eq!(reply(&messages)["result"]["stopReason"], "end_turn");
+}
+
+#[test]
+fn acp_model_failure_is_a_server_error_not_a_fake_answer() {
+    let (_dir, store) = store();
+    let agent = Agent::with_model(&store, Box::new(Broken));
+    session(&agent);
+    let messages = agent.handle(&request(
+        "session/prompt",
+        json!({ "sessionId": "sess-1", "prompt": [{ "type": "text", "text": "halo" }] }),
+    ));
+    assert_eq!(reply(&messages)["error"]["code"], SERVER_ERROR);
+    assert!(reply(&messages)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("kunci API tidak ada"));
+    assert_eq!(messages.len(), 1, "tidak ada update palsu saat model gagal");
+}

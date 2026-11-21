@@ -1,6 +1,7 @@
 //! The `plaesy` command tree. Port of `scripts/cmd/plaesy` (Go, cobra). Each command group is
 //! one module; the logic lives in the library modules, and these files parse arguments and print.
 
+pub mod acp;
 pub mod advisor;
 pub mod analyze;
 pub mod common;
@@ -68,6 +69,8 @@ pub enum Command {
     Reach(reach::Args),
     /// Send a prompt to a configured model provider or chain
     Delegate(delegate::Args),
+    /// Serve the ACP v1 agent over stdio, answering prompts with a configured provider
+    Acp(acp::Args),
     /// Check health of reach platforms and delegate providers
     Doctor(doctor::Args),
     /// Token/context compression for command output, memory and instruction files
@@ -126,6 +129,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Loop(args) => loop_cmd::run(&args),
         Command::Reach(args) => reach::run(&args),
         Command::Delegate(args) => delegate::run(&args),
+        Command::Acp(args) => acp::run(&args),
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
