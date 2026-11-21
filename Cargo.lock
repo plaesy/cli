@@ -3436,6 +3436,19 @@ name = "plaesy-interface-client"
 version = "0.0.1"
 
 [[package]]
+name = "plaesy-interface-http"
+version = "0.0.1"
+dependencies = [
+ "axum",
+ "plaesy-adapter-sqlite",
+ "plaesy-service",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tower",
+]
+
+[[package]]
 name = "plaesy-kernel"
 version = "0.0.1"
 dependencies = [
