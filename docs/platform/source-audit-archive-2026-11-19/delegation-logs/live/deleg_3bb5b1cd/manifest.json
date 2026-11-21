@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3bb5b1cd",
+  "started": "2026-11-15 09:59:34",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Independently verify metadata and artifact integrity for Laya checkpoint repo convaiinnovations/laya at revision 06d956120490bbaebaf4bc0e23377a10be65171f. Use primary Hugging Face API/docs or download only if reasonable. Verify exact sha256 and sizes for model.safetensors, encoder/config.json, rl_agent_config.json, tokenizer/tokenizer.json and license. Do not edit repo. Report evidence and whether hashes are actual byte SHA-256 or Git LFS/object IDs.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3bb5b1cd/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:01:30"
+}

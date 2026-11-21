@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3dc7019b",
+  "started": "2026-11-14 12:03:45",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect /home/ubuntu/cli Advisor absence and existing dirty work. Suggest a safe minimal implementation plan or test harness that can be applied without overwriting active user changes. Do not edit. Focus on identifying exact prerequisites/gaps.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3dc7019b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 12:05:23"
+}

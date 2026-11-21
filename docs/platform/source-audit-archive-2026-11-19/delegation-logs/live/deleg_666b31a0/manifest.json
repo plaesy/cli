@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_666b31a0",
+  "started": "2026-11-15 10:32:00",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review current decisions locking code in /home/ubuntu/cli. Verify whether symlink lock path risk and ancestor race still remain and whether File::lock covers processes. No edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_666b31a0/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:47:37"
+}

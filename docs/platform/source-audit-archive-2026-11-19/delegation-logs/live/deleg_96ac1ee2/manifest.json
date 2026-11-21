@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_96ac1ee2",
+  "started": "2026-11-15 09:25:23",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "For Plaesy CLI decision-model integration, independently verify current official Laya model repository license and pinned revision, required inference artifacts and exact Hub integrity metadata (including download size and hash semantics). Research primary source only; no downloads and no edits. Return citations and flag anything not verified.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_96ac1ee2/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 09:27:13"
+}

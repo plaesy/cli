@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_023775d4",
+  "started": "2026-11-18 10:46:48",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only independent review: determine whether docs/platform/replacement-backlog.md still claims 17 tasks or any other stale task-count/coverage figures, and inspect task directory count directly. Report current state with line references; do not edit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_023775d4/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:47:13"
+}

@@ -1,0 +1,54 @@
+# Dependencies.
+node_modules/
+
+# Build output.
+dist/
+release/
+coverage/
+*.tsbuildinfo
+
+# Upstream snapshot is fetched by scripts/sync-upstream.sh, pinned by upstream/UPSTREAM.lock.
+upstream/hermes-agent/
+
+# Python.
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# OS / editor.
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Credentials. Hermes keeps its own in ~/.hermes; none belong in this repository.
+*.pem
+*.key
+*.p12
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_hermes*
+auth.json
+
+# The shell tarball the image build copies next to the Containerfile.
+/herald-os-linux.tar.gz
+
+# makepkg's work (packaging/arch): sources, build trees and packages.
+packaging/arch/*/src/
+packaging/arch/*/pkg/
+packaging/arch/*/herald-os/
+packaging/arch/*/*.tar.gz
+*.pkg.tar.zst
+
+# Herald OS Linux VM artifacts (images, seeds, disks, screenshots).
+linux/vm/build/
+*.qcow2
+*.raw
+*.iso
+*.dmg
+
+# bootc-image-builder's output folder (docs/BUILDING-THE-IMAGE.md).
+/output/

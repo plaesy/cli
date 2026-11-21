@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ca989d61",
+  "started": "2026-11-18 16:53:10",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect and report additional bounded source + test-assertion audit coverage for a remaining incumbent (prefer Paperclip webhook delivery/retry if available, else Nimbalyst CSV or OpenProject adjacent API). Verify exact pinned SHA and clean checkout, read existing task/inventory, cite precise paths and ranges; map existing IDs; tests not run; preserve unknowns; no edits/build/tests/upstream modifications.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ca989d61/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:53:57"
+}

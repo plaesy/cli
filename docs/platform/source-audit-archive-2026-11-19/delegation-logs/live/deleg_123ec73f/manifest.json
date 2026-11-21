@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_123ec73f",
+  "started": "2026-11-18 10:10:49",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read only and report the currently running replacement audit children status, no need to inspect transcript deeply. Do not wait; return immediate status of which background audit batches remain. Context: user continuing goal resume/finish; four delegated audits were dispatched as delegation deleg_65a09640 and one artifact crosscheck deleg_a26bf611. Need only see if work done or ongoing; no edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_123ec73f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:11:08"
+}

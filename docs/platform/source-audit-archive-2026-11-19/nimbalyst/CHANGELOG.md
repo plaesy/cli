@@ -1,0 +1,9685 @@
+# Changelog
+
+All notable changes to Nimbalyst will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## [Unreleased]
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.84.1] - 2026-11-15
+
+
+### Added
+<!-- New features go here -->
+- Collapse all and Expand all buttons in the agent session list close or open every parent session and workstream at once
+- The Codex model picker also lists models reported by the bundled Codex CLI, so newly released Codex models can be selected before Nimbalyst's built-in list includes them
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Queued messages delivered in one turn each open with the time they were queued and who sent them; same-named senders are distinguishable.
+- The Extension Dev indicator moved to the outer project rail, and the navigation button menus use the shared floating menu positioning.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Sessions started in a subfolder that names its own checkout root keep commit auto-approval.
+- Projects without a team no longer show tracker publish notices that cannot be resolved.
+- With many sessions busy at once, an agent transcript no longer loses its opening prompt and earlier messages until the session is reopened.
+- Delayed session-status refreshes no longer hide Cancel during a newer turn or show it after completion, including when opening a running session.
+- With many sessions busy at once, an agent transcript now stays on screen while the app reloads the session, instead of going blank and replaying from older messages.
+- The new tracker item popup no longer pushes its title field off screen in fullscreen when many items are waiting to publish; the list of saved items now scrolls.
+- When an agent works with a local HTML file that is not open in a tab, its page no longer appears as a box over the top-left of the window that cannot be closed.
+- In a project with no team, new bug, decision, milestone and release items no longer show a "team sync is not connected" publication notice with a Retry that cannot succeed. This includes items created before this fix.
+- Deleting tracker items now shows an error when a delete fails, including how many items failed in a multi-select delete, instead of failing silently.
+- With auto-approve on, a commit proposal from a session opened on a subfolder of a git checkout that names that checkout's root is now auto-approved instead of waiting for approval as if it targeted another worktree.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.84.0] - 2026-11-14
+
+
+### Added
+<!-- New features go here -->
+- Switch branches from the Git panel, including remote-only branches and new branches.
+- Workstreams: a named folder in the session list that groups peer sessions.
+- `nim wiki publish` copies a local wiki into a team project for review, with a Commenter role (requires the updated sync server).
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Commit proposals can name a folder, which expands to its changed files for review.
+- New worktrees start from the remote's default branch instead of the main checkout's branch.
+- The open menu bar island can be resized by dragging its edges.
+- Daily tool-output cleanup now also replaces aged images and drops the duplicate result copy.
+- Team guests see only the projects they are granted (requires the updated sync server).
+
+### Fixed
+<!-- Bug fixes go here -->
+- "Create Branch..." in the Git panel's commit menu now opens a name form.
+- Files-mode chat "Context:" label clears when the file's tab is closed.
+- Moving a session under another no longer changes its manager unless it leaves the manager's tree.
+- SQLite backups keep rotating after the database shrinks to under half its size.
+- Tool-output cleanup no longer skips recent rows that age into the window later.
+- Agent edits next to a comment on part of bold or inline code no longer write broken markdown.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.83.0] - 2026-11-09
+
+
+### Added
+<!-- New features go here -->
+- A file tree subfolder cut off at the 200-entry limit now ends with a row saying how many items are hidden ("51 more items", or "N or more" when skipped symlinks were not checked). The workspace root folder and folders loaded on expand do not show it yet
+- Claude Fable 5.2 is now available in the model picker, with Fable 5.1 and Fable 5 kept as selectable previous-generation options
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Messages queued while an agent is working, typed by you or sent by other sessions, are now delivered together in one turn, each opening with the time it was queued and who sent it (you, or the sending session by name); slash commands and messages with a different document context still go as their own turn, and Send Now delivers everything that can share a turn in one press
+- On macOS and Linux, processes Nimbalyst starts (agent sessions, MCP servers, CLIs, git) now put the login shell's PATH ahead of the system defaults, so tools from version managers such as mise are found before `/usr/bin` versions, and PATH is deduplicated per folder
+
+### Fixed
+<!-- Bug fixes go here -->
+- The weekly history in the Claude and Codex usage popovers now charts the main weekly limit by default instead of a per-model limit such as Fable
+- Nested lists under numbered items are saved indented past the parent's number (3 spaces under `2. `, 4 under `10. `), so other Markdown tools keep them nested, and a nested numbered list under an item numbered 10 starts at 1 instead of 10
+- Creating a local wiki page whose content starts with its own frontmatter now writes one frontmatter block with those fields and type, instead of adding a second block above it
+- A question card (AskUserQuestion or PromptForUserInput) that a PreToolUse hook denies now shows as blocked with the hook's reason, instead of as answered or as a form that can still be submitted
+- The `consume_session_inbox` tool is now listed on the `nimbalyst-host` MCP server, so orchestrating agents can call it as their instructions describe
+- The Agent Sessions search is cleared when you switch workspace in the same window, and a search still running for the previous workspace no longer replaces the new workspace's list or shows its error there
+- A prompt queued after you clear the document no longer merges into a turn with the older document content
+- The session machine picker labels the local machine with its device name, followed by "(this device)", instead of "This Mac" on every platform
+- When a workspace has more than 5,000 uncommitted files, the session list skips matching sessions to those files instead of sending every path to the database in one query. Git status still lists every untracked file, so this does not remove all memory growth in very large workspaces
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.8] - 2026-11-09
+
+
+### Added
+<!-- New features go here -->
+- macOS: an optional `nimbalyst` terminal command (Nimbalyst menu > Install 'nimbalyst' Command in PATH, or Settings > Advanced) opens a folder as a project with `nimbalyst .`, or a file with `nimbalyst <file>`
+- With multiple projects per window enabled, drag a project from one window's project rail to another window's rail to move it, or drop it outside every window to open it in its own window
+- Projects switcher (Cmd+Shift+P) has an Open Folder as Project row for opening a folder that isn't in the recent list
+- Dictation: speak into the agent input, markdown editor or code editor with the mic button or Ctrl+Option+Space. On a Mac it starts macOS dictation; you can choose on-device speech recognition or OpenAI transcription with your OpenAI key in Settings > Dictation instead, where you can also turn it off to hide it
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Moving a project from the Project Manager runs in the background: the Project Manager stays usable and shows the move's progress, and moves on the same disk rename the folder instead of copying it
+- With multiple projects per window enabled, the usage indicators, theme toggle, feedback button and account menu sit at the bottom of the project rail instead of in each project's navigation gutter
+- Project rail icons no longer show a close button on hover, which was easy to hit when selecting a project; close a project from its right-click menu or by middle-clicking it
+- The selected project in the project rail fills with its color and the other projects dim until hovered, replacing the ring and edge bar
+- Project rail badges use the same colors as the Agent mode bubble: orange when a session is waiting for your input, green while sessions are running, blue for unread, and stay visible on the selected project
+- The transcript's prompts menu also lists your answers to agent questions and jumps to the question card; prompts sent by other sessions are shown muted and no longer count toward the badge
+
+### Fixed
+<!-- Bug fixes go here -->
+- With multiple projects per window enabled, opening the terminal panel in one project no longer opens it in the other projects in the rail
+- With multiple projects per window enabled, restarting Nimbalyst reopens each window with all of its rail projects and the project it was showing, instead of only the window's first project
+- Moving or renaming a project no longer requires deleting its worktrees first; the project's worktrees folder moves with it and git's worktree links are repaired
+- With multiple projects per window enabled, clicking a session in the menu bar panel switches the window to that session's project instead of opening the session under the project currently shown
+- With multiple projects per window enabled, session links, Cmd+L picks, wakeup notifications, and files opened from Finder or the `nimbalyst` command open in the project they belong to instead of the project currently shown
+- With multiple projects per window enabled, new documents, chat attachments, pasted images, recent files and Cmd+N use the project currently shown instead of the first project in the rail
+- A session started from the mobile app for a project that wasn't matched exactly could be created in another open project whose path contained the same text; it now goes only to the exact project
+- With multiple projects per window enabled, picking a project that isn't open in any window from the Projects switcher (Cmd+Shift+P) now adds it to the current window's project rail instead of opening a new window
+- Projects switcher (Cmd+Shift+P) now tags a project as Open when it is in any window's project rail, not only when it is the project that window started with
+- Images generated by Codex's built-in image tool now show in the transcript instead of as a block of base64 text
+- Dictation: the macOS shortcut starts dictation on key press instead of waiting for every key to be released, and the first words are no longer lost
+- Overlapping or superseded Claude turns in one session no longer close or replace the newer turn's live query
+- With multiple projects per window enabled, switching rail projects shows the cached session list while it reloads, and project document sync stays connected for the projects that remain open
+- The sleep blocker stays on through brief sync drops, and the menu bar session panel recovers after its renderer is lost
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.7] - 2026-11-04
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- New tracker items get local numbers (like `NIM.75`) again; items created since early October without one are numbered on the next launch. A tracker type can opt out with `localNumbers: false`
+- The pull request panel no longer reports the GitHub CLI as signed out when `gh auth status` is slow to answer.
+- After you start a new session to implement a plan, the planning session's plan card says "Deferred to new session" instead of "Denied"
+- A session that fails to load now says why and offers Try again, instead of showing "Session not found"
+- Plan-approval and question dialogs no longer fail with "PreToolUse hook did not respond before its timeout" when you step away
+- Very long sessions open again instead of showing "Session not found" once their history grew too large to load in one read
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.6] - 2026-11-03
+
+
+### Added
+<!-- New features go here -->
+- Colored text and highlight colors in Markdown documents, from a seven-color picker in the selection toolbar, saved as HTML spans that Obsidian also displays
+- Claude in Chrome for Claude Code sessions: an Agent Features setting (off by default) that lets the agent control your Chrome browser through the Claude in Chrome extension
+- Weekly usage history in the Claude and Codex usage popovers: a chart of each week's usage against an even pace, and past weeks' final percentages, recorded while Nimbalyst is running
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Extension tabs on `virtual://` paths no longer show a "File updates delayed" warning or retry file registration every minute
+- Browser agent tools no longer fail with "File has no extension" when given a folder path alongside a browser session
+- Clicking a meta agent's child session in the session list or on the Sessions board opens that child instead of the meta agent
+- Windows: git commands Nimbalyst runs in the background, including Project Graph indexing, no longer flash console windows
+- Windows: commit proposals whose file paths use forward slashes (`C:/...`) now commit to the right repository instead of failing with "None of the selected files are in a git repository"
+- Windows: the Claude Code CLI provider starts in "Ask every time" mode instead of exiting with "Settings file not found"
+- Files an agent changes through shell commands show up in its session's edited files again after a Codex session has run in the same project, instead of going untracked until restart
+- With auto-approve commits on, a commit proposed into another worktree shows the Confirm/Cancel card instead of spinning on "Committing changes..."
+- Checking for updates in the first minute after a release is published no longer fails with "Cannot download ... status 404"; releases now go public only after every download is uploaded
+- Deleted Codex and Claude Code sessions stay deleted instead of being re-imported, and imported Codex sessions are no longer titled with their `<environment_context>` text
+- The session list shows only the current project's sessions, and "Session not found" names the project a session belongs to
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.5] - 2026-10-31
+
+
+### Added
+<!-- New features go here -->
+- GPT-6.1 Terra is available in the OpenAI Codex model picker
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Existing databases up to 1 GiB now move from PGLite to SQLite automatically at startup on every install; larger databases stay on PGLite until you choose Migrate to SQLite in Database settings
+- Cancelling a Claude Code agent's question card now tells the agent you dismissed the question and lets it keep working, instead of stopping the turn; the Stop button still stops it
+
+### Fixed
+<!-- Bug fixes go here -->
+- Meta-agent sessions can no longer call Claude Code built-in tools that were added after their blocked-tool list, such as PowerShell and LSP
+- A review session started from the GitHub Pull Requests panel now shows in the PR's chat pane when you come back to the PR, including for PRs with no tracker item; sessions started before this fix are found and linked the next time you open their PR
+- An agent can no longer start an independent top-level session that also reports its result back; a worker whose result the agent needs now nests under it in the session tree instead (#1876)
+- OpenAI Codex commands and edits that Codex wants approved now show the approval prompt instead of being rejected with "blocked by policy"; Codex also runs in Ask every time mode, and a declined command says so on its card (#1884)
+- On Windows, a file in a subfolder that an agent edits now gets its content from the start of the session as the diff baseline; the git lookup used to fail and the file was treated as if it had not existed (#1889)
+- Agent diffs for a file whose name has a space or non-ASCII character, and that had uncommitted changes when the session started, no longer count those earlier changes as the agent's
+- Closing a window that had opened a file from Finder or the terminal no longer throws an "Object has been destroyed" error in the main process
+- Find highlights in a markdown document are redrawn when the editor's width changes (window or side panel resize), instead of staying where the text used to be
+- The dashboard screenshot in the tutorial project's first sample session now displays, instead of a broken image, in tutorial projects created after this update
+- A backslash written before punctuation in a markdown document, such as `Cmd+\)`, is no longer removed when the editor saves the file
+- On Claude plans without a 5-hour session limit, the Claude usage popover no longer shows an empty Session bar (0%, "Resets in Unknown"), and the gutter ring shows weekly usage instead of 0%
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.4] - 2026-10-27
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- In a folder with more than 200 entries, the file tree now shows the first 200 in sorted order (folders first), instead of whichever 200 the disk listed first
+- Opening a file from Finder or the terminal that starts a new project window now shows the file, instead of an empty window
+- Opening the same file again from outside the app (Finder, a terminal link, `open`) now shows it, instead of doing nothing until a different file was opened
+- Typing a short query in the find bar on a long markdown page no longer stalls the editor while match highlights are drawn; highlights are now drawn for up to 1000 matches around the current one.
+- A transcript image opened in the image viewer no longer sometimes gets stuck at full size with Fit and zoom doing nothing
+- Sending a message now while a commit proposal waits for approval closes the proposal and sends the message, instead of holding it until the proposal is answered
+- A Claude Code turn that was running when the computer went to sleep is no longer aborted as stalled the moment the computer wakes
+- Answering or cancelling an older Claude Code question card now closes that card instead of reaching the question the agent is waiting on, and no longer interrupts the running turn (the answer reaches the agent when that turn ends); a form whose tool call was denied no longer stays open.
+- Codex sessions now work when Codex is configured to use Amazon Bedrock (`model_provider = "amazon-bedrock"` in `~/.codex/config.toml`), instead of failing with "model does not exist" (#1371)
+- Markdown files inside a Claude plugin's `node_modules` folder are no longer listed as plugin commands, so exporting skills to Codex no longer writes a folder for each dependency README into the project (#1786)
+- Extension backend tools that could not start because the project was not yet trusted now start once you trust it, instead of staying unavailable until the project is reopened (#1767)
+- Agent browser tools can now type and click in headless browser sessions and in browser tabs that are not in the foreground, instead of the input being dropped (#1726)
+- In-app agents can now read and edit the body of a team-shared typed page; the `collab://tracker-content/<id>` address the tools suggested was rejected as invalid, and reads could return an older copy of the body (#1879)
+- Updating or creating plans, bugs and tasks on team-shared trackers through agent tools no longer fails with `unknown_type` (needs the updated sync server) (#1880)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.3] - 2026-10-25
+
+
+### Added
+- Admins can recover a legacy-encryption team organization in place from Settings > Security & Encryption, keeping ticket numbers (needs the updated sync server).
+
+### Fixed
+- Opening a rail project in a new window now shows the selected project even when restoring previous projects is enabled.
+- Automatic CPU profiles no longer accumulate and fill disk space.
+- Codex sessions no longer list files edited by concurrent sessions; edits of unknown origin are named in the file tracking notice.
+- Codex sessions no longer show duplicate commit cards, and automatic commits show success only after the result arrives.
+- Moving a session under another in the sidebar no longer appoints a manager or sends either session a message.
+- Images copied in Windows can now be pasted into agent chat and documents when Nimbalyst runs under WSL.
+- Wiki start and team skills load their descriptions correctly, and malformed skill metadata logs concise warnings.
+- Development builds no longer stop responding when React inspects props containing sandboxed HTML embed windows.
+- Scrolling past an agent-displayed image or editor screenshot in a transcript no longer jumps back to it.
+- A pasted image that finishes saving after you undo or switch sessions no longer reverts prompt edits.
+- Unchanged transcript rows are no longer re-rendered while a session runs or reloads.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.1] - 2026-10-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Child sessions no longer send informational reports to their parent by default; the spawning session chooses what it hears back.
+- Document sync skips git worktrees nested inside a project, such as `.claude/worktrees`.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Creating a session from iPhone or iPad no longer fails with "The desktop did not confirm session creation" on desktops using SQLite.
+- A malformed field on one session no longer hides that session on iOS.
+- Links, files, and folders opened from WSL fall back to Windows when no Linux handler works; executables are revealed instead of launched.
+- Sessions that finish in a background project or window now show as unread.
+- Clicking "Always" on one waiting permission prompt now also covers the other waiting prompts.
+- Permission prompts answered while settings were loading stay answered after reload.
+- A notification click opens its session instead of the one previously open in that project.
+- The saved session is restored before the fallback session is chosen on project switch.
+- Single-choice decisions that allow written answers show an Other choice with a text box.
+- Moving a local wiki to a team keeps embeds, map links, Home and types.
+- Document sync with a large upload backlog sends it in ~1 MB pieces instead of dropping and retrying every ~17 seconds; repeated drops back off up to 30 seconds.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.82.0] - 2026-10-23
+
+
+### Added
+<!-- New features go here -->
+- Agents can propose a commit into another worktree of the session's repository; the commit card shows its branch and path and always asks for approval on desktop
+- In the iOS and Android apps, a synced Markdown file now shows an embedded `.html` diagram live instead of as a link; document sync now carries `.html` files so the phone has them
+- The Project Graph timeline has a "24 hours" time range with an hourly ruler and times in its tooltips
+- The session list can show a thin bar under each session with how full its context window is; turn it on with "Show context usage" in the session list's sort menu. Sessions from agents that don't report a context window show no bar
+- The GitHub pull request and issue lists can be searched by author: typing a login matches it, and `author:login` shows only that person's items. Pull request search also matches labels now
+- `nim wiki export --static <dir>` exports a local wiki as a static website for any static host, served from the root of a site or a subdirectory with `--base /docs/`: each page gets its own URL and readable HTML, and the browser view shows it read-only with charts, diagrams, embedded editor pages, backlinks and search. Tracker items a page links to get their own read-only page in the export when the Nimbalyst app is on the machine. Pages marked `export: false` and person fields are left out by default
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Chat now shows the file or page name being included as context and a short preview of selected text, including on Local and Personal wiki pages
+- Going Back or Forward in Pages, with the buttons, keyboard or a trackpad swipe, now returns a page to where it was scrolled instead of its top
+- Opening a local wiki page from Quick Open or from a file link in an AI transcript now shows it in Pages mode instead of Files
+- On the SQLite database, tool output older than 30 days in agent transcripts is now replaced with a placeholder by a daily background pass; your prompts, agent replies and tool calls are kept. Shrinking the file on disk is still the Vacuum action in the database dashboard
+- Completed and failed queued prompts older than 30 days are now deleted automatically
+- Old document history is now pruned once a day while the app stays open, and the pruning runs after the first window loads instead of during startup
+- Document history no longer stores snapshots of images and other binary files
+- Saving a tracker item's body no longer keeps a full copy of every earlier version in the local database; on the SQLite database, copies already stored are removed by a daily background pass. The original body from creation and the latest body are kept
+- Editing a tracker item now shortens the before and after values of its older activity entries to the 500-character limit new entries already use, so items edited before that limit stop carrying whole old descriptions in every save
+- When a project with document sync connects or reconnects, only files whose size or modification time changed since they were last read are read and hashed again, instead of every synced file. The first connect after updating still reads every file once
+- Saving a synced document without changing its content no longer uploads it again
+- Session groups in the session list no longer show a count of unread child sessions, which took up row space
+- The table of contents menu in a document's header now indents each heading under the heading it belongs to, and shows deeper headings in smaller, lighter text
+
+### Fixed
+<!-- Bug fixes go here -->
+- Typing into a text cell in a tracker table no longer replaces the first typed character with the second (#1199)
+- Video, audio, WebP, AVIF and HEIC files are now read as binary instead of being decoded as text, and encoding detection for large non-UTF-8 text files only scans a bounded sample
+- Creating a session from mobile now waits for confirmation that it is available in sync, and reconnecting a phone restores missing session-list entries from the desktop.
+- In Claude Agent sessions with automatic review on, approving a tool call the automatic review blocked now lets that call run instead of being blocked again; "Always" approvals saved to the project's local Claude settings now apply to tools such as sub-agents, and an approval prompt whose turn already ended now shows as cancelled instead of staying clickable
+- `@` file mentions and Quick Open file and content search return results in large repositories instead of nothing.
+- In Claude Agent sessions on Opus 5.5 and Fable 5, the short summary the model returns in place of text written between tool calls now shows as a visible line in the transcript instead of inside a collapsed Thinking box; the full original text is not returned by the API and still can't be shown
+- The background scan for Claude Code and Codex session files now waits before retrying a file that failed to import, starting at 1 minute and growing to 30, instead of retrying it on every pass; a file that changes on disk is still retried right away
+- Files deleted from a synced project, including a whole deleted folder or files deleted while Nimbalyst was closed, are now removed from document sync instead of being written back to disk on the next sync; a file edited on another device since is still restored
+- The local slow-query log is now capped at 2,000 rows instead of growing past its limit
+- The expanded tray panel reads each session's latest reply from an index instead of scanning every assistant message in the database, which could stall other database work for seconds on large histories
+- Session search now finds error messages from Codex sessions; on the SQLite database, existing Codex messages are relabeled once by a background pass
+- With "Allow everything" and Agent-verified checks on, a hook that asks for approval now waits for your answer instead of letting the tool run
+- A file watcher hitting the open-file limit no longer opens a blocking error dialog, which could keep the app from starting with many projects restored
+- The tray menu no longer throws an error dialog when a settings read fails, and projects without a `.mcp.json` no longer leak a folder watcher each time they start
+- Keep All and Revert All on an open Markdown file now write the agent's or the original bytes exactly when you haven't edited during the review, instead of re-saving the whole file through the editor, which broke front matter and `$` math
+- Reloading a Markdown file open in source mode after reviewing agent changes no longer throws an error
+- A hook that asks for approval now always prompts, even when the tool was approved for the session, matches a saved Always rule, or would be allowed by the current permission mode
+- Sending a queued prompt now, an orchestrator interrupt, or a teammate message no longer cuts off a commit in progress, and a commit that timed out waiting for the git lock now reports whether it actually committed
+- Commit proposals from Codex sessions no longer fail with "Cannot identify this exact commit proposal"
+- Claude Agent sessions no longer keep every command they have ever run in the session record. The session list re-read those records on each refresh, which could make the app run out of memory and crash. The Agents panel now lists running tasks and the 20 most recent finished ones. After updating, existing records are trimmed to the same limit once, and the removed entries are first saved to an export file in the app's data folder
+- In the Project Graph timeline, an AI session's bar now ends at its last activity or phase change instead of running to today, and when there are more than 1,000 rows the most recent ones are shown instead of the oldest
+- A Claude Code session no longer keeps showing "Waiting for your response" after you answer its question while it carries on working.
+- A prompt whose send failed, or a retried copy of it, no longer stays at the bottom of the transcript below later replies
+- The macOS Window menu now drops a project when you close its window and checks the window that has focus
+- The Pages sidebar now highlights the open page when it is a typed page in a local wiki or sits under a typed page, opening the collapsed rows above it
+- Cursor Agent sessions now receive attached text documents and the file paths of pasted images and PDFs, which the agent opens itself
+- On iPhone and iPad, a new session is no longer sent to an offline record of your computer, which left the request unanswered; the connection dot now reflects the selected computer, the picker and Settings mark offline computers, and choosing one shows an error instead of failing silently
+- With several projects on the rail, the Tracker board no longer shows another project's items after a switch, and starting a session from a tracker item that belongs to a different project is refused instead of running the agent in the wrong project's folder
+- The terminal no longer stops starting after many project switches in one window, because a closed terminal now frees its memory; when it cannot start, it shows the real reason instead of "Failed to fetch" and writes it to the app log
+- Editor errors, such as a file that failed to save or an editor that crashed, are now written to the app log instead of being dropped
+- Switching projects in one window no longer restarts the previous project's terminals inside the new project
+- Clicking a notification for a session in another open project opens that session, instead of the session that was open there before.
+- Choosing "Always" on one of several tool permission prompts that are waiting at once now approves the others too, instead of asking again
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.7] - 2026-10-16
+
+
+### Added
+<!-- New features go here -->
+- After enlarging an image in an AI session transcript, the Left and Right arrow keys (or Prev and Next) step through the session's other images: your attachments, editor screenshots and images the agent displayed.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Charts whose x column holds plain dates such as 2026-08-31 show one label per row, like "Aug 31", instead of weekday ticks that missed the rows.
+- Decision blocks in the local wiki browser view no longer stay on "Loading answer status...", and votes on a decision block typed by hand into a team page are kept after a reload.
+- In shared documents, a collaborator's cursor label shows their name, or their email when no name is set, instead of an internal member ID such as `member-live-...`.
+- On iOS and Android, a session from a desktop project that isn't synced to mobile shows "Transcript not synced" and where to turn it on, instead of "Thinking..." over an empty transcript. Adding the project under Settings > Mobile App on the desktop uploads that session's earlier transcript.
+- A session that finished while the desktop's sync connection was down no longer stays marked as running on the phone; the desktop sends the update once the connection is back.
+- Following external Claude Code and Codex sessions watches each session folder instead of keeping every transcript file open, which had reached over 2,000 open files on one machine.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.6] - 2026-10-15
+
+
+### Added
+<!-- New features go here -->
+- In the Nimbalyst Wiki plugin for Claude Code and Codex, local wiki pages can name the code they cover, the agent is told at session start what the local wiki covers and which pages cover uncommitted changes (Claude Code), and capture starts from the pages a session's changes touched. New `wikiDoctor` and `listMarks` tools report broken links, orphan and stale pages and list recorded decisions and open questions, and a new `recall` skill answers what the wiki says or decided.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The Nimbalyst Wiki plugin's team server moved to a separate `nimbalyst-wiki-team` add-on that the team skill offers to install, so people who only use a local wiki are no longer shown a team sign-in. Team wiki users install the add-on once after updating.
+- The wiki update skill now applies to requests for architecture or product maps, diagrams and HTML pages, keeps a map to one screen with every box linked to a page, and checks those links before finishing.
+- Mobile sync sends each transcript message in one piece instead of splitting large ones into chunks; desktop, iOS and Android all updated.
+- Updated Claude Agent SDK to 0.3.300 and Codex SDK to 0.162.1.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Local wiki HTML pages opened from the Pages tree now open in the HTML page editor instead of the browser, and their links open the linked wiki pages.
+- HTML pages in `nim wiki serve` no longer render blank in browser panels that withhold the sign-in cookie from embedded frames.
+- The wiki plugin's local wiki tools can now switch to another project's wiki with `useLocalWiki` when a session moves to a different folder, and every result names the wiki folder in use.
+- In a narrow Pages Search view, such as the web console on a phone, page names are visible again; type, status and author show on a line under each name instead of in their own columns.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.5] - 2026-10-14
+
+
+### Added
+<!-- New features go here -->
+- Interactive HTML pages: a link to an `.html` file or HTML page on its own line embeds it live in a document, sandboxed from the app, and its links open wiki pages, tracker items and files in Nimbalyst. HTML is also a Team, Personal and local wiki page type with a preview and a source view.
+- Wiki setup now builds a project wiki by default, with a dashboard Home, a product map, initiatives, decisions, team and strategy pages, and wiki agents use charts, 2x2s, decision blocks and every editor page type where they fit. A team sets its preferred visuals in its "How we write this wiki" page.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Mermaid timeline (gantt) charts now fit the page width with readable labels in light and dark themes.
+- Columns in a document no longer show a dashed outline while you read it.
+- A message queued during a Claude Code agent turn no longer cancels a question the agent asks; it waits until you answer and the turn finishes.
+- Enlarging an image an agent showed in the transcript no longer shows a broken image when the file is outside the project folder.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.4] - 2026-10-14
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- A local wiki created outside the app now shows up in Pages mode without reloading the project.
+- The local wiki browser view now says when its server has stopped.
+- Moving a local wiki to a team now also brings editor pages and the images they link to.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.3] - 2026-10-14
+
+
+### Added
+<!-- New features go here -->
+- nimbalyst-wiki plugin: `/nimbalyst-wiki:team` moves a local wiki to a new or existing Nimbalyst team from Claude Code, opens it in the browser and invites teammates by email or invite link, with no desktop app needed.
+- nimbalyst-wiki plugin: in Claude Code and Codex, the agent tells you when a newer plugin version is out and which commands install it (turn off with `NIMBALYST_WIKI_NO_UPDATE_CHECK=1`).
+- Local wiki browser view (`nim wiki serve`): markdown pages store pasted and dropped files in the page's `.assets/` folder, link other pages or create one from `@`, insert references to the wiki's typed pages from `#`, show linked drawings and other editor pages live, and find and replace with Cmd+F.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Shared team wiki and feedback request links open in the right project with the right editor, or show why they can't, instead of a blank tab or nothing.
+- Local wiki browser view (`nim wiki serve`): opening a drawing page, or a canvas with a drawing card, and then navigating away no longer erases the drawing.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.2] - 2026-10-13
+
+
+### Added
+<!-- New features go here -->
+- nimbalyst-wiki plugin: `/nimbalyst-wiki:start` tour, opens the local wiki in the browser with nothing to install, MIT license.
+- Local wiki browser view opens, edits and creates drawings, mind maps, spreadsheets, data models, mockups and canvases.
+- `nim mcp` gains mind map and Excalidraw tools so agents can build those pages without the app.
+- Local wiki table types convert to pages from the browser view, `nim wiki convert-type`, or an agent, keeping item ids.
+- Share a personal tracker type with the team from the tracker sidebar or the Wiki's Personal Types table.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Alpha installs under 256 MiB can migrate from PGLite to SQLite automatically at startup as the staged rollout reaches them.
+- Local wiki table rows are read-only; the wiki setup skill creates page types with table columns by default.
+
+### Fixed
+<!-- Bug fixes go here -->
+- macOS Cmd+` cycles windows again while an agent drives a headless browser session.
+- iPhone keeps the landscape session list hidden across rotation and relaunch.
+- iOS left-edge swipe from the session list returns to the project list again.
+- display_to_user images render in the iOS transcript instead of a broken image.
+- Wide document tables scroll sideways with the first column pinned; phone-width screens show rows as cards.
+- New type no longer hangs on "Creating..."; it finishes, shows the server's refusal, or says the type is still syncing.
+- Set type leaves the page in place when the type has not reached the server.
+- Notice shown when a project's team tracker types are not syncing.
+- `nim wiki serve` picks up type changes live, keeps its address across restarts, and catches edits made right after start.
+- Local wiki fields with reserved names (`activity`, `comments`) are reported as a type problem instead of showing blank.
+- Git baseline reads no longer return another file's content after a git helper process restarts.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.1] - 2026-10-12
+
+
+### Added
+<!-- New features go here -->
+- The nimbalyst-wiki plugin installs in the Codex CLI, with the same wiki skills and tools as in Claude Code
+- Drop or paste files into a local wiki page to attach them: images show inline, other files become links, and attachments stay with the page when it is renamed or moved
+- Claude Code sessions suggest your next prompt in the empty input after a turn; press Tab to fill it in (toggle in Agent Features)
+- Claude Agent sessions stopped by a usage limit can continue on their own once the limit resets; turn it on from the limit card in the transcript or in Agent Features
+- The iOS app can copy diagnostics (versions and recent sync errors, no session content) from Settings, the "Couldn't load sessions" screen and the sync error banner, for pasting into a bug report
+- Customize a project's initials, color, or image in Project Settings > Appearance
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The built-in tutorial project now shows how to set up a Wiki for the project and where to find it
+- The Wiki extension is now on by default, so agents can set up and write a project's wiki without enabling it first; if you turned it off, it stays off
+- The meta agent's delegated sessions panel can now be folded away, so the transcript gets the full width on a narrow or vertical window.
+- Pages search and the tracker toolbar show active filters, tags and source as pills inside the search box; the tracker toolbar's Clear and source buttons are gone, Filter is an icon in the box, and Import moved into the New menu
+
+### Fixed
+<!-- Bug fixes go here -->
+- Sessions in projects you have not turned on in Settings > Sync no longer upload their messages to the sync server while they run
+- A prompt you send from the desktop no longer stays in the phone's input box
+- Cmd+Alt+W (Ctrl+Alt+W on Windows and Linux) now opens the new-worktree dialog, like the New Worktree menu item it is shown next to, instead of creating a worktree with a generated name
+- Codex sessions no longer fail to start when an HTTP MCP server is also listed in `~/.codex/config.toml`
+- Copilot tool calls show their tool name, arguments and result instead of "unknown", and Copilot messages are labeled "Copilot Agent"
+- Archiving a session now shows an error when it fails, and no longer hangs when a worktree's git remote stops responding
+- In a project spanning several repositories, pulling or pushing one of them from the title bar shows its progress and names the repository, and no longer greys out pull and push for the others while it runs
+- Clicking or dropping a file in the empty space below a short markdown document now lands in the editor instead of doing nothing
+- In a type's table, clicking a page title now opens the page, and the web wiki viewer shows the fields defined in the type file as columns
+- Picking a filter such as a tag in Pages search now applies it instead of discarding it
+- The phone no longer shows a "different sync key" notice that re-pairing could not clear, and its computer picker lists only computers seen in the last week, hiding the picker when there is just one
+- The phone no longer fails to open a session with "bad response from the server" after its sign-in token expires while it is reconnecting
+- Long assistant replies and question forms no longer disappear from the phone's transcript; only bulky tool output is shortened for mobile sync
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.81.0] - 2026-10-11
+
+
+### Added
+<!-- New features go here -->
+- New editor blocks for wiki pages: charts, callouts, columns, tabs, a table of contents, transclusions, `@` mentions of people and dates, link previews and video players, code excerpts, and buttons that start an agent session or create a new item. Most can be resized from a bottom-right grip and edited from the block menu.
+- Local wikis on iPhone, iPad and Android: a Wiki tab shows the project's page tree, follows links between pages in the app, and saves page edits back to the desktop
+- On iPhone, iPad and Android, a Team tab opens a team project's Wiki and Trackers (alpha)
+- The CSV spreadsheet editor gains a formatting toolbar, conditional formatting, data validation, wrap text, freezing, a status bar, formula autocomplete with click-to-insert references, named ranges, spreadsheet-style keyboard shortcuts and paste from other spreadsheet apps, and undo for every edit; agents can edit sheets with A1-range tools, including files that aren't open
+- Reorder projects in the rail by dragging or using the context menu, or sort them by name, with the order saved across restarts.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- A document's frontmatter properties and the sources it cites now sit in a resizable Page info panel opened from the header, instead of a metadata bar above the page and a Sources line below it; a page whose status is not current shows it as a small tag at the top
+
+### Fixed
+<!-- Bug fixes go here -->
+- A question left open when the agent connection drops no longer leaves the session waiting for your response (#1557).
+- Sending queued messages to Codex no longer fails with an overlapping-turn error when interrupting a session
+- Nimbalyst's background branch and file status checks no longer lock the git index, which could make a `git pull --rebase` with autostash leave your uncommitted changes in the stash
+- Windows updates no longer fail with "Command failed ... Get-AuthenticodeSignature" when checking the downloaded installer's signature takes longer than 20 seconds
+- Clicking a link to another Local wiki page in the Wiki now opens that page in the same tab instead of switching to Files
+- Local wiki pages an agent edited now open in the Wiki with the edit applied instead of in red/green review
+- Removing a project's last slash command or action prompt on the desktop now removes it on the phone too
+- The iOS session list now shows an error when the device's database can't be read, instead of an empty list
+- The iOS session list no longer fails with "Couldn't load sessions" on iPhones with an older system SQLite
+- On iOS, when refreshing your sign-in keeps failing, the "Sign in again" banner now appears after the first failed retry instead of after several minutes of loading
+- The desktop no longer fails to refresh its sign-in every 30 seconds when its saved sync server address is malformed
+- A Local wiki type file written as the wiki format describes, without `icon`, `color`, `modes` or `idPrefix`, now loads; a type file that still fails to load shows in the Local section with the reason instead of its tables and typed pages silently disappearing
+- Shell commands no longer appear as sub-agents in the agent sidebar, and a stopped task no longer looks the same as one that failed.
+- An error from an earlier turn, such as the "You are logged in" login card, no longer stays pinned to the bottom of a session after later turns
+- Files @-mentioned to chat providers without file tools are read from attached folders too, and no longer from a sibling folder whose name starts with the project's
+- Commit with AI from the Git panel no longer fails with "Session not found" when the selected repository is nested inside the project folder.
+- In a project spanning several repositories, the title-bar branch, the Git operations panel and the new-worktree dialog follow the file open in the editor instead of always using the first repository
+- Archiving a worktree that was interrupted by quitting the app now finishes cleanly on the next launch, without leaving its sessions visible on a deleted checkout or deleting a same-named branch in the wrong repository.
+- Sessions that hand off to a new session no longer fail with "Session hierarchy depth exceeds 8" after eight handoffs, and agents can place a spawned session beside themselves instead of nested under them
+- Archiving a worktree with unmerged commits no longer skips its warning because a similarly named branch, a remote copy of the branch, or `origin/HEAD` was already merged.
+- Quick Open, @ mentions, and content search find files in git repositories cloned inside a project, which the project's ignore rules used to hide (#1449).
+- An agent session in a worktree can read and edit folders attached to either the worktree or its project
+- Expanded deep folders stay visible and current when files change elsewhere, even when refreshes finish out of order
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.80.6] - 2026-10-09
+
+
+### Added
+- Actions can set an `effort` level, and choosing an action that sets a model or effort switches the composer's pickers to match
+- The Wiki's Local section (formerly Personal) keeps its pages as plain files in the project, default `nimbalyst-local/wiki`, which agents and the `nim` CLI can read and edit; existing Personal pages stay visible and can be exported to files
+- `nim wiki` commands, `nim mcp` (a stdio MCP server for the local wiki) and `nim wiki serve` (the local wiki in a browser) work without the desktop app, and Claude Code can create and maintain a local wiki through the Nimbalyst Wiki plugin
+
+### Changed
+- Local tracker item numbers (`NIM.75`) are only given to types that set `localNumbers: true`
+- The `nimbalyst-pages` Claude Code plugin is now `nimbalyst-wiki` (commands `/nimbalyst-wiki:setup`, `update`, `capture`), and `nim pages` is now `nim wiki`
+
+### Fixed
+- The Claude Code wiki plugin now includes its MCP servers, which were missing when it was installed from GitHub
+- Clicking a document link to an existing file, such as the root package.json, now opens it in large workspaces where the file was missing from the scan index
+- Windows no longer keep the full transcripts of agent sessions they have not opened or recently viewed in memory; reopening an older session reloads its history
+- Streaming agent responses no longer re-render every visible tool card and diff in the transcript on each update
+- A coordinating session now sees a long-running child session's latest response instead of an old message from early in its transcript
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.80.5] - 2026-10-08
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Tracker views placed in a page can be resized from a grip in the bottom-right corner, and a table without a set height fits its rows.
+- The tracker reference preview card on desktop shows the item's summary, its key fields, and what it links to.
+- Pages is now called Wiki: the Knowledge skills are /wiki:setup and /wiki:update, `nim wiki` works like `nim pages`, and agents on a wiki page are pointed at /wiki:update.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Agents on desktop can list past the first 100 wiki pages.
+- The new shared doc location picker in the Wiki shows the same pages, typed pages and types as the sidebar tree, and defaults to the open page.
+- Tracker reference chips bold the item's name instead of its key, and no longer show a raw internal ID for types without an issue key.
+- Moving a session under a new parent no longer sends "moved by the user" notes to old sessions or wakes them when the session-tree update runs.
+- Open in browser on a shared document opens the web console again instead of doing nothing.
+- The agent's recent-commits tool no longer fails when given the project folder instead of a file.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.80.4] - 2026-10-07
+
+
+
+
+
+### Added
+<!-- New features go here -->
+- Sessions now form nested trees on desktop and mobile, with drag-to-reassign, Undo, subtree activity summaries, and an optional compact one-line view.
+- Pages: plain pages have a status, owner, summary and tags, and can move between Personal and Team.
+- Pages: swipe two fingers on the trackpad to go Back and Forward.
+- Pages: copy a file from disk, including drawings, mind maps and other editor files, into Team or Personal pages with Copy to Pages... in Files or Add from Files... in Pages; agents can import files the same way.
+- Pages: `@` in a Personal page links your Personal pages and embeds Personal drawings and other editor pages; `@` in a local file also lists Team and Personal pages.
+- Agents can edit drawings, mind maps, data models and other editor pages in Pages with those editors' tools, without the page open.
+- Custom Claude models defined under `modelPicker` in Claude's settings now appear in the Claude Code model picker and are sent to your gateway by name.
+- Claude Haiku 5.5 is available in Claude Agent and Claude Chat; Haiku 4.5 stays selectable.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The extension dev menu lists stale extensions and can reinstall them individually or together.
+- The extension build tool runs pnpm for extension projects that use pnpm.
+- Knowledge setup asks about your goals and creates a Home page with linked starter pages.
+- Pages: save named views, configure them with compact tracker-style controls, open them full-size, create items, find typed-page decisions, and recover failed edits; Home stays user-authored and the type map supports pan and zoom.
+- Removed vendor branding from embedded tracker tables in Pages.
+- 2x2 charts can be resized by selecting them like an image, and their labels no longer run off the chart or overlap each other.
+- Shared markdown links show 2x2 charts and Mermaid diagrams as images instead of their source.
+- Pages and shared documents use one header layout, with a clickable path, history, and a ⋯ menu that has the page's sidebar actions (rename, move, new page inside, favorite, trash, copy as Markdown, export to PDF).
+
+### Fixed
+<!-- Bug fixes go here -->
+- Git Output no longer jumps to the bottom while reading earlier output.
+- Fixed a terminal that could stop showing output after restoring its saved history.
+- Excalidraw drawings embedded in a document no longer show the menu and bottom toolbar until the embed is selected.
+- Team tracker items opened right after launch no longer open in local mode before your organization finishes loading.
+- Effort and Actions menus now support typeahead like the model picker.
+- Tracker table cells for people and select fields open the field chips' choice list with type-to-filter, instead of a plain text box for people or a native menu.
+- Pages with citations no longer fail to load with an editor update loop.
+- Fixed clicking a decided or open-question chip in Pages, the Mark open question toolbar button, and the chip not updating after switching a mark between decided and open.
+- Updated the desktop runtime with security fixes while preserving PDF export margins.
+- Fixed security issues in YAML metadata, extension archives, file-pattern matching, Git operations, MCP connections, proxy address handling and development tooling.
+- Fixed formatting loss on other clients when undoing collaborative text deletion.
+- Fixed a crash when stopping an active local database worker.
+- Kept transcript reading position stable when content above the viewport grows.
+- Restored edge styling in Mermaid flowcharts.
+- Agent edits to a 2x2 chart in a markdown file now show in the editor as a reviewable change instead of leaving the old chart in place.
+- Improved MCP connection reliability while tools await a response.
+- In the web console, clicking a link or `@` reference to another page in Pages opens it in the current tab; Cmd/Ctrl+click opens a new tab.
+- Improved reliability of repeated Anthropic chat requests by releasing completed-request listeners.
+- Fixed a tracker crash when a person has no display name.
+- Reduced startup time spent re-reading settings while scanning extensions and resolving teams.
+- Sessions launched from an action now get a descriptive name instead of keeping the action's label.
+- On iOS and Android, the session list no longer briefly shows only phone- and automation-created sessions when the app returns to the foreground.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.80.0] - 2026-10-05
+
+
+### Added
+<!-- New features go here -->
+- Pages: one page tree with nested pages, typed pages with header fields, type pages with an item table, subtypes, drag reordering, and Set type in place.
+- Pages: named relations written as links, with a Links section listing each relation and the sentence that made it.
+- Pages: mark sentences as decided or open, cite prompts, answers, comments and web sources, and place tables, 2x2 charts and decision lists in a page.
+- Pages: history with compare and restore for every page, and a Trash in each section that restores pages with their children.
+- Pages: Home, Search and Types in each section; Search covers page titles and text, Types shows a map or table, and New type works without an agent.
+- Pages: a Personal section that works offline with no account or team.
+- Pages in the web console, and the `nimbalyst-pages` Claude Code plugin and `nim pages` CLI for team pages.
+- Agents can list, search, create, place, reorder, retype and edit pages, cite the session, and read another team project's pages by name.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Shared Docs mode is now Pages; it opens on Home, shows only the current project, and the Shared documents list is replaced by Search.
+- Clicking a page opens it in the current tab; Cmd+click opens a new tab, with per-tab Back and Forward (Cmd+[ / Cmd+]).
+- Agent edits to shared pages apply directly, with a version saved to history first.
+- Shared page history shows red and green diffs against the previous or current version.
+- Clicking a link in a document opens it; a hover card offers Edit and Copy.
+- New links in pages are console.nimbalyst.com links that open in the desktop app when possible.
+- Confirmations and errors in the desktop app use in-app dialogs instead of system dialogs.
+- Re-sharing a tracker type the team already owns is refused instead of overwriting the team's definition.
+- Knowledge extension skills write pages, typed pages and relations instead of claim and finding items.
+- Enlarged transcript images support pinch zoom.
+- iOS: session list and header take less space.
+
+### Fixed
+<!-- Bug fixes go here -->
+- A prompt sent while a session is starting is restored to the composer if the app quits first.
+- Structured input form answers submitted after a restart or after the agent call ended now resume the session.
+- Claude Code: a follow-up message runs right away while a background command is still running.
+- Agents can update or archive a tracker item that is missing an unrelated required field.
+- Pages deleted by an agent, or with child pages from the sidebar, go to Trash instead of being deleted permanently.
+- Team tracker sync starts even when one item has a backlog of unsent edits too large to load; oversized edits are refused with an error.
+- Phone sync skips an oversized project file instead of stopping the rest of the upload.
+- Pages team sync no longer stops with "Data source has been disposed" after error recovery.
+- Knowledge graph labels and relation names load for the open project.
+- A Mermaid syntax error no longer pushes the window's title bar out of view.
+- Editor screenshots in the transcript enlarge over the whole window.
+- The Add Project menu stays within the window.
+- No error dialog when a credential lock is released mid-check.
+- macOS: opening the menu bar panel no longer removes Nimbalyst from the Dock and Cmd+Tab.
+- Android: prompts are no longer lost on leaving mid-send or on a silently dropped connection, and offline phones stay signed in.
+- Android: no crash at launch during WebView updates, after moving to a new phone, or without a browser or camera app.
+- iOS: the "Sync interrupted" notice clears on reconnect and is less intrusive.
+- Windows: projects directly under a drive root can send prompts.
+
+### Removed
+<!-- Removed features go here -->
+- Tracker items no longer show the earlier knowledge graph's claim statements and qualifier editors; stored values are kept.
+
+## [0.79.1] - 2026-09-30
+
+
+### Added
+- Android: create worktrees, workstreams, and Meta Agent sessions, pick a model per session, edit synced documents in a Files tab, and cancel or archive sessions.
+- GPT-6.1 Sol in the Codex and OpenAI model pickers, now the default Codex model.
+- `/crew:hire` designs a new Crew member from any agent session, replacing the Hire dialog's "Describe the job" tab.
+
+### Changed
+- Quick Track's Cmd+Enter creates the item and closes the popup without switching to Tracker mode; the title field now spans the popup.
+
+### Fixed
+- Typing in a Crew dialog no longer loses focus every few seconds.
+- Context menus and popovers no longer open under the title bar, where their first item could not be clicked.
+- Concurrent label or predicate additions by two teammates to a shared knowledge graph no longer drop one of them.
+- Compound Bash commands no longer prompt for permission after a user PreToolUse hook has allowed them.
+- Codex auto-review and subagent threads no longer appear as separate "# AGENTS.md instructions" sessions.
+- Tracker types defined in a background project's window now appear in its tracker pane without a reload.
+- Claude Agent sessions in an externally created worktree no longer stay stuck on "running" after a background command finishes.
+- Transcript messages no longer flash and redraw while a session is streaming.
+
+## [0.79.0] - 2026-09-29
+
+
+### Added
+<!-- New features go here -->
+- Opt-in unlimited open projects with a scrollable project rail and cleanup of unused project resources.
+- Sonnet 5.5 for Claude Agent and the Claude API; the Sonnet row now runs Sonnet 5.5 and Sonnet 5 stays selectable.
+- Crew (alpha, off by default): persistent agent teammates that work scheduled shifts within token budgets and flag you when something needs you.
+- Extensions can start and drive their own agent sessions.
+- Knowledge extension sets up a team wiki with an editable "How we write this wiki" guide and optional market and project-spec vocabulary packs.
+- Knowledge graph labels: a page can carry several labels, each bringing its own fields and expected statements.
+- Ontology inspector in web console Tracker setup shows what a team project tracks and drafts fixes for gaps.
+- Navigable wiki Types map with search, minimap, and per-relationship details.
+- Knowledge curator (alpha): sort commits, sessions, and tracker changes into the knowledge graph with TypeSafe's Jev model or Workers AI.
+- Team wiki from the terminal (alpha): a Claude Code plugin and `nim wiki` commands read and write a team project's knowledge wiki.
+- iOS: Live voice conversations are recorded as voice sessions on the connected desktop, including tool calls.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- iOS: the session detail status bar shows the session's model.
+- Claude Code sessions waiting on a background shell or sub-agent show a distinct indicator and name the task in the transcript.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Agent sessions no longer read and cache large or binary files written into the workspace, which flooded the log and grew memory.
+- File @-mention suggestions pick up newly created and renamed files without a reload.
+- Overlapping file-tree scans no longer exhaust memory while files change in large projects.
+- Improved load performance for very large Codex sessions.
+- Clicking the Dock or tray icon brings back the project window after the app sat in the background.
+- Following external Claude Code sessions keeps importing after the agent changes directory, and skips unchanged logs.
+- Sessions no longer stay marked as running, or lose their waiting-for-you state, around an open question.
+- A question left unanswered by sending a new message now shows as skipped.
+- Workstream sessions in the session list keep their "updated" time current.
+- Inline diffs no longer freeze the window for agent edits across long, list-heavy markdown files (#1606).
+- A sent prompt no longer stays duplicated below the transcript when the turn is slow to start (#1620).
+- Team tracker type changes reach teammates right away instead of after the next reconnect.
+- A team project's knowledge relationship verbs are shared with teammates and the web console.
+- iOS: returning after a long background shows a quiet "Reconnecting…" notice and no longer leaves an open session stuck loading.
+- iOS: creating a session no longer reports failure when the desktop created it.
+- iOS: Live voice reads a session's pending question in its own voice, relays your answer, and works for desktop-started sessions.
+- iOS: the running-sessions Live Activity restarts after an earlier card ends.
+- iOS: scrolling up in a long session reaches the first message.
+
+## [0.78.5] - 2026-09-24
+
+
+### Added
+<!-- New features go here -->
+- Claude Opus 5.5 is available in the Claude API model picker and is the new Claude API default.
+- GPT-6 Sol and GPT-6 Luna are available for Codex and OpenAI API sessions, and GPT-6 Sol is the new default for both.
+- Knowledge extension (off by default) gives agents a shared ontology for team knowledge graphs: entities, claims, questions, findings, the verbs that connect them, and a hierarchy of areas.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- The macOS menu bar island follows the dark theme again instead of showing light colors
+- Tracker lists grouped by type, and row type badges, show type names instead of raw type ids
+- Codex sessions can read the reference files that come with extension skills
+- Find in markdown files highlights and moves between matches again after switching between raw and rich view, and Cmd+G / Cmd+Shift+G now step through matches
+- Extensions that are off by default no longer give agents their skills until they are enabled
+
+### Removed
+<!-- Removed features go here -->
+- The `tracker_install_pack` agent tool; the Knowledge extension replaces knowledge packs.
+
+## [0.78.4] - 2026-09-22
+
+
+### Added
+<!-- New features go here -->
+- Use Opus 5.5 in Claude Agent and Claude Code CLI while keeping older Opus versions selectable.
+- Fenced code blocks in the chat panel show a copy button with confirmation.
+- Agents can install knowledge packs that add claim, entity, question, finding, and investigation trackers, with citations pinned to the exact version of the item they cite.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The menu bar island loads only what it displays instead of the full app, reducing its memory use.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Mobile session creation reports sync failures accurately, and sync status shows when session writes are unavailable.
+- Review with AI starts a pull request review without requiring a custom slash command (#1556).
+- Codex can ask interactive questions when tool approval is set to never (#1553).
+- Spawned sessions run correctly in projects opened through symlinks or different path casing (#1551).
+- Foreground commands no longer trigger background-task wake-ups, and genuine completions are delivered once (#1493).
+- Cancelling a question clears its waiting state without hiding other pending prompts (#1549).
+- Tracker field edits preserve untouched frontmatter comments, formatting, dates, and line endings (#1552).
+- A failed organization directory lookup is reported as unavailable and retried instead of showing an empty organization list.
+- An agent edit to a long, list-heavy markdown file no longer freezes the editor while its inline diff is computed.
+- Memory extension re-indexing skips unchanged files and records instead of rebuilding its whole search index for each batch.
+- OpenCode sessions resume after a permission prompt instead of stalling (#1563).
+
+## [0.78.2] - 2026-09-18
+
+
+### Added
+- Open shared documents in the browser from their document menu.
+- Share Namenym naming projects for collaborative editing and individual favorites on desktop and the web.
+
+### Fixed
+- Codex honors writable directories, detects unexpected read-only sessions, and offers Windows sandbox setup (#1544).
+- Codex file tracking handles rebuilds, slow commands, restarts, and overlapping sessions without false edits or warnings.
+- Browser previews no longer remain over the app after switching tabs (#1547).
+- Claude usage consistently shows percent used, matching its progress bars (#1546).
+- Image previews refresh after external edits and recover from failed loads (#1543).
+- Pasting tracker values across grouped rows keeps each value aligned with its record (#1548).
+- Organizations recover after startup sign-in delays instead of appearing empty.
+- Cloudflare sandbox failures show clearer errors and refresh connection status before retrying.
+- Workspace windows stay on-screen after disconnecting or rearranging monitors (#1535).
+- Claude plugins no longer load duplicate, unconfigured copies (#1465).
+- Personal session sync keeps publishing when some server entries use another device's key (#1545, #1542).
+- Selecting Stable while running a newer build no longer rolls the app back on every launch (#1545).
+- Unreadable sync credentials preserve the existing encryption key (#1542).
+
+## [0.78.1] - 2026-09-17
+
+
+### Added
+<!-- New features go here -->
+- Browse trackers comfortably on phones with stacked lists, compact filters, and an explicit plan editing mode.
+- Try GPT Live voice on iOS with session context, spoken prompt handling, audio routing, synced-file access, and desktop announcements.
+- Manage paired computers by hiding, restoring, or renaming devices when using a compatible sync server.
+- Navigate the AI model, effort, and Actions menus entirely by keyboard.
+- Optionally follow external Claude Code and Codex CLI sessions live, including their names, from Agent Features settings.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Claude sessions use an updated SDK for more reliable MCP tools and resume while respecting enterprise restrictions.
+- iOS computer switching opens from the top-right computer status button.
+- Required Claude approvals default to Deny and allow only one-time approval.
+- Settings diagnostics distinguish agent-verified trust from user-authored configuration.
+
+### Fixed
+<!-- Bug fixes go here -->
+- iOS session search, loading, transcript ordering, and reconnect recovery remain reliable across app lifecycle changes.
+- Consumed prompts stay out of the iOS queue and delivery warnings clear when the desktop starts or finishes processing.
+- iPhone fleet Live Activities recover after expiration or reconnecting and stay visible while using the Mac with an updated sync server.
+- The session sidebar stays visible when rotating iPhone to landscape.
+- Restarting Nimbalyst preserves open projects.
+- File-linked sessions and Actions metadata refresh without missed changes or repeated background lookups.
+- On Windows, Gemini connects to the open Antigravity editor and offers current Flash models.
+- In-app HTML previews render UTF-8 text correctly even when the document omits a charset declaration.
+- Commit proposals stay in the session worktree and reject unsupported checkout overrides.
+- Codex turns survive transient reconnects and keep tracking shell edits after tool failures.
+- Shared CSVs retain all rows and concurrent edits, and custom-editor reviews complete after Keep or Revert.
+- Landscape PDF pages use the correct page size and text alignment.
+- Packaged file search uses the bundled ripgrep reliably.
+- On Linux, the taskbar and window switcher show the Nimbalyst icon instead of a generic one (#697).
+- Internal MCP servers accept Streamable HTTP clients that omit a required response media type.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.78.0] - 2026-09-14
+
+
+### Added
+- Run remote sessions in your own Cloudflare sandbox with attachments, Actions, and saved account preferences.
+- Claude usage shows model-specific weekly allowances remaining and reset times, including Fable.
+- Active transcript turns show elapsed time.
+
+### Changed
+- Canvas boards gain richer editing controls, zoomed-out previews, and screen navigation with editable titles and screenshot links.
+- GPT Live voice previews play instantly offline without an API key.
+- Prisma diagrams gain clearer relationship routing and layout controls while preserving source text during layout-only saves.
+
+### Fixed
+- Voice mode starts more reliably, communicates with coding agents, sleeps through silent audio, and reports auto-approved commits.
+- Editor screenshots avoid freezes and support unopened Markdown, code, image, and extension files.
+- Open files recover from missed disk changes, preserve unsaved edits, and block saves when the disk version cannot be verified.
+- Accepting large document rewrites preserves paragraph order; rejecting them restores the original formatting.
+- SQLite migrations retain progress, verify the switch after restart, and preserve recovery copies when history cannot be copied.
+- Git pushes stay connected during long checks and report SSH disconnects and termination signals clearly.
+- The GitHub panel clears unrelated AI sessions when the selected PR or issue has no matching session.
+- Slash-command search ranks exact matches first, then prefixes, with alphabetical ordering among equal matches.
+- Menu bar status colors match the panel: green for running sessions and blue for unread sessions.
+- iOS avoids launch hangs, reports sync failures, and preserves newer settings and drafts across reconnects.
+- Mobile-created sessions target the desktop, open without restarting, and report creation failures.
+- Consumed messages stay out of the mobile queue, and slash commands sync automatically after reconnecting.
+- Removing a Cloudflare sandbox also removes its container application.
+
+## [0.77.5] - 2026-09-09
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Embedded file links resolve relative to their document, with `/` for workspace-root paths.
+- Claude Agent's bundled runtime no longer self-updates out of place; preserved copies are recovered automatically.
+- Coordinating agents read sibling reports during long-running work without replaying them as extra turns.
+- The new-item popup saves typed content as the body, accepts pasted or dropped screenshots, and keeps the draft if creation fails.
+- Items whose creation text was lost to that bug offer the saved description for copy or insertion into the body.
+- Git commit details scroll together with the commit list in short panels.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.77.4] - 2026-09-09
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- iOS pages the session index into a persistent cache, reducing stalls on accounts with large session histories.
+
+### Fixed
+<!-- Bug fixes go here -->
+- iOS no longer asks you to re-pair a working device because of partial sync failures or local database errors.
+- A desktop with a mismatched sync key now pauses session sync and reports the mismatch instead of deleting shared index entries.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.77.3] - 2026-09-08
+
+
+### Added
+<!-- New features go here -->
+- Jump to unanswered agent questions and automatically scroll to new ones.
+- Choose whether Agent mode opens file tabs above the transcript or in the right pane.
+- Pick one of your project's action prompts from the mobile composer's + menu to prefill it, or open a new session with it.
+- Browse folders on the Shared Docs home and right-click a row to open, rename, move, or trash it.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Deep links and notifications reveal their destination even when an extension panel is open.
+- Codex shell edits now appear in file-session links with inferred attribution and live updates.
+- Files on iOS load large projects reliably and show sync progress and retryable errors.
+- Display math beginning with a number renders correctly in chat.
+- SQLite migrations recover from slow batches and copy large session tables more efficiently.
+- Sent document questions now appear in Feedback with response progress and links back to each question.
+- Invalid tracker update requests are rejected instead of changing an unrelated item.
+- Slash command search results are sorted alphabetically.
+- File quick search opens from the Agent mode file viewer.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.77.2] - 2026-09-07
+
+
+### Added
+<!-- New features go here -->
+- Send document questions to teammates, collect private answers, and resume the agent after a human settles the outcome.
+- Open and play `.mp4` files in a tab with the new Media Viewer extension, including scrubbing through long recordings.
+- A session that launches another session can request the reasoning effort it runs at, rather than leaving it on the app-wide default.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Provider API keys are encrypted on disk, settings files keep private permissions, and saved keys remain clearable when a provider is disabled.
+- Workstream session tabs scroll in one row with readable names and a new-session button that stays visible when the strip is full.
+- Codex sessions receive the first answer to a question even when the turn that asked it has already ended.
+- Project Graph keeps loaded data visible instead of repeatedly flashing a blank loading view during startup.
+- Simple document questions and their selection outlines stay at a readable width on wide screens, with controls that wrap on narrow screens.
+- Embedded mockups repaint after their frame is attached or moved, preventing intermittent blank previews.
+- iPhone and iPad share one adaptive layout that preserves the active session and draft through rotation, with a session sidebar on wide screens.
+- Project and session lists show loading until sync finishes instead of prematurely reporting that they are empty.
+- Orchestrating sessions keep up with their children: updates arriving mid-turn are delivered together, and a repeat from the same child replaces the earlier one.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.77.0] - 2026-09-05
+
+
+### Added
+<!-- New features go here -->
+- Project Graph adds Atlas, Pulse, and Evidence Trails with broader source coverage, saved views, and linked source exploration.
+- Session history marks sessions that launched other sessions with an icon and launch-count tooltip.
+- GPT-6 Astra can be selected for Codex sessions, with its Ultra reasoning level.
+- Decision blocks inside documents, with solo or collaborative voting and attributed outcomes preserved in the markdown.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Project Memory now indexes agent instructions and personal memory as separate sources, can use an optional on-device embedding model, and reports semantic-search readiness accurately.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Rapid edits to a shared CSV spreadsheet in the web console no longer let an older asynchronous save overwrite the latest cell value.
+- SQLite migration no longer times out while copying large document histories (#1452).
+- The effort selector offered reasoning levels the selected Codex model does not accept; choosing Max on those models ran at xHigh without saying so.
+- A tool call to an extension that stopped responding waited forever instead of failing, leaving the agent stuck with nothing in the logs.
+- A Codex session's name, tags, or phase could silently stop updating when the agent's tool call was dropped in transit; the update is now re-applied.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.76.3] - 2026-09-03
+
+
+### Added
+<!-- New features go here -->
+- Database Settings can recover preserved database copies and explain migration blocks, while recovery and rollback keep the original data intact across restarts.
+- Radar gives shared trackers a since-you-left digest of teammate activity, status moves, bulk sweeps, and stalled work in desktop and the web console.
+- The Git panel's Changes tab can show every repository in the project at once, each with its own file list and commit box.
+- Display Settings can show a tracker's Type column as the type's name instead of its icon.
+- The menu bar sessions panel can mark every unread session as read at once.
+- Clicking the session name the menu bar is showing opens that session in Nimbalyst.
+- A `.deb` download for Debian and Ubuntu, which starts on Ubuntu 24.04 and later where the AppImage is blocked by AppArmor's user-namespace restriction.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Commit with AI now proposes one commit per repository when your changes span several, so you approve each one separately and each gets its own message.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Cmd/Ctrl+Alt+1-9 switched tabs instead of applying the heading level while editing (#1429).
+- Pull requests were missing from the Git panel when the project is a fork checkout; they now list against the upstream repository (#1439).
+- The Git tab jumped back to the previously selected repository when you switched between repositories in a multi-repository project.
+- Interrupting a turn could let the next queued prompt start alongside the priority prompt that replaced it (#1018).
+- Claude Code CLI sessions ignored the custom Claude executable path in settings and reported Claude as not installed (#1296).
+- `tracker_get` left out an item's archived state and its comments (#1224).
+- A file a child session edited several times was listed once per edit in the parent's Files modified list (#1244).
+- A background task that finished mid-turn produced no visible follow-up turn, and every tool call in it that needed permission was denied without asking.
+- A queued prompt containing CJK text could have Enter land mid-paste in a Claude CLI session; an undelivered prompt is now reported as failed instead of marked complete (#1387).
+- Animation MP4 exports finish again, and completed HTML, MP4 and GIF exports are revealed in Finder or Explorer.
+- A Vite build error in development no longer covers the top of the screen through the macOS menu bar island.
+- Document sync could delete markdown files from your workspace, including files tracked in git.
+- Sync connection errors wrote your authentication token to the application log in plain text.
+- Committing changes that spanned repositories reported files as committed that were never committed, and showed only the first repository's commit hash.
+- Approving a commit from your phone failed outright when the changes spanned repositories, including the files that could have been committed.
+- A session running in a worktree silently left out changes in the project's attached folders when committing.
+- Cmd+B bolds text again when you are typing in an editor, instead of toggling the sidebar.
+- Typing in a markdown file no longer stutters each time it autosaves in a workspace with a large tracker.
+- A session that had previously reached the complete phase stayed out of the menu bar's Running list for the whole of its next turn.
+- Opening a session on iOS could show another session's transcript under the correct title.
+- Applying a heading with Ctrl+Alt+1 through 3 in the editor no longer also jumps to the matching tab on Linux and Windows (#353).
+- Clicking a markdown link to a file in the same folder did nothing unless the document sat at the top level of the project.
+- Answers typed into an agent's question were lost if you scrolled the conversation far enough to move the question out of view before submitting.
+- Worktrees of a project opened through a symlink did not inherit the project's agent permissions, so every tool call asked for approval again.
+- Tracker rows of a custom type showed a blank Type column instead of the icon the type declares.
+- Opening a project from the Project Manager did nothing when the window that project was opened in had since switched to a different project.
+- The New Worktree keyboard shortcut did nothing on macOS.
+- A tracker item whose title contains a comma showed as two separate values in a relationship column.
+- Starting an OpenCode session could wait five minutes before recognizing a server that was already healthy.
+- The Cmd+Shift+K shortcut for the kanban view did nothing.
+- Waking from sleep could start a second full database backup while one was still running, so both failed; the backup copies setting now also applies to databases still on PGLite.
+- Two dollar amounts on different lines of the same paragraph in a chat message rendered as math.
+- A tracker item closed by a commit recorded the close in its activity with no author and a timestamp the timeline could not order, and repeated closes merged into one entry when the item synced.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.76.2] - 2026-09-01
+
+
+### Added
+<!-- New features go here -->
+- Claude Fable 5.1 is now available in the model picker, with Fable 5 kept as a selectable previous-generation option.
+- A project can span several folders: attach one from the File menu or quick open and it appears in the explorer, in search, and to your agents, with git status, branches and commits tracked per repository.
+- Quick open's Files tab can narrow to just your local files or just your team's shared documents, and remembers the choice.
+- A workstream's context menu can mark every session in it as read at once.
+- `/planning:nimbalyst-coach` reviews your project and recent sessions and suggests extensions that match your files, features you have not tried, and instructions worth adding, changing nothing until you approve it.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The title bar now carries two create buttons: one on the left that makes a new file, shared doc or tracker item in the list you are looking at, with a menu of every type it can create, and one on the right that starts a new session.
+- Accepting a team invitation now opens your team in the browser and lands you on its documents, instead of asking you to download the desktop app first; the app is offered alongside it for the work only it can do.
+- Inviting someone now asks what they get — their role, any extra projects, and folders to share with the team — so a new teammate arrives to real work instead of an empty organization.
+- Shared documents in the web console can be opened as editable source text, so a document its editor cannot render is still reachable in the browser.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Agent edits to a file already open in diff mode could be reverted by an autosave or freeze at an old version; repeated writes now stay ordered, accept/reject and manual save can no longer overwrite newer content, and large documents keep their approval bar.
+- A canvas board holding a sticky or an image card you had not filled in yet could not be saved, read by an agent, or opened as source.
+- Phone-started sessions now run on one desktop instead of starting duplicate agents across every connected install.
+- `nim tracker show` no longer presents linked work, triage metadata, or derived signals as custom fields.
+- Cmd+N in Shared Docs opened the local new-file dialog instead of creating a shared document, and did nothing in the tracker.
+- A command an agent ran in the background was killed about five minutes after its turn ended; one can now run for up to 30 minutes.
+- Changing the theme laid a large opaque rectangle across the top of the screen behind the menu bar island, and flattened the menu bar panel's translucency.
+- Project-knowledge search now falls back to the local keyword index when semantic matching is unavailable instead of presenting a credential setup error.
+- Opening a markdown file with a pending AI edit could lock up the app for half a minute and then show no diff at all; very large files now skip the inline highlighting and go straight to the approve/reject bar.
+- A shared tracker item could arrive with no issue key at all, leaving it unreachable by `Fixes NIM-123`, by deep link, and by key lookup; new items keep the key they are given and existing ones get theirs back.
+- The tracker's Display Settings — view, grouping, ordering and sort — are now remembered per tracker type, so grouping bugs by status no longer regroups every other tracker (#1412).
+- A compaction that failed left no way forward: the transcript showed a bare error and the Compact button stayed stuck on "Compacting..."; it now reports the failure with the error that caused it and lets you retry (#1414).
+- Clicking a desktop notification from a session running in a worktree reported that the session could not be found in its originating project; it now opens the session.
+- Typing in quick open over an open spreadsheet lost everything after the first letter to the selected cell.
+- A session working through a long build or test run dropped out of the menu bar's Running list after fifteen minutes and was labelled as not responding until its turn ended.
+- Worktree actions were greyed out inside a git repository until another part of the app happened to check first.
+- A Claude Code turn that ended in an error completed twice, so its token usage and turn-end snapshot were dropped.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.76.0] - 2026-08-31
+
+
+### Added
+<!-- New features go here -->
+- The macOS menu bar shows your session fleet: it names a session as it starts, finishes, blocks or fails, flags one that has stopped responding, and quiets to a single mark when nothing is running, with a settings row in the panel to turn any of it off.
+- Your session fleet also reaches the iPhone Lock Screen and Dynamic Island as a Live Activity, ranked by how long each session has been waiting on you; tap one to open it.
+- Quick Track (Cmd+Shift+I) files a tracker item of any type from anywhere in the app, offering similar existing items before you add a duplicate.
+- Right-click a folder and choose "Share Folder to Team" to publish everything shareable inside it at once, mirroring its subfolders in the team space.
+- Animations can show a spinning indicator for a running or loading state.
+- The title bar names the Git command running right now, whoever started it, and the Git panel's Output tab marks the ones an agent ran.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Grok Build sessions can answer questions and approve tool use while they run, reach your Nimbalyst tools, and use the model you picked.
+- An animation plays inline in the agent transcript when an agent creates or edits it, as a click-to-activate stage rather than a plain file row.
+- In the tracker table the Key cell is the open button; clicking any other cell just selects it, and double-click always means edit.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Extensions can store secrets on Windows again; secrets saved on macOS and Linux by earlier versions are picked up automatically.
+- Files whose AI edits have already been committed no longer open with a leftover change count and review dot.
+- Images an agent writes inside a session's worktree now open at full size instead of failing to load (#1343).
+- The workspace picker marks a truncated markdown count as a lower bound instead of showing a confidently wrong number (#1376).
+- A tool permission request that timed out or was dropped now says nobody answered it, instead of reporting a cancellation you never made (#1348).
+- Images in a shared document now render in the web console instead of showing a broken-image placeholder.
+- Sending a message to Grok Build, Cursor Agent or Gemini no longer fails with "Unknown provider".
+- Grok Build and Cursor Agent report the tokens a session actually consumed, including cached input, instead of a fraction of it.
+- The session model picker loads ahead of opening and uses cached results instead of blocking on provider discovery.
+- Typing in a dialog while the tracker table is open no longer edits the selected cell.
+- A tracker item's body is no longer cleared when the item's metadata syncs with your team.
+- A tracker item can no longer drift onto an issue key that belongs to a different item.
+- An API key left in your shell environment is no longer handed to the Codex or Copilot coding agents; only a key you configured in Nimbalyst settings is used.
+- The Git panel's Refresh button now reloads the Changes tab's file list, instead of refreshing only the commit log and branch.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.75.5] - 2026-08-28
+
+
+### Added
+<!-- New features go here -->
+- Grok Build and Cursor Agent as coding agents, each with settings, model picker, edited-file tracking and diff review.
+- AI sessions can read and edit a shared document without it being open in a tab, including mockups, drawings and data models.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Gemini is a built-in coding agent rather than an extension, with edited-file tracking and a model list from your account.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Reopening a Gemini session shows the tool calls it made instead of only the conversation.
+- "Accept all" no longer refuses an AI edit by claiming the file changed on disk.
+- Documents with a scalar status key in frontmatter render the frontmatter card instead of falling back to the raw text editor (#1392).
+- Time trackers, screen readers, and other macOS accessibility tools now see the document you are actually viewing, instead of the last file you happened to open (#1375).
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.75.4] - 2026-08-28
+
+
+### Added
+<!-- New features go here -->
+- Author step-based technical animations in `.anim.json` files, with a live stage, scrubbable timeline, retiming, frames that draw real product UI under a palette the document owns, and MP4 or GIF export.
+- An AI session can now build a Project Canvas board for you from a description, placing cards that reference real workspace files and shared documents.
+- Animation and Project Canvas are now installable from the Extensions marketplace.
+- A feedback request now previews the mockups it is about, not only the ones bound to individual options, for both the recipient and the author reading results.
+- The author of a feedback request can open the session that composed it from the request's results.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Project Canvas gains two-finger pan, Cmd+wheel zoom, click to select and double-click to activate, card resizing, and cards for existing files and shared documents.
+- A feedback request now shows where its mockups will be published before you send, and puts them in a Feedback requests folder without opening a share dialog for each one.
+- Tips in a new session's empty panel now rotate, so you work through the set over time instead of meeting the same card every launch.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Images attached to a Claude Code session reach the model again; since 0.75.1 every one was dropped without warning.
+- Codex web search steps now finish in the transcript instead of sitting unresolved with empty arguments.
+- Pressing Cmd+F while the find bar is already open now returns focus to the search field instead of closing the bar.
+- iOS: tapping a notification now opens the session it was about, including on iPad and before that session has finished syncing to the device.
+- A session no longer keeps showing "waiting for your response" once you have typed a new instruction instead of answering the question it asked.
+- A mockup already shared with your team now reaches the recipient of a feedback request as the shared document, not a file path from the sender's machine.
+- Sending a feedback request now happens once: the card stays sent when you scroll away and back, and pressing send again no longer creates a second request.
+- A document link pasted into a team message or a shared document now becomes the document it names; links sent before this stay as text until you paste them again.
+- Working out which organization your projects belong to no longer runs a git command per project each time it is checked, which could block the app for a second or more.
+- A screenshot the AI takes with an explicit light or dark theme now shows an extension's editor working, instead of an error state where the extension could not reach its own tools.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.75.3] - 2026-08-27
+
+
+### Added
+<!-- New features go here -->
+- Work your team's shared trackers from the web console in list, table, board, timeline and tag board, with search, filtering, grouping, column choice, inline editing, comments and drag-and-drop, converging live with the desktop app.
+- Invite people to your organization from the web console, see who has not accepted yet, and resend or revoke a pending invitation.
+- Open anything in the web console with Cmd+K, right-click a tracker row for its actions, and pick from the full set of Nimbalyst themes.
+- A tracker now shows who else is viewing it.
+- A feedback request comparing mockups now shows the designs themselves: preview every option, open one full size, and vote without leaving the request.
+- A session that orchestrates other sessions can interrupt one to deliver an instruction immediately, instead of waiting for its current turn to finish.
+- Project Canvas: an infinite canvas where every card is the real editor (markdown, mockup, spreadsheet, drawing, mindmap) live and editable in place. Drag a file or shared document from the sidebar onto the board, with sticky notes, frames, arrows, snapping, team comments and presence, agent activity, and revision pinning to compare. Works in the desktop app and the web console, and saves as an open `.canvas` file that reviews as a diff.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The web console now reads as Nimbalyst rather than a separate admin tool, with the desktop app's header, navigation and controls, and a layout that holds up on a phone.
+- The web console's Requests inbox now also carries mentions, replies, tracker comments and document discussions, each row saying what it is about rather than repeating the sender.
+- Mockups and data models embedded in a document now render as the live editor instead of a saved screenshot, and existing embeds convert on open.
+- Mockup project files open as a read-only preview with a "Convert to canvas" action, writing a new `.canvas` file beside the untouched original that holds the real MockupLM editor for each screen.
+- Editing many tracker rows at once — pasting a range, or changing status or priority on a multi-row selection — now applies as a single update instead of one per row.
+- Quick open now finds a tracker by its issue key or number and puts it at the top, instead of only ever ranking trackers by meaning.
+- AI sessions take less disk: Nimbalyst stops recording progress counters and duplicate screenshots it never displays, and clearing old tool output now prunes existing sessions too (about 1 GB of a 5.6 GB database on one measured install).
+- The Claude Code CLI provider is off unless you turn it on, and is no longer labelled "Subscription"; the Claude Agent, now marked recommended, already runs on your Claude subscription.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Code in the AI transcript no longer picks up stray backslashes before dollar signs, so a shell command you copy out of it still runs.
+- A scheduled automation whose schedule was hand-edited into a shape Nimbalyst didn't expect no longer stops running for good; it repairs what it can and names what you need to fix.
+- A tracker type now shows the same colour and icon everywhere it appears; decisions and features were drawn differently in the AI transcript than in the tracker itself.
+- Searching quick open's trackers no longer closes the whole dialog with an error when any tracker item has no title.
+- The inbox now names who sent each message instead of showing your teammates as "Unknown member".
+- Saved views shared with your team no longer go missing from the tracker sidebar on startup.
+- Sending a queued prompt while a background sub-agent is running no longer leaves the session stuck on "Thinking..." or later claims a sub-agent was interrupted when none was.
+- Nimbalyst no longer removes items from your team's tracker when it can't tell which of your trackers are shared; it now holds off and tells you instead of assuming they were made private.
+- Tracker items stuck on their way to your team now sync, including in projects you aren't focused on, and items on a no-longer-shared tracker stop being retried on every reconnect.
+- Settings can now edit a built-in tracker type you have already customised; the edit button silently did nothing for those types.
+- On a large database, the startup backup no longer stalls the app for about a minute and then reports failure when it had actually succeeded.
+- Nimbalyst no longer freezes for seconds at a time during startup, while an AI session edits files, or while opening shared documents, switching projects, loading sessions, or resizing panes.
+- OpenCode models you discover now show up in the session model picker and stay in Settings, instead of falling back to a fixed handful of built-in models; each project keeps its own list.
+- Hiding a model in Settings now takes effect in the session model picker for OpenCode, Codex and Copilot, which previously ignored the setting.
+- The web console now asks the server what you may do with a shared document instead of inferring it from your first edit, so commenters are no longer told they are read-only and viewers are no longer allowed to type.
+
+### Removed
+<!-- Removed features go here -->
+- The `/datamodel` and `/Mockup` slash commands; embed either in a document the same way as any other file, by putting a link to it on its own line.
+
+## [0.75.2] - 2026-08-24
+
+
+### Added
+<!-- New features go here -->
+- Commit with AI can stage individual hunks of a file, so parallel sessions editing the same file each commit only their own lines.
+- Browse and triage GitHub issues beside pull requests, keeping your investigation status and notes local until you decide to adopt an issue as a tracker item.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Codex sessions now run on the 0.149.1 Codex release.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Updated bundled dependencies to pick up published security fixes, including ones affecting the auto-updater and extension installation.
+- Claude sessions on Windows no longer crash at start; if the agent process does die, Nimbalyst now says why and retries once instead of ending the turn on a bare exit code.
+- Shared Home now shows who created and last edited each document instead of labelling your teammates "Unknown".
+- Discarding old tool output now reclaims the gigabytes it previously reported as nothing, and says how much of the database its estimate actually sampled.
+- An automation no longer overwrites a report the agent wrote itself, which had been silently replacing finished output with the session's closing message.
+- Commit with AI now pre-selects the hunks your session actually wrote, instead of opening with every change in the file checked.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.75.0] - 2026-08-23
+
+
+### Added
+<!-- New features go here -->
+- OpenCode sessions gain slash commands, Compact, agent roles, and a live model picker listing the models you are signed in for.
+- Comment on a spot in a shared mockup: pins sync live, keep their place when an AI regenerates the mockup, and agents can read and reply.
+- Trackers record what an item is waiting on, with a built-in Ready view listing unblocked work most-unblocking first.
+- Right-click a tracker item to jump to the AI sessions working on it, or launch a new session or worktree for it.
+- Creating an automation can set where its output goes, what the file is called, and whether it starts enabled.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Calc Sheets mix narrative Markdown with calculations without treating prose as a formula error, and recognize `ln`.
+- Find (Cmd+F) in Tracker Mode jumps to the search box.
+- The feedback request list moved from Shared Docs to your organization, beside the Inbox.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Saving a file, opening a folder and switching sessions no longer hang for seconds at a time on a busy workspace.
+- A tracker board with thousands of items now draws only the cards on screen.
+- Offline team-tracker edits, including archives and deletes, reach the team as soon as you reconnect.
+- Creating a published item while disconnected says the issue key is pending instead of claiming the workspace has no team.
+- A disabled automation no longer keeps running on its schedule.
+- Automations write to the output file name you configured instead of always writing `output.md`.
+- Removing a team member or revoking their project access takes effect on connections they already have open.
+- A team change the server refuses for good is retired instead of being re-sent on every reconnect.
+- The context-usage indicator hides itself for agents that cannot report usage, instead of sitting at 0%.
+- Arrow keys move through the @-mention list in document comments.
+- A background shell command killed when its turn ends is reported as killed, with how long it ran.
+- A file open in an editor tab no longer silently reverts changes made to it on disk; it stops saving, retries, and tells you.
+- Shared Docs stays in the navigation rail when the team lookup is slow or times out at launch.
+- Shared trackers and team documents connect within moments of launch instead of taking up to half a minute.
+- The Set Status menu on a tracker card scrolls, and offers only statuses the selected items can actually hold.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.74.4] - 2026-08-22
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Installs that came up with an empty database now open the one that actually holds their sessions.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.74.3] - 2026-08-21
+
+
+### Added
+<!-- New features go here -->
+- Shared Docs navigation now shows an unread badge.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Inbox access now lives in the left navigation.
+- Account sync settings now call cross-device synchronization “Mobile Sync.”
+
+### Fixed
+<!-- Bug fixes go here -->
+- Existing databases are never set aside without confirmation, and unsafe storage migrations stop before copying lost data.
+- Interrupted saves no longer empty files, while explicit saves can still clear them.
+- Questions, plan approvals, and commit proposals remain answerable after the agent moves on.
+- Windows and Teams surfaces use the active theme background instead of flashing or staying white.
+- Trackers load after organization initialization and reliably show or allocate local item numbers.
+- Completed background sessions remain unread until you view them.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.74.2] - 2026-08-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- A new install stays on the faster storage engine instead of being switched to the old one after its first launch.
+- A momentary database startup failure no longer empties your sessions and history: Nimbalyst retries before setting the database aside.
+- When the database will not start, Nimbalyst now lists the backups it holds and can reveal them, instead of telling you to delete your database folder.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.74.1] - 2026-08-20
+
+
+### Added
+<!-- New features go here -->
+- The tracker sidebar collapses and reopens like every other mode's — the Tracker icon, Cmd+T, or the title-bar control.
+- Expand the active tab to fill the window from View > Toggle Expanded Tab or with Shift+Escape, in any view mode.
+- Your organization's inbox, rooms, and direct messages open in the project window as an Organization mode, with mentions, assigned work, and owed replies as their own rows.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Sync no longer takes up a spot in the left gutter: its state reads as a single line in the account menu, and a sync problem shows on your avatar.
+
+### Fixed
+<!-- Bug fixes go here -->
+- A shared document that can no longer display collaborators' changes now says so, instead of continuing to report itself as synced.
+- Typing @ in a document comment finds people again when the team list arrives late, and now matches on either a person's name or their email address.
+- A tracker item shows its number as soon as it is created, instead of staying blank until the list is refreshed.
+- A project that belongs to no organization now offers to add it to one you pick, or to a new one, instead of suggesting a single organization at random.
+- The organization inbox no longer comes up empty when the app starts up faster than it can sign you in.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.74.0] - 2026-08-19
+
+
+### Added
+<!-- New features go here -->
+- Shared spreadsheets, mockups, and Excalidraw diagrams open and edit in the web console, with live presence between the desktop app and the browser.
+- Ask a teammate for structured feedback: your agent drafts the question, it lands in their inbox with the artifacts it is about, and anyone can answer in a browser.
+- Spreadsheets gain date-time, time, checkbox, link, and tracker columns, cell styling, accounting and scientific number formats, and date arithmetic in formulas.
+- Trackers hide closed work by default, with an Open / All / Closed switch on every view, Won't Do and Duplicate statuses, and Owner and Due Date across the All view.
+- Tracker items that have not been shared yet get a number of their own, like NIM.12, so you can refer to one before it is published.
+- A file link that names a line opens the file scrolled to that line instead of the top.
+- Desktop notifications carry their own icon, so a finished agent, a question, an approval request, and a teammate's message are distinguishable at a glance.
+- Entities and relationships a teammate has selected in a shared data model show their name and color.
+- The Files pane and session tips now offer a way into Teams.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Nimbalyst takes far less disk: fewer and now-adjustable database backups, no more storing enormous command output, and an option to discard old tool output.
+- Nimbalyst upgrades its local database to the faster storage engine on its own, restarting when it finishes and staying on the old one if anything goes wrong.
+- Mockup project files can no longer be shared to a team, since their screens do not yet sync between people.
+- Opening an editor no longer fetches a font from a third-party server.
+- Codex no longer offers slash commands it cannot run, and Compact is hidden for agents that cannot compact.
+- The inbox's message pane can be dragged to the width you want and stays on screen at far more window sizes.
+- Long agent sessions that edit many files, and project sync hashing, no longer slow the rest of the app down.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Shared spreadsheets, diagrams, mockups, and data models no longer drop edits when two people work in them at once.
+- Opening a shared document whose editor you do not have names the extension you need and offers to install it.
+- Shared mockup files now have a source pane, so their content can be edited collaboratively.
+- The results column in a shared calc sheet no longer goes blank until you type again.
+- Collaborator avatars and the sync indicator no longer flicker on every character you type in a shared document.
+- Collaborators in a shared spreadsheet, diagram, or mockup come back after a network blip instead of the list emptying and staying empty.
+- Team messages, mentions, and notifications arrive when the app finishes starting before you are signed in.
+- Push notifications reach the phone you walked away from, and a session blocked on your answer or one that errored reaches you at your computer too.
+- Tracker items keep their owner in a shared workspace.
+- Feedback requests validate attached artifacts before publishing and keep artifact links in their originating team project.
+- Cutting spreadsheet cells can be undone, and undoing a deleted range restores those cells instead of overwriting the first one.
+- A spreadsheet edit that fails to save stays marked unsaved instead of looking saved while the file on disk was unchanged.
+- A milestone or release reports the progress it really has: type-specific closing statuses count, abandoned items no longer hold it below 100%, in-review is not done.
+- Closing an item from a commit message sets a status that item's type actually offers.
+- Milestones, goals, and collections read as their own name in lanes, headers, chips, and columns instead of a raw id or a stale name.
+- Tracker date, link, and people chips carry their field name, so an item with two dates or several links no longer needs a hover to tell them apart.
+- Picking a grouping or ordering in the tracker's Display Settings works instead of closing the panel without changing anything.
+- A Claude Code CLI session no longer hangs when the CLI asks you to confirm a model switch.
+- A session leaves Thinking when a Claude Code turn ends with a shell task still running. (#1246, contributed by @hajee)
+- A resumed CLI session no longer replays a synthesized user message, and the CLI's prompt-suggestion fork is no longer read as session activity. (#1272, contributed by @tlee-nymbl)
+- Typed input in an agent prompt widget no longer disappears when the prompt changes underneath it. (#1218, contributed by @forcewalkerneo)
+- An unresponsive renderer no longer wedges the main process behind a dialog you cannot see. (#807, contributed by @co-cy)
+- Opening an extension panel while an agent session is running no longer takes the whole window down.
+- Starting an agent after moving, renaming, or deleting the project folder names the missing folder instead of reporting a broken agent binary.
+- Codex file edits show a red/green diff again, Codex sessions show context usage, Compact works, and your skills reach Codex.
+- A Codex session that cannot resume says so instead of starting over with an empty history while still showing the old conversation.
+- A Codex tool server that fails to start shows as failed instead of the agent quietly losing its tools.
+- The effort level you select applies to Claude Code CLI sessions instead of being ignored. (#996, contributed by @Derazien)
+- MCP servers configured for a specific project in Claude Code load on Windows instead of being silently ignored. (#1317, contributed by @Derazien)
+- The spellchecker follows your OS locale, with a setting to override it. (#1256, contributed by @forcewalkerneo)
+- An active session content search is no longer replaced by title-only results. (#1136, contributed by @Yogitmeister)
+- Relative times in the session list keep updating on idle sessions. (#1200, contributed by @forcewalkerneo)
+- Selecting text in the transcript no longer breaks as new content streams in. (#1217, contributed by @forcewalkerneo)
+- Long transcripts no longer slow down matching tool calls against unbounded history. (#1144, contributed by @Yogitmeister)
+- Text in the git Output tab is selectable.
+- A full-screen window has a visible way out again: an exit button in the title bar, and on macOS the window buttons reappear at the top of the screen.
+- The inbox's organization filter no longer opens onto an empty menu when there is nothing to narrow by.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.73.2] - 2026-08-11
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Repositories with more than a page of open pull requests no longer show only the first page, and accented characters in PR titles no longer come through garbled.
+- Nimbalyst comes to the front once when launch finishes, instead of sometimes staying hidden behind other apps after a slow start.
+- Opening the menu bar sessions panel no longer drops Nimbalyst out of the Dock and the app switcher.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.73.1] - 2026-08-11
+
+
+### Added
+<!-- New features go here -->
+- Group the tracker board into lanes by milestone, goal, or any other field, placing work by dragging a card, using the chip on it, or selecting several at once.
+- A Timeline view lays tracker work out over time, grouped the same way the board is.
+- Plans still marked draft after a linked session committed now carry a chip naming the commits that disagree.
+- Clicking the menu bar icon on macOS opens a sessions panel with the same rows as the in-app popover, showing each session's provider, model, elapsed time, and project instead of a list that ran off the screen.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- View mode, grouping, and ordering now live together in the tracker's Display Settings panel.
+- The tracker sidebar's personal and team groups collapse under compact one-line headers, team first, and both the groups and folders remember their state across restarts.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Sessions waiting on a question or a permission prompt now show as awaiting your input in the sidebar and on mobile, instead of looking like they are still running.
+- Confirmation dialogs now close when you answer them, so removing a member no longer leaves the prompt stuck on screen.
+- Organization Messages opens on an organization you can actually use instead of stranding you on a screen waiting for a membership that never loads.
+- The slash-command palette shows each command and skill's own description again, along with its correct icon and grouping, instead of a generic placeholder.
+- Browser tabs now line up with their tab when the window is zoomed in or out, instead of painting the page in the wrong place and at the wrong size.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.73.0] - 2026-08-11
+
+
+### Added
+<!-- New features go here -->
+- Git Log shows which AI session produced each commit, with a click-through to open it.
+- The editor header shows the last AI session that worked on the open file, with a dropdown to jump to other sessions or start a new one.
+- Linked local files can pull the latest Shared Document content from the editor header.
+- Shared document version history previews the contents of each earlier version before you restore it.
+- Trackers are now plainly personal or your team's, and items in a team tracker stay private until you publish them.
+- Read, write, and reply to shared document comments in the browser, with `@`-mentions reaching the person's inbox.
+- Signing in to a team walks you into your organization's project, and Account settings can open a project in any organization you belong to.
+- Organization owners and admins can remove a member or revoke a pending invitation from Members & Roles.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Agents reading a web page no longer receive what you typed into its form fields.
+- A shared document you may only read now says so, instead of silently retrying the refused save.
+- Restoring an earlier version of a shared document now actually rolls the document back.
+- Keeping or reverting an AI change in a shared document now clears its highlight for good.
+- An AI edit near an embedded file in a shared document no longer duplicates the embed.
+- AI agents no longer present provisional tracker keys as final references in shared projects.
+- Editing a shared tracker's config file no longer silently discards the change.
+- A Quick Open file mask that filters by name, such as `Ch0*.md`, now matches on Windows.
+- Comment highlights in a shared document reappear after the document reloads.
+- Teammates appear by name rather than by email address in `@`-mentions and notifications.
+- Edits you make to a shared document on one of your devices now appear live on your others.
+- A failed sign-in on iPhone and iPad now explains what went wrong.
+- The profile menu updates as soon as you sign in or out.
+- Opening a team invitation while signed out now takes you to the sign-in page.
+- Prompts sent from your phone appear in the queue while they are still pending.
+- Viewing history diffs no longer freezes a restored session.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.8] - 2026-08-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Claude Agent sessions no longer re-write the prompt cache on most turns, cutting token cost and rate-limit usage on long sessions.
+- A file that repeatedly fails to save now shows a Retry banner instead of autosave looping on it forever.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.7] - 2026-08-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Windows release builds sign and publish again.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.6] - 2026-08-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Tracker items shared with a team now get the same issue key for everyone, instead of each member's app assigning its own number to the same item.
+- Simply opening a tracker item no longer bumps its "Updated" time or adds a phantom edit to its history.
+
+### Removed
+<!-- Removed features go here -->
+- The accept/reject bar on shared tracker content — edits from teammates now just appear, the same as in shared documents.
+
+## [0.72.5] - 2026-08-06
+
+
+### Added
+<!-- New features go here -->
+- Open a shared project that is not a git repository by choosing a folder for it in your organization's project list.
+- A Renders tab in the Developer Dashboard that reports which components re-render, how often, and why.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The CSV Spreadsheet extension now computes formulas live and keeps them after a save, and adds find and replace, per-column filters, and AI tools for analyzing data and applying formulas.
+- The Git panel's Changes tab is now one compact, collapsible list with no staging step: tick the files you want and commit them, or hand the selection to AI to write the message.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Codex sessions using parallel sub-agents now wait for the lead agent's final response instead of ending when the first child finishes.
+- Sending a queued prompt immediately no longer leaves the session stuck as running with the prompt never delivered.
+- Committing from the Git panel works again, renamed files show up, and discarding also undoes staged changes without touching files you did not select.
+- The Git panel's file mask is remembered per project again, instead of resetting every time you reopen the panel.
+- A spawned session's completion notification no longer repeats its entire original prompt back to the session that started it.
+- Reloading an extension now rebuilds it first, so your latest changes actually load.
+- Signing in or creating an organization now turns on Shared Docs right away, instead of staying hidden until you restart or reopen the window.
+- The voice agent no longer sounds like it switches to a different voice partway through an answer.
+- Accepting a team invitation now opens Nimbalyst instead of leaving you in the browser, and tells you how to sign in if you do not have the app yet.
+- When a session edits the same file several times, the red/green diff shows the whole set of changes again instead of only the last one.
+- Everyone on a team now sees the same tracker fields: a schema your team shares wins over an old copy on your machine, instead of silently freezing that type and hiding fields like Collections from you.
+- Customizing a shared tracker type now reaches your teammates, and a second open project no longer swaps another window's tracker types for the built-in ones.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.4] - 2026-08-05
+
+
+### Added
+<!-- New features go here -->
+- Undo and redo in the tracker table with Cmd+Z and Cmd+Shift+Z, covering cell edits, paste, bulk status and priority changes, and archiving.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- A newly created organization now appears in the profile menu of every open window right away.
+- A project with no git remote can now be added to an organization you already administer.
+
+### Removed
+<!-- Removed features go here -->
+- The tracker table's drag-to-clone handle, which was easy to hit by accident and silently rewrote a whole column.
+
+## [0.72.3] - 2026-08-05
+
+
+### Added
+<!-- New features go here -->
+- Spreadsheets support find, replace, and per-column filters, opened with Cmd+F.
+- The AI can analyze a spreadsheet's columns for data-quality problems and apply a formula across a range.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Setting up an organization no longer asks you to pick starter chat rooms, going straight from invites to finished.
+- Dragging a spreadsheet selection past the edge of the view now scrolls the grid.
+- Spreadsheets are read-only while you review AI changes, and the review bar says so.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Spreadsheet formulas now calculate on open and stay formulas on save, instead of showing as raw text and saving as plain numbers.
+- Arrow keys and Home/End move the cursor within a spreadsheet cell you are editing instead of jumping to another cell.
+- Spreadsheets use the app font, right-align numbers, have a more compact header, and no longer show a white gutter block in dark themes.
+- Sharing a file to your team works again; a share that does fail no longer leaves an empty document behind.
+- Referencing a shared mockup or diagram with `@` inside a shared document now inserts a live embed instead of a plain link.
+- Unsent team-message drafts now return when you revisit a conversation and stay cleared after sending.
+- Setting up an organization no longer leaves the account menu showing "No organization" and AI requests failing to authenticate.
+- HTTP MCP servers you authorized with OAuth now connect in Claude Code sessions instead of reporting that they need authorization.
+- Tracker date columns read as "Today", "Tomorrow", or "in 5 days", with the full date on hover.
+- Git command output no longer shows raw terminal color codes around messages from hooks and failed commands.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.2] - 2026-08-04
+
+
+### Added
+<!-- New features go here -->
+- Organizations can now be created from a released build, not only in development builds.
+- The organization inbox is reachable from any project: a title-bar button badges unread messages, and the account menu gains a Messages entry.
+- Spreadsheets can freeze columns and header rows again, and a selection now spans the frozen edge whether you drag it, select all, or copy it.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Double-clicking a cell in the tracker table now edits it in place; the key, type and date columns still open the item.
+- Inbox rows are shorter and lead with what each delivery points at, with unread and source-type filters and a click that previews instead of navigating away.
+- The sessions popover in the gutter is wider, drag-resizable, and gives each session title a full row so long titles are readable.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Yes/no questions from the agent now show both answers as pickable buttons and wait for you to choose, instead of a single control that submitted "no" untouched.
+- Team conversations open on the newest message and follow the one you send, while holding your place if you have scrolled up to read.
+- Shared documents and team collaboration connect again after the sync server started rejecting the desktop app's connections.
+- Shared documents retry sync after a sign-in token refresh fails, instead of sitting on a connection that never comes back.
+- Team messages raise a desktop notification, and a direct message is titled after the other person, when more than one account is signed in.
+- Sessions no longer show as running after their work finished, so prompts queued behind an interrupted or background-task session send.
+- SSE-transport MCP servers that use OAuth reach your sessions again, and a server left out because it needs authorizing is now listed as such.
+- MCP servers whose provider refuses dynamic client registration can be authorized with a client ID you enter, and the error names that cause.
+- Tracker items in list and table views now expose their action menu without requiring a right-click.
+- Tracker date fields now show the day you entered, instead of the day before if your time zone is behind UTC.
+- Committing an agent's work now closes the tracker item it fixed and marks the session complete.
+- Changing a project's permission mode now applies to agent sessions that are already running.
+- Prompts you queue from the phone leave the queued list once the agent picks them up.
+- Tables exported to PDF now span the full page width with content-sized columns, instead of collapsing into a narrow strip.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.72.0] - 2026-08-01
+
+
+### Added
+<!-- New features go here -->
+- The new-worktree dialog can now search branches, narrowing the local and remote lists as you type.
+- The organization window gains rooms and direct messages, a rich message composer with attachments and mentions, live chips for pasted plan and tracker links, unread badges, and desktop notifications for new messages.
+- Tracker items can now open as full documents with collaborative editing, inline comments, consistent editable field chips (including collection creation), keyboard-driven search and filters, shared-document navigation, a side-by-side AI chat panel, and a visible action to copy shareable reopen links.
+- A new install now starts on the onboarding screen and can open a ready-made tutorial project — documents, data, designs, plans, and finished AI sessions to explore — reachable any time from the project manager or Help > Launch Tutorial.
+- Agent sessions can show an MCP status chip in the header listing which servers the session has, which are connected, and which never reached it at all — off by default, enable it under Settings > Agent Features.
+- Quick Open prompt search now distinguishes prompts you wrote from ones an agent sent, with filter controls to narrow to either.
+- The Agent mode header gains a pin toggle, and worktrees now show the worktree icon and their worktree name.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The Agent mode right-panel control in the title bar is now a split button: one click hides or restores the panel, and the caret picks which panel to show.
+- Organizations are now managed in a dialog in whichever window you are already in — members, projects, settings, billing and the danger zone — leaving the organization window for messages, with a bottom-left profile menu that matches the project window's.
+- Signing in now hands back to the copy of Nimbalyst that started it rather than through a system-wide link handler.
+- Turning an MCP server off for Claude now also turns it off for Claude Code outside Nimbalyst in that project, because Nimbalyst records it the same way Claude Code does.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Checking for updates no longer fails outright when the newest release tag has no published downloads behind it; the app falls back to the most recent version that does.
+- Cancelling a Codex session now stops it for good, instead of the session sliding back into a running state seconds later after its turn had already failed.
+- Find-in-document now highlights matches inside inline code, and comment highlights are visible on commented inline code.
+- Source files containing NUL separators now render as text in GitHub reviews instead of appearing as binary changes.
+- Queued prompts now run on their own: a prompt sent from your phone opens the project and runs it, prompts left over from a quit resume once the project is open again, and a prompt that arrives mid-turn runs when the turn ends — no more pressing Escape or restarting to release the queue. (#962)
+- Web search and web fetch no longer fail in Claude Code CLI sessions running at max effort.
+- Sharing a plan or decision now produces a link your teammates can actually open, and the sharer edits the same collaborative content everyone else sees instead of quietly staying on their local file. Items shared earlier can be unshared and shared again to pick this up, keeping the content that has been edited since.
+- An AI session that reports its previous conversation has expired now genuinely starts fresh on the next message, instead of repeating the same expiration error forever. (#1098)
+- Tracker items with structured array fields no longer crash when opened, even when older schemas describe those fields as text lists. (#1104)
+- Claude Code sessions now use your existing MCP setup instead of overriding it, so account connectors load again and sessions no longer fail to start on machines with an organization-managed MCP policy. (#1051)
+- HTTP MCP servers that authenticate with a static key now connect directly on Claude Code sessions instead of being routed through an extra helper process.
+- Unified Quick Open tabs now show compact platform keyboard glyphs without shortcut labels overflowing into neighboring tabs.
+- Desktop AI notifications now lead with the originating session name and open that exact session and project, including child sessions, instead of following whichever project is currently visible.
+- Dropdown menus no longer open underneath the macOS window controls — the project rail's "+" menu now opens beside the button instead of jumping to the top corner. (#1096)
+- File reveal menus now name Finder on macOS, Explorer on Windows, and the containing folder on Linux.
+- Main windows now restore their maximized state after restart instead of reopening at stale pre-maximize bounds. (#1077)
+- AI sessions that preview a web page no longer strand a blank, unclosable window on a second monitor.
+- Tracker list progress cells now use the selected theme's background instead of a light block.
+- Sorting a tracker view by Updated, or any other date column, now orders rows by date instead of alphabetically by month name.
+- Embedded mockups and diagrams written as a plain relative link inside a shared document now open the shared copy instead of failing to load.
+- A link to a file written as a plain relative path, such as `design/dashboard.mockup.html`, now opens the file instead of a broken page in your web browser.
+- Shared-document references no longer make recovery exports empty or turn into tracker links.
+- Tracker sidebar type counts no longer read 0 for types that have items, and listing archived items no longer comes back empty.
+- Committing with the AI commit widget no longer leaves the just-committed files showing as deleted or reverted, and no longer discards changes you staged elsewhere at the same time.
+- Projects with many new, uncommitted folders no longer stall while the file tree and changed-files list refresh, and ignored files inside those folders no longer show up as changed.
+- Adding a second account no longer changes which account personal sync runs as.
+- Answering or cancelling a question from an agent now closes it for good, instead of leaving it on screen and bringing it back when you switch sessions and return. (#1116, #773)
+- Attaching a file the agent is not permitted to read now says so and offers an inline retry, and staged attachments are kept out of workspace scans and cleaned up afterwards. (#1086)
+- The sidebar extension panel reopens where you left it after a reload instead of coming back blank. (#1114)
+- Comments whose anchor text was deleted now scroll into view instead of being unreachable, and new comments are composed in the comments panel.
+- The Tracker columns menu now stays inside the window instead of running off the edge.
+- Window icons no longer flash their text labels while the window starts up.
+- Mockups containing XML-incompatible comments can be captured as screenshots again.
+- The organization inbox reconnects on its own after the connection drops.
+- Session titles inside an expanded workstream update as they change instead of showing the old name. (#973)
+- Windows builds sign the app payload before packaging, so the installer no longer reports an unsigned application. (#853)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.71.3] - 2026-07-28
+
+
+### Added
+<!-- New features go here -->
+- The organization window gains an Inbox with conversations plus mentions and replies from shared-document comments.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Teams is still in alpha and new signups limited.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Queued chat messages now continue through a replacement project window after the original window reloads or closes.
+- Windows and Linux get the File/Edit/View menus back, now drawn in the project window's title bar.
+- Menus and popups that open over the title bar respond to clicks again on Windows and Linux, including "Open folder…" in the project switcher (#1052).
+- Tracker types defined in one project no longer overwrite another open project's identically-named types (#1035).
+- Codex sessions now reach for Nimbalyst's browser tools instead of dead-ending on the ChatGPT desktop app's in-app browser plugin.
+- An active content search no longer gets silently reset to zero results by unrelated session activity elsewhere in the workspace.
+
+### Removed
+<!-- Removed features go here -->
+- Organizations still on the original client-managed encryption are no longer supported and must be set up again; all team collaboration — including attachments in shared documents — now uses Nimbalyst-managed encryption.
+
+## [0.71.2] - 2026-07-26
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The composer's Extended thinking choice now sticks across new sessions instead of resetting each time.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Long or multi-line prompts sent to a Claude Code CLI session are no longer truncated or split across several pasted-text placeholders.
+- Sessions no longer stay stuck showing "awaiting input" once the AI has stopped waiting.
+- The transcript's scroll-to-bottom arrow no longer blocks clicks, selection, and scrolling across the full width of the pane.
+- Long git errors no longer stretch the title bar's Git menu across the window, and a rejected push now says to pull first.
+- Creating a plan or decision from an AI session no longer fails schema validation, and new items start on their type's own default status. (#1037)
+- Pinning or unpinning a session inside an expanded workstream updates its icon, menu, and position immediately. (#972)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.71.1] - 2026-07-26
+
+
+### Added
+<!-- New features go here -->
+- Pull request review mode gains a resizable AI session pane that carries the selected pull request into the conversation, with its linked sessions shown in the header.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The tracker Table view is now the virtualized editable grid, with favorites and right-click bulk actions; the separate grid view has been folded into it.
+
+### Fixed
+<!-- Bug fixes go here -->
+- File links in a transcript now open the right file when the extension is longer than eight characters, such as `.excalidraw`.
+- Turning off usage analytics now stops all collection; some events kept being sent from the app window after opting out.
+- Screenshots taken by a desktop session appear in the mobile transcript again, sized so they stay sharp when zoomed.
+- The mobile session list no longer reshuffles while sessions are streaming.
+- Android session transcripts no longer stay stuck on "Waiting for session..." when the messages were already synced before the session was opened.
+- Android screens no longer show a white background behind their content on light-mode devices.
+- Session-pane title reveals now appear only for clipped names and expand from the truncated text.
+- New Claude Agent sessions now accept Sonnet 5 saved as an explicit default instead of failing before the first prompt runs.
+- Tracker grid column headers toggle sorting, and the Display Options grouping dropdown actually groups rows.
+- Tracker saved views can be saved from any view state and exited with a Close control, and filters can match the status an item changed to or from.
+- The nim CLI now reports an error and exits non-zero when the app rejects a tracker create or update, instead of printing success.
+- The tracker triage inbox now shows items waiting on a decision, badges the waiting count, and offers a "Leave it" action that clears an item for the whole team.
+- Claude Agent and Claude Code CLI pickers offer Opus 5 (1M) and Fable 5 (1M) rows again, and the CLI context meter reports the window the session is really running at. (#989, diagnosed by @Derazien)
+- Clearing the last queued prompt now syncs to your other devices instead of leaving a stale queued count. (#817)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.71.0] - 2026-07-25
+
+
+### Added
+<!-- New features go here -->
+- Claude Opus 5 is now the default Claude model and is selectable across all Claude providers, with the previous Opus 4.8 still selectable as a pinned choice.
+- Trackers now offer an editable grid, field-filter pills, shareable saved views, triage inboxes, release and review workflows, and expanded CLI commands.
+- Sharing a markdown document to your team now offers to share the documents it embeds, and teammates see those embeds live inline.
+- Voice agents can inspect the current Nimbalyst view, selected file, and active session, and capture the app window with explicit permission.
+- AI agents can read, reply to, and create inline comments on shared documents, attributed to the agent's own session.
+- Agent mode gains a workstream review panel and per-session chat panels.
+- The Agent popover previews live sessions before you switch to them.
+- Project windows now carry title bar controls for Git, session, and panel actions.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Tracker filters are unified across views with multi-select values, relative dates, user filters, and a Clear button.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Session-pane session, workstream, and worktree labels now reveal their complete names in wrapped hover tooltips.
+- Remote MCP server OAuth now recognizes successful authorization instead of reporting it as rejected, and gives slower sign-ins more time to complete.
+- Resolved SQLite migration errors on startup and no longer offers the dry-run and migrate controls once you are already on SQLite.
+- Comment highlights in collaborative documents are now legible in dark mode.
+- Collaborative tracker items can now be filtered by who created them.
+- Expanded workstream rows now show external session renames immediately without reloading the session view.
+- Agent-mode document embeds now recover when their target file is created after the document opens.
+- Claude Code and Codex now honor relocated config directories, so usage, session history, settings, plugins, commands, and skills all resolve correctly.
+- Automations no longer rerun the same scheduled occurrence after restarting while a run is waiting or fails.
+- Voice Mode now explains blocked or missing microphones on Windows and links directly to microphone privacy settings.
+- The worktree name shown above the Commit panel no longer changes to the session title once the agent names the session.
+- Frontmatter plans now share to your team after a cold discovery pass instead of silently staying local.
+- Shared tracker saved views survive the view migration again.
+- Git actions are hidden in projects that are not git repositories.
+- iOS pairing links now open the in-app scanner instead of being ignored.
+- Persistent file-save failures now pause autosave after bounded retries, preserve unsaved edits, and show a Retry banner instead of looping indefinitely.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.5] - 2026-07-23
+
+
+### Added
+<!-- New features go here -->
+- The onboarding survey now offers more discovery sources and asks what users searched for when they choose Search.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Markdown tables no longer retain stale observers after their document closes.
+- Mobile settings no longer show desktop-only team-sharing guidance.
+- Shared documents reconnect cleanly when replay history has expired.
+- Collaborative document tab menus no longer offer Copy Path for non-filesystem documents.
+- Shared document @ mention menus now stay visible instead of being clipped by the editor pane.
+- Long tracker titles now wrap across lines in the detail view instead of being clipped.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.4] - 2026-07-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Quick Open now puts Memory search at the end with clear Docs, Trackers, and Sessions scopes while keeping exact tracker lookup and file-content search distinct.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Embedded files and tracker references now survive copy, paste, and shared-document serialization without degrading or emptying the document.
+- Stopping a Codex agent session now reliably cancels it instead of bouncing back to "running".
+- SQLite databases open in the browser again instead of failing while loading the database engine.
+- Shared documents open reliably for accounts with legacy shares; the migration now runs in the background with status and retry controls.
+- Pull request rows now show the time of the latest real activity instead of a misleading timestamp.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.3] - 2026-07-22
+
+
+### Added
+<!-- New features go here -->
+- Organizations now have their own management window with a switcher between them, and Account settings lists the organizations each signed-in account belongs to.
+- New agent sessions now include a contextual tip for launching background sessions from anywhere with Cmd+Shift+N without leaving the current view.
+- Extensions can contribute first-class Application or Project settings pages with per-repository context, and Memory now has its own Project settings page.
+- The AI Usage Report now shows built-in and extension tool usage over time and by project, with historical backfill and contextual tips for undiscovered tools.
+- Voice agents can use the current workspace's slash commands.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Organization and sharing screens now carry an alpha label: Nimbalyst Teams is free during alpha, may have bugs, and will require a paid subscription after launch.
+- The desktop app now runs on Electron 43, and file and folder pickers open in the active workspace or their last-used directory instead of defaulting to Downloads.
+- Updated the bundled Claude Agent engine to Claude Code 2.1.215; subagents no longer spawn their own nested subagents by default, and the number running at once is now capped.
+
+### Fixed
+<!-- Bug fixes go here -->
+- File edits from concurrent Codex sessions now stay with the session that made them; app-server sessions trust structured edit events instead of filesystem timing, so read-only commands cannot claim existing working-tree changes.
+- OpenAI Codex automations now use the signed-in ChatGPT subscription, report failures accurately, and prevent overlapping duplicate runs.
+- Interrupting a Claude Agent session no longer lets a permission-gated tool run anyway after the interrupt.
+- The Find menu command now opens Monaco's native find widget in code files instead of crashing the markdown search bar.
+- Reopening a shared tracker item shows its content again instead of a loading overlay that never clears.
+- Opening a shared tracker or document no longer crashes the editor with a lost-selection error.
+- Switching sessions no longer leaks event listeners, which could slow the window down and eventually crash it after days of uptime.
+- Right-clicking a file near the edge of the edited-files sidebar or the project picker now keeps the context menu on screen, and Escape closes it.
+- Voice-created sessions now keep the selected provider, receive follow-up instructions, and request explicit approval before committing.
+- Restored terminal history no longer flashes briefly before hiding.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.2] - 2026-07-21
+
+
+### Added
+<!-- New features go here -->
+- Launch a new AI session from any workspace mode with Cmd+Shift+N; the draggable composer runs it in the background without navigating away and resets for the next launch.
+- Agents can send local system notifications to get your attention when you step away.
+- Start a new AI review session from any pull request with the review command prefilled.
+- Search the model picker by model name or ID.
+- Start the Voice Agent from the iOS sessions list.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The agent permissions dialog and navigation indicator now present four clearer autonomy levels, defaulting to Agent-verified.
+- Updated the bundled marketplace catalog with 18 extension releases, including Electronics Studio and new Replicad CAD tools.
+- Inline tracker references now show the item type, key, live title, workflow state, and owner, with completed titles crossed out.
+- The Files view empty state now offers starter files and prompt suggestions in a responsive layout.
+- Direct chat providers stay hidden until explicitly enabled.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Voice Mode now asks for microphone permission on macOS the first time you turn it on, instead of never prompting or prompting during normal use.
+- Claude Agent sessions no longer invalidate their prompt cache mid-session — tag updates, session naming, and extension servers connecting mid-session could each re-bill the full cached context — and rarely used built-in tools now load on demand to reduce per-session overhead.
+- New agent sessions no longer hang on a spinner that never resolves when git status stalls; the session list stays responsive instead of requiring an app restart.
+- Pending permission review buttons now scroll to the correct approval prompt instead of doing nothing.
+- RTL text typed in the chat composer now displays on the right again; the detected direction is mirrored onto the composer's visible-text overlay, which a transparent-textarea refactor had left stuck on LTR.
+- Pinned Shared Documents tabs now keep their pinned state and tab order after a window reload or app restart.
+- Answering a question prompt in a Codex (GPT) session now reliably resumes the turn, on desktop and from the mobile app, instead of appearing to submit but hanging.
+- The user menu again links to Application and Project settings, which the account menu redesign had dropped.
+- Spreadsheet documents (CSV, TSV, and calc sheets) can now be shared as collaborative documents instead of being reported as unsupported.
+- The New Session button in the files chat panel no longer gets cut off on a narrow panel, and you can now start a new session from the session menu too.
+- Claude Code (CLI) sessions created for a worktree now run inside that worktree, so their edits land on the worktree branch instead of the main branch.
+- Restored windows no longer steal focus during launch.
+- Shared tracker comments and history now persist through database and collaboration sync.
+- Legacy mockup embeds migrate to the current live design-link format instead of breaking Markdown rendering.
+- AI edits to Excalidraw documents stay offscreen instead of opening the editor unexpectedly.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.1] - 2026-07-20
+
+
+### Added
+<!-- New features go here -->
+- Shared spreadsheets now show live collaborator presence: each person's selected cell is outlined in their color, and the cell they're editing is highlighted with their name.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Text you select in an editor again reliably appears as a removable chip in the AI chat and is sent with your prompt -- including after the editor reloads, in shared documents, in agent-session editor tabs, for selected cells in shared spreadsheets, and for selected screens in mockups.
+- RTL Support no longer flattens transcript headings or strips spacing and layout from other Markdown blocks.
+- Opening a shared code or calc-sheet document no longer intermittently fails to connect for collaboration.
+- Shared documents stay visible after reloading a window instead of occasionally rendering blank.
+- Scrolling long virtualized lists such as the sessions list no longer crashes the app under React 19.
+- Rapid auth-state changes no longer trigger a storm of background team-list refreshes.
+- Sorting the sessions list by created date no longer crashes the app, and a bad saved sort preference can no longer lock you out of a workspace.
+- Archiving a workstream now archives its child sessions too, so they no longer linger as active sessions; existing orphaned children are cleaned up on next launch.
+- Oversized or corrupted session metadata is now cleaned up on startup again instead of silently failing, so affected databases stop growing.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.70.0] - 2026-07-19
+
+
+### Added
+<!-- New features go here -->
+- The AI chat now shows what you have selected as removable chips -- including multiple shapes at once from node-like editors such as Excalidraw -- and you can remove any selection so it is not sent to the model.
+- Claude Agent sessions expose an `Extended: On` / `Extended: Off` selector (developer mode) next to the effort selector for supported Opus/Sonnet variants, so you can turn off extended thinking per session to reduce latency and token use. It stays on by default.
+- Switch AI models from the keyboard directly in the chat input.
+- Star tracker items and filter the list by Favorites, Recently Viewed, and Edited by Others.
+- Launch an isolated worktree session directly from a tracker item.
+- Text and code files such as TypeScript, HTML, Swift, and Python can now be shared and co-edited with live cursors.
+- Tracker items and other sessions mentioned in the chat transcript are now clickable, opening the item or session directly, and tracker reference pills show live workflow status.
+- Cmd+O file search now finds team shared files and opens them collaboratively.
+- Shared document and folder creation now lets you choose any shared folder or Root as the destination.
+- Create diagrams, data models, spreadsheets, mockups, and more directly as shared documents.
+- The shared documents home is now a sortable list view -- browse by All, Favorites, Unread, Recently opened, Shared with me, or Shared by me, filter by type, people, or folder, and sort any column.
+- Shared documents now have a recoverable Trash with empty-document cleanup, restore, manual purge, and automatic 30-day removal.
+- Feature tracker items now have a "Won't Do" status for work decided against.
+- Built-in tracker types can now be customized per workspace -- add, rename, or remove statuses, tweak labels, icons, and colors, or add fields -- and reset back to their defaults at any time.
+- Sign in with multiple accounts and switch between them from the account switcher in the sidebar.
+- Sharing sessions and projects now lets you choose which account owns the share.
+- A dedicated organization window for the member roster, invites, and project sharing, opened from the organization switcher or account menu.
+- iOS: sign in with multiple accounts and switch between them.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Hidden Tracker and PR Review modes now pause background work while preserving their state, and extension editors stay available without eagerly loading every extension.
+- Settings is reorganized into Application, Account, and Project sections, with organization management moved to a dedicated window.
+- Logging in to your Claude subscription now opens the terminal in your current project folder.
+- Hiding, showing, or reordering navigation gutter icons now updates every open window immediately instead of after a reload.
+
+### Fixed
+<!-- Bug fixes go here -->
+- CLI: repeating `--field key=value` for the same key now collects the values into an array, so multi-value fields can be written from `nim tracker create`/`update` (previously only the last value was kept).
+- OpenCode no longer stays disabled for the rest of the session when its server is slow to start; a slow start now retries or adopts the ready server, and a missing OpenCode CLI reports a clear error.
+- PR review diffs and controls now follow the active theme without unreadable backgrounds behind operator characters.
+- Extensions can now write binary files without corrupting their contents.
+- Session summaries now end with any unanswered interactive question so pending user input is not lost in the recap.
+- Switching themes no longer freezes the window for several seconds when documents with code blocks are open.
+- Usage indicators (Claude, Codex, Gemini) hidden from the navigation gutter can now be restored by right-clicking the gutter.
+- Codex sessions now reap owned child process trees and release idle or archived providers, preventing orphan Git and MCP processes from accumulating.
+- Commit with AI in a worktree no longer sweeps in ignored files like node_modules when an untracked folder is present, so it proposes only the files you actually changed.
+- Team shared documents and trackers no longer show as locked ("No encryption key available") after a network change or brief server outage.
+- Embedded spreadsheets and code editors in the chat transcript no longer steal focus and scroll-jump the transcript back to themselves.
+- Tracker sidebar counts now match the filtered list and Kanban views.
+- Tracker history now records manual field and content edits.
+- Copying an image from a shared document now places the actual image on the clipboard, and images can be copied via right-click.
+- Pasted markdown links in shared documents now stay clickable instead of becoming literal text.
+- Marking shared documents as read now stays cleared through delayed sync updates, sidebar reopen, and restart.
+- Share to Team now refreshes its folder picker when opened, so newly created, renamed, or moved shared folders appear immediately.
+- Shared documents no longer disappear from the collaboration folder tree during sync or reconnect.
+- Shared document and folder names no longer briefly go blank in the collaboration folder tree during sync or reconnect.
+- Images pasted into a shared document from a web browser now persist after a refresh instead of disappearing.
+- Cmd+Y now opens history for the currently focused shared document instead of the last local document.
+- Inline charts and screenshots the assistant shows in chat now render again instead of failing with a schema error.
+- The UI no longer stalls for seconds during heavy AI file editing across multiple sessions.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.69.1] - 2026-07-15
+
+
+### Added
+<!-- New features go here -->
+- Shared documents now work offline: previously opened documents open instantly from an encrypted local copy, and edits and attachments made offline are queued durably and upload automatically when you reconnect.
+- In a shared document, typing `@` now suggests other shared documents and inserts a team-styled link that opens the referenced shared document.
+- Settings now separates Application, Personal, Organizations, and Project management, including per-account mobile-sync profiles, organization administration without an open workspace, explicit project access controls, and project-level MCP server configuration.
+- The Git extension now keeps a persistent, live command output history across panel and renderer reloads.
+- Tracker types can now be organized into manually ordered folders that stay in sync for everyone on a Nimbalyst Team project.
+- The Agent navigation icon now shows sessions awaiting input, running, or unread and opens a grouped attention list with a mark-all-read action.
+- Shared team documents now appear in Quick Open, so you can jump straight to any shared doc.
+- Document headers can now link a tracker plan, connecting a document to its plan item.
+- Reviewed HTTPS links can now be opened in your external browser.
+- Extensions can now request host filesystem access through the EditorHost, enabling editors that read and write project files directly.
+- Extensions can now reference and link tracker items with compact, typed tracker pickers.
+- New read-only `list_queued_prompts` MCP tool lets agents inspect a session's pending prompt queue.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Team encryption is now server-managed for new organizations; legacy organizations migrate silently only after local plaintext collaboration backups succeed, with recovery markers retained if post-cutover verification fails.
+- The Claude Agent model picker no longer lists duplicate "(1M)" rows — current models already run their full context window on their single row.
+- Tracker reference chips now show live workflow-state badges and cross out completed items in documents and AI chats.
+- Mobile session sync now skips messages the mobile transcript never displays, cutting sync storage and traffic.
+- Codex is now enabled by default and the Claude Code CLI is now opt-in; existing choices are preserved.
+- The Git log panel gains improved search and panel controls.
+- Tracker item popovers are clearer and easier to scan.
+
+### Fixed
+- Commit proposals now remain bound to their native worktree and preserve unrelated staged or unstaged changes.
+- Next Tab and Previous Tab now navigate the active mode, including Shared Docs, without changing hidden tabs in another mode.
+- Attachments in shared documents no longer disappear after an image is moved, deleted-and-undone, or edited by a collaborator — images now stay put for everyone.
+- Very large AI sessions now open quickly instead of appearing to hang, and no longer slow down as your history grows.
+- PR mode now explains when a merge needs the GitHub CLI `workflow` scope and offers the recovery command instead of showing `gh api -X failed`.
+- The context usage popup now labels its cumulative session totals separately from the current window fill, so the two no longer read as contradicting numbers (#824).
+- Queued prompts that were delivered but never answered (app quit or interrupt mid-turn) now show a visible failed state with a retry hint instead of being silently marked completed (#783, #790).
+- Importing Mermaid diagrams into Excalidraw works again: flowcharts (including subgraphs) become editable shapes instead of failing or degrading to a broken image, and AI-added arrows no longer lose their labels.
+- Voice mode no longer stops listening while you are still speaking; the mic stays open until you finish or explicitly pause.
+- Shared-document comments now live in the text-selection toolbar instead of overlapping it.
+- MCP servers disabled in Settings no longer load in Claude Code (SDK) sessions; the disable toggle now governs both the CLI and SDK paths.
+- Directory grouping and commit-proposal folder labels now handle Windows and trailing-separator paths consistently across change views.
+- Stopping a running Codex session (including from mobile) now interrupts it immediately instead of leaving it stuck showing as running.
+- Answering an interactive prompt from mobile — approving a plan, granting a tool permission, or answering a question — now works across every agent instead of silently doing nothing on non-Claude-Code sessions.
+- Tracker status badges and custom columns no longer vanish after a synced update; they stay put instead of blanking out until the next reload.
+- A long queue of pending prompts now scrolls within a capped area instead of pushing the message input off screen.
+- Opening several shared documents or tracker items at once no longer repeats team-resolution and encryption-status lookups for each one, removing redundant network round trips from the open path.
+- Restarting with several AI tabs or windows open no longer repeats slash-command and shared-link lookups for each one, removing redundant scans and network round trips from startup.
+- Recurring collaboration sign-in loops and JWT 401 errors on team login no longer recur; personal and team session tokens now refresh cleanly.
+- Codex usage now adapts to variable rate-limit windows instead of assuming a fixed window.
+- Codex model selection is preserved across turn refreshes and reconciles its fallback roster, so the chosen model no longer resets.
+- Effort controls are available again for current Claude model variants.
+- Sync no longer retries fatal session-limit errors, avoiding repeated failed attempts.
+- Packaged builds resolve the SQLite schema directory chunk-safely, fixing a startup failure.
+- The transcript diff view no longer crashes on re-render.
+- Tracker workstream tabs are now safe and durable and no longer resurrect closed tabs.
+- Filtered tracker empty states now offer an actionable next step instead of a dead end.
+- The mobile transcript resolves the SDK file-tree subpath correctly.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.68.1] - 2026-07-10
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- New projects now derive their tracker issue-key prefix from the project name instead of always using `NIM`.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Long Claude Code thinking phases no longer end early with a "no output for 120s" stream-silent error.
+- Codex tool results no longer appear as stray "message elided" warnings in iOS transcripts.
+- Tracker reference popovers now follow the active theme instead of always rendering light.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.68.0] - 2026-07-10
+
+
+### Added
+<!-- New features go here -->
+- OpenCode presets now include GLM 5.2 through the Z.AI and Z.AI Coding Plan providers.
+- GPT-5.6 (Sol, Terra, and Luna) is available for the OpenAI and Codex agents, with Sol as the new default.
+
+### Changed
+- Any extension can now enable a native-code backend module, approved once via a single consent prompt instead of an allowlist or a per-workspace dialog.
+- Tracker link chips in chat now show more of the item title before truncating.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Bundled Codex runtime updated to 0.142.5 so the Codex Chrome plugin can start in Nimbalyst with the current Codex plugin protocol.
+- The Claude Usage popover now shows the Claude provider icon instead of a generic layers icon.
+- Editing a markdown file with em dashes or curly quotes no longer corrupts the text into `â` symbols or traps it in a reload loop.
+- File links to paths with spaces (e.g. `My Project`) now stay clickable in chat instead of breaking at the first space.
+- Sidebar resize handles now keep responding while dragged over a mockup preview.
+- Codex/ChatGPT sessions no longer reject Nimbalyst's own tools with "user rejected MCP tool call".
+- Extension agent provider settings now save correctly instead of being discarded.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.67.3] - 2026-07-09
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Claude Code no longer breaks after an app update on Windows, and a broken install now shows an honest "repair Nimbalyst" message instead of a misleading libc error.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.67.2] - 2026-07-08
+
+
+### Added
+<!-- New features go here -->
+- Shared folders are now first-class: right-click a folder in Shared Items to rename, move, copy a link, or delete it (with a count-based confirmation), drag folders and documents to reorganize, and let an AI agent create or reorganize shared files and folders — reorganizing never breaks a document's local link.
+- Advanced setting to route Claude Code CLI (Subscription) traffic through a custom local API proxy (e.g. a token-compression or caching layer).
+- Shared Docs discovery home: search, favorites, recently opened, and docs new or changed since you last viewed them, with a sidebar filter (All / Favorites / Updated) and controls to hide or clear unread markers.
+- Tools & Token Cost settings panel: see every tool group's estimated context-token cost and load policy in one place, with a link from the AI panel's token meter.
+- iOS: create a Meta Agent on mobile and see it grouped with its sub-agents in a collapsible "Meta Agent" group (alpha-gated to the desktop feature flag).
+- Slash commands, `@` file references, and `@@` session mentions now appear as tinted pills anywhere in a chat message; slash-command pills stay clickable to show what each command does and open its source file.
+- Unread indicators mark trackers and shared docs that have changed since you last viewed them.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Trim the session model picker: each provider's settings page has checkboxes to hide models you don't use, and the Claude Agent SDK and Claude Code CLI sets can be enabled or disabled independently.
+- Agent sessions no longer include tracker guidance in the system prompt when trackers are disabled for the workspace, reducing per-request token usage.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Scheduled interval automations now fire on time instead of silently never running, and an automation whose due time passed while the app was closed runs once on next open.
+- Agent sessions defer MCP tool definitions until used on all models, and multi-worktree projects no longer load duplicate copies of project commands.
+- Background agents launched by a session are no longer killed when the session's turn ends; the session stays alive and wakes when they finish.
+- Sync: meta agents and their spawned sub-agents now group together on mobile in real time instead of only after a full resync.
+- Shared documents created while team sync was still connecting no longer go missing from the Shared Items tree; their registration is now queued and completed once sync attaches.
+- OpenAI chat model selection works again.
+- Plan items show fresh updated timestamps in the tracker table, and spurious tracker timestamp churn is stopped.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.67.1] - 2026-07-07
+
+
+### Added
+<!-- New features go here -->
+- Double-click an editor tab to maximize the editor area in Files, Agent, and Shared Docs modes, then double-click again to restore the previous layout.
+- Customize the navigation gutter: hide or show any icon and drag to reorder them via a Customize Gutter popover (right-click the gutter), with preferences applied across all projects.
+- The Pull Requests view now connects to trackers and sessions: review-status badges and filter chips, one-click jumps between a PR, its tracker item, and its review session, linking any tracker item to a PR, and merges update linked tracker items automatically.
+- Tracker kanban cards can show an item's external identity (like a PR number) next to its issue key via the new externalKey schema role.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Claude Agent sessions now recover a turn whose stream closes mid-response instead of losing the reply.
+- Git branch watching no longer crawls the entire workspace, cutting CPU and disk churn in large projects.
+- Reduce lost project states on reopen.
+- Shared extension-editor documents (CSV, data model, mindmap) no longer come back empty or wipe the shared copy after close and reopen, and re-uploading a local file into a shared document now checks for conflicts before overwriting.
+- Marketplace extension installs no longer hang mid-extraction and fail with "reply was never sent".
+- Settings navigation: the Marketplace item now works in project scope, and the Privileged Capabilities item now works in all scopes.
+- Mockup share links now render full-size in the browser instead of a tiny square.
+- Android prompt input is no longer hidden by the soft keyboard when typing in a session.
+- Android prompt input no longer drops words while typing when the desktop echoes back a synced draft.
+- Android interactive widget responses (Commit, Allow, Approve, AskUserQuestion Submit) now reach the desktop session instead of silently doing nothing.
+- Mobile project list no longer holds onto projects that the server has dropped from the sync snapshot, and no longer wipes itself when a transient decryption failure shrinks the snapshot.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.10] - 2026-07-04
+
+
+### Added
+<!-- New features go here -->
+- Sync settings now show a per-project document-sync status (connected, file count, or an error) so you can tell whether mobile document sync is working.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The New File menu now scrolls when long, lists file types by name (Markdown first, the rest alphabetical), and no longer shows a duplicate Mockup entry.
+- Refreshed the extension marketplace: updated all published extensions and added Browser, Calc Sheets, GitHub Issues Importer, and Memory
+- Voice mode: the assistant now replies more briefly and no longer asks you to approve tasks that auto-send after the on-screen countdown.
+
+### Fixed
+- Tracker item content no longer renders as raw JSON text after closing and reopening the item.
+- Interactive input prompts no longer collapse into plain chat if you take longer than 5 minutes to answer.
+- Open custom-editor tabs (e.g. Replicad, Excalidraw) now refresh when an agent edits the file, instead of staying stale until closed and reopened.
+- Claude Code sessions now end with an error instead of spinning forever if the agent stream silently stalls.
+- iOS: session badges now label Fable 5 and Sonnet 5 sessions instead of showing a generic "Claude Agent" fallback.
+- The Claude Code model picker now always shows every available model, so Fable 5 and other variants can no longer go missing.
+- Mobile document sync now propagates `.md` deletions to your other devices and reconnects after you change sync settings, instead of silently leaving later edits unsynced.
+- Clicking a relative file link in a markdown doc now opens the file in a tab instead of a blank white window; external links open in your browser.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.9] - 2026-07-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Built-in extensions no longer show the native-code consent prompt; it now only appears for third-party extensions.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Gemini (Antigravity) agent and meta-agent turns no longer come back empty after the agent runs a tool that returns no results.
+- Agent calls to deferred background tools (Monitor et al) no longer fail with schema validation errors.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.8] - 2026-07-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- The iOS voice agent now runs the same gpt-realtime-2 model and session configuration as desktop, with automatic fallback when the model is unavailable.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Built-in extensions are once again included in packaged builds; a dependency regression had silently dropped them from released apps.
+- The memory extension now starts in packaged builds instead of failing to load its bundled dependencies.
+- Agent sessions that launch background tasks now wake and continue when those tasks finish, instead of the task being cancelled at the end of the turn.
+- Voice mode no longer interrupts itself from echo of its own speech on open speakers (desktop and iOS).
+- The voice selected in iOS Settings (or synced from desktop) is now actually used by the voice agent.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.7] - 2026-07-01
+
+
+### Added
+<!-- New features go here -->
+- Memory recall/search tool calls now show a transcript card with the query and matched source documents, with click-to-open.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Toggling an extension on/off via an AI agent now actually restarts its backend module, and importer crash errors now include the real failure reason instead of just "crashed".
+- Git worktrees with branch-style names (e.g. `feature/x`) and a project's own subfolders now inherit the parent project's agent permissions instead of re-prompting for every tool call, while a separate repository nested inside a trusted folder still prompts on its own.
+- On Windows, clicking a file link in chat now opens the file instead of a blank window.
+- Claude Code background sub-agents are no longer killed when the lead agent's turn ends; the agent keeps waiting for them and is told if one is interrupted.
+- Tracker status changes now work for custom tracker types that rename their workflow status field.
+- Tracker reference links (`nimbalyst://` chips) in chat no longer render blank.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.6] - 2026-07-01
+
+
+### Added
+- Nimbalyst-branded Android launcher icon, replacing the generic Android stock icon.
+- Claude Sonnet 5 is now selectable across the Claude chat, Claude Agent, and Claude Code CLI providers (Sonnet 4.6 remains available as a pinned choice).
+- Start a new coding session by voice — say "create a new session" on desktop or mobile; on mobile it now opens the new session automatically on the device you asked from.
+- The mobile floating mic shows what the voice agent is doing — an animated ring and a tool icon appear while it runs a tool.
+- Voice mode on mobile can now find sessions by topic, switch sessions, summarize a session (including the agent's latest notes and any question it's waiting on), answer a session's pending question by voice, and send coding tasks to your desktop.
+- Choose the voice model and reasoning level in Voice Mode settings.
+- Dart syntax highlighting in the Monaco editor.
+
+### Changed
+- Claude Code CLI sessions defer MCP tool schema loading, cutting baseline context usage.
+
+### Fixed
+- New AI sessions now appear immediately instead of waiting for sync to connect.
+- Linking tracker items now reliably updates both sides and no longer goes stale or drops an item's other links after syncing — including when the AI sets the link.
+- Tracker relationship fields no longer get cleared or dropped by concurrent syncs.
+- Structured prompts stay visible in the transcript when tool calls are hidden.
+- Windows: Claude Code CLI sessions launch reliably, including with multi-line system prompts.
+- Mobile voice mode now shows clear Pause and Cancel buttons by the floating mic, so a single tap reliably pauses or stops voice mode.
+- Another session can now read an OpenAI Codex session's last reply through the session-summary tools, matching Claude Code sessions.
+- Voice mode now always speaks in your configured preferred language, including on mobile, instead of sometimes starting up in a different language.
+- The iOS voice agent now reliably speaks its response when it wakes up after a coding agent finishes a task.
+- Voice replies no longer speed up or skip near the end of longer responses.
+- Mobile voice replies no longer garble, overlap, or click — responses play one at a time and fade out cleanly when you interrupt.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.5] - 2026-06-26
+
+
+### Added
+- Reference a tracker item from any document or AI chat: type `#` to pick an existing item and insert a live chip showing its current status and title (filter by type with `bug:`, search by key or title), with a one-click way to turn a legacy inline tracker into a real tracked item. The AI now links tracker items as clickable chips too.
+- New Nimbalyst Memory extension: indexes your project notes and surfaces relevant facts to the AI and voice agent for grounded answers.
+- Global semantic search in Quick Open (Cmd+Shift+O): find any tracker or document by meaning, with an option to include past AI sessions; available when the Nimbalyst Memory extension is enabled.
+- Extensions can now contribute tools and session context to the voice agent.
+- Ask the voice agent to open a past AI session by topic (e.g. "open the most recent session working on the collaborative document system"); it finds sessions by what they worked on, not just their title, when the Nimbalyst Memory extension is enabled.
+- Search box on the Installed Extensions settings pane to filter the list.
+- Optional "Shared" column in the tracker table shows whether each item is shared with the team or local-only.
+- Database Browser maintenance action to reclaim space used by old Claude Code sessions, with an optional compaction step.
+- Copy a shareable link to a team shared document from the editor header.
+- Share and co-edit more document types in real time, including spreadsheets and code files, not just markdown.
+
+### Changed
+- Claude Code sessions store and sync far less redundant data (no more full original-file copies on every edit), shrinking the local database and mobile transfers.
+- Updating a tracker item no longer links it to the current AI session unless you ask, so sessions stop accumulating items the agent merely touched.
+- Collab mode's document tree and AI chat panels can now be collapsed, and the layout is remembered per workspace.
+- Linked sessions now appear at the top of a tracker item's detail, so you can jump back into a session without scrolling past the description and comments.
+
+### Fixed
+- AI session status no longer stays stuck on "running" in the mobile app after a turn finishes on desktop.
+- Stop prompting to run the Gemini backend at startup; it now starts only when you actually use Gemini.
+- Remove a stray "[Full message elided...]" bubble that appeared in the mobile transcript but not on desktop.
+- Tracker item detail no longer gets stuck on "Connecting…" when the team lookup hangs; it falls back to local mode.
+- Tracker type counts no longer briefly flash "0" while tracker data is still loading.
+- Reopened secondary projects now scope the tracker list to the correct project instead of the startup project's items.
+- Fixed tracker field corruption on the SQLite backend caused by merging JSON updates.
+- Shared documents no longer get stuck on a blank "Offline – unsynced changes" editor when a session token was scoped to the wrong org.
+- Shared document bodies written before a team's encryption-key rotation now decrypt and load instead of opening blank.
+- Shared documents whose name contains spaces or other special characters now open instead of failing to sync.
+- Committing no longer triggers a burst of slow database queries that briefly hitched the app.
+- Excalidraw drawings shared with the team no longer open blank or render with a light canvas in dark mode.
+- Reopening a shared document in Shared Docs mode no longer instantly closes the tab.
+- Windows: Claude Code CLI chat sessions now start instead of failing immediately on launch. (#684)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.4] - 2026-06-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Shared document titles no longer show "Encrypted document (key unavailable)" when the server can decrypt them.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.3] - 2026-06-23
+
+
+### Added
+<!-- New features go here -->
+- Share a plan with your team straight from the tracker — a Share toggle in the tracker item view publishes the plan to the team's shared tracker.
+- Team admins can re-share the current encryption key with all members from Settings → Security & encryption, fixing teammates who saw "Encrypted document (key unavailable)".
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Extension AI tools (such as OpenSCAD and Replicad) no longer revert your recent file edits by saving stale editor content over them.
+- Shared document names no longer show as scrambled text after a team turns on managed encryption, and are recovered even when the team's encryption key was rotated.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.2] - 2026-06-22
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Desktop release builds now bundle the application correctly (0.66.0 and 0.66.1 failed to package).
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.1] - 2026-06-22
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Updated the bundled Electron runtime to 41.8.0 (security fixes).
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.66.0] - 2026-06-22
+
+
+### Added
+- Custom completion sounds — pick your own audio file (MP3, WAV, OGG, M4A, AAC, FLAC) to play when an agent finishes a turn.
+<!-- New features go here -->
+- iOS: create a Meta Agent from the session create menu (alpha-gated to mirror the desktop `meta-agent` feature flag, synced to mobile).
+- New Gemini (Antigravity) marketplace extension, usable as an AI chat and meta-agent provider, with a usage indicator chip. (#558)
+- New RTL Support extension: auto-detects right-to-left languages (Arabic, Hebrew, Persian, etc.) and renders the transcript and input correctly, with a settings panel and toggle shortcut. (#638)
+- Real-time team document collaboration (alpha): share documents across editor types and edit them together live.
+- Org and project management (alpha): move a project between orgs and merge orgs with guided wizards, plus org-scoped settings.
+- `/session-cleanup` command (Planning extension) tidies your Sessions board: it proposes phase corrections and "mark complete" candidates for your approval, and flags old sessions to archive.
+- `nim`, a companion CLI for trackers: list, create, update, comment on, archive, and import tracker items from the terminal — through a running Nimbalyst, or directly against the database when the app is closed.
+- Link tracker items to one another with relationship fields: typeahead pills in the table and detail panel, plus automatic "Linked from" backlinks.
+- New tracker views — a tag board, saved views (filter and group), and kanban columns that follow each type's custom status order.
+- Customize or reset a tracker type's schema from Settings, with a drift warning when the saved schema diverges from its files.
+- Edit and delete your own tracker comments.
+- Share individual plans (and other full-document trackers) with your team: the shared copy keeps its status, lifecycle, and body in sync — including changes made offline — and unsharing removes it for everyone, while unshared items stay private.
+- Control whether AI agents can use your trackers per project, with an "AI Agent Access" toggle in tracker settings.
+- Android app variant with email/magic-link sign-in, push notifications, deep links, and pairing QR scanner. (#663)
+
+### Changed
+- Contextual tips now fill empty AI sessions immediately and on every empty session, instead of after a delay and only once per app launch.
+
+### Fixed
+- Sign-in now completes on Linux AppImage builds — the `nimbalyst://` URL handler is registered at startup so the OAuth browser callback reopens the app correctly.
+- Startup is fast again after restart: a transcript maintenance pass that could stall the app for tens of seconds on large histories is now deferred until after the first window loads.
+- AI tools for custom editors (diagrams, CAD, etc.) no longer revert a change the agent just wrote to a file that isn't open in a tab.
+- The Themes, Shared Links, and Database settings panels now open instead of snapping back to the first agent provider.
+- A session can now spawn child sessions again after several have finished — the limit is on how many run at once, not a lifetime total.
+- The welcome dialog no longer re-appears on a slow or busy startup after you've already completed onboarding.
+- Restarting the app no longer occasionally loses your open project windows and drops you back on the Workspace Manager.
+- The Claude Code context indicator now updates throughout a turn instead of only at the end, and no longer bounces when sub-agents run.
+- Personal docs sync no longer overwrites newer local edits (or an open editor's unsaved changes) with an older synced copy.
+- "Commit with AI" in a worktree now proposes all uncommitted changes in the worktree, not just the current session's edits.
+- Claude Code CLI sessions now show an install link when the Claude Code CLI isn't installed, instead of a cryptic terminal error.
+- The Claude Code login prompt no longer falsely reports "logged in" when the bundled Claude runtime is missing, and now suggests running /login in a terminal if sign-in keeps failing.
+- Commit with AI (and other in-app git actions) now run hooks with your shell PATH, so husky hooks that call yarn/node no longer fail with "command not found". (#643)
+- Stop the AskUserQuestion widget from crashing when a question is missing its options.
+- Deleting a custom tracker type no longer fails on the SQLite backend.
+- Launching a sibling session from a normal session no longer moves it (and the new session) into the Meta Agent group in the session list.
+- Tracker items from one project no longer leak into another project's panel.
+- The tracker detail panel no longer overwrites custom field edits made elsewhere while it's open.
+- Personal and settings sync no longer gets stuck when a stale stored account id blocked the personal sync connection.
+- Tracker table columns for custom fields (such as PR links, author, and number in the GitHub PRs tracker) no longer render blank.
+- AI agents reading a tracker item now see its custom fields (such as a GitHub PR's number and author), which were previously omitted from the item's details.
+- Tracker types shared via team sync now persist across restarts (including synced overrides of built-in types), and synced tracker items no longer silently fail to save on some databases.
+- A session no longer gets stuck showing "awaiting user input" when an interactive prompt is abandoned (e.g. you send a new message instead of answering it).
+- Mode-switch keyboard shortcuts now work while a fullscreen extension panel is open — they exit the panel first.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.65.4] - 2026-06-15
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Lost-model fallback no longer silently sends paid 1M context; 1M is only used when you explicitly pick a 1M model. (#631)
+- "Allow All" permission mode auto-approves everything again; the Claude Code safety classifier is now opt-in per project. (#628)
+- No more Electron crash when a worktree produces a filesystem-event storm. (#629)
+- Auto-commit retries when another git process briefly holds .git/index.lock, so concurrent sessions commit on the first try.
+- Background Claude Code CLI sessions no longer spawn (and hit rate limits) when the app is reactivated.
+- Claude Code CLI: the "Thinking…" indicator no longer sticks off after you answer a question.
+- Claude Code CLI: a typed slash command no longer runs the autocomplete-highlighted command instead.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.65.3] - 2026-06-15
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- MCP servers disabled in Settings no longer load in Claude Code CLI sessions (they were leaking in and eating context).
+- Claude Code CLI sessions no longer get stuck showing a "Processing…" spinner after their turn finishes.
+- Namespaced extension slash commands (e.g. /feedback:bug-report) now resolve in Claude Code CLI sessions instead of failing.
+- Generated extension-workflow plugins now load in Claude Code CLI sessions, with broader CLI version support for plugin loading.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.65.2] - 2026-06-12
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Claude Code CLI sessions can now spawn sessions via the meta-agent tools, and prompts sent to them while closed (spawned sessions, restart continuations, scheduled wakeups) launch the CLI and deliver instead of failing.
+- Smart Commit and other queued prompts on Claude Code CLI sessions no longer linger in the queued list after they run.
+- The CLI terminal drawer no longer steals keyboard focus from the chat input when ordinary terminal output looks like a picker.
+- Linked tracker items now show up and survive linking additional items on the SQLite backend, and commits link to session trackers again.
+- Stopping an already-idle Claude Code CLI session no longer quits the CLI and leaves the session unresponsive.
+- Claude Agent startup crashes now log detailed spawn diagnostics and auto-capture a CLI debug log on retry, and the real error message reaches the renderer log (#614).
+- HTML preview renders again instead of a blank pane (or a Windows Store popup), and in-workspace files on Windows are no longer rejected over drive-letter casing (#612, #625).
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.65.1] - 2026-06-12
+
+
+### Added
+<!-- New features go here -->
+- Claude Fable 5 is now selectable across all Claude providers, including a Fable 5 (1M) variant; existing Fable defaults migrate to 1M automatically.
+- Switch models mid-session on Claude Code CLI sessions from the model picker.
+- Claude Code CLI sessions receive your active document and selection as context, support workspace slash commands and the memory widget, and auto-name themselves from the first prompt.
+- Toggle the raw-terminal drawer with Ctrl+Shift+`; hover help on the model picker explains the Claude Agent vs Claude Code CLI choice.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Stopping a Claude Code CLI turn now reliably interrupts the CLI, and queued prompts no longer get stuck near turn boundaries.
+- API failures in Claude Code CLI sessions surface in the transcript without false alarms at session startup.
+- The raw-terminal drawer stays closed once you collapse it and no longer steals keyboard focus from the chat input.
+- Files Edited sidebar updates immediately as Claude Code CLI sessions edit files.
+- Fixed the whole app freezing permanently after closing a terminal that had rendered emoji output.
+- Terminal Retry now actually recovers a failed initialization, and a slow-starting backend auto-recovers without clicking Retry.
+- Claude Code CLI raw terminal no longer double-paints or mis-wraps its display after restoring a session.
+- Fable 5 sessions no longer hit a false 200k context ceiling: selecting Fable resolves to a model the Claude Agent SDK accepts, and the context indicator matches the CLI's real window.
+- Claude Code CLI sessions no longer appear disconnected after switching sessions — the terminal reattaches even while its drawer is collapsed.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.65.0] - 2026-06-09
+
+
+### Added
+- Run agent sessions on the genuine Claude Code CLI using your Claude Pro/Max subscription (no API metering), with the same live transcript, file tracking, and interactive prompts as the built-in agents — plus a resizable raw-terminal drawer that auto-reveals when the CLI opens a native picker (`/model`, `/login`, …).
+- Import GitHub issues into the tracker as native bug, task, or feature items that link back to the source, with one-click re-snapshot to pull the latest title, status, and body. Uses your installed `gh` login.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Restarting the app no longer relaunches every Claude Code CLI session at once (which stampeded the subscription rate limit and failed turns) — only the focused window's session resumes; background windows resume when you switch to them.
+- Smart Commit (and any queued prompt) on a Claude Code CLI session now runs immediately instead of sitting queued when the CLI is idle.
+- In Multi-Project mode, a project's tracker list no longer shows another open project's items. (#591)
+- Docs a session just created now sync to mobile immediately, and tapping their transcript link on mobile waits for the doc to sync instead of dead-ending with "not synced to this device".
+- Launching an action in a new session with a different provider's model (e.g. "Implement in Codex" from a Claude session) no longer fails with a model-identifier error.
+- Synced tracker item bodies containing lists or links now load for teammates instead of appearing blank.
+- Voice mode connects again after OpenAI retired the Realtime Beta API (migrated desktop and iOS to the GA shape).
+- Renaming or moving a project no longer fails and rolls back on the SQLite backend.
+- Quick Open remembers your filter selections, and file-mask filters now return matching results.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.64.5] - 2026-06-06
+
+### Added
+- Built-in PR review mode (Cmd/Ctrl+U): browse, filter, diff, comment on, and approve/merge PRs using your existing `gh` login; open a PR into a worktree with an agent session. (#307)
+- Auto session mode for Claude Code: safe actions run silently, only uncertain ones prompt, when workspace trust is "Allow All". (#379)
+- Inline comments on shared documents: select text to comment, reply in @-mention threads, and resolve, synced live across collaborators.
+- Browser tabs for HTML preview (Cmd+Shift+B), plus browser tools that agents can drive.
+- Quick Open's Sessions tab now searches message contents, not just titles.
+- Clickable file paths in AI transcripts.
+- Refresh button in the Files Mode sidebar header. (#259)
+- Calc Sheets ship a Falcon 9 demo with custom syntax coloring.
+- Sync WebSocket connections report platform and version for connect/disconnect telemetry.
+- Expanded extension release and share-viewer support.
+
+### Fixed
+- Effort Level selector now takes effect instead of always running at "high".
+- Context usage breakdown opens on click, no longer blocking the queued-prompt controls. (#429)
+- Chat box no longer leaks keystrokes into a file an agent is editing.
+- `.calc.md` files and shared calc sheets render in the Calc Sheet/Monaco editor again.
+- Inline tracker edits save for id-less markers, and due dates persist across a re-scan. (#404)
+- Truncated session names now show in full on hover. (#577)
+- Local markdown links open correctly, resolving relative paths from the current document.
+- Session images can be copied; transcript images are zoomable, uncropped, and persist across reloads. (#580)
+- LM Studio uses the loaded model ID; Opus 4.8 aliases resolve without falling back to Sonnet; OpenCode slash autocomplete works. (#143)
+- Generated Codex workflows preserve their command arguments.
+- Multi-Project rail is preserved on reload, and automations run in the active rail project. (#544, #557)
+- New workspaces default to Documents on Windows.
+- Broken markdown embed commands are hidden; the keep-awake tip only shows when eligible.
+- Browser toolbar and URL bar respect the active theme in dark mode.
+- Restored diff application in headless mode.
+
+## [0.64.4] - 2026-06-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- AI Usage Report no longer crashes the app on the SQLite backend.
+- Terminal scrollback is preserved when it contains a stray NUL byte, instead of discarding all saved history.
+- Claude Code session token totals in the AI Usage Report are no longer inflated.
+- Tracker tool widgets no longer crash on the SQLite backend over a JSON-string `type_tags` column.
+- Default OpenAI model selections for `openai`, `openai-codex`, and
+  `openai-codex-acp` now point to GPT-5.5 instead of GPT-5.4.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.64.3] - 2026-06-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Release packaging validators now find the codex binary at its codex-sdk 0.131+ `vendor/<triple>/bin/` path, which broke the release build.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.64.2] - 2026-06-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Renderer build no longer breaks on the Anthropic SDK's Node-only agent-toolset (node:crypto/child_process/etc.), which broke the release build.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.64.1] - 2026-06-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- pdf-viewer extension build no longer bundles the host runtime (and the Anthropic SDK's Node built-ins), which broke the release build.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.64.0] - 2026-06-03
+
+
+### Added
+- Claude Opus 4.8 is now selectable in the Claude provider (1M context, dateless ID `claude-opus-4-8`) and is the default Claude model for new installs. (#473)
+- Claude Code variants `opus-4-7` and `opus-4-7-1m` pinned to Opus 4.7 so it stays selectable after the canonical `opus` alias was bumped to 4.8. (#473)
+- Extension themes can contribute Monaco editor themes via an optional `monaco` block in `contributions.themes[]`, defining `base`, `rules`, and `colors`. Monaco-backed editors register the theme dynamically and switch to it when the user activates the theme; omitting the block keeps the previous `vs` / `vs-dark` fallback.
+- Claude Code sessions now show a Task List panel in the right sidebar with the agent's SDK-native task queue (TaskCreate/TaskUpdate), including status, owner, and blocked-by dependencies.
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Default Claude model bumped from `claude-opus-4-7` to `claude-opus-4-8`. Existing sessions keep their configured model; only new sessions and "reset to default" pick up 4.8. (#473)
+- Bumped `@openai/codex-sdk` from 0.130.0 to 0.136.0; updated the binary path resolver for the new `vendor/<triple>/bin/codex` and `codex-path/` layout.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Claude Code sessions on Opus 4.8 now actually run on 4.8 (#531) Upgraded `@anthropic-ai/claude-agent-sdk` to 0.3.161 (and `@anthropic-ai/sdk` to 0.100.1 for its peer requirement).
+- Commit proposal diff peeks use the normal default size again instead of collapsing to a tiny bottom-right popover.
+- Quick Open file search no longer lags because hidden tabs stop re-rendering on each keystroke.
+- Fixed an EPIPE feedback loop where the main-process uncaught-exception handler re-entered itself when stderr was broken on Linux, flooding the log until the process died.
+- Meta-agent child sessions now inherit the parent session's provider and model instead of silently falling back to a Claude/Opus default for non-Claude parents.
+- iOS: fast typing into the prompt input no longer jumbles characters; synced drafts are no longer applied while the compose field has keyboard focus.
+- iOS: switching back to a recently-viewed session is now instant — the transcript keeps up to 3 sessions warm and no longer waits on the sync round-trip to reveal already-local messages.
+- iOS: fixed the transcript bundle failing to build (and shrank it ~3.8MB) by stopping a tool widget from importing the runtime barrel, which dragged the Anthropic SDK into the browser bundle.
+- "Commit with AI" now prompts the agent to include relevant, commitable, side-effect files.
+- Localhost `/clip` endpoint now rejects requests from arbitrary web pages, accepting only extension-origin JSON requests.
+
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.9] - 2026-06-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+- Meta-agent child sessions now inherit the parent session's provider and model instead of silently falling back to a Claude/Opus default for non-Claude parents.
+- Public builds no longer spam logs with normal-path AI, sync, auth, git, and diff-trace diagnostics.
+- OpenAI Codex settings panel no longer triggers an infinite re-render loop.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.8] - 2026-06-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- AI edits to markdown files with inline base64 images no longer trigger multi-minute main-process beachballs.
+- Tool calls no longer get stuck at "running" when multiple AI sessions are open.
+- Workstream parent sessions now rise to the top when a child session becomes active.
+- AskUserQuestion, ExitPlanMode, and GitCommitProposal widgets now render via MCP-prefixed tool names.
+- Workspace search now caches the resolved ripgrep path instead of reprobe-logging on every keystroke.
+- Quick Open no longer stalls while listing prompts, and older prompts now appear in results again.
+- Tracker labels no longer crash the backfill on reconnect or gain a phantom leading `null` on SQLite.
+- New Worktree no longer stays disabled in git repos when the initial probe races mount.
+- Calc Sheets PARSE ERR rows are legible in dark mode.
+- Document-edit usage analytics no longer crash on either database backend.
+- Database backups now clean up stranded temp files and catch up after sleep or startup gaps.
+- Database Browser now shows SQLite backup sizes.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.7] - 2026-06-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- ScheduleWakeup no longer logs a spurious "Unrecognized tool" warning each time the agent schedules a wake-up.
+- Commit proposal widget reliably flips from "Pending" to "Changes Committed" after a successful commit.
+- "Waiting for your response" sidebar indicator no longer gets stuck after the prompt is answered; survives renderer reloads and stays in sync with mobile.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.6] - 2026-06-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- SQLite migration dry-run no longer fails on row-count mismatch when PGLite is being written to concurrently
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.5] - 2026-06-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Commit proposal widget no longer reverts to "pending" after a successful commit when a later duplicate response carries an error.
+- SQLite migration no longer crashes with `Invalid URL` during the adopt phase in packaged builds.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.4] - 2026-06-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Canonical transcript events kept in-memory per session and rebuilt from raw messages on demand instead of persisted to disk.
+- Agent-message search index now mirrors extractor output, keeping tool noise and metadata chunks out of search results.
+
+### Fixed
+- Multi-minute startup beachball for users with many shared trackers; document-sync key-fingerprint check is now single-flighted and cached, and tracker prewarm is debounced.
+- Marketplace `.nimext` packages now ship the `claude-plugin/` directory so installed extensions can register their Claude skills.
+- Pending-files query no longer throws `json_extract` errors on PGLite installs.
+- Claude Code mid-turn widgets (commit proposal, etc.) now appear in the background-session view as the turn streams, not only after the next session load.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.3] - 2026-06-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Auto-updater no longer pops a giant "Cannot find latest-mac.yml ... HttpError: 404" toast on background polls when a release is mid-publish. Treats the 404 the same as "no update available" until the workflow finishes uploading metadata; manual checks see a friendly "release is being published" message instead of the raw HttpError.
+- Release builds no longer fail on CI when the afterPack worker-bundle ABI check times out spawning the unsigned Electron binary. The path-resolution and `.node`-presence checks remain fatal (those catch the packaging-miss class); only the Electron-as-Node boot probe is now informational.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.63.2] - 2026-06-01
+
+
+### Added
+- Claude Opus 4.8 is now selectable in the Claude provider (1M context, dateless ID `claude-opus-4-8`) and is the default Claude model for new installs. (#473)
+- Claude Code variants `opus-4-7` and `opus-4-7-1m` pinned to Opus 4.7 so it stays selectable after the canonical `opus` alias was bumped to 4.8. (#473)
+<!-- New features go here -->
+- Calc Sheets: a new `.calc.md` custom editor for line-oriented worksheets with units, currency-aware evaluation, assertions, Monaco-based editing, and a live result gutter.
+- Alpha SQLite storage backend behind an opt-in Settings → Database migration. Dry-run reports row counts and integrity against your live PGLite without touching it; the real migration preserves PGLite at `pglite-db.migrated-<ts>/` for rollback. WriteCoordinator batches writes through a single lane and chunks slow ops on a background lane; FTS5 mirrors back agent-message and transcript-event search; Database Browser gains a Performance tab.
+- Worktree git panel now has a Manual/Smart commit toggle and "Commit with AI" button, matching the non-worktree experience.
+- Contextual tips: small bottom-left cards that suggest tracker mode, worktree sessions, the keyboard-shortcuts dialog, and theme exploration based on local feature usage.
+- Tip body now renders basic markdown (paragraphs, bullets, bold).
+- Empty AI session panels now cycle through 15 additional contextual tips: the four embedded editors (Excalidraw, MockupLM, DataModelLM, spreadsheets), shared session and document links, CLAUDE.md standing instructions, auto-commit mode, document history (Cmd+Y), quick open (Cmd+O), content search (Cmd+Shift+F), mobile pairing, scheduled wakeups, action prompts, and the lightning interrupt button.
+- Session history search supports a virtual `#worktree` tag that filters to all worktree sessions and their children.
+- Shared Documents file tree now has inline search by document name or folder path.
+- Unified Quick Open: one tabbed dialog replaces the four separate Files / Sessions / Prompts / Projects quick-open dialogs, adds a real Trackers tab, a comma-separated file-mask filter (same syntax as the git extension) on Files / In Files, and a type filter on Trackers. ⌘O / ⌘⇧F / ⌘L / ⌘⇧L / ⌘⇧P each open the unified dialog on their tab and also jump between tabs while it's open.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Main-process startup now logs event-loop lag, per-batch progress in `ProjectFileSyncService.buildManifest`/`handleSyncResponse`, per-phase timing in `document-sync:open`, and per-request elapsed time in `TeamService.fetchTeamApi` to diagnose multi-minute startup freezes.
+- Default Claude model bumped from `claude-opus-4-7` to `claude-opus-4-8`. Existing sessions keep their configured model; only new sessions and "reset to default" pick up 4.8. (#473)
+- Monaco editor host wrappers now support custom load/save content transforms so extensions can present normalized editor views while preserving richer on-disk source formats.
+- Bumping a tip or walkthrough version now re-shows it even if the prior version was completed or dismissed.
+- The alpha SQLite backend now migrates session, transcript, tracker, and document stores more completely, with worker-backed execution and expanded validation/adoption flows to keep large migrations and database browsing responsive.
+- Blitz, Super Loops, and Meta Agent now appear in the new-session menu for any user with their alpha feature enabled, instead of being hidden behind developer mode. (#438)
+- Transcript tool-call diff enrichment moved to the main process, removing per-render IPC chatter from the renderer.
+- Cloudflare session sync now clamps payloads more aggressively and routes metadata-only index updates through a lightweight path to cut server write churn.
+
+### Fixed
+<!-- Bug fixes go here -->
+- Primary buttons pick a readable label color on light/pastel theme accents instead of hardcoded white. (#504)
+- Packaged better-sqlite3 binaries validated during build to catch broken native modules before release.
+- PromptForUserInput widget no longer crashes with "Cannot read properties of undefined" when the agent emits a malformed field. (#494)
+- AI sessions no longer appear to keep running forever on the mobile app after a desktop turn ends; v0.63.0 routed the "isExecuting" signal through a new lightweight wire message the server and iOS did not yet understand, so the running indicator never cleared.
+- Lexical selection-toolbar format dropdowns now render inside the editor root when portaled, so shared dropdown styling and theme backgrounds no longer disappear.
+- AskUserQuestion widget no longer goes blank (header-only "Waiting..." with no options) after switching from Agent mode to Files mode and back when the same session is open in both panels.
+- Mobile sync no longer wastes per-session storage on transient Codex app-server delta and diff-update events, preventing noisy sessions from tripping the 10 MB SessionRoom cap too early.
+- Codex sessions no longer persist transient app-server notifications (message/reasoning deltas, token-usage updates, MCP startup status, thread lifecycle) to the local raw log; only durable item/turn/error events are kept, cutting per-session DB churn for long Codex runs.
+- Claude Code sessions no longer persist transient SDK chunks (hook lifecycle, task progress, tool progress, auth status, rate-limit events) to the local raw log or sync them, since they never render in the canonical transcript.
+- Codex app-server transcripts no longer duplicate commit proposal widgets or final messages when repeated item/turn notifications arrive.
+- SQLite migration now reconciles final PGLite writes before cutover, rollback works after SQLite is active, voice-mode session resume no longer depends on PG-only interval SQL, and SQLite-backed analytics no longer hit PostgreSQL-only queries.
+- Sessions resumed from queued prompts now stay marked running until the continuation actually finishes, so the session dashboard and background-task UI no longer flip to idle mid-turn.
+- Sessions no longer get stuck in the running state after the final queued-prompt continuation completes; the dispatcher now ends the session once the queue chain fully drains.
+- Embedded calc sheets and other inline custom editors no longer immediately lose focus after the second click used to enter the embedded editor.
+- Agent transcript no longer collapses `$7M ... $40M`-style currency text into LaTeX. (#462)
+- Markdown-led transcript file change cards no longer append sibling embedded editor previews like Excalidraw beneath the markdown diff.
+- Tracker table view now gives the Type column enough width to show its header and icon instead of collapsing to a clipped sliver.
+- Smart commit in worktree sessions now resolves session-edited files against the worktree path, so the cross-reference with git status correctly matches.
+- Blitz no longer silently dismisses the dialog when run against a workspace whose git repo has no commits. (#455)
+- Share to Team now seeds new shared extension documents into the collab room before publishing the link, so teammates no longer open blank MockupLM docs when they join immediately.
+- Re-uploading a shared MockupLM document now resolves the correct collab content adapter for `.mockup.html` and `.mockupproject` files.
+- Shared-document history now records bootstrap and manual revisions reliably; Cmd/Ctrl+S inside a collab editor creates a manual revision, and Restore waits for pending writes to settle before bailing on transient sync status.
+- Session history no longer pegs the renderer at 100% CPU during AI streaming.
+- Slow `getPendingFilesForSession` query that compounded the streaming slowdown now uses a partial expression index and a short-lived cache.
+- Monaco editor now picks the right dark or light base theme for extension themes whose IDs don't include `-dark` (e.g. rose-pine), so the editor matches the rest of the UI.
+- Developer Dashboard no longer crashes when database stats arrive in the SQLite instrumentation shape instead of the legacy per-table counts shape.
+- Extension uninstall now also prunes settings for providers contributed under `aiAgentProviders`, not just `aiProviders`, so the ghost-provider cleanup keeps working with the new contribution point. (follow-up to #446)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.62.0] - 2026-05-26
+
+
+### Added
+- Non-markdown shared documents (Excalidraw, Mindmap, Mockup, etc.) now show the unified editor header bar with breadcrumb, View History, and local-source actions.
+- Editor header bar's "Shared to Team" dropdown links to the shared document, showing its name with the team-side folder path in subscript.
+- Shared documents have revision history: Cmd/Ctrl+S saves a named version, auto snapshots run after idle, and any past revision can be restored.
+- Custom shared-document editors can publish history controllers so the global History dialog can route to collaborative revisions.
+- Extensions SDK permissions and backend modules.
+- Extension panels can run read-only SQL via `host.data.query()` against the local PGLite store when the manifest declares `nimbalyst-database-read`.
+- Backend-module allowlist: only built-in extensions, curated marketplace ids, and dev-installed extensions with `NIMBALYST_ALLOW_DEV_BACKEND_MODULES=1` can ship native-code backends.
+
+### Changed
+- Auto-update downloads in the background and shows only the "Ready to install" toast; the redundant "Update Available" toast is removed. (#327)
+- Extension docs now cover all four markdown/transcript contribution surfaces in both the internal architecture doc and the public SDK docs.
+- Backend-module consent prompt leads with an explicit "this extension will run native code on your computer" banner; granular catalog ids only cover host-brokered services.
+
+### Fixed
+- Claude Code sessions break out of the SDK iterator after the `result` chunk so the binary's task-list reminder hook can't emit a 14+ minute `tool_result(Stream closed)` flood that pins sendMessage open.
+- Claude Code sessions flip to "ready" the moment the model's turn finishes instead of sitting on the last output for up to 30 s while the SDK stdin grace period expired.
+- Claude Code sessions no longer reset mid-conversation when the agent spawns sub-agents. (#451, #456, #457)
+- CI `npm ci` no longer fails resolving `@nimbalyst/collab-adapters`; the workspace was missing from `package-lock.json`.
+- Project quick open loads recent projects from stored recents instead of crawling every workspace on open.
+- Rebuild Extensions submenu lists buildable extensions alphabetically.
+- Shared Excalidraw and mockup tabs no longer come back blank after restart or close+reopen.
+- Tracker list, table, and kanban views share the session-style `#tag` typeahead filter.
+- Session history search bar no longer overlaps floating popovers (e.g. Claude Usage).
+- Re-uploading a local source into a shared markdown document waits for the collab write to be acknowledged before tearing down the headless sync client.
+- Codex session-naming reminder no longer leaks into the chat transcript. (#420)
+- Mobile sync picks up Codex sessions running in git worktrees by resolving worktree workspaceIds to the parent project path. (#430) Thanks @stamkivi.
+- Claude Code plugins installed at the project scope appear in the Installed plugins list with marketplace and scope badges.
+- Slash-command typeahead lists commands and skills from Claude CLI plugins without requiring the experimental "Agent Workflows" toggle.
+- Excalidraw "import mermaid" registers the rendered diagram image, so it no longer shows as a broken thumbnail. (#428)
+- Codex sessions append actionable guidance when `~/.codex/config.toml` has a url-based MCP server the bundled Codex rejects, instead of an opaque failure. (#424)
+- Dollar signs in markdown no longer collapse currency text like `$7M ... $40M` as inline LaTeX; the typing-time `$...$` shortcut is replaced by slash-menu "Math (inline)" / "Math (block)". (#447)
+- Trackers panel refetches when switching projects in the sidebar rail instead of staying pinned to the workspace that was active at app startup. (#441)
+
+### Removed
+- Catalog permission ids `spawn-process`, `network-loopback`, `network-internet`, and `filesystem` are no longer accepted; they were unenforceable inside a Node backend. Manifests listing them load with a non-fatal warning.
+
+## [0.61.1] - 2026-05-21
+
+
+### Added
+- AI action seed file now includes sibling-session launch examples for planning and worktree implementation.
+- Tracker screen has a table view with sortable columns, resizable widths, and aligned headers.
+- "Share to Team" opens a folder picker so you can choose the destination folder and rename the document before sharing; last-used folder is remembered per workspace.
+- Shared documents can remember their local source file, surface re-upload actions, and relink missing local files.
+
+### Changed
+- Tracker row interactions unified in a shared hook; legacy `'table'` view-mode entries migrate to `'list'`.
+- Agent guidance treats markdown links to custom-editor files as the default way to share visuals.
+
+### Fixed
+- Bug-report anonymizer scrubs workspace paths and Windows path-form variants. (#396)
+- Imported sessions now show the model actually used instead of always Sonnet. (#394)
+- CollabV3 no longer hammers the server with rejected connections on JWT/userId mismatch; backs off pre-open failures exponentially up to 5 minutes.
+- Renderer no longer hangs during heavy tool-call streams when CollabV3 JWT/userId mismatch latch is set.
+- Shared docs defer markdown bootstrap until server sync to avoid duplicated content; share-to-team preserves full custom-editor suffixes.
+- Shared-document tabs respect Find and Close Tab menu commands; dev HMR no longer stacks stale reconnect listeners.
+- Mobile git commit proposal cancellation sends a durable prompt response so blocked sessions actually cancel.
+- iOS session sync preserves workstream, worktree, pin, and naming metadata so sessions don't reappear as duplicates.
+- Floating menus use floating-ui portals so they stay visible instead of clipping inside panels.
+- Agent transcript no longer repaints on every streamed token or keystroke; text selection in running sessions stays usable.
+- Dev-mode transcript reprocess refreshes views without marking sessions unread; child session menus under workstreams unified.
+- Settings Alpha badges show the shared tooltip with alpha risk details and future Team pricing.
+- Codex app-server tool events now appear in transcripts.
+- Renderer no longer hangs when opening large markdown files mid-AI-edit.
+- External session edits excluded from git staging. (#398)
+
+## [0.61.0] - 2026-05-21
+
+### Added
+- Shareable deep links for tracker items via "Copy Link" on the kanban, table, and detail header.
+- Shareable deep links for team documents via "Copy Link" in the shared-document menu.
+- Programmable actions can launch a new sibling session (per-action `launch` / `model` / `foreground` / `autoSubmit` config in `ai-actions.md`).
+
+### Changed
+- File-based plan trackers (`design/trackers/*.md`) unified with DB tracker items on the kanban.
+- `nimbalyst-session-naming` MCP server set to `alwaysLoad` so `update_session_meta` stays in the prompt instead of behind ToolSearch.
+- Triple-layered defenses against file-watcher attribution-queue overflows under multi-session codegen / build storms. (#352, #365)
+- Stytch B2B auth recovery: honor JWT `exp`, log WS close codes, surface worker error params, centralize auth state, add iOS Sign Out.
+- Cut ~970k/week of low-value PostHog events (file-save / file-conflict / streamed-response / update-poll dedup).
+- System addendum nudges agents toward `PromptForUserInput` widget over chat-based questions.
+- CLAUDE.md refactored into path-scoped `.claude/rules/` plus dedicated docs.
+
+### Fixed
+- Database lock dialog vs. false-positive lockout on fresh-timestamp / ambiguous locks; force-unlock path restored. (#272 follow-up)
+- AI-edit review diff preserved in CSV and datamodel custom editors. (#328)
+- Auto-update toast no longer fires on transient DNS failures during background polls. (#387)
+- Tracker "Updated" widget renders every field change, not just the hardcoded set.
+- Dragging files into AI input inserts `[name](/absolute/path)` markdown links instead of `@<relative-path>`.
+- Shared tracker bodies now sync end-to-end through the collab Y.Doc, not just local cache.
+- Pasted Google-Docs-style images stored as assets instead of inline base64.
+- iOS Codex on app-server transport renders messages (was throwing in the SDK parser and silently dropping output).
+- Transcript no longer rerenders on activity in unrelated sessions.
+- AIService shutdown no longer dereferences `sessionManager` / `settingsStore` on late-arriving IPC during quit.
+- Dead flat-list transcript code path removed; desktop and iOS now run VList unconditionally.
+- E2E selectors unstuck (worktree, datamodellm, core specs).
+
+## [0.60.6] - 2026-05-19
+
+### Fixed
+- Windows release build no longer fails `vite build` with `[postcss] Cannot read properties of undefined (reading 'blocklist')`; tailwind config path now uses `fileURLToPath`.
+
+## [0.60.5] - 2026-05-19
+
+### Added
+- LaTeX math editing in the Lexical document editor via a new built-in `math` extension; KaTeX inline (`$...$`) and block (`$$...$$`) with double-click edit.
+- Programmable action prompts in the AI composer; per-workspace `nimbalyst-local/ai-actions.md` defines reusable prompt presets.
+- Collaborative editing for extension custom editors via `useCollaborativeEditor` hook + `customEditors[].collaboration` manifest field (extension-sdk 0.2.0); Excalidraw and CSV opt in.
+- MockupLM Share-to-Team collaborative editing for `.mockup.html` and `.mockupproject`.
+- Tracker sync rewritten as metadata-layer `TrackerSyncEngine`: server-assigned monotonic `syncId`, hybrid conflict resolution, Y.Doc-CRDT bodies, encrypted envelopes.
+- Install-from-GitHub prefers Release assets over cloning source; authors no longer need to commit `dist/`.
+- `nimbalyst-settings` MCP server for in-app configuration (theme, sync, feature flags, extensions, tracker policies, workspaces) with allowlist + audit logging.
+- Runtime contributions for transcript markdown and tool widgets; transcript math moves into the new `math` extension.
+
+### Changed
+- `@nimbalyst/collab-protocol` extracted as single source of truth for client<->server WebSocket wire types; `packages/collabv3` moved to a separate `nimbalyst-collab` project.
+- `extension-sdk` 0.2.0 with the new collab editor API (backwards-compatible; no-ops on hosts without collaboration).
+- Agent transcript returned to virtua with safer selection handling; wider desktop render buffer.
+- Wakeup-resumed prompts no longer render in the user lane; new "Resumed from scheduled wakeup" system card. (#376)
+- `getMcpConfigService` extracted into `mcpConfigServiceRef` so non-entry modules stop back-importing `main/index.ts`.
+
+### Fixed
+- Crash-on-load loop on markdown files with extremely wide table rows; `TABLE_TRANSFORMER` now skips rows above 5 KB and falls back to plain markdown. (#321)
+- Tracker (kanban) tools now work from the agent; all 11 `tracker_*` tools added to `INTERNAL_MCP_TOOLS`. (#236)
+- CSV editor currency / percent / number column formats render via RevoGrid `cellTemplate`. (#329)
+- Claude usage indicator no longer hidden by a deprecated `navigator.platform` check on Windows / Linux. (#362)
+- Marketplace clone-source path no longer bricks an existing GitHub install when the new clone is missing `dist/`.
+- Manifest-only extensions (theme-only, `claudePlugin`-only) install from a GitHub URL. (#355, #356)
+- Queued prompts no longer re-send on restart-after-AskUserQuestion, mid-turn cancel, or mobile-sync rollback. (NIM-615)
+- Lightning button reliably interrupts and drains the queue. (#337)
+- Unsaved tab edits survive file renames. (#367)
+- CSV and datamodel shared documents survive close-and-reopen.
+- In-app issue flow uses the correct `.yml` template, drops bogus labels, and prefills the right field.
+- Codex interactive prompt correlation stabilized; new thread IDs persisted before interactive prompts can block.
+- B2B auth callback fails fast when Stytch returns no session instead of building a broken deep link. (#351, NIM-600)
+- Alpha updates no longer 404 on stray non-`v0.*` tags landing in the `releases.atom` feed.
+- Mac local builds unblocked; renderer / extension build-time warning noise reduced.
+
+## [0.60.4] - 2026-05-16
+
+### Changed
+- Tracker schema watcher test rewritten to use mocked chokidar callbacks instead of real filesystem timing.
+
+### Fixed
+- Agent transcript regressions from v0.60.3's flat-list switch: drag-selection lands correctly, short transcripts hug the input, sticky-bottom no longer drops on streaming or lazy-mount.
+
+## [0.60.3] - 2026-05-15
+
+### Added
+- Filter the sessions list by tag with a `#` picker that composes with title search. (#244)
+- In-app ChatGPT / API-key sign-in for OpenAI Codex via the app-server transport; pre-flight auth gate with a "Sign in to OpenAI Codex" CTA.
+- URL fields for tracker items and PR metadata in the tracker schema.
+- Compact Rename and Move buttons in the project header. (Refs #305)
+
+### Changed
+- Agent session transcript switched to a flat `content-visibility:auto` list on non-iOS so DOM node identity (and selection) survive scrolling.
+
+### Fixed
+- CSV editor no longer truncates `YYYY-MM-DD` date cells to the year via `parseFloat`. (#329)
+- Claude Code permission stream no longer dies on sessions with many accumulated tracker tasks; `PROMPT_GRACE_MS` bumped from 5s to 30s. (#320)
+- Enter at end of a list item ending with inline-code-plus-space no longer keeps the new bullet in inline-code format. (#302)
+- "+" (Create new...) button in the session sidebar now works when all sessions are archived. (#306)
+- Cmd+O Quick Open and @-mention picker scope "recent files" to the current workspace. (#301, #304)
+- Find-in-page search bar no longer hides behind the session-phase pill on narrow widths. (#309)
+- Long multi-line git errors stay a single line with View / Copy buttons via a new shared `GitStatusBar`.
+- Git extension Output tab errors are now readable and copyable.
+- Codex pasted images unblocked in app-server turns (camelCase `localImage`).
+- Codex helper PATH preserved in app-server mode for packaged Windows builds.
+- Codex `developer_git_commit_proposal` no longer produces duplicate "Changes Committed" cards across SDK / app-server transports.
+- Codex bottom-left usage indicator no longer sticks at a stale percentage after the 5h / 7d window resets. (#120)
+- "Thinking…" indicator no longer pins after Claude Code finishes on sessions where the workspacePath isn't yet known. (#116)
+- PGLite lock self-heals on Windows after PID reuse (60s grace window inside the EPERM branch). (#272)
+- Quick Open and @-mention picker no longer flash stale hover state when opened via keyboard.
+- Agent session history list now has stable ordering.
+- Collab v3 JWT-mismatch warning is now actionable: decodes claims, names the consequence, points at the file to look at.
+- PGLite worker `init` allows 120s (was 30s) so the first relaunch after a force-close doesn't fail while WAL recovery is in progress. (#238)
+
+## [0.60.2] - 2026-05-15
+
+### Added
+- Codex moved to the app-server transport for proper file-edit hooks and unified-diff capture; one codex child per session, cached across turns.
+- `inheritModel` flag on `spawn_session` MCP tool so `/launch-new-session` can keep the new session on the caller's model.
+- LaTeX math rendering in agent transcript markdown via remark-math / rehype-katex / katex. (#136)
+- Inline embeds for extension-edited files (Excalidraw, mockup, datamodel, csv, sqlite) inside markdown documents.
+- Unified embedded editor breadcrumbs to match the main editor toolbar.
+- Extension manifest gains `supportsTranscriptEmbed` / `transcriptEmbedHeight`; MockupLM, DatamodelLM, and CSV Spreadsheet opt in.
+- Clear-all-unread action in the system tray.
+- Workstream tag row collapses overflow tags into a "+N" pill that opens a floating menu.
+- Human-readable widget for upstream Claude API 5xx errors with the `request_id`. (#277)
+- Dev-only `transcript:force-reparse-session` IPC to rewrite canonical events for one session.
+
+### Changed
+- Codex session sync bandwidth reduced via per-block 8 KB truncation before encryption; per-session 50 MB cap with FIFO eviction; `SessionRoom` TTL dropped 30 -> 14 days.
+- `MessageStreamingHandler` tracks per-listener refs instead of `removeAllListeners` so other subscribers aren't dropped. (#225)
+
+### Fixed
+- Pre-approved tools in the global Claude allow list now bypass the permission dialog; new `matchesAllowPattern` handles MCP server-wide / bare-name / `Bash(...)` wildcards. (#152)
+- CommonMark angle-bracket inline links (`[text](<url>)`) render as clickable hyperlinks. (#86)
+- OpenCode test-connection finds the `opencode` binary under nvm / asdf / Volta / fnm. (#184)
+- Large pasted-text attachments use the platform tmpdir on Windows instead of hardcoded `/tmp`. (#269)
+- Chat-attached text files reach the agent instead of degrading to a `@filename` token. (#239)
+- "Allow this tool?" permission dialog no longer gets stuck with no buttons. (#276)
+- Right-click Archive surfaces backend rejections in a visible error notification instead of failing silently. (#282)
+- Meta-agent `get_session_result` returns the actual most-recent assistant response on Codex follow-up turns. (#270)
+- Pressing Enter at end of a tracker-item line on the last line of the file inserts a new paragraph instead of swallowing the keypress. (#263)
+- OpenCode model picker finds `opencode.json` on Windows (`%APPDATA%\opencode\opencode.json`). (#284)
+- Codex usage indicator no longer sits on a stale percentage after the 5h / 7d window resets. (#120)
+- PGLite lock self-heals on Windows after PID reuse (60s grace window in the EPERM branch). (#272)
+- "Thinking..." indicator no longer pins on extended-thinking Opus sessions where the workspacePath isn't yet known. (#116)
+- Auto-update on macOS no longer fails with "command is disabled" after download; redundant pre-download `checkForUpdates()` removed so Squirrel.Mac proxy stays alive. (#245)
+- Codex `thread/resume` re-forwards `mcp_servers`, `sandbox`, `approvalPolicy`, `developerInstructions`, `model`, and reasoning effort.
+- Codex interactive widgets (`developer_git_commit_proposal`, `AskUserQuestion`) no longer deadlock; `tool_call_started` now fires on `item/started`.
+- Claude sessions preserved across project moves via shared workspace path encoding.
+- Blank-turn rendering for unknown slash commands fixed; result-text backfill bypasses the dedup gates when `num_turns` is 0.
+- Codex chat attachments preserved in prompts and transcript across SDK and ACP sessions.
+- Onboarding mode-picker no longer beach-balls on cold start; redundant dynamic imports converted to static; `onboarding:get` races a 3s timeout. (#260)
+- Archived workstream children and archived worktrees stay out of session lists / history.
+- Git commit failures surface instead of reporting fake success; pre-commit hook stderr preserved. (#202)
+- Copilot ACP retains context between turns; "Session is already loaded" treated as success. (#251)
+- Wrap toggle in transcript code blocks persists across `OverflowWrapper` remounts. (#274)
+- Detached HEAD state handled in the git extension; pull/push disabled while detached.
+- Git views refresh after `.gitignore` edits (root and nested).
+- Session archive state propagates to iOS via the CollabV3 `metadata_updated` cache merge.
+- `claude-code` no longer shadows OAuth login with empty `ANTHROPIC_API_KEY`.
+- Copilot CLI resolves from `%APPDATA%\npm` on packaged Windows.
+- Finder/Dock drag-and-drop into folders restored on Electron 32 via `webUtils.getPathForFile`. (#206)
+- Finder drops on empty file-tree space copy into the workspace root. (NIM-584)
+- Collab v3 Share-to-Team migrates pasted-image asset refs to `collab-asset://` URIs via a pre-seed pass.
+- Collab v3 session titles encrypted to `encryptedTitle` / `titleIv` in `SessionRoom`; server strips plaintext title.
+
+## [0.60.1] - 2026-05-12
+
+### Added
+- `chatShowToolCalls` user-facing setting (default `true`) to hide tool-call rows entirely in the AI chat; `showToolCalls` stays a developer-mode toggle. (#118)
+- Editor extension API: extensions can ship Lexical extensions via `contributions.lexicalExtensions` + `module.lexicalExtensions`; editor shell switched to `LexicalExtensionComposer`; built-ins (Mermaid, Images, Kanban, Diff, Table, etc.) declared as LexicalExtensions; legacy `PluginPackage` / `PluginRegistry` retired.
+
+### Changed
+- Upgrade Lexical and `@lexical/*` to 0.44.0 across the runtime; stop forking `@lexical/markdown`'s importer (NCRs in place of backslash escapes); `LexicalMarkdownImport.ts` and forked text transformers deleted.
+- Cut per-commit GitHub Actions runtime: macOS sim job gated to `packages/ios/**`, new Ubuntu Transcript Bundle job, `node_modules` and `packages/runtime/dist` caches.
+
+### Fixed
+- Markdown anchor links scroll to in-document headings via new headless `HeadingAnchorExtension` (GitHub-style slug ids). (#248)
+- Marketplace install from a GitHub URL surfaces a clear error when the repo has no built `dist/` directory and cleans up the partial install. (#247)
+- Commit-widget failure path renders the error state with the underlying error string instead of collapsing to "cancelled". (Partial fix for #202)
+- Commit-widget proposal renders before the SDK chunk flush; `interactiveToolHandlers` writes an awaited synthetic `nimbalyst_tool_use` row keyed by the SDK toolUseId. (#265)
+- Restore open workspaces after an auto-update relaunch (save session state before tearing listeners down). (#232)
+- Workspace YAML tracker schemas load on every workspace-open path (session restore, UI open, file-open create), not just CLI-arg open.
+- Agent-mode conflict dialogs no longer overflow short viewports; body scrolls, max-width widens.
+- Triple-nested emphasis no longer corrupts on export when a whitespace-only text node sits between formatted siblings.
+- Lexical collaboration context restored for Lexical 0.44 (upstream removed the implicit global context).
+- In-tree `SelectionAlwaysOnDisplayPlugin` checked in; cold-clone / CI builds no longer fail with a missing-module error.
+- Dark-mode logo asset rendered correctly in the editor shell after the Lexical upgrade.
+
+## [0.60.0] - 2026-05-11
+
+### Added
+- Multi-project rail with keep-warm switching: opt-in Discord-style vertical rail lets one window host multiple workspace projects with `Cmd/Ctrl+1..9` switching; AI sessions, file watchers, tabs, and git status stay live in inactive projects. Refs #155.
+- Streamlined feedback intake: `/feedback:bug-report` and `/feedback:feature-request` route through a single `FeedbackIntakeDialog` that prefills the GitHub issue.
+- Orphan Durable Object cleanup endpoint and driver in collabv3; gated by Cloudflare Access (`Cf-Access-Jwt-Assertion`), no shared-bearer fallback.
+
+### Fixed
+- Workstream rows no longer get created inside worktrees (the worktree IS the workstream); one-time migration deletes accidental three-layer hierarchies. New `docs/SESSION_HIERARCHY.md`.
+- Worktree child sessions stay in sync with the parent workspace; running / waiting indicators restored. (#231)
+- Codex `workspace-write` sandbox can reach sibling worktrees via `additionalDirectories` (`OpenAICodexProvider.setAdditionalDirectoriesLoader`). (#230)
+- `spawn_session` inherits the caller's worktree instead of creating the child in the project root. (#229, refs #37)
+- Diff peek paths resolve against the worktree's own checkout for worktree files.
+- Slash skills namespaced consistently with commands (`/excalidraw:excalidraw`, `/planning:design`, ...); `nimbalyst-` prefix dropped from bundled plugin names. (#234)
+- Codex command instructions preserved when frontmatter is missing a description.
+- `FeedbackIntakeDialog` `onLaunch` typed via `FeedbackIntakeLaunchOptions`.
+- Commit proposal widget sorts files alphabetically by basename and subdirectories by displayPath. (#233)
+- Open file links of the form `/abs/path/<real absolute path>` resolve on Windows and macOS. (#240)
+
+## [0.59.4] - 2026-05-09
+
+### Added
+- New `PromptForUserInput` MCP tool: single structured-prompt widget with five field types (`multiSelect`, `singleSelect`, `reorder`, `editText`, `confirm`) so one prompt collects several inputs at once.
+- `mcp__nimbalyst-tracker__tracker_update` can change a tracker item's `primaryType`; activity log records the change. (#79)
+- Title-only mode (`searchField: 'title'`) for `list_recent_sessions` MCP tool. (#83)
+- Allow renaming AI sessions; "Preferred Agent Language" global setting steers AI-generated session names. (#219)
+- Voice agent can run "Commit with AI" via a new `propose_commit` voice tool; voice now reads the actual commit title and file count.
+- Voice Mode settings panel surfaces microphone permission status with a deep link to macOS System Settings.
+- Voice mode "Generate Project Summary" no longer requires an Anthropic API key; launches a new agent session in the configured agent. (#201)
+- Codex slash command autocomplete: workspace Codex skills surface in the shared slash-command picker.
+- Skills and commands compatibility layer for Claude Code and Codex; extension manifest gains `agentWorkflows` contributions.
+- Map Codex reasoning items into transcript thinking blocks.
+- MCP servers configured with `command: "node"` use Electron's bundled Node runtime, so MCP works without system Node. (Refs #197)
+
+### Changed
+- `[StartupSlow] {name} took {ms}ms` log when a startup phase crosses 2s (PGLite init, ProjectFileSync, SyncManager fetch, TrackerSync initial sync).
+- Upgrade bundled Codex SDK and harden Claude packaged binary resolution (reject unusable `app.asar` paths).
+
+### Fixed
+- Legacy plan and decision tracker docs (top-level `planStatus` / `decisionStatus`) appear on the Tracker board again.
+- Drag-and-drop on a multi-file selection moves or copies every selected item, not just one. (#31)
+- Claude Chat Test Connection works against the default `claude-opus-4-7` model; `temperature` omitted for Opus 4.7+. (#199)
+- `automationStatus` documents (created via `/automation`) appear as Tracker rows. (#67)
+- Detect frontmatter on Windows files with CRLF line endings; all 13 frontmatter regex sites use `\r?\n`. (#68)
+- Show the tray icon on Linux and Windows; macOS-only theme subscription guarded. (#39)
+- User-visible error dialog when deleting a file from the workspace tree fails. (#195)
+- `ErrorDialog` `details` prop accepts a plain string in addition to the structured `DiffErrorDetails` shape. (#216)
+- Stop spamming `Update Error: net::ERR_NAME_NOT_RESOLVED` on the auto-update background poll; network errors during hourly check suppressed. (#56)
+- `Ctrl+=`, `Shift+=`, and numpad `+/-` accelerators all zoom on Windows / Linux. (#205, #220)
+- Honor `.gitignore` from nested git repos when watching a non-git workspace root; no more OOM on huge build-output trees. (#207)
+- Files committed inside a nested git repo no longer report as untracked indefinitely. (#122)
+- `customClaudeCodePath` read from the `ai-settings` store instead of `app-settings.json`. (#162)
+- Drag-drop session merge initializes workstream state via `convertToWorkstreamAtom` (`skipSiblingCreation: true` path was skipping it). (#212)
+- Live-update sub-session renames and add Rename to the workstream parent menu. (#211)
+- Tracker "+ Launch Session" uses the workspace's default provider instead of hardcoded `claude-code`. (#176)
+- Skip the hidden-editor mount for built-in file types in extension AI tool dispatch. (#217)
+- Hide the Environment Variables section from the Project tab in Settings (it's a global file). (#185)
+- Git extension panel persists active tab and selected commit (by hash) per workspace.
+- Git extension Output log persists across panel close/open via a module-level `useSyncExternalStore`.
+- Session list refresh no longer stampedes PGLite; `getSessionsForUncommittedFiles` filters by uncommitted paths and dedups in-flight promises.
+- Shared Documents recover after laptop sleep/wake; reconnect path always tears down and reestablishes the WebSocket.
+- Read-only Codex bash commands (`sed -n`, `nl`, `cat`) no longer attribute as edits; pre-edit snapshot captured at `item.started`. (NIM-475)
+- Paste-as-Text shortcut reliable and visible in the keyboard shortcuts dialog.
+- Voice mic stays open after the agent finishes a turn (15s listen window starts when audio playback drains).
+- Bold spans containing inline code stay intact through approve-all diff round-trips.
+- Shared mockup viewer rendering restored; mockup diff review re-enabled for `.mockup.html` editors.
+
+### Removed
+- Unused `MCPConfigBuilder` removed from runtime.
+
+## [0.59.2] - 2026-05-07
+
+### Changed
+- Finish IPC listener centralization and lock it in via an eslint `no-restricted-syntax` rule banning `electronAPI.on()` outside `store/listeners` (with documented carve-outs). Last component-level callsites migrated.
+
+### Fixed
+- Codex `file_change` edits render as proper red/green diffs (not empty-baseline whole-file-green) for gitignored / never-snapshotted / post-boot-created files; `pre_edit_snapshot` StreamChunk captures the baseline at `item.started`.
+- Markdown export to PDF includes the document title in metadata and generates outlines / tagged PDFs from headings.
+- Open file tabs no longer disappear when switching tasks / sessions; `WorkstreamEditorTabs` restore effect waits on `workstreamStatesLoadedAtom`. (#169)
+- Settings -> Claude Agent SDK panel reads the version correctly when `@anthropic-ai/claude-agent-sdk` is hoisted to the repo-root `node_modules`. (#60)
+
+## [0.59.1] - 2026-05-06
+
+### Added
+- Codex `file_change` tool calls render as inline red/green edit cards in the transcript; new `nimtc|...` synthetic edit-group IDs and `CodexEditWindowRegistry` attribute writes without upstream hooks.
+- Privileged `collab-asset://` scheme for E2E-encrypted attachments in collaborative documents; main fetches and decrypts asset bytes so CORS isn't in the renderer's path.
+- Voice agent gets a `create_session` MCP tool to spin up a coding session on demand and link it as the active session.
+- Delayed finish timestamp on completed transcript turn summaries (with prior-day dates).
+- Tracker MCP tools expose schema introspection (`tracker_define_type` schema fields). (NIM-371)
+- New `tracker_unlink_session` MCP tool.
+- Existing-session tracker link flow: choose an existing session when linking a tracker item.
+
+### Changed
+- Upgrade bundled `@openai/codex-sdk` to 0.128.0 (via 0.124.0).
+- Refine collabv3 metrics dashboard queries (`blob2` = DO id, `cpuTime` for DO compute, `durableObjectsSqlStorageGroups` for SQLite size, `responseBodySize` for subrequests).
+- Restore optional email collection in analytics (onboarding / Stytch sign-in deliberately set it).
+- Local-to-shared tracker upgrades require explicit confirmation. (NIM-364)
+- `tracker_create` no longer auto-links the calling AI session; pass `linkSession: true` to link. (NIM-408)
+- `tracker_link_session` MCP tool accepts an optional explicit `sessionId` arg with validation. (NIM-405)
+
+### Fixed
+- Default `CLAUDE_CODE_ENTRYPOINT` to `'cli'` so OAuth subscription traffic isn't deprioritized as third-party. (#174)
+- Open a workspace with a zero-commit `.git` repo without spamming a stack trace into `main.log`.
+- Refresh the editor on AI edits when the pre-edit IPC outruns the disk write (skip empty-diff session creation).
+- Sub-bullet-with-link diffs render cleanly; tree-matcher dedup, URL wrapping on the target, reversed removals.
+- Codex edit attribution stable: synthetic edit-group IDs reused in raw tool matching, watcher fallback delayed.
+- Tracker session link visibility centralized through shared rules so MCP handlers behave the same as the UI.
+- Meta-agent session history actions restored: context menus on meta-agent rows, archive and delete scoped to the full group.
+- Collabv3 analytics tracks the real `sessionId` (DO id as `blob2`) instead of empty string.
+- Auto-committed widgets stay visually committed when the auto-commit toggle flips off; success widget gains a proper "Disable auto-approve" checkbox.
+- Shared tracker session links stay local-only (don't leak per-user links to team members). (NIM-368)
+- Tracker session linking UI initializes on first load. (NIM-407)
+- Meta-agent MCP tools restored for Codex sessions via the Codex SDK allowlist.
+- `ai:messages-logged-batch` routed only to the window owning the session's workspace; stops cross-window "Rejecting session" warnings.
+- Local tracker typing preserved during MCP refresh races.
+- `@` mentions for `nimbalyst-local` plans surface in the mention picker again.
+- MCP `tracker_update` no longer clobbers collab Y.Doc bodies for shared trackers; skipped writes reported back via `structured.skippedFields`. (NIM-436)
+- Tracker reads / writes no longer corrupt `automationStatus` (nested block wins on overlap; caller updates route to top-level for un-owned fields). (NIM-324)
+- Claude Code `[^a-zA-Z0-9]` path encoder applied to the importer so workspace paths with spaces / apostrophes resolve; `claude-code:sync-sessions` surfaces failures. (#170)
+- Persisted `fieldUpdatedAt` threaded through tracker upload so batch / recovery uploads don't claim all fields were just edited. (NIM-246)
+- Tracker detail editor refreshes on external content updates via a key-epoch remount. (NIM-433)
+- Meta-agent `get_session_result` extracts Codex child output (event_msg, item.completed for agent_message + reasoning, task_complete). (#145)
+
+### Removed
+- Obsolete `AssetLinkPlugin` (superseded by `CollabAssetLinkPlugin`).
+
+## [0.59.0] - 2026-05-05
+
+### Added
+- Peek file diffs from the git log commit detail panel: click a file to pin its unified diff in the existing peek popover; Up/Down steps, Esc closes.
+
+### Changed
+- Migrate alpha auto-updates from the legacy R2 feed to GitHub prereleases; adds cumulative public-release promotion commands.
+- Centralize PGLite TIMESTAMPTZ handling to epoch-ms via `toMillis`. (#147)
+
+### Fixed
+- Workspace-filtered Claude session import resolves paths with spaces / apostrophes / accents via a shared `encodeWorkspaceDir()` helper matching upstream `[^a-zA-Z0-9]`.
+- Parent's `childCount` bumps in the session registry when a child is added so the left-pane workstream tree reveals new children without a manual toggle. (NIM-435)
+- `ai_agent_messages` writes coalesced through a single FIFO `AgentMessageWriteQueue` (200ms idle / 200-row batch); writer-lock p95 ~330ms -> ~1ms, unblocking `can_use_tool` audits. (#163, NIM-340 / NIM-431)
+- Word-level inline diff no longer interleaves red/green fragments on near-complete paragraph rewrites; block-level fallback above 5 clusters, sentence-level pre-pass peels identical openers / closers.
+- MCP `workspaceId` normalized for worktree callers at the meta-agent dispatch boundary so `spawn_session` doesn't fail with "Parent session not found in this workspace". (#157)
+- Wide walkthrough callouts (`step.wide`) clamp to 420px to match the Tailwind rendered width. (Refs #148, #164)
+- Claude session import falls back to all sessions when the workspace-filtered scan returns nothing, with a notice that scope was broadened.
+- PGLite WAL growth managed: explicit CHECKPOINT after init / before close, periodic maintenance CHECKPOINT above 200 MB, `db.close()` timeout 2s -> 5s, WAL stats on the Database dashboard.
+- Single-flight `refreshSession()` (and per-`personalOrgId` keyed variant) so cold-start no longer fires 4+ concurrent `/auth/refresh` requests racing for Stytch's single-use token. (NIM-430)
+- Claude Code stdin stays open across late tool permission requests via a persistent `AsyncIterable` prompt and a `PromptStreamController` with 5s grace timer. (#160, NIM-340)
+- Later-turn Codex tool calls render on iOS transcripts; dedup on `(id, toolName)` so reused per-turn item ids don't drop; `openai-codex-acp` and `copilot-cli` routed through their own mobile parsers.
+- Git commit proposals stage deletes via `git add --all -- <paths>` (mobile, desktop, auto-commit paths). (NIM-428)
+- Child `session:completed` only forwards to parent on terminal idle; between-turn idles suppressed by pending-queue check; signature dedup resets on `session:started` / `session:streaming`. (#142)
+- Keyboard shortcuts render platform-correct glyphs on Windows / Linux via an `isMac` parameter; three hardcoded `⌘⇧X` literals replaced with helper calls. (#149)
+- HEIC wasm decoder lazy-loaded so standard PNG / JPEG attachments don't pay the startup cost.
+
+## [0.58.21] - 2026-05-04
+
+### Changed
+- CI: re-enable tag-triggered electron release builds (post-OSS-launch tag force-push finished); `/release` no longer needs a separate `gh workflow run` dispatch.
+
+### Fixed
+- Pasting images into markdown on Windows no longer fails with a `nim-asset` 403 (split on both separators, explicit `..`-segment traversal guard).
+- "Stream closed" tool permission errors on multi-result Claude Code turns reduced via a 5s reset-on-activity grace timer.
+- Restoring from history on a gitignored markdown file no longer leaves the editor showing stale content. (NIM-426)
+
+## [0.58.20] - 2026-05-04
+
+### Changed
+- Bump claude-agent-sdk 0.2.117 -> 0.2.126 (MCP reconnection after transport abort, `SessionStore.append()` retry, `origin` field on result messages).
+
+### Fixed
+- Local images render after 0.58.19's `webSecurity: true` hardening; runtime `localAssetUrl` helper routes absolute paths through `nim-asset://`. (#146)
+
+## [0.58.19] - 2026-05-04
+
+### Fixed
+- Harden Electron security: per-launch bearer token on the five internal MCP HTTP servers; drop `Access-Control-Allow-Origin: *` from MCP preflight; restore `webSecurity: true` via a registered `nim-asset://` custom protocol with an open-workspace allowlist. (#146)
+- Invisible git log resize handle in the git extension.
+
+## [0.58.18] - 2026-05-03
+
+
+### Added
+- Live-update kanban peek transcript while session is running so the AI transcript streams in real time without waiting for the turn to complete.
+- Clear button on session history search input for quick filter resets.
+- CollabV3 sync metrics dashboard for monitoring sync health and performance.
+
+### Changed
+- Update lodash-es for CVE fix.
+- Reduce collabv3 observability sampling to 5%.
+- Require workspacePath for Claude Code path loader, tightening the contract so workspace-scoped overrides resolve correctly.
+
+### Fixed
+- Route built-in editor saves through Layer D and sync diff resolution across sibling tabs so edits in one tab no longer silently overwrite concurrent changes in another.
+- Smooth iOS session back navigation so the transition no longer stutters.
+- Keep iOS transcript live during AI turns instead of freezing until the turn completes.
+- Add settings shortcut to voice mode errors so users can quickly configure their provider when voice fails.
+- Prevent autosave from overwriting AI-recreated deleted files by checking the recently-deleted set before writing.
+- Use getTime() for TIMESTAMPTZ store timestamps so date comparisons work correctly across timezones (#140).
+
+## [0.58.17] - 2026-05-01
+
+### Added
+- Auto-name Claude Code sessions via an SDK side-question on the first turn: two parallel SDK control requests set the title (~1s) and tags / phase early, with `phase: "planning"` fallback so every session lands on the kanban.
+- `xhigh` effort level option in the Effort Level selector. (#133, closes #132)
+
+### Changed
+- Rename `spawn_sibling` MCP tool to `spawn_session` and add an `isolated` parameter for top-level fix-and-commit sessions; `/launch-new-session` picks the mode from the user's phrasing.
+- Consolidate AI provider override normalization (`normalizeAIProviderOverrides` exported and reused in `AIService`). Follow-up to #128.
+- Quiet noisy release-path logging in startup and document-service traces.
+
+### Fixed
+- Paste attachments now reach OpenCode (document text part + image / PDF `FilePart` with base64 data URL) instead of degrading to a phantom `@filename`. (#121)
+- Codex ACP stderr buffer bounded to a 64 KB rolling tail to prevent main-process OOM after multi-hour sessions. (#119)
+- Eliminate 15s waits on git status reads: pass `core.optionalLocks=false` and drop the `gitOperationLock` wrapper from read-only handlers.
+- File tree refreshes when the agent creates a gitignored folder; workspace-tree watcher opts in to `add` / `unlink` events for gitignored paths. (#127)
+- Worktree inherits the parent project's Claude path override.
+- "Custom Claude Installation" override scoped per workspace via the existing override infrastructure (was leaking across projects). (#125, #128)
+- Duplicate rows in `FilesEditedSidebar` tree collapsed; `SessionFileTracker.trackSingleFile` normalizes to absolute paths.
+
+## [0.58.16] - 2026-05-01
+
+### Added
+- Agents can spawn sibling sessions via `/launch-new-session`; auto-promotes caller into a workstream with shared files/tabs/overview.
+- Extensions can contribute themes via `contributions.themes`; manifest-only theme extensions supported with fallback to dark/light when disabled.
+- Import Claude Code 2.1.x sessions via the File menu (no longer dev-mode-gated); correctly imports threaded prompts, subagents, persisted outputs, and extended-thinking blocks.
+
+### Fixed
+- Stop renderer freeze and OOM on long Claude Code streams; transcript now re-renders at most once per frame via `requestAnimationFrame` coalescing. (NIM-411)
+- `spawn_sibling` now refreshes workstream UI without a manual toggle.
+- Stop `HooklessAgentFileWatcher` warn-flood on Bash directory args; filter out directories from the path extractor.
+- Reduce debug logging volume across services.
+
+### Changed
+- `@nimbalyst/extension-sdk` published as 0.1.5 with org rename alignment and npm Trusted Publishing (OIDC provenance).
+- Correct iOS 1.1.0 changelog entries.
+
+## [0.58.15] - 2026-04-30
+
+
+### Added
+- Full undo/redo for AI chat input (Cmd+Z/Cmd+Shift+Z) restoring text, attachments, and cursor position.
+- Diff peek in AgentMode Files Edited sidebar: hover to reveal an inline unified-diff popover.
+- File history dialog (Cmd+Y) works in agent mode.
+- Surface archived sessions in `list_recent_sessions` MCP tool via new `includeArchived` parameter.
+- `/social-response` slash command for drafting copy-paste-ready replies to user messages on Discord, GitHub, Twitter, etc.
+
+### Changed
+- Onboarding telemetry replaced with custom `onboarding_completed` PostHog event; fixed `user_role` property overwrite bug for 'Other' text.
+- Coalesce streaming `assistant_message` chunks so Codex-ACP sessions don't persist one row per token; kanban peek tail bumped to 100.
+- Bump `@nimbalyst/extension-sdk` to 0.1.1 and switch publish to npm Trusted Publishing (OIDC).
+- CI: bump Node to 22 across workflows; raise the nested-lists diff test timeout to 20s.
+
+### Fixed
+- Keep AI diffs granular: LCS-based `diffWordsWithSpace` replaces prefix/suffix diff; in-flight edit races queued instead of dropped.
+- Show row add/remove and in-cell content diffs in tables; LCS-based row alignment and visual diff for modified cells.
+- Custom editors load for 3+ segment compound extensions (e.g. `*.reddit.watch.json`); use longest-suffix key match. (NIM-396)
+- Resolve workspace-relative paths in `workspace:open-file` IPC.
+- Track every file in a Codex ACP multi-file `apply_patch`.
+- Stop context menus from flashing before positioning.
+- Render OpenAI Codex icon for ACP transport in pickers.
+- Render provider icons correctly in diff headers.
+- Show child transcript in workstream/worktree kanban peek when the parent has no transcript of its own.
+- Refresh kanban transcript peek on new events; cache now invalidates on `transcript:event`.
+- Update opencode installation command to use `opencode-ai`.
+- Reduce debug logging volume in DocumentSync.
+
+### Removed
+- Dead `DiffApprovalBar` plugin files removed (superseded by `UnifiedDiffHeader`).
+
+## [0.58.14] - 2026-04-29
+
+
+### Changed
+- Final Stravu -> Nimbalyst rename: components, CSS class, path aliases, localStorage keys, and log paths aligned to `nimbalyst`.
+- OSS prep: public repo assets, community health files (CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md), AGPL-3.0 on collabv3, gitignore generated outputs.
+- GitHub Release promotion is now opt-in; tag pushes upload to R2 alpha channel only.
+- Loud warning in extension SDK manifest reference: `supportsDiffMode` defaults to `false` and must be explicitly set to `true`.
+- iOS: stop committing built `transcript-dist` and `editor-dist` bundles; Xcode pre-build script regenerates them.
+
+### Fixed
+- Restore inline screenshot preview in the agent transcript; `EditorScreenshotWidget` now parses `tool.result` via `parseToolResult()` instead of treating it as a structured object.
+- Windows update download: retry on `EPERM`/`EBUSY` rename from antivirus-locked installer.
+- ScheduleWakeup logic moved to a main-process static handler so vitest no longer crashes on Electron-only imports.
+
+### Removed
+- Unused `PostHogSurvey` component removed.
+
+<!--
+NOTE: v0.58.13 was tagged but never shipped to R2 -- the release build hit a
+403 (Resource not accessible by integration) at electron-builder's GitHub
+publish step because CI ran on nimbalyst-code with a token that can't write
+to nimbalyst/nimbalyst. The "Make GitHub Release promotion opt-in" change
+above (--publish never) is the fix; v0.58.14 bundles all of v0.58.13's
+intended changes plus that fix.
+-->
+
+
+## [0.58.12] - 2026-04-29
+
+
+### Fixed
+- Fire `ScheduleWakeup` tool calls in Claude Code sessions by intercepting them in the `tool_use` stream.
+- Spawn-safe paths for codex-acp and Copilot in packaged builds; rewrite `app.asar` to `app.asar.unpacked` and unify PATH detection via `enhancedPathLoader`.
+- Cast `onerror` on MCP `Server` instances to satisfy `exactOptionalPropertyTypes` in ES2024 tsc.
+- Bump CI mac runner runtime build heap to 8GB to fix OOM during `vite build`.
+
+## [0.58.10] - 2026-04-28
+
+
+### Added
+- Recent file masks history in the git Changes tab (up to 10, deduped, dropdown picker).
+- Guided agent bug-report flow (`FeedbackIntakeDialog`) replaces the PostHog feedback survey; Help > Send Feedback spawns a Claude Code session with anonymization and GitHub Issues posting.
+
+### Changed
+- `POSTHOG_EVENTS.md` and `FEATURE_INVENTORY.md` updated to reflect the new feedback flow.
+
+### Fixed
+- Ship `@opencode-ai/sdk` in packaged builds; add `validate-packaged-sdks` afterPack validator that tests real ESM imports from the packaged tree.
+- Use latest session title in blocked-state OS notifications; fetch from repository at notify time instead of closing over stale reference.
+- Pass platform/arch from electron-builder context to the packaged-SDK validator; no silent host-arch fallback.
+- Install codex-acp cross-arch binary for Mac x64 builds; add `@zed-industries/codex-acp-darwin-${arch}` to `mac.extraResources`.
+- Make the packaged-SDK validator work on Windows: use `pathToFileURL()` for prefix matching and `'junction'` for symlinks.
+
+## [0.58.6] - 2026-04-28
+
+
+### Added
+- OpenCode provider: configurable models, LM Studio bridge, disable-auto-update toggle, and real error messages surfaced from `session.error`.
+- Extension SDK declares app compatibility via `nimbalyst.minAppVersion`.
+
+### Changed
+- OSS prep: MIT license at root, AGPL-3.0 on collabv3, new `LICENSING.md`, Telemetry section in README.
+- OSS prep: gitignore `nimbalyst-local/` and other local-only paths; untrack 67 previously-committed files.
+- Loud warning in `TranscriptTransformer.CURRENT_VERSION` to never bump it for parser bugfixes.
+
+### Fixed
+- Keep AI red/green diff on open files; fix two races where `onFileChanged` could clobber the editor during diff apply or duplicate the same tag twice.
+- Ship codex-acp native binary in packaged builds via `asarUnpack` and `build.files` wildcard. (NIM-388)
+
+## [0.58.5] - 2026-04-28
+
+
+### Added
+- OpenAI Codex over ACP transport (alpha): `openai-codex-acp` provider via `@zed-industries/codex-acp` with native file-edit hooks, MCP passthrough, and `apply_patch` diff rendering.
+- AI editing of shared collaborative documents via Yjs; new `readCollabDoc` and `applyCollabDocEdit` MCP tools using `collab://` URIs.
+- Diff peek in the git commit proposal widget; shared `DiffPeekPopover` with the git extension, user-resizable with persisted size.
+- Self-pacing session wakeups via `schedule_wakeup` MCP tool; persistent across restarts with OS notification on fire.
+- Publish `@nimbalyst/extension-sdk` to npm on `extension-sdk-v*` tag push with npm provenance.
+
+### Changed
+- Consolidated tracker UI: `TrackerBottomPanel` removed, `TrackerMode` is now the single canonical tracker UI. (NIM-382)
+- Alpha features open to all users; each is opt-in from its natural settings panel with an alpha badge. (NIM-380)
+- Consolidated extensions Installed view into Settings > Extensions; Marketplace shows Discover only.
+- Finish Tailwind migration: replace remaining `--surface-*`/`--text-*`/`--primary-color` CSS vars with `--nim-*` equivalents; drop backwards-compat aliases.
+- Centralized renderer IPC listeners in `store/listeners/*`; components now read Jotai atoms instead of subscribing directly.
+- Split `AIService.ts` into `aiServiceUtils.ts` (pure helpers) and `MessageStreamingHandler.ts` (send-message lifecycle).
+- Extract `HooklessAgentFileWatcher` from `AIService` into its own class; add 100-test vitest suite for `aiServiceUtils`.
+
+### Fixed
+- Codex ACP `apply_patch` edits produce accurate `FilesEditedSidebar` entries and diff previews; force empty baseline for new-file adds.
+- `@@` session typeahead shows real provider icons and phase badges matching the session list.
+- Persist `FileGutter` collapsed state across remounts.
+- Stabilize terminal bottom-panel restore across reloads.
+- Remove blank space below the Claude Code Plugins panel.
+- Render Monaco diff gutter glyphs correctly; fix codicon font 403 and restyle gutter to match peek layout.
+- Unhang diff preview in `HistoryDialog`; add Rich/Raw toggle; fix `bg-transparent` conflicting with active-state bg color on buttons.
+- Keep awaiting-input indicator after mode switch; strip `mcp__<server>__` prefix in `refreshPendingPromptsAtom` so MCP-routed prompts count as pending.
+- Show real third-party authors in the Claude Plugins panel instead of defaulting to Anthropic.
+
+## [0.58.4] - 2026-04-26
+
+
+### Added
+- GitHub Copilot CLI as a new AI agent provider (alpha) via ACP protocol with MCP passthrough and streaming.
+- Inline diff peek and sessions pane in the git Changes tab.
+- OpenCode sessions wire through Nimbalyst's MCP tools; tool calls render correctly during streaming.
+- Recent files in the @ mention picker on empty query. (NIM-263)
+- GPT-5.5 added to OpenAI Codex and Chat model catalogs.
+- Subtle "alpha" badges on alpha-bounded features throughout the UI.
+
+### Changed
+- Redesigned Changes pane in the git panel: checkboxes, group-level Stage/Unstage/Discard, file mask filter, color-coded filenames.
+- System reminder cards in the AI transcript now default to collapsed.
+
+### Fixed
+- Apply external file edits to extensions without a diff view; auto-accept diff for no-diff-mode custom editors. (NIM-379)
+- Restore login widget for Claude Code auth errors; thread `isAuthError` through the canonical transcript pipeline. (NIM-377)
+- Restore PATH so Claude Code stdio MCP servers can spawn npx/uvx/docker. (NIM-376)
+- Require `workspacePath` on `HistoryManager.createTag` to fix NOT NULL constraint violations. (NIM-384)
+- Preserve AskUserQuestion draft answers across unmount.
+- Stop OpenCode transcripts from duplicating text and bleeding across sessions; add dedicated `OpenCodeRawParser`.
+- Stop iOS draft sync from deleting characters during fast typing. (NIM-383)
+- Show Files tab and file browsing in the iPad sidebar.
+- Harden iOS webview error handling; skip transcript webview warmup on iPad.
+- Give every tracker type consistent tag support. (NIM-370)
+- Require custom editors to opt in to diff mode via `supportsDiffMode`.
+- Stop over-counting `update_toast_shown` analytics events.
+- Fix iOS CI failures from `@vscode/ripgrep` 403 rate limit.
+
+## [0.58.3] - 2026-04-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Always pre-resolve the Claude Code binary path in packaged builds: the v0.58.2 "let SDK resolve" experiment (Workaround A for NIM-838) caused the SDK's `require.resolve` to return a path inside `app.asar` instead of `app.asar.unpacked`, producing `spawn ENOTDIR`. The SDK then silently fell back to the user's standalone Claude Code CLI, which ignores `--resume` and broke multi-turn sessions. Remove the `skipPreResolve` gate -- all platforms now pre-resolve via `resolveClaudeAgentCliPath()`, which correctly rewrites `app.asar` to `app.asar.unpacked`.
+- Ignore transient hook session IDs that caused false resume mismatch (NIM-838 root cause): SessionStart hooks (`hook_started`, `hook_response`) emit a transient pre-resume UUID before the init frame arrives with the real session ID. `parseSystemChunk` captured `session_id` from all system chunks, so the resume-mismatch guard aborted on the hook UUID before the init frame ever arrived. Only emit `session_id` from system chunks with `subtype: "init"`; hook frames are now ignored for session ID capture.
+- Hot-reload `customClaudeCodePath` without app restart: the custom Claude Code binary path was previously read once at startup and cached as a static string, so changing it in Settings had no effect until restart. Replace the static string with a loader function that reads fresh from the electron-store on each `sendMessage` call, and remove the redundant `setCustomClaudeCodePath` call from the save handler since the loader reads from the same store the save writes to. Follows the same lazy-loader pattern used by `mcpConfigLoader`, `claudeCodeSettingsLoader`, etc.
+- Prevent duplicate transcript events from concurrent `ensureUpToDate` calls: concurrent `ensureUpToDate`/`processNewMessages` calls could race on the same watermark and write duplicate canonical events. Add a per-session promise-chain lock to `TranscriptTransformer` so calls serialize instead. Also log the effective binary path on each `buildSdkOptions` call to confirm `customClaudeCodePath` changes take effect without restart.
+- Suppress result chunk text in resume batches to prevent duplicate assistant messages: the SDK's result chunk always echoes assistant text. When the assistant and result chunks land in separate transformer batches (observed 68ms apart, split by a throttled `ensureUpToDate`), the fresh parser's `processedTextMessageIds` is empty and the result text passes the guard. Add `suppressResultChunkText` flag to `ClaudeCodeRawParser`, set by the transformer on resume batches (`afterId > 0`) where prior batches already handled any assistant text. Slash-command-only turns still work because they're processed in the first batch.
+
+### Removed
+- NIM-838 diagnostic instrumentation: root cause (transient hook session IDs) has been found and fixed, so remove the temporary debugging infrastructure -- `DEBUG_CLAUDE_AGENT_SDK=1` env var injection on resume turns, `logResumeDiagnostic()`/`schedulePostTurn1Diagnostic()` methods, `RESUME_DIAGNOSTIC` filesystem/stderr dumps from the mismatch guard, and restore the stderr ring buffer from 200 back to 50 lines.
+
+## [0.58.2] - 2026-04-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Remove Claude Code SDK prewarm end to end: prewarm was gated behind `PREWARM_ENABLED=false` after it was found to interfere with session resume and required a `canUseTool` shim to keep tool permissions working. Remove the dead path (provider fields, `prewarm`/`discardWarmQuery` methods, `ai:prewarm` IPC handler, preload bridge, type, and renderer `useEffect`), collapsing `sendMessage` to a single `query()` call and removing the warm-query shim entirely. Does not fix NIM-838 -- prewarm was already inert -- but shrinks the surface to reason about while chasing the real resume-mismatch bug.
+
+### Fixed
+- Restore Claude Code on packaged macOS/Linux (regression from v0.58.1): v0.58.1 shipped the NIM-838 workaround that passed `pathToClaudeCodeExecutable=undefined` in packaged mode so the SDK could resolve the binary itself. On packaged macOS arm64, the SDK's `require.resolve` returns a path inside `app.asar` where the binary only exists under `app.asar.unpacked`, producing `spawn ENOTDIR` on turn 1 and breaking Claude Code entirely for Mac users. Restore pre-resolution on every platform except packaged Windows, where the original NIM-838 resume-mismatch reports originated and the experiment remains open. `TeammateManager` now receives the same pre-resolved path so teammate spawns don't hit the same failure.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.58.1] - 2026-04-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Diagnose and work around Claude Code session resume mismatch (NIM-838): follow-up messages in Claude Code sessions fail on v0.57.33+ with "Session resume mismatch" because the native SDK binary (0.2.114+) mints a fresh `session_id` on every `--resume` attempt. Two platform-targeted workarounds plus broad diagnostic instrumentation: stop overriding `pathToClaudeCodeExecutable` in packaged mode so the SDK's own `require.resolve` picks the binary (dev mode unchanged); force `HOME=USERPROFILE` on Windows so the binary's home resolution is deterministic across turn boundaries; enable `DEBUG_CLAUDE_AGENT_SDK=1` on resume turns and bump stderr capture to a 200-line tail-biased ring buffer for the session-lookup fingerprint; `logResumeDiagnostic` walks every plausible home root from subprocess env (HOME, USERPROFILE, APPDATA, CLAUDE_CONFIG_DIR, `os.homedir()`), locates the session jsonl if it exists, and dumps the head of any `.claude/debug/sdk-*.txt` the SDK wrote, firing at preQuery, postMismatch, and +500ms/+2000ms post-turn-1 so we can separate "turn 1 never wrote" from "turn 2 reads elsewhere"; `ai_stream_interrupted` now carries `errorCategory` and `ai_request_failed.errorType` gains the same buckets so `resume_mismatch` and `stream_closed` can be split from the generic error bucket in PostHog. Full evidence chain, bare-SDK repro results, and alpha-build readiness checklist in `nimbalyst-local/plans/claude-code-resume-mismatch-investigation.md`.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.58.0] - 2026-04-22
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Stop tracker items leaking across open projects (NIM-346): MCP tracker change broadcasts went to every BrowserWindow, so items created in one project transiently showed up in other open projects' tracker lists. Scope MCP broadcasts via `findWindowByWorkspace` so events only reach the owning workspace's window, and add a defensive workspace filter in the renderer listener so stray cross-project events are dropped before they touch the atom map.
+- Stop buggy tracker widget from white-screening the app (NIM-351): a malformed tracker result with non-array `tags` threw during `CreatedView`/`RetrievedView` render and unmounted the transcript. Guard both views against non-array `item.tags`, coerce `args.tags` to an array in `tracker_create`/`tracker_update` so bad shapes from the agent aren't persisted going forward, wrap custom tool widgets in `ToolWidgetErrorBoundary` so a crashing widget renders an inline fallback instead of bringing down the transcript, and wrap the renderer root in `ErrorBoundary` as a safety net so escaped errors show a recoverable screen instead of a white screen.
+- Avoid `document-service` IPC calls outside workspace windows: gate tracker sync startup on workspace-backed window state and prevent non-workspace windows (settings, help, etc.) from invoking `document-service` handlers, which produced errors and log spam when those windows were open.
+- Ship working `node-pty` in the Linux AppImage (NIM-354): the Linux AppImage crashed on launch because packaged `node_modules/node-pty` contained no loadable `pty.node` for `linux-x64` -- the upstream `node-pty@1.x` npm package ships prebuilds for darwin and win32 only, and electron-builder's `install-app-deps` runs `@electron/rebuild` with `buildFromSource=false` so the Linux job silently skipped rebuilding instead of falling back to node-gyp. Add a Linux-only CI step that runs `@electron/rebuild --force` against the target Electron version and verifies `build/Release/pty.node` actually landed, and extend `validate-extra-resources.js` with a `node-pty` binary check that fails the build when no `pty.node` exists for the current target (mirroring the existing ripgrep and claude-agent-sdk checks). Catches this class of silent-skip on any platform, not just Linux.
+- Remove console error when dropping a session onto itself: the drop is already a no-op but logged a noisy console error on every self-drop; now returns early without logging.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.42] - 2026-04-22
+
+
+### Added
+- Complete the marketplace extension deep link flow: queue install requests until the renderer is ready, then open Settings > Marketplace and focus the requested extension so users landing from an external link arrive on the matching detail view.
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Render custom tool widgets in Codex sessions: Codex reuses short per-turn item IDs (`item_1`, `item_2`, ...) across sessions, so the transcript transformer's `findByProviderToolCallId` queried globally and deduped a new session's `tool_call` against a same-named tool from a previous session, dropping the canonical event and hiding widgets like the git commit proposal. Scope the lookup to the current session by threading `sessionId` through the store interface, `processDescriptor`, the `ParseContext` wiring in `TranscriptTransformer` and `projectRawMessages`, and the `ToolCallMatcher` diff lookups. Adds a regression test covering two sessions that both call `mcp__nimbalyst-mcp__developer_git_commit_proposal` with `item_1`. Refs NIM-342.
+- Detect Windows Claude Code installs correctly: the detector only looked for `claude.exe`/`claude` on PATH and missed the npm-installed `claude.cmd` shim, so users with a working Claude Code install still saw the false "Claude Code not detected" setup warning. Recognize `claude.cmd` and add regression coverage for the Windows installation check alongside the related app-startup change.
+- Ship ripgrep on Windows ARM64 and the Claude Agent SDK native binary on Intel Mac: two silent `extraResources` failures caused broken release builds (ripgrep missing from Windows ARM64 installs with `spawn rg ENOENT`, and the `claude-agent-sdk` native binary missing from Intel Mac installs). Re-run `@vscode/ripgrep` postinstall explicitly after `npm ci --ignore-scripts` on `windows-11-arm` (the `--ignore-scripts` flag, added to dodge workerd's missing ARM64 prebuild, also skipped the rg.exe download); extend `validate-extra-resources` to walk `build.{mac,win,linux}.extraResources`, expand the `${arch}` macro via `BUILD_ARCH`, and assert the actual binary exists inside `@vscode/ripgrep/bin` and `@anthropic-ai/claude-agent-sdk-<platform>-<arch>`; extend `normalize-extra-resources` to handle platform-specific entries and self-heal npm hoisting in both directions; wire `validate:extra-resources` into `build:win` scripts (was only running for mac/linux).
+- Restore Electron typecheck for Windows Claude detection: remove the explicit `shell` option from the new Windows Claude version checks so the Electron package compiles cleanly again.
+- Scope `validate-extra-resources` to the current build platform: the v0.57.40 validator walked every `build.{mac,win,linux}.extraResources` block on every runner, so the Linux release job failed validation on `@anthropic-ai/claude-agent-sdk-darwin-x64` -- a package that isn't installed on a Linux runner and isn't needed for the Linux build output. Limit platform-scoped walking to entries whose macro matches `process.platform` (with a `BUILD_PLATFORM` override for future cross-platform scenarios); top-level `extraResources` still validate everywhere. Root cause of v0.57.40 failing to ship.
+- Combine cross-arch native binary installs into a single `npm install` invocation: v0.57.41's Intel Mac build ran two sequential `npm install --no-save --force` calls (one for `@anthropic-ai/claude-agent-sdk-darwin-x64`, then one for `@openai/codex-darwin-x64`). Because neither package is recorded in `package.json`, npm treated the SDK binary as extraneous on the second invocation and pruned it -- the Codex install logged `added 1 package, removed 1 package`, leaving only Codex on disk and tripping the new extraResources validator with a "missing `claude-agent-sdk-darwin-x64`" error. Pass both package specs to a single `npm install` so npm keeps both trees intact. Root cause of v0.57.41 failing to ship.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.39] - 2026-04-22
+
+
+### Changed
+- Release collabv3 0.1.63.
+- Increase maximum width for `TrackerMainView` component.
+- Bump `claude-agent-sdk` to 0.2.117, which ships Claude Code native binary 2.1.117 (built 2026-04-21). Picked up after observing a `hook_0 "Stream closed"` cascade on 2.1.116 in a non-Unknown-tool path (plain Bash, long turn, no user-facing hook configured) -- the cascade is binary-side, so the only lever on our side is the binary version. Also aligns `packages/electron/package.json` from `^0.2.114` to `^0.2.117` so all three declarations match (previously drifted during the 0.2.116 bump). Refs NIM-340.
+
+### Fixed
+- Normalize hoisted `extraResources` before Mac packaging: the previous normalize step ran inline with validation but, on Mac cross-arch builds, the packaging invocation sidestepped the normalization and the validator still saw missing `@openai/codex-sdk` paths. Run the normalize step as a dedicated pre-step in the Electron mac build flow so symlinks are in place before `validate-extra-resources` and electron-builder start, preventing CI packaging failures when workspace dependencies are hoisted. Root cause of v0.57.38 failing to ship.
+- Normalize `extraResources` paths across npm hoisting layouts: npm's workspace hoisting isn't stable across platforms -- the same lockfile can place `@openai/codex-sdk` in `packages/electron/node_modules/` on one machine and in the repo root `node_modules/` on another. The electron-builder `extraResources` entries use literal paths, so when npm hoists differently the Linux CI build failed `validate-extra-resources`. Added a pre-validate normalize step that, for any entry whose electron-local path is missing but whose root-level equivalent exists, creates a symlink at the expected location. Entries are processed shallowest-first so one symlink (e.g. `@openai`) covers any nested entries (e.g. `@openai/codex-sdk`). No-op when hoisting already matches. Root cause of v0.57.37 failing to ship.
+- Restore bundled ripgrep via `@vscode/ripgrep`: the claude-agent-sdk upgrade to a native binary package stopped shipping the vendored ripgrep binary at `vendor/ripgrep/<arch>/rg`. `getRipgrepPath()` fell back to system `rg`, which most users don't have, so `findWorkspaceFiles` threw `spawn rg ENOENT`, the QuickOpen cache never built, and the `@` file-mention typeahead in AIInput had no options. Added `@vscode/ripgrep` as a direct dep (postinstall fetches the host-arch rg), rewrote `getRipgrepPath()` to resolve the binary in dev and packaged builds, bundled via `extraResources` into `app.asar.unpacked/node_modules/@vscode/ripgrep`, and extended the CI cross-arch install step to re-run postinstall with `npm_config_arch` so cross-compile jobs pack the correct binary.
+- Lock `@vscode/ripgrep` in package-lock.json so CI installs the same version used to bundle rg.
+- Pass `GITHUB_TOKEN` to the `@vscode/ripgrep` postinstall on CI: `@vscode/ripgrep` downloads its rg binary from `ripgrep-prebuilt` GitHub releases during postinstall. Unauthenticated CI runners hit the 403 rate limit, breaking `npm ci`. Expose `secrets.GITHUB_TOKEN` on both the initial install step and the cross-arch re-download step so the postinstall authenticates its fetch. This was the root cause of v0.57.36 failing to ship.
+- Stop `hook_0 Stream closed` cascade on Claude Code 2.1.116: long agent turns hit repeated `Error in hook callback hook_0` / `Tool permission request failed: Error: Stream closed` failures as soon as the agent invoked one of the CLI's new built-in tools (`Monitor`, `ExitWorktree`, crons, etc.). The old `SDK_NATIVE_TOOLS` whitelist missed those tools, so Nimbalyst tried to execute them locally, threw `Unknown tool`, and destabilized the CLI<->host control stream for the rest of the turn -- the agent then retried blindly for minutes. Added `Monitor`, `ExitWorktree`, `PushNotification`, `RemoteTrigger`, `CronCreate/Delete/List`, `ListMcpResources(Tool)`, `ReadMcpResource(Tool)`, `Config`, `Mcp` to `SDK_NATIVE_TOOLS`; replaced the unknown-tool throw with a warn-and-skip that assumes CLI-native so future tool additions log one line instead of breaking the stream. Refs NIM-340.
+- Narrow `STREAM_CLOSED_RAW_CHUNK` diagnostic to real errors: was matching any chunk whose JSON contained the string "Stream closed", firing on successful tool results that legitimately mentioned the phrase (e.g., `git log` echoing a commit message about the stream-close fix). Narrowed to only match user/tool_result chunks with `is_error=true` and "Stream closed" in the content string. Verified against archived cascades: every real stream-close event still matches; the commit-message false positive no longer does.
+- Silence `TreeMatcher` guidepost error on unchanged subtrees: when a list subtree is diffed and its children have identical text, the synthetic source/target markdown blobs match exactly and `createTwoFilesPatch` returns a patch with zero hunks, which `parseUnifiedDiff` rejects as invalid. The caller already swallows the error but logged noisily. Short-circuit `buildTextBasedGuidePosts` when the blobs are identical so the diff library is never invoked in this case.
+
+## [0.57.35] - 2026-04-22
+
+
+### Fixed
+- Shared/hybrid tracker types rendering blank in workspaces with no team: routed through the collaborative editor path which couldn't resolve a DocumentRoom, leaving the detail panel stuck on "No content". Now detects team membership as a tri-state (pending/no-team/team) in `TrackerItemDetail`, skips the document-sync IPC when no team exists (falls back to the local PGLite Lexical editor that already backs collab content), and holds the loading state while team detection is in flight so the editor doesn't briefly mount in the wrong mode.
+- electron-store failing to load in packaged builds with `Cannot find module 'p-try'`: the allowlist-style `build.files` array was missing `p-try`, which `pkg-up`'s nested `p-limit@2.3.0` requires. Broke the project move feature. Added `p-try` to the allowlist.
+- Unrelated SDK errors misreported as "session expired": the post-error fallback was using `~/.claude/history.jsonl` as authority for whether a resumed session still existed. When the lookup missed (write-timing races, programmatic sessions the SDK never logs to history), any unrelated SDK error was swapped for a "session expired" message and the session mapping deleted, forcing the user onto a fresh conversation. Demoted the check to a soft diagnostic and preserve the session mapping -- real expiry is still caught upstream via the SDK's own error signature.
+
+## [0.57.34] - 2026-04-22
+
+
+### Added
+- Collaborative tracker content editing via DocumentRoom: team-synced tracker items using Yjs with review gate, awareness cursors, and PGLite persistence. TrackerItemDetail now supports three content paths (file-backed, local-pglite, collaborative); review banner shows pending remote changes with accept/reject; server auto-repairs corrupt tracker items by re-encrypting from local PGLite data when decryption fails. 1MB content size limit enforced. Configurable TTL on DocumentRoom (tracker content rooms use 90-day TTL).
+- Extension marketplace update flow: auto-updates installed marketplace extensions silently on app launch, update indicators in Discover tab (cards + detail modal), per-extension Update button and Update All in Installed tab, new `/release-extension` command, bundled registry updated with mindmap v1.0.1.
+- Pre-fetch commit context to eliminate agent discovery latency: new `git:get-commit-context` IPC handler cross-references session-edited files with git status before sending to the agent. `handleSmartCommit` injects the pre-fetched file list into the prompt so the agent calls `developer_git_commit_proposal` immediately. New `CommitRequestCard` widget renders commit-request user messages as a collapsible card instead of raw prompt text.
+- Capture `cpu_arch` as PostHog person property so user base can be segmented by CPU architecture (arm64, x64) -- GitHub download counts lose this fidelity once pre-split generic assets are in the mix.
+
+### Fixed
+- Session resume failing in packaged builds: `setupClaudeCodeEnvironment()` was overlaying a synthetic env on top of the carefully sanitized `process.env`, clobbering it. Designed for the old Node.js execution path but the native binary doesn't need NODE_PATH/PATH rewrites -- just HOME. Removed the overlay so dev and packaged mode launch the binary with the same environment. Also: `checkSessionExists` fails open when `~/.claude/history.jsonl` is missing (fixes Windows where the CLI may store data elsewhere), stopping real SDK errors from being misdiagnosed as "session expired".
+- MIME type resolution for chat attachments: `.log`, `.ts`, `.py`, `.yaml`, and other text-based files were rejected as "unsupported file type" because browsers report empty or `application/octet-stream` MIME for those extensions. Added extension-to-MIME fallback map (~70 extensions), passed filename through to validation, and broadened supported document MIME list (html, xml, yaml, js, ts, etc.).
+- iOS compose bar clearing dictated text after keyboard voice input: dismiss focus before clearing the text binding on send/queue so any in-flight keyboard dictation commits first. Otherwise UIKit's pending dictation buffer re-inserted text after the clear, leaving the dictated message stuck.
+- Tracker content editor destroying/remounting on every save by removing `updatedAt` dependency from content load effect.
+- Model picker showing raw variant ID for pinned opus-4-6 on initial load: use `CLAUDE_CODE_MODEL_LABELS` map instead of naive first-char capitalization so `opus-4-6` displays as `Opus` not `Opus-4-6`. Matches server-side label format (dot separator).
+- `scheduleAIProviderPersist` re-sending stale debug settings: provider saves fetched `currentSettings` via `aiGetSettings()` and re-sent `showToolCalls`/`aiDebugLogging` alongside `apiKeys`/`providerSettings`. If a debug toggle changed while a provider save was in the 500ms debounce window, the older debug values were re-saved over the fresh ones. The `ai:saveSettings` handler guards every field with `!== undefined`, so dropping those keys preserves existing values. Last remaining holdout of the NIM-801 spread pattern.
+- Dropping advanced settings when debounce timer resets: toggling Extension Dev Tools (or any `changedKeys`-driven advanced setting) silently failed to persist when another setting mutated within the 500ms debounce window. The scheduler captured `changedKeys` in a `setTimeout` closure and cleared the pending timer on each call, losing the first call's keys entirely. Accumulate `changedKeys` into a module-level Set and capture the latest settings snapshot so the flushed timer sees every queued change. Same fix applied to `scheduleDeveloperFeaturePersist`.
+
+### Removed
+- Failing mermaid import exploration test (debugging artifact with `console.log` diagnostics whose subgraph case asserted on the `mermaid-to-excalidraw` library's internal fallback for inputs it throws on; consistently failing CI with no production code relying on the assertion).
+
+## [0.57.33] - 2026-04-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Intel Mac packaged build was missing the Claude Code x64 SDK binary due to three compounding issues:
+  - `afterPack.js` used `packager.arch` which was falsy for some arch values, falling through to `process.arch` (arm64 on the build machine). Pruning kept the arm64 binary and deleted the x64 one. Now uses `context.arch`.
+  - electron-builder's `files` patterns only include packages in the npm dependency tree. The `--no-save` cross-arch install isn't in the lock file, so `files` globs silently skipped it. Added `mac.extraResources` with the `${arch}` macro to copy the binary from root `node_modules` regardless of lock-file state.
+  - Simplified the CI cross-arch install to put the binary in root `node_modules/`, where `extraResources` reads from.
+- Added diagnostic logging and improved error messages when Claude Code binary resolution fails at runtime (shows which package and arch were expected).
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.32] - 2026-04-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Upgrade Claude Agent SDK 0.2.114 -> 0.2.116 (permission dialog crash fix, session resume perf, API 400 race condition fix) and `@anthropic-ai/sdk` 0.71.2 -> 0.81.0 (deduped with the agent SDK dependency)
+- Address 36 npm audit vulnerabilities including 2 critical: upgrade `simple-git` 3.30.0 -> 3.36.0 (command execution RCE fix), `mcp-remote` 0.1.37 -> 0.1.38, plus high-severity fixes in `vite`, `rollup`, `tar`, `picomatch`, `path-to-regexp`, `@hono/node-server`, `@xmldom/xmldom`, `undici`, and others. Remaining 30 are upstream/transitive with no fix available.
+
+### Fixed
+- Cross-arch SDK install step hitting `ERR_PACKAGE_PATH_NOT_EXPORTED`: `@anthropic-ai/claude-agent-sdk` and `@openai/codex` both have an `exports` field in `package.json` that doesn't expose `./package.json`, so `require.resolve('<pkg>/package.json', { paths: [...] })` fails regardless of the `paths` option. Probe the known `node_modules` locations with bash file existence, then `require()` the absolute path -- absolute paths bypass `exports` resolution and just read the file.
+- Restore typecheck after the `@types/node` bump pulled in by the npm audit fix: TypeScript 5.7+'s newer `Uint8Array<ArrayBufferLike>` / `Buffer<ArrayBufferLike>` definitions narrow `SharedArrayBuffer` out of `ArrayBuffer`, breaking ~13 `crypto.subtle.*`, `fetch`, and `new Blob()` call sites. Added `as BufferSource` / `as BodyInit` / `as BlobPart` casts at the boundaries in `ShareHandlers.ts`, `KeyRotationService.ts`, `OrgKeyService.ts`, `CollabAssetService.ts`, and the runtime sync providers (`DocumentSync.ts`, `ECDHKeyManager.ts`, `ProjectSyncProvider.ts`, `TeamSync.ts`, `TrackerSync.ts`). All heap-allocated `Uint8Array`s, so the casts are safe at runtime.
+- Intel Mac "spawn ENOTDIR" reproduced after the v0.57.29 attempt: running `npm install --prefix packages/electron/` makes npm read that workspace's `package.json`, which lists `@nimbalyst/runtime` and other workspace siblings as dependencies. Without workspace context npm tries to resolve those from the public registry and 404s. Install into a temp directory that has no workspace neighbors, then copy the binary into `packages/electron/node_modules/` where electron-builder can find it.
+- Tool permission prompts lost after renderer reload: `safeSend` silently dropped events when the original `webContents` was destroyed (e.g., HMR reload), so the pending permission promise never resolved and the SDK stream timed out with "Stream closed". Now falls back to any live `BrowserWindow`.
+- Always include subprocess stderr in error messages: previously stderr was only appended to errors containing "exited with code", losing diagnostic context for native binary crashes producing "Stream closed" or other errors.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.31] - 2026-04-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Upgrade Claude Agent SDK 0.2.114 -> 0.2.116 (permission dialog crash fix, session resume perf, API 400 race condition fix) and `@anthropic-ai/sdk` 0.71.2 -> 0.81.0 (deduped with the agent SDK dependency)
+- Address 36 npm audit vulnerabilities including 2 critical: upgrade `simple-git` 3.30.0 -> 3.36.0 (command execution RCE fix), `mcp-remote` 0.1.37 -> 0.1.38, plus high-severity fixes in `vite`, `rollup`, `tar`, `picomatch`, `path-to-regexp`, `@hono/node-server`, `@xmldom/xmldom`, `undici`, and others. Remaining 30 are upstream/transitive with no fix available.
+
+### Fixed
+- Cross-arch SDK install step on CI now uses `require.resolve(..., { paths: ['./packages/electron'] })` to look up the Claude Agent SDK and Codex versions: the previous hardcoded `./packages/electron/node_modules/...` path didn't exist when npm workspaces hoisted the SDK to the root `node_modules/`, which broke the Intel Mac cross-arch install and cascaded into fail-fast cancellations for the whole matrix.
+- Restore typecheck after the `@types/node` bump pulled in by the npm audit fix: TypeScript 5.7+'s newer `Uint8Array<ArrayBufferLike>` / `Buffer<ArrayBufferLike>` definitions narrow `SharedArrayBuffer` out of `ArrayBuffer`, breaking ~13 `crypto.subtle.*`, `fetch`, and `new Blob()` call sites. Added `as BufferSource` / `as BodyInit` / `as BlobPart` casts at the boundaries in `ShareHandlers.ts`, `KeyRotationService.ts`, `OrgKeyService.ts`, `CollabAssetService.ts`, and the runtime sync providers (`DocumentSync.ts`, `ECDHKeyManager.ts`, `ProjectSyncProvider.ts`, `TeamSync.ts`, `TrackerSync.ts`). All heap-allocated `Uint8Array`s, so the casts are safe at runtime.
+- Intel Mac "spawn ENOTDIR" reproduced after the v0.57.29 attempt: running `npm install --prefix packages/electron/` makes npm read that workspace's `package.json`, which lists `@nimbalyst/runtime` and other workspace siblings as dependencies. Without workspace context npm tries to resolve those from the public registry and 404s, aborting the install before any native binary lands on disk. Install into a temp directory that has no workspace neighbors, then copy the binary into `packages/electron/node_modules/` where electron-builder can find it. Same pattern for the Codex binary.
+- Tool permission prompts lost after renderer reload: `safeSend` silently dropped events when the original `webContents` was destroyed (e.g., HMR reload), so the pending permission promise never resolved and the SDK stream timed out with "Stream closed". Now falls back to any live `BrowserWindow` so the permission UI still appears after a renderer reload.
+- Always include subprocess stderr in error messages: previously stderr was only appended to errors containing "exited with code", so native binary crashes producing "Stream closed" or other errors had their stderr silently dropped, losing diagnostic context needed to debug intermittent binary deaths.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.30] - 2026-04-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Upgrade Claude Agent SDK 0.2.114 -> 0.2.116 (permission dialog crash fix, session resume perf, API 400 race condition fix) and `@anthropic-ai/sdk` 0.71.2 -> 0.81.0 (deduped with the agent SDK dependency)
+- Address 36 npm audit vulnerabilities including 2 critical: upgrade `simple-git` 3.30.0 -> 3.36.0 (command execution RCE fix), `mcp-remote` 0.1.37 -> 0.1.38, plus high-severity fixes in `vite`, `rollup`, `tar`, `picomatch`, `path-to-regexp`, `@hono/node-server`, `@xmldom/xmldom`, `undici`, and others. Remaining 30 are upstream/transitive with no fix available.
+
+### Fixed
+- Restore typecheck after the `@types/node` bump pulled in by the npm audit fix: TypeScript 5.7+'s newer `Uint8Array<ArrayBufferLike>` / `Buffer<ArrayBufferLike>` definitions narrow `SharedArrayBuffer` out of `ArrayBuffer`, breaking ~13 `crypto.subtle.*`, `fetch`, and `new Blob()` call sites. Added `as BufferSource` / `as BodyInit` / `as BlobPart` casts at the boundaries in `ShareHandlers.ts`, `KeyRotationService.ts`, `OrgKeyService.ts`, `CollabAssetService.ts`, and the runtime sync providers (`DocumentSync.ts`, `ECDHKeyManager.ts`, `ProjectSyncProvider.ts`, `TeamSync.ts`, `TrackerSync.ts`). All heap-allocated `Uint8Array`s, so the casts are safe at runtime.
+- Intel Mac "spawn ENOTDIR" still reproduced after the v0.57.29 attempt: running `npm install --prefix packages/electron/` makes npm read that workspace's `package.json`, which lists `@nimbalyst/runtime` and other workspace siblings as dependencies. Without workspace context npm tries to resolve those from the public registry and 404s, aborting the install before any native binary lands on disk. Install into a temp directory that has no workspace neighbors, then copy the binary into `packages/electron/node_modules/` where electron-builder can find it. Same pattern for the Codex binary.
+- Tool permission prompts lost after renderer reload: `safeSend` silently dropped events when the original `webContents` was destroyed (e.g., HMR reload), so the pending permission promise never resolved and the SDK stream timed out with "Stream closed". Now falls back to any live `BrowserWindow` so the permission UI still appears after a renderer reload.
+- Always include subprocess stderr in error messages: previously stderr was only appended to errors containing "exited with code", so native binary crashes producing "Stream closed" or other errors had their stderr silently dropped, losing diagnostic context needed to debug intermittent binary deaths.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.29] - 2026-04-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Intel Mac "spawn ENOTDIR" still reproduced after v0.57.28: npm workspaces hoist packages to the root `node_modules/` even when `npm install` is run from a child directory, so the darwin-x64 SDK binaries kept landing where electron-builder couldn't find them. Use `--install-strategy=nested --prefix` to bypass workspace hoisting and force the binaries into `packages/electron/node_modules/`. Added a post-install verification step that fails the CI job immediately if the binary is missing at the expected path.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.28] - 2026-04-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Gate SDK prewarm behind `PREWARM_ENABLED=false` temporarily while the session resume and canUseTool plumbing bakes
+
+### Fixed
+- Intel Mac "spawn ENOTDIR" on launch: run the cross-arch npm install from `packages/electron/` (not the monorepo root) so the darwin-x64 Claude Agent SDK and Codex binaries land in `packages/electron/node_modules/` where electron-builder's `files` patterns can resolve them. Keeps `macos-latest` as the runner since GitHub is phasing out Intel runners.
+- Session resume silently starting fresh conversations after a Nimbalyst restart: `ai:prewarm` cached the Claude Code provider without calling `setProviderSessionData`, so `sessions.getSessionId()` returned undefined and the SDK spawned a brand-new session with no visible error. `setProviderSessionData` now runs on every `sendMessage`, the prewarm IPC handler also restores session data, and the restore is asserted against the DB. The stream now compares the SDK-reported `session_id` against `options.resume` for Claude Code, Codex threads, and managed teammates, throwing on mismatch so silent resume failures surface loudly.
+- canUseTool Zod errors on every tool call after prewarm: the prewarm stub returned `true`, which spread into `{toolUseID: ...}` with no `behavior`/`updatedInput`/`message` and failed the CLI's Zod schema. Replaced with a delegating shim backed by `warmCanUseToolRef`; the real session-bound handler is installed before the warm query is reused.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.27] - 2026-04-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Gate SDK prewarm behind `PREWARM_ENABLED=false` temporarily while the session resume and canUseTool plumbing bakes
+
+### Fixed
+- Mac x64 build switched to a native macos-13 Intel runner instead of cross-compiling on ARM64: SDK native binaries were landing in root `node_modules/` where electron-builder couldn't find them, causing "spawn ENOTDIR" on Intel Macs. The cross-arch install step is no longer needed.
+- Session resume silently starting fresh conversations after a Nimbalyst restart: `ai:prewarm` cached the Claude Code provider without calling `setProviderSessionData`, so `sessions.getSessionId()` returned undefined and the SDK spawned a brand-new session with no visible error. `setProviderSessionData` now runs on every `sendMessage`, the prewarm IPC handler also restores session data, and the restore is asserted against the DB. The stream now compares the SDK-reported `session_id` against `options.resume` for Claude Code, Codex threads, and managed teammates, throwing on mismatch so silent resume failures surface loudly.
+- canUseTool Zod errors on every tool call after prewarm: the prewarm stub returned `true`, which spread into `{toolUseID: ...}` with no `behavior`/`updatedInput`/`message` and failed the CLI's Zod schema. Replaced with a delegating shim backed by `warmCanUseToolRef`; the real session-bound handler is installed before the warm query is reused.
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.26] - 2026-04-20
+
+
+### Added
+- canUseTool Zod schema compliance tests (43 tests) covering immediateToolDecision trust modes / team tools / MCP tools / delegation, toolAuthorization service and fallback permission flows, askUserQuestion answer/cancel/abort paths, and the canUseToolNormalization safety net
+
+### Changed
+- Opt GitHub Actions workflows into the Node.js 24 runtime (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true) to silence deprecation warnings ahead of the forced default in June 2026
+
+### Fixed
+- Use `npm install --force` for the cross-arch native binary step so npm accepts platform-specific optional dependencies on the arm64 CI runner (was failing the CPU check and blocking the Intel Mac build fix from actually shipping)
+- Intel Mac builds now ship with the correct native binaries: CI installs target-arch Claude Agent SDK and OpenAI Codex packages when cross-compiling macOS x64 on an arm64 runner, resolving "CLI not found" errors
+- Windows agent mode input is focusable on the first session: guard auto-focus with an offsetParent visibility check and use IntersectionObserver to retry when the panel becomes visible
+- Windows auto-update relaunches the app after silent install (flip NSIS runAfterFinish to true) so the update flow matches macOS
+- Race condition in ElectronDocumentService where refreshWorkspaceData didn't set initializationPromise, letting listDocumentMetadata start a competing background scan that blocked subsequent refreshes via the isScanning guard
+- Remove stale ELECTRON_RUN_AS_NODE assertion in the claudeCodeEnvironment test (env var was intentionally removed during the native binary SDK upgrade)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.25] - 2026-04-20
+
+
+### Added
+- canUseTool Zod schema compliance tests (43 tests) covering immediateToolDecision trust modes / team tools / MCP tools / delegation, toolAuthorization service and fallback permission flows, askUserQuestion answer/cancel/abort paths, and the canUseToolNormalization safety net
+
+### Changed
+- Opt GitHub Actions workflows into the Node.js 24 runtime (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true) to silence deprecation warnings ahead of the forced default in June 2026
+
+### Fixed
+- Intel Mac builds now ship with the correct native binaries: CI installs target-arch Claude Agent SDK and OpenAI Codex packages when cross-compiling macOS x64 on an arm64 runner, resolving "CLI not found" errors
+- Windows agent mode input is focusable on the first session: guard auto-focus with an offsetParent visibility check and use IntersectionObserver to retry when the panel becomes visible
+- Windows auto-update relaunches the app after silent install (flip NSIS runAfterFinish to true) so the update flow matches macOS
+- Race condition in ElectronDocumentService where refreshWorkspaceData didn't set initializationPromise, letting listDocumentMetadata start a competing background scan that blocked subsequent refreshes via the isScanning guard
+- Remove stale ELECTRON_RUN_AS_NODE assertion in the claudeCodeEnvironment test (env var was intentionally removed during the native binary SDK upgrade)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.24] - 2026-04-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Consolidate iOS CI from 3 sequential macOS jobs to 1, cutting roughly two-thirds of runner time by removing redundant npm ci/simulator boot/Xcode setup and no-op UI test plan check
+
+### Fixed
+- Restore login/logout after the Claude Agent SDK upgrade to native binary packaging: resolve the platform-specific binary path instead of the removed cli.js, run the binary directly instead of via ELECTRON_RUN_AS_NODE, and fall back to system-installed claude.exe on Windows
+- Normalize canUseTool response shape (updatedInput on allow, message on deny) in the ClaudeCodeProvider wrapper to satisfy the SDK native binary's Zod schema validation
+- Silence noisy auth/sync logs for unauthenticated users in collabDocuments, SyncManager, and iOS SyncManager/DocumentSyncManager so startup logs stay clean when signed out
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.23] - 2026-04-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Upgrade Claude Agent SDK to 0.2.114 for Zod 4 compatibility; bump zod to ^4.0.0 across the workspace
+- Expanded MCP error logging: onerror handler and top-level try/catch with tool name/args in all 7 MCP servers, prefixed `[MCP:server-name]` for easy grepping
+- Log canUseTool return values in ClaudeCodeProvider to diagnose SDK validation failures
+
+### Fixed
+- Silent Windows auto-updates so users no longer see the NSIS installer wizard
+- Prevent duplicate tool call entries in agent provider transcripts (claude-code, codex, opencode) by gating the legacy addMessage path to chat providers only
+- Migrate existing users' persisted Claude Code model list to include the Opus 4.6 variant so upgrading Windows users see it again in the Agent picker
+- Default Claude Code model list now includes Opus 4.6 for fresh installs
+- Restore actual release notes (from CHANGELOG.md) on internal GitHub Releases instead of the hardcoded boilerplate that had been used since Sep 2025
+- Restore package-lock.json optional flags that were stripped by npm install during the SDK upgrade, unblocking CI on Linux x64
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.22] - 2026-04-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Upgrade Claude Agent SDK to 0.2.114 for Zod 4 compatibility; bump zod to ^4.0.0 across the workspace
+- Expanded MCP error logging: onerror handler and top-level try/catch with tool name/args in all 7 MCP servers, prefixed `[MCP:server-name]` for easy grepping
+- Log canUseTool return values in ClaudeCodeProvider to diagnose SDK validation failures
+
+### Fixed
+- Silent Windows auto-updates so users no longer see the NSIS installer wizard
+- Prevent duplicate tool call entries in agent provider transcripts (claude-code, codex, opencode) by gating the legacy addMessage path to chat providers only
+- Migrate existing users' persisted Claude Code model list to include the Opus 4.6 variant so upgrading Windows users see it again in the Agent picker
+- Default Claude Code model list now includes Opus 4.6 for fresh installs
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.21] - 2026-04-20
+
+
+### Added
+- Delete custom tracker types from Settings > Trackers (built-in types remain protected)
+- Prewarm Claude Code SDK subprocess while user types for near-instant first-query response
+
+### Changed
+- Upgrade Claude Agent SDK to 0.2.114 with native per-platform binaries; remove Electron-as-Node launch chain, standalone binary toggle, and Bun/claude-helper CI steps
+- Prune non-target SDK binaries in afterPack to shrink installer by ~500MB
+- Runtime tsconfig upgraded to ES2024 for AsyncDisposable support; zod pinned to v3.23 for claude-agent-sdk compatibility
+
+### Fixed
+- TrackerPlugin no longer destroys automationStatus frontmatter, fixing stale lastRun, "[object Object]" schedule, and mismatched runCount in the automations UI (NIM-324)
+- Manual "Check for Updates" works after previously dismissing an update with "remind me later"
+- Windows Claude Code subprocess "exit code 1" failures resolved via native binary architecture; stderr is now captured for diagnostics
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.20] - 2026-04-20
+
+
+### Added
+- Opus 4.6 remains selectable in the Claude Code model picker via a pinned variant
+
+### Changed
+- Validate extraResources paths before building
+
+### Fixed
+- Recover sync quickly after network change or laptop sleep
+- Yield tool_call chunks from claude-code so lastTextSection resets between text sections
+- Codex SDK missing from packaged builds after upgrade
+
+## [0.57.19] - 2026-04-17
+
+
+### Changed
+- Temporarily disabled Windows ARM64 build in CI while winCodeSign/DigiCert tooling gaps are sorted out
+
+## [0.57.18] - 2026-04-17
+
+
+### Added
+- Windows ARM64 build alongside x64
+- Extension marketplace and Claude Plugins now open to all users
+
+### Changed
+- Single source of truth for Claude Code variant versions and labels
+- Rebuilt iOS transcript bundle
+
+### Fixed
+- Unblock Windows ARM64 Electron build by resolving missing signtool.exe
+- Skip workerd postinstall on Windows ARM64 CI
+- Marketplace extension install on Windows
+- iOS: stopped stale SwiftUI teardown from stranding the next session
+- Render Codex transcripts on iOS and Android via canonical projection
+- Prevent main-process OOM from release-artifact file storms
+- Align Codex/OpenCode provider tests with text chunk yields
+
+## [0.57.17] - 2026-04-17
+
+
+### Fixed
+- Marketplace extension install on Windows
+
+## [0.57.16] - 2026-04-17
+
+
+### Added
+- Windows ARM64 build alongside x64
+- Extension marketplace and Claude Plugins now open to all users
+
+### Changed
+- Single source of truth for Claude Code variant versions and labels
+- Rebuilt iOS transcript bundle
+
+### Fixed
+- Skip workerd postinstall on Windows ARM64 CI (unblocks ARM64 build)
+- iOS: stopped stale SwiftUI teardown from stranding the next session
+- Render Codex transcripts on iOS and Android via canonical projection
+- Prevent main-process OOM from release-artifact file storms
+
+## [0.57.15] - 2026-04-16
+
+
+### Added
+- Windows ARM64 build alongside x64
+- Extension marketplace and Claude Plugins now open to all users
+
+### Changed
+- Single source of truth for Claude Code variant versions and labels
+- Rebuilt iOS transcript bundle
+
+### Fixed
+- iOS: stopped stale SwiftUI teardown from stranding the next session
+- Render Codex transcripts on iOS and Android via canonical projection
+- Prevent main-process OOM from release-artifact file storms
+
+## [0.57.14] - 2026-04-16
+
+
+### Added
+- Claude Opus 4.7 with the full 1M-token context window as the default Claude model (`claude:claude-opus-4-7`). Opus 4.7 uses 1M context natively on the Messages API — no `context-1m-2025-08-07` beta header required, unlike Opus 4.6. Previous default (Sonnet 4.6) remains selectable.
+- Commit-tracker item linking with opt-in automation settings
+- Session phase badges shown in agent mode history panel
+
+### Changed
+- Upgraded `@anthropic-ai/claude-agent-sdk` from 0.2.87 to 0.2.111 (Opus 4.7 support, task management, agent teams, plan-mode refinements)
+- Upgraded `@openai/codex-sdk` from 0.117.0 to 0.121.0
+- Upgraded `@modelcontextprotocol/sdk` to 1.29.0
+- Claude Agent variant label now reports Opus 4.7 (was Opus 4.6)
+- Simplified tracker automation to 2 toggles with CLAUDE.md hint
+- Lowered tool-search threshold to 2%
+- Local config for trackers: added blog, bug, and task metadata configurations
+
+### Fixed
+- Unconditionally strip `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from `process.env` at main-process startup; explicitly clear them in `options.env` for the Claude Code SDK and in the Codex child-process env so the 0.2.111 overlay behavior (which no longer replaces `process.env`) cannot silently re-introduce a shell-inherited key
+- Deduplicate claude-code notification text between assistant and result chunks
+- Correct Opus 4.7 context window reporting to 1M
+- Defer React root.unmount() to avoid render race condition
+- iOS transcript loading deadlock and unified iPad/iPhone session list
+- Awaiting-input indicator visibility and priority in session history
+- Tracker comments now appear immediately after posting
+
+## [0.57.13] - 2026-04-15
+
+
+### Added
+- Main-process commit event subscription API in GitRefWatcher
+
+### Changed
+- Updated About window copy to reflect current product positioning
+
+### Fixed
+- OS notifications now show actual response text and session title instead of text before trailing tool calls
+- Tracker sync: content refetch retry, nullish checks, and dbRowToRecord improvements
+- Prevent aiSaveSettings callers from clobbering unrelated fields via read-modify-write
+- Wire tracker comments, activity, and content through sync pipeline
+- Tracker items created via MCP now get local issue keys and proper content formatting
+- Unified shift/cmd-click selection across all session group types
+- Persist fieldUpdatedAt timestamps for correct tracker sync last-write-wins
+- Render system errors as errors instead of system reminders
+- @@session reference links now navigate to the referenced session
+- Auto-open workspace when mobile sends prompts to a closed project
+- Unified tracker kanban and list view data sources to eliminate ghost entries
+
+## [0.57.12] - 2026-04-14
+
+
+### Added
+- Configurable issue key prefix per project in tracker settings
+
+### Fixed
+- Session list shift-select range and bulk archive from context menu
+- ExitPlanMode auto-accepted without showing confirmation widget
+- Editor overflow menu clipped by diff header in agent mode
+- Cursor hijacking and sibling editor sync in DocumentModel
+- Full tracker item context now included when launching sessions from tracker
+- Hardened E2EE security boundaries for key rotation, room deletion, and member removal
+- Hardened E2EE key rotation to prevent data loss on member removal
+- Markdown Document roles now include rank property
+- Session input placeholder text updated to include navigation commands
+
+## [0.57.11] - 2026-04-13
+
+
+### Added
+- Column header click-to-select and right-click context menu in session kanban
+- Drag-to-sort manual card ordering in tracker kanban board
+- "Unassigned" filter for tracker items
+- Owner avatar display on tracker kanban cards
+
+### Changed
+- Renamed /plan extension command to /design
+- Redesigned tracker table as Linear-style list layout
+
+### Fixed
+- Stale session:waiting event no longer overrides running status
+- Account and sync settings page now reflects current working state
+- Remote MCP OAuth no longer prompts on startup
+- VisualDisplayWidget guards against non-array items argument
+- Tracker "Mine" filter now correctly matches authenticated user identity
+- Tracker document header displays for legacy planStatus frontmatter
+- Tracker item counts on settings screen now show real data
+- Sibling editor save-overwrite cycle prevented in DocumentModel
+
+### Removed
+- Dead createTrackerDocument code from OnboardingService
+
+## [0.57.10] - 2026-04-10
+
+
+### Added
+- DocumentModel coordination layer for multi-editor file sync
+- "Install Chrome Extension" option in Help menu
+- Shift-click range selection on tracker kanban board
+
+### Changed
+- Tracker system refactored to be fully schema-driven via TrackerRecord and roles
+- Input placeholders updated to include session mention syntax
+
+### Fixed
+- Codex OAuth no longer opens at session start; requires mcp-remote auth cache before injecting native OAuth remotes
+- Deduplicated Codex tool call events with recycled item IDs
+- Hardened OAuth MCP server flows to prevent unauthorized remote servers from triggering login on startup
+- TeamSync doc index messages now queued while offline instead of silently dropped
+- Tracker authorIdentity preserved when document indexer re-indexes items
+- Windows terminal shell selection made reliable
+- Local images inlined as base64 in shared file links
+- Duplicate AskUserQuestion events in transcript prevented
+- Synthetic assistant messages that echo errors now skipped
+- Extension-sdk alias added to transcript vite configs for CI
+
+## [0.57.9] - 2026-04-08
+
+
+### Fixed
+- Tool call file edit FK violation and Codex duplicate tool call widgets
+- Files scope dropdown now stays above transcript actions
+- Tracker sync reconnects indefinitely instead of giving up after 10 attempts
+- Org key split-brain encryption and tracker sync reliability
+- Tracker panel, sync timestamps, and Durable Object migration
+- Duplicate user messages in transcript during streaming
+
+## [0.57.8] - 2026-04-03
+
+
+### Added
+- Tracker user identity system with configurable table columns and resizable panels
+- Multi-type tracker items with type tags and feature type support
+- Rich tracker transcript widgets with structured data and click-to-navigate
+- Linked tracker items moved from transcript banner to dedicated sidebar panel
+- Tracker sync identity hardening and issue-key workflows
+- Complete tracker field exposure, archive sync, and reconnect support
+- Dev-only background task tracker shell
+- Meta-agent session type for orchestrating multiple AI coding sessions
+
+### Changed
+- Unified transcript write path through single TranscriptTransformer
+- Extracted shared SettingsToggle component and consolidated Advanced Settings layout
+- Kanban dynamically discovers status columns from actual items
+
+### Fixed
+- TrackerToolWidget uses toolName from canonical transcript type
+- Stale draft sync echoes on iOS rejected to prevent text jumbling
+- Tracker sync not working between users (three bugs)
+- PDF viewer extension fails to load due to code splitting
+- TrackerSync reconnects through JWT expiration instead of giving up
+- Splash screen no longer sets alwaysOnTop
+- Kanban context menu archive now acts on multiselected sessions
+- Tracker MCP notifications, duplicate search, and Mine filter
+- Auth deep link login on secondary dev instances and tracker sync reconnect loop
+- TranscriptPeek on session kanban board failing due to dynamic imports
+- Persisted hidden gutter buttons and removed dead projectState blob
+- Workerd process group killed on test teardown to prevent orphaned processes
+- Git commit proposal no longer hangs on transport drop
+- MCP config lookup uses parent project path for worktree sessions
+
+## [0.57.7] - 2026-04-02
+
+
+### Added
+- Meta-agent session type for orchestrating multiple AI coding sessions
+
+### Fixed
+- Git commit proposal no longer hangs when transport drops during commit
+- MCP config lookup now uses parent project path in worktree sessions
+- Codex session meta widget and duplicate AskUserQuestion prompt
+
+## [0.57.6] - 2026-04-02
+
+
+### Changed
+- Transcript UI now consumes TranscriptViewMessage directly, removing intermediate mapping layer
+
+### Fixed
+- Duplicate "yes" messages no longer incorrectly deduplicated in transcript
+- TypeScript errors in transcript projector InteractivePromptPayload cast
+- BashWidget and FileChangeWidget elapsed time display using correct timestamp field
+
+## [0.57.5] - 2026-04-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Codex SDK missing from packaged builds
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.57.4] - 2026-04-01
+
+
+### Fixed
+- CI unit tests broken by canonical transcript migration
+
+## [0.57.3] - 2026-04-01
+
+
+### Added
+- Running tool calls now show elapsed time indicator
+- Queued prompts now bundle into a single prompt instead of running sequentially
+- Queued prompts can be sent immediately via SDK interrupt
+- Clean screenshot export for extensions via exportToPngBlob convention
+- GIF images in transcript now have play/pause and frame scrub controls
+
+### Changed
+- Single write path for transcript canonical events (refactored dual-write to unified pipeline)
+
+### Fixed
+- Elapsed timer no longer runs indefinitely after tool completes
+- EditorScreenshotWidget now displays images correctly in transcript
+- Excalidraw tools no longer fail on valid file paths
+- Default model no longer resets from Opus 4.6 1M to Opus 4.6
+- Session metadata widget now displays in Claude Code sessions
+- Pending/error sessions no longer re-query indefinitely
+- Codex sessions now produce canonical transcript events
+- Added gifuct-js type declaration to fix pre-push typecheck
+
+## [0.57.2] - 2026-03-30
+
+
+### Changed
+- Renamed MockupScreenshotWidget to EditorScreenshotWidget for clarity
+
+### Fixed
+- API keys from user's environment variables (e.g. .env files) are no longer silently used for provider authentication
+- Excalidraw MCP tools no longer fail when no file is active in the editor
+- Dotfiles like .env are now visible in the file tree
+
+## [0.57.1] - 2026-03-30
+
+
+### Added
+- Canonical transcript storage: all transcript rendering now uses ai_transcript_events table for consistent, provider-agnostic display
+- Database browser: inline cell editing for viewing and modifying data
+
+### Changed
+- Updated claude-agent-sdk 0.2.81->0.2.87, mcp-sdk 1.27.1->1.28.0, codex-sdk 0.114.0->0.117.0
+
+### Fixed
+- Canonical transcript handlers (list-user-prompts, get-tail-messages) were unreachable due to misplaced closing brace
+- TypeScript errors in transcript event store and converter
+- Improved Figma MCP OAuth error messaging with clearer user guidance
+
+## [0.57.0] - 2026-03-27
+
+
+### Added
+- Git extension: Changes tab with staged/unstaged file lists and Output tab for git command logs
+- Clipboard helpers (`readClipboard`/`writeClipboard`) added to extension SDK
+
+### Changed
+- Upgraded Electron 37 to 41.0.4 (Chromium 146, Node 24)
+- Browser extension cleaned up for public release
+
+### Fixed
+- Prevent iOS initial sync from deleting all server files
+- Improve web clipper content extraction for JS-heavy sites
+- Align desktop and iOS notification opt-in flow
+
+## [0.56.17] - 2026-03-26
+
+
+### Changed
+- Remove alpha flag gate from tracker kanban view
+- Remove alpha limit on automations extension
+
+### Fixed
+- Prevent stale PID lock from blocking app launch after reboot or auto-update
+
+## [0.56.16] - 2026-03-25
+
+
+### Fixed
+- Fix extension-sdk build failing with TS5055 when dist/ already exists from prior build
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.15] - 2026-03-25
+
+
+### Fixed
+- Fix CI build failure: externalize extension-sdk from runtime vite build to prevent circular package resolution
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.14] - 2026-03-25
+
+
+### Added
+- Hidden editor mounting for agent MCP tool execution
+- Cloudflare Analytics Engine integration in collabv3 for product usage metrics
+- Bidirectional linking between tracker items and AI sessions
+- Read-only web viewer for shared extension files
+- MarkdownEditor and MonacoEditor exposed to extensions via SDK
+- Custom editors can opt out of diff and header chrome
+- Model status page links in usage popovers
+- Download-as-markdown button for shared file viewer
+- MarkdownEditor wrapped with platform features for extensions
+
+### Changed
+- Renamed /plan command to /design to avoid conflict with Claude built-in
+- Updated extension SDK package and version numbers
+
+### Fixed
+- Session sort timestamp no longer bumped by draftInput sync or metadata-only updates
+- Improved iPad session list layout density
+- WebSocket reconnects when JWT is refreshed during session room sync
+- iOS sync failures now detected and surfaced instead of silently failing
+- Bundle Claude SDK image binaries in packaged app
+- Prevent creating automation items via tracker; fix schedule display
+- Extension host helpers routed through the SDK correctly
+- Hardened Windows auto-update signing checks
+- OffscreenEditorManager tests fixed for incomplete electron mock
+
+## [0.56.13] - 2026-03-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Error toasts fired before app mount now correctly display on startup
+- Figma MCP migration toast now detects HTTP transport configs in addition to stdio
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.12] - 2026-03-25
+
+
+### Added
+- Figma MCP server available as a built-in template for easy setup
+- Startup warning when Figma MCP OAuth config is broken, with action to open MCP settings
+- MCP server disconnection detection and logging during sessions
+
+### Fixed
+- New workstream sessions now appear in the session list immediately
+- Added missing `action` option to `showWarning` notification type signature
+
+## [0.56.11] - 2026-03-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Update errors now direct users to manual download instead of showing a broken auto-update flow
+- Codex test connection now shows clear error messages instead of failing silently
+- Resolve TypeScript variance error in atomFamilyRegistry
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.10] - 2026-03-24
+
+
+### Fixed
+- Removing Codex API key now takes effect immediately instead of persisting until restart
+- All AI providers now refresh credentials every turn so settings changes apply to existing sessions
+
+## [0.56.9] - 2026-03-24
+
+
+### Added
+- Setting to disable system spellchecker
+- Double-click tracker rows with a file to open it in the editor
+- Browser extension web clipper with local HTTP clip endpoint
+
+### Fixed
+- Resolve EditorContext typecheck errors
+- New worktrees no longer show false rebase count
+- Keep Claude Agent setting toggles from collapsing
+- Update @anthropic-ai/claude-agent-sdk to version 0.2.81
+- Extension test infrastructure for multi-window and external projects
+- extension_test_run MCP tool now targets the correct CDP window
+- Marketplace-installed extensions load immediately without refresh
+- Restore Windows auto-update publisherName in signtoolOptions
+
+## [0.56.8] - 2026-03-23
+
+
+### Added
+- OpenCode open source coding agent integration
+- Route OS file opens to frontmost workspace window
+- MockupLM interactive mode with theme toggle, drag-and-drop, project system, and editor context API
+- Automation execution history and tracker integration
+- Clickable links in iOS session transcript
+- Multi-config support in Playwright panel for extension tests
+- Project quick open dialog and Window menu discoverability
+- Extension live integration test infrastructure
+- Extension marketplace deployment with live registry connection
+- Plugin.json validation before passing to Claude Code SDK
+- Native screenshot capture with dark/light theme support
+- Sleep prevention mode selector (off/always/when plugged in)
+- Feature usage tracking system for local UX decisions
+- Contextual tips system with mobile keep-awake tip
+- Extension marketplace screenshots with dark/light theme support
+- Default new users to Opus 4.6 (1M context) and auto-migrate existing Opus users
+
+### Changed
+- Commented out noisy debug logs in renderer
+
+### Fixed
+- Respect Codex API key without breaking CLI auth
+- Restore Claude Code image attachments in dev
+- Keep new markdown files syncing and expand tracker detection
+- Context usage indicator shows 1M for extended context models
+- ExitPlanMode now blocks for user confirmation instead of auto-allowing
+- Extensions can now override built-in editors for compound file types
+- "All Uncommitted Files" mode no longer shows committed session files
+- Extension project intro dialog Continue button not working
+- Android UX alignment with iOS navigation model and session sync fix
+- Docker E2E setup aborts instead of corrupting host binaries
+- Tracker dates no longer show Updated before Created
+- Tracker detail panel clears on type switch; existing items now save
+- Context window shows correct /1M instead of /200k when subagents are used
+- Display "1M" instead of "1000k" for million-token context windows
+- Hardened plan tracking defaults, settings merge, and test selectors
+
+## [0.56.7] - 2026-03-20
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Hardened plan tracking defaults so unconfigured callers don't silently inject plan tracking instructions
+- Settings merge in sdkOptionsBuilder is now safe against future key overwrites
+- Added data-testid to plan tracking toggle for E2E testability
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.6] - 2026-03-19
+
+
+### Fixed
+- Codex CLI binaries now bundle correctly in packaged builds (extraResources path pointed to monorepo root instead of local node_modules)
+
+## [0.56.5] - 2026-03-19
+
+
+### Added
+- Developer Dashboard with atomFamily instance tracking, live time-series charts for memory/watchers/atoms, DB query performance monitoring, IPC handler stats, and renderer memory tracking
+- Tracked atomFamily wrapper for debug monitoring in Developer menu
+
+## [0.56.4] - 2026-03-19
+
+
+### Added
+- Codex todo_list items now render as checklists in transcript
+- Slash command menu sections appear in logical order
+
+### Changed
+- Replaced correlated subqueries with pre-aggregated LEFT JOIN for better query performance
+
+### Fixed
+- Codex provider no longer silently drops unrecognized event types
+- Symlinked skills and commands now discovered in slash menu
+
+## [0.56.3] - 2026-03-18
+
+
+### Added
+- Opus 4.6 and Sonnet 4.6 1M context models in model selector
+
+### Changed
+- Updated claude-agent-sdk 0.2.69 to 0.2.76, codex-sdk 0.110.0 to 0.114.0
+- Plan mode tool restrictions now delegated to SDK natively
+
+### Fixed
+- Remove extensionFileTypesLoader not in AgentToolHooksOptions interface
+- Require plan path when exiting planning mode
+- Keep started agent sessions on their original provider
+- Prevent agent response text from appearing twice in transcript
+
+## [0.56.2] - 2026-03-18
+
+
+### Added
+- Marketplace Cloudflare Worker, packaging pipeline, and CDN redirects
+- Packaged third-party notices and license audit report
+
+### Fixed
+- Tracker items with source=native are now always editable
+- Docker E2E tests no longer corrupt host platform-specific binaries
+- PromptQuickOpen now scrolls transcript to the selected prompt
+- Infinite reconnect loop on collab doc decryption failure with auto-recovery for lost org keys
+- preventSleepWhenSyncing setting no longer lost on app restart
+- Deleting inline tracker items now removes the line from the source file
+- Tracker table multi-select and double-click to open file
+- Git panel no longer loops refreshing in empty repos
+- Tracker and workspace summary header alignment
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.1] - 2026-03-17
+
+
+### Added
+- Tracker MVP: drag-and-drop reordering, inline editing, multi-select, delete/archive all items, multi-select filters, frontmatter editing
+
+### Changed
+- useEditorLifecycle hook moved to extension-sdk package
+- Floating-ui positioning rule extracted to dedicated rules file
+
+### Fixed
+- Context menus and kanban scroll use floating-ui for correct positioning
+- Queued messages not firing when SessionStateManager.endSession did not emit session:completed
+- Queued prompts not continuing after guarded turn completion
+- Missing build script for editor configuration
+- Duplicate last message appearing when loading session transcript
+- iOS background SQLite crash from full index sync on every reconnect
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.56.0] - 2026-03-16
+
+
+### Added
+- Session recovery system: survive app restart with pending questions
+- Extension marketplace with security warning and alpha gate
+- Keep Awake option to prevent Mac sleep while syncing
+- E2E encrypted document sync between desktop and iOS
+- Native Android client with mobile sync parity
+- Extension project intro modal with simplified creation flow (neutral starter scaffold)
+- Extension examples in intro modal
+- Richer documentation scaffolding for new extension projects
+- CLAUDE.md and .agents.md generation in new extension projects
+- useEditorLifecycle hook with migration of all extensions
+- Extension API for direct AI chat completions with responseFormat support
+- Extension contribution points for commands, keybindings, and panel tooltips
+- Context menu to hide/show navigation gutter buttons
+- Collaborative cursors that scroll with content and fade on inactivity
+- Per-table database query stats with blocked time tracking
+- Git extension improvements: hover card positioning, branch submenus, pull rebase, auto-refresh
+- Created/updated timestamps in tracker document header
+- Cmd+Shift+V to force-paste text without attachment conversion
+- Android/iOS parity improvements and PostHog analytics
+
+### Changed
+- Sync identity uses path-based SHA-256 instead of YAML frontmatter syncId
+- DataModelLM auto-layout replaced with ELK layout engine
+- OpenAI model defaults refreshed to current GPT-5.x and GPT-4.1 IDs
+- ClaudeCodeProvider static DI and SDK options extracted into focused modules
+- MCP tool schemas colocated with handler implementations
+- httpServer.ts (4,258 lines) split into focused modules
+
+### Fixed
+- SSE keepalive pings prevent MCP connection death during long tool waits
+- Orphaned UUID-keyed files purged on server during sync handshake
+- Single app activation on launch instead of per-window focus steal
+- Skip writing remote sync files when local content already matches
+- New projects no longer open with terminal panel visible
+- Extensions can no longer hijack keyboard input in text fields
+- AskUserQuestion no longer hangs when routed through MCP server path
+- Sessions no longer stuck as 'running' after git commit proposal with dead subprocess
+- SDK result messages now render correctly in agent transcript
+- Theme type consistency across extension APIs (string type)
+- PDF-viewer extension fileIcons format causing manifest validation failure
+- Mobile AskUserQuestion answers not reaching MCP server
+- Extension chat completion API: skip DB logging, simplify ResponseFormat, reduce noise
+- Virtual refs in floating-ui cast for TypeScript strict checks
+- Windows publisherName set to prevent auto-update rejection on cert change
+- Claude-code user-agent set on usage API requests
+- E2E session-management tests passing with proper data-testid selectors
+- TypeScript strict null errors blocking git push
+
+## [0.55.31] - 2026-03-12
+
+
+### Added
+- PostHog DAU tracking via app_foregrounded event
+- Mobile and desktop PostHog users now merge on QR pairing
+
+### Changed
+- Convert file tree scanning from synchronous to async fs operations
+- Narrow extensions find-files scan root using glob literal prefix
+- Eliminate main-process blocking when opening large non-git projects
+- Git remote lookups no longer block the main process on startup
+- Opening large projects no longer freezes the UI
+
+### Fixed
+- File tree loading spinner no longer spins forever on empty workspaces
+- Community dialog logo now shows in packaged builds
+- TypeScript errors in playwright extension
+
+## [0.55.30] - 2026-03-12
+
+
+### Changed
+- Centralize WalkthroughProvider IPC listeners into store
+- Centralize UpdateToast IPC listeners into store
+
+### Fixed
+- Mobile sync initial setup not syncing and pairing without projects
+- Thinking indicator hidden and waiting state not restored after session switch
+- AskUserQuestion widget stays pending after session abort
+- Automations extension incorrectly on stable channel (reverted to alpha)
+- TypeScript errors across electron and playwright packages
+
+## [0.55.29] - 2026-03-12
+
+
+### Added
+- PostHog analytics tracking for session kanban board interactions
+
+### Changed
+- Adopted @floating-ui/react for all dropdown and popover positioning (replaces custom positioning logic)
+- Consolidated E2E test suite to reduce Electron launches from ~83 to 29 files
+
+### Fixed
+- Guard against pending-cleared reload race condition during diff tag clearing
+- Sessions stuck in 'running' state after completion
+- Opening files from the file tree now uses IPC instead of scrolling the virtualized tree
+- Preserve Keep All content in chained diff replacements when applying sequential markdown changes
+- Prevent false diff markers on list items with bold text
+- Kanban peek panel and context menu rendered transparent in the Complete column
+
+## [0.55.25] - 2026-03-07
+
+
+### Changed
+- CollabV3 updated to 0.1.36
+
+### Fixed
+- Suppress mobile push notifications when desktop app is active
+- Mobile session creation fails after sync reconnection
+
+## [0.55.24] - 2026-03-06
+
+
+### Added
+- "Other" freetext option in AskUserQuestion widget for custom responses
+
+### Changed
+- CollabV3 updated to 0.1.35
+
+### Fixed
+- Prevent sign-out on network errors and persist sync identity across restarts
+
+## [0.55.23] - 2026-03-06
+
+
+### Changed
+- CollabV3 updated to 0.1.34
+
+### Fixed
+- Prevent sync echoes from overwriting active typing in AIInput
+- Mobile session sync broken by multi-org auth changes
+
+## [0.55.22] - 2026-03-06
+
+
+### Added
+- Folder-based navigation for shared collab docs with create folder/document flows, drag-and-drop reordering, and persisted tree UI state
+
+### Changed
+- CollabV3 0.1.32 with improved team vs personal org tracking
+
+### Fixed
+- Restore shared link ownership and labels by classifying Stytch orgs with explicit personal/team metadata
+- Keep AI input typeahead selection in sync
+- Show Codex web search calls in session transcripts
+- Restore Codex image attachments in session transcripts
+- Deduplicate repeated transcript edit previews
+- Render Codex session reminders as system cards instead of raw text
+- Restore AI session creation tracking in modern flows (PostHog `create_ai_session` events)
+
+## [0.55.21] - 2026-03-05
+
+
+### Fixed
+- Replace emoji with Material Symbols icon in session mention typeahead
+- Git commit proposal widget disabled when model sends filesToStage as string instead of array
+- Update Claude Haiku version label from 3.5 to 4.5 in model picker
+- CI test failures on Linux
+
+## [0.55.20] - 2026-03-05
+
+
+### Added
+- Configurable thinking level for OpenAI Codex sessions
+- `nimbalyst_version` super property added to all PostHog events
+- Open transcript file links directly in the editor instead of the browser
+- AskUserQuestion support in Codex agent flow
+- First-turn reminder for Codex session metadata tool usage
+
+### Changed
+- Split ClaudeCodeProvider into focused workflow modules
+
+### Fixed
+- Harden Codex MCP prompt routing, server config, and broken startup
+- Isolate git commit proposal responses per session
+- Sanitize dotted MCP server names for Codex TOML config (e.g., `@scope/name` no longer produces invalid TOML keys)
+- Restore Configure Models navigation from model selector
+- Restore Monaco background for Monokai theme with built-in theme ID mapping
+- Prevent table resizer crash on stale cell refs
+
+## [0.55.18] - 2026-03-05
+
+
+### Fixed
+- Correct GPT-5.4 model ID (renamed from gpt-5.4-codex to gpt-5.4) with migration alias for existing users
+- Remove silent model fallback that masked invalid model errors by switching to a different model
+
+## [0.55.17] - 2026-03-05
+
+
+### Added
+- GPT-5.4 Codex model support
+
+### Changed
+- Update @openai/codex-sdk 0.107.0 -> 0.110.0
+- Update iOS App Store link with correct Apple ID and remove Coming Soon badge
+
+### Fixed
+- Show archive confirmation dialog after clean worktree merge
+- Regenerate lock file to fix corrupted Codex binary integrity hashes
+- Session HTML export typecheck failure on ES2020 target
+- Bulk archive now correctly archives all selected sessions
+
+## [0.55.16] - 2026-03-05
+
+
+### Added
+- Unified tracker system with database-first storage, file import, and MCP tools
+- @@ session mention typeahead in chat input
+- Drag-and-drop session mentions onto chat input
+- MCP servers can be enabled per-provider (Claude/Codex)
+- Auto-compare blitz sessions when all sessions finish
+- Codex usage indicator re-enable toggle
+
+### Changed
+- Update claude-agent-sdk 0.2.63 -> 0.2.69, codex-sdk 0.106.0 -> 0.107.0
+- Remove beta label and warning from OpenAI Codex
+
+### Fixed
+- Checkbox state changes silently lost in diff mode
+- Session provider icon uses correct provider and updates on model change
+- Keep session history metadata in sync (provider, model, title changes broadcast to renderer)
+- Prevent session export/share from freezing on large sessions
+- Deduplicate concurrent usage API refresh calls to prevent redundant network requests
+- Reduce usage API polling frequency to prevent 429 rate limiting
+- Add ToolSearch to SDK_NATIVE_TOOLS to prevent tool execution failure
+- Correct Codex token accounting and context usage display (treat turn usage as cumulative snapshots)
+- Scope AI session-state updates to the owning workspace window to prevent cross-workspace interference
+- Resolve claude-agent-sdk path for non-hoisted npm workspace layout
+- Stabilize unit test execution and CI coverage with deterministic vitest run mode
+- Consolidate E2E tests to minimize app launches for CI
+
+## [0.55.12] - 2026-03-04
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Claude Agent API key test no longer returns 404 (updated discontinued model ID)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.55.11] - 2026-03-04
+
+
+### Added
+- Voice agent session navigation and activation sound
+- Drag files from file tree into AI input as @-mentions
+- Drag files from edited sidebar into AI input as @-mentions
+
+### Changed
+- Densified AI sessions dropdown into single-row menu items
+- Removed click-to-copy on inline code blocks in transcripts
+
+### Fixed
+- Enforced Claude Agent key separation and refresh auth config
+- Gitignore bypass only registers for write tools, not Bash
+- AI file edits in gitignored directories now detected
+- AI file edits now detected regardless of path format
+- Persisted unread=false to database when tray session is clicked
+- Matched FileGutter vertical spacing to FileEditsSidebar
+- Workstream parents inherit phase from children on kanban board
+
+## [0.55.10] - 2026-03-04
+
+
+### Added
+- Track new user creation with user_created analytics event
+- Button to open memory file from memory prompt indicator
+- Worktree archiving auto-skips confirmation dialog when branch is clean and merged
+- Session meta tool shows tag/phase/name transitions in rich widget
+- Kanban drag-to-archive cleans up worktree on last session
+- Windows code signing via DigiCert KeyLocker
+
+### Changed
+- Densified AI sessions dropdown in editor header bar
+- Merged name_session and update_tags into single update_session_meta tool
+- Split test signing into fast credential check and full build steps
+
+### Fixed
+- Removed broken message count from document session history display
+- Fixed history dialog session link click target
+- Tracker sidebar counts now include frontmatter-based items
+- Restored selected session on app restart and page refresh
+- Prevented error toast flooding from repeated identical errors
+- Prevented tracker items from leaking across workspaces
+- Restored runtime prompt build parsing
+- Persisted selected workstream immediately to survive app restart
+- Used config.userId for sync room routing instead of JWT sub claim
+- Fixed signtool.exe discovery by searching Windows SDK directory
+- Merged duplicate "overrides" keys in root package.json
+- Fixed electron-builder invocation in test signing workflow
+- Prevented test signing workflow from publishing to GitHub Releases
+
+## [0.55.9] - 2026-03-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Worktree archive from kanban board updates UI immediately without requiring refresh
+- Resolved false Codex workspace trust warning by using actual workspace path for connection tests
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.55.8] - 2026-03-03
+
+
+### Added
+- Resizable panels, keyboard shortcut, and help tooltip for CollabMode
+- Sharing discovery callout on Account & Sync page
+- Multi-select and batch drag-drop on session kanban board
+- Tracker kanban view (gated behind alpha release channel)
+
+### Changed
+- Session context menu reordered into logical groups with dividers
+
+### Fixed
+- Worktree sessions load instantly instead of spawning hundreds of git processes
+- Single-instance lock so Windows OAuth deep links route to existing app on Windows
+- Transcript peek widget no longer flashes at top-left on keyboard navigation
+- Terminal panel visibility persists per-workspace instead of globally
+- Tray icon included in packaged builds via extraResources
+- Team name no longer leaks to Stytch org metadata
+- File scope walkthrough delayed until sidebar has actual files
+
+## [0.55.7] - 2026-03-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Toggling auto-commit ON in commit widget now actually triggers a commit
+- Commit widget shows real progress indicator when toggling auto-commit on
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.55.6] - 2026-03-03
+
+
+### Added
+- Collaboration features gated behind alpha release channel flag
+- Slack notifications for alpha release builds
+- Developer mode users routed to agent mode after onboarding
+
+### Changed
+- Unified session context menu across sidebar, kanban, and tabs (shared SessionContextMenu component)
+- Paired devices persist across disconnects with online/offline status and "last seen" time
+
+### Fixed
+- QuickOpen reveals folders in file tree instead of failing to open them
+- iOS CI builds against iOS SDK instead of macOS (xcodebuild targeting iOS Simulator)
+- iOS test fixtures aligned with camelCase wire protocol
+- iOS transcript bundle tests skip gracefully instead of failing when bundle is absent
+
+## [0.55.5] - 2026-03-02
+
+
+### Added
+- @ mention shows files immediately on typing "@" and supports directory mentions with folder icon
+- Context-aware walkthrough guides: agent-mode-intro in Files mode, files-mode-intro in Agent mode
+- Hide collab UI when no team configured; show gear icon for disconnected projects
+
+### Changed
+- Cmd+1-9 now exclusively switches tabs (removed conflicting window switching shortcuts)
+- Sessions Board removed from tracker panel (lives in AgentMode now)
+
+### Fixed
+- iOS mobile prompt send failures now show user-visible error alerts and restore draft text
+- Draft text no longer bounces back after mobile prompt submit (draftUpdatedAt timestamp for stale rejection)
+- Secondary account JWTs auto-refresh on 401 in TeamService instead of failing
+- "Share to Team" menu hidden when project has no team
+- Tray menu no longer shows stale "blocked" status for completed sessions
+- Skip YAML parsing for .astro files whose --- blocks contain JavaScript
+- Gutter popover placement fixed to open right instead of above
+
+## [0.55.4] - 2026-03-02
+
+
+### Added
+- Bidirectional draft sync and queued prompts between desktop and iOS
+- Multi-account team management with admin role editing and account picker for team creation
+- Editable tag rollup in workstream headers with inline autocomplete
+- Cmd+Shift+N shortcut to create new AI session from any mode
+- New agent sessions pre-populated with @file reference to currently open document
+- Kanban board walkthrough and PostHog analytics for session view mode switching
+
+### Changed
+- Reduced verbose logging across CollabV3Sync, TeamService, SyncManager, AIService, TrackerSyncManager
+- Skip model fetching for disabled AI providers (fixes LM Studio fetch error when not in use)
+
+### Fixed
+- Kanban view auto-exits when navigating to a specific session (tray, quick open, double-click)
+- Session token corruption when exchanging for secondary accounts
+- Undecryptable project entries cleaned up during sync instead of logging errors
+- Tray icon uses macOS template images for correct dark/light menu bar rendering
+- Tray icon uses system appearance instead of app theme for foreground color
+- Tray BGRA byte order fix (blue dots were rendering as orange)
+- Unread sessions now seeded from database on tray init
+- Key envelope overwrite vulnerability closed in DocumentRoom (empty sender_user_id truthiness check)
+- Sub-agent transcript truncation and tool name mismatch (Agent vs Task rename)
+- Stale session data when navigating to completed sessions with cached mid-stream snapshots
+
+## [0.55.3] - 2026-03-02
+
+
+### Added
+- Custom Claude executable path setting for corporate SSO wrappers (Browse file picker in Claude Agent settings)
+- iOS AI model picker synced from desktop with provider/model fields in CreateSessionRequest
+- iOS cancel button for running AI sessions via control messages
+- Session archive/unarchive control messages from mobile
+- Pre-rendered logo template assets for system tray icon (crisp splat silhouette with hash cutout)
+- Uncommitted/committed tag tracking in agent session naming prompt
+- /ios-release command for iOS App Store releases with platform-prefixed tags
+
+### Fixed
+- Child sessions of worktree-group parents now visible in session list
+- Team JWT refresh before personal session exchange to prevent stale token 401s after idle/sleep
+- iOS session creation menu shows on single tap instead of requiring long press
+- Diff stats color toned down in agent turn summary (opacity-60 to match surrounding text)
+- TypeScript error for openFileDialog in ClaudeCodePanel (missing ElectronAPI type)
+
+## [0.55.2] - 2026-03-01
+
+
+### Added
+- System tray menu showing AI session status with click-to-navigate, dock badge for sessions needing attention
+- Session kanban board as right-panel view in AgentMode (Cmd+Shift+K toggle)
+- Live sub-agent progress tracking in teammate panel (status, elapsed time, tool count)
+- Multi-account support: user avatar menu, add/remove accounts, per-project account binding
+- Click/tap-to-copy on inline code blocks in transcripts with green flash feedback
+- iOS jump-to-prompt bottom sheet in session detail view
+- iOS hierarchical session navigation with worktree/workstream sync (6 new metadata fields)
+- Log rotation on startup (keeps 2 previous sessions) and Developer menu "Rotate Logs" option
+- Rate limit warning/blocked widgets with amber/red styling
+
+### Changed
+- Updated claude-agent-sdk to 0.2.63
+- SDK now handles background sub-agents natively instead of TeammateManager interception
+
+### Fixed
+- Voice agent answering interactive prompts (prompt forwarding race, IPC channels, widget display)
+- iOS transcript blank screen caused by React hooks ordering violation
+- iOS compact button now sends /compact command through native bridge
+- iOS voice playback routed through VPIO bus 0 for proper echo cancellation
+- Auto-delete undecryptable session index entries so they re-sync with correct key
+- Rate limit events from Claude Code SDK now handled instead of dumped as unhandled messages
+- Git commit widget shows committed state when reloading sessions (missing tool_result)
+- Tracker items now load automatically on startup via deferred workspace scan
+- Scroll-to-bottom button is now a proper circle
+- Rate limit reset times use Unix timestamps to prevent timezone parsing bugs
+
+## [0.55.1] - 2026-02-27
+
+
+### Added
+- Voice mode: interactive prompt support (answer AskUserQuestion, ExitPlanMode, GitCommitProposal verbally)
+- Voice mode: OpenAI API key input directly on Voice Mode settings panel
+- Maximize button in chat sidebar to open current session in agent mode
+- File count and +/- line stats in agent turn summary ("Finished in 6m 57s · 3 files +45 -12")
+- Session kanban board: keyboard navigation (arrows, Enter, Space), Cmd+arrows to move cards between phases, collapsible columns
+
+### Changed
+- Updated claude-agent-sdk 0.2.45 -> 0.2.62, mcp-sdk 1.26.0 -> 1.27.1, codex-sdk 0.104.0 -> 0.106.0
+- Auto-commit toggle moved from Claude Agent settings to Advanced panel
+- Reduced log noise for worktree operations
+
+### Fixed
+- Mobile sync broken after team session exchange (personal JWT now preserved across org switches)
+- Team panel showing wrong project when multiple teams exist
+- Team key envelope distribution: new members now receive shared documents via broadcast + polling
+- Voice mode: idle timer running during assistant speech, wake-from-sleep, voice drift, echo cancellation
+- Voice agent now receives coding agent results and recent conversation context
+- Auto-commit toggle not persisting across app restarts (atom never hydrated from store)
+- Zombie WebSocket preventing mobile session sync after network changes
+- CI TypeScript check failure for collabv3 test files
+
+## [0.55.0] - 2026-02-26
+
+
+### Added
+- E2E encrypted collaborative document editing via Lexical + yJS through Cloudflare Workers
+- E2E encrypted tracker sync with team-scoped Durable Objects
+- Team trust model with ECDH key exchange, key envelopes, and Stytch B2B org discovery
+- CollabMode for real-time document collaboration with team members
+- TrackerMode with kanban board, item detail panel, and sidebar
+- Team setup UI: TeamPanel, TrackerConfigPanel, team invite/join dialogs
+- Session kanban board atoms and E2E tests
+- "Remove from workstream" context menu for child sessions
+- WebSocket proxy (IPC-bridged) for document sync to bypass Cloudflare browser blocks
+- Lazy batch message loading for session sync (3 sessions at a time)
+
+### Changed
+- Consolidated file watchers into single ref-counted WorkspaceEventBus per workspace
+- Merged rexical package into runtime (all editor code now in packages/runtime/src/editor/)
+- Project rename uses atomic fs.rename() instead of copy+delete to prevent data loss
+- Project move no longer auto-deletes original directory; user verifies before deleting
+- Session drag-drop onto standalone session now creates proper workstream parent
+- Worktree sessions blocked from drag-drop in both directions
+- Throttle uncaught exception dialogs (dedup within 5s, max 3/min)
+- Multiple dev instances now fully isolated with per-instance outDir and userData
+
+### Fixed
+- Shared document list and document sync failures (migration, reconnect, cross-mode handoff)
+- Session list not refreshing after importing Claude Code sessions
+- Session sync instability across org switches (personalOrgId for consistent room IDs)
+- Team collaboration security: sender_user_id tracking, P-256 key validation, JWKS cache-miss refresh
+- Session invalidation on team deletion and auth token persistence after session exchange
+- OS notification click now switches to agent mode to show the session
+- Flush pending DB writes before session completion to prevent stale transcript after /compact
+- Clipboard copy silently failing in Electron renderer
+- Session context MCP server startup and workstream-aware commit prompts
+- All TypeScript compilation errors resolved (38 -> 0)
+- Session drag-drop creating broken parent-child relationships
+
+### Removed
+- Capacitor package (will build native Android app instead)
+- Playground package (no longer needed after rexical merge)
+- ChokidarFileWatcher, SimpleFileWatcher, SimpleWorkspaceWatcher (replaced by WorkspaceEventBus)
+
+## [0.54.20] - 2026-02-26
+
+
+### Added
+- Agent prompt now includes multi-session awareness and commit tool guidance
+- App update restart is deferred until all active AI sessions finish
+
+### Fixed
+- Blitz archive now recursively archives child worktrees
+- Built-in terminal now has same PATH as Claude Code sessions
+
+## [0.54.19] - 2026-02-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Raised file descriptor limit to prevent silent watcher failures
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.18] - 2026-02-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed Bash edits on gitignored files showing the entire file as green instead of just the changed lines
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.17] - 2026-02-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Consolidated file watchers into single WorkspaceEventBus per workspace, halving file descriptor usage
+- Added .gitignore-aware filtering and circuit breaker protection against event flooding
+
+### Fixed
+- Fixed Bash diff baseline advancing per tracked change
+- Fixed Nimbalyst hanging when workspace has thousands of dirty files
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.16] - 2026-02-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Shared links can no longer be created without expiration
+- Stable baseline used for Bash file diffs
+- Pending AI diffs now apply without manual refresh
+- Pending-review diffs preserved for ignored file updates
+- Unified files-mode pending review and edited file sync
+- Stabilized Codex file baseline and Bash edit visibility
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.15] - 2026-02-25
+
+
+### Added
+- Share dialog shows inline sign-in (Google/magic-link) when not authenticated instead of redirecting to Settings
+
+### Changed
+- Share link expiration capped at 30 days; "No expiration" option removed
+- Legacy null (no-expiration) share preferences convert to 7-day default
+- Codex API key field labeled as optional with explanation of account-based vs API key pricing
+
+### Fixed
+- External file edits no longer dropped when they arrive immediately after a save
+- Pre-edit baseline preserved correctly when watcher tag starts empty
+- Codex commit widget completion state persists across tab navigation
+- Vendored ripgrep now available in enhanced PATH for search functionality
+- Community modal social icons restyled to match design (transparent background, blue icons, larger text)
+- Community modal stays open when clicking social links; "Accept Invite" renamed to "Join Discord"
+
+## [0.54.14] - 2026-02-25
+
+
+### Added
+- Share modal with expiration options (1/7/30 days or none) and end-to-end encryption notice
+- Community channels popup replacing Discord-only popup, with links to Discord, YouTube, LinkedIn, X, TikTok, Instagram
+- Persistent Community submenu in Help menu with all social channels
+- Smarter community popup timing: triggers after 3 completed AI sessions instead of on app launch
+
+### Changed
+- Share link button moved to header bar; removed duplicate from editor dropdown menu
+
+### Fixed
+- Share TTL defaults normalized to prevent bad expiration values
+- Codex diff baselines preserved correctly for existing files (path normalization, empty-baseline skip)
+- Restored dialogRef export from dialogs index (fixes SessionListItem module loading)
+- Removed redundant service error modal for Claude outages (error already shown inline)
+- Codex no longer inherits OPENAI_API_KEY env variable (must be set explicitly)
+
+## [0.54.13] - 2026-02-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Hardened diff tracking security with path validation and size limits
+- Same-session multi-edits now show cumulative diffs instead of only the last edit
+- Per-tool-call diff tracking correctly isolates diffs for multi-edit files
+- Codex diff tracking hardened for async safety, deduplication, and edge cases
+- Per-tool diffs preserved correctly for Codex file_change edits
+- Codex Bash edits now consistently produce viewable diffs
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.12] - 2026-02-24
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Codex moved back behind beta feature flag (reverted public visibility)
+
+### Fixed
+- Settings sidebar widened to fit "OpenAI Codex (BETA)" label without truncation
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.11] - 2026-02-24
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Codex moved back behind beta feature flag
+
+### Fixed
+- AI file diffs now show only changed lines instead of entire file
+- AI diffs route to the visible editor instance instead of potentially targeting a hidden one
+- Database schema creation order fixed so ai_agent_messages precedes ai_tool_call_file_edits
+- AI agents more reliably name sessions on their first turn
+- Clicking a teammate in the sidebar scrolls to its spawn message in the transcript
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.10] - 2026-02-24
+
+
+### Added
+- Teammate sidebar shows elapsed time, tool count, and click-to-scroll navigation
+
+### Fixed
+- Lead agent no longer hangs waiting for a teammate that already finished
+- All sub-agent cards now visible in transcript
+
+## [0.54.9] - 2026-02-24
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Teammate messages no longer hang when lead agent is mid-turn
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.8] - 2026-02-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Codex file_change (apply_patch) diffs no longer missing from tool output
+- Session file watcher no longer exhausts file descriptors on macOS/Windows
+- Workspace watcher no longer exhausts file descriptors on macOS/Windows
+- Super loop progress MCP no longer appears in regular sessions
+- Active session now correctly initialized for worktree selections
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.7] - 2026-02-23
+
+
+### Added
+- Session file watcher now respects project .gitignore rules
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Subagent permission bypass prevented by isolating settings per agent
+- Diagnostic logging added to HistoryManager.createTag error path
+- Bash pre-tag race condition that dropped red/green diffs in tool output
+- Restart indicator no longer shown on brand new sessions
+- Cross-session file edit misattribution prevented
+- Non-git projects no longer watch node_modules and build directories
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.6] - 2026-02-23
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- File descriptor exhaustion from workspace watcher opening per-file FDs (2500+ per workspace), causing spawn EBADF with default ulimit
+- File descriptor leak from session file watchers causing spawn EBADF errors
+- Sub-agents now spawn correctly in packaged builds
+- Worktree timestamps no longer shift by local timezone offset
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.5] - 2026-02-23
+
+
+### Fixed
+- Codex file change diffs now match the correct tool call across machines
+- Worktree and workstream session tabs now stay in their creation order
+- Bash file changes now detected on Windows
+- Codex bash commands now unwrap correctly on Windows
+- Claude usage API forbidden responses now log full details for diagnostics
+
+## [0.54.4] - 2026-02-23
+
+
+### Added
+- Codex is now available without enabling beta features
+
+### Fixed
+- Usage indicators remain visible when load errors occur
+- Grouped session context menus now align with plain session menus
+- Improved Claude usage diagnostics with explicit auth failure logging
+- Session share links no longer gated behind alpha flag
+- Codex bash commands no longer show /bin/zsh -lc wrapper
+
+## [0.54.3] - 2026-02-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Tool call diffs now appear for Codex sessions
+- File change diffs use history snapshots and exclude human edits
+- Shell-wrapped bash commands properly unwrapped for file tracking
+- Claude Code no longer leaks or uses the Claude Chat API key
+- @ mention file search fixed in dev mode
+- Claude usage indicator no longer hidden when utilization is at 0%
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.54.2] - 2026-02-21
+
+
+### Added
+- File change diffs shown per tool call in agent transcripts (ToolCallMatcher)
+- Share markdown files from editor overflow menu
+- Codex local file history diffs with dirty/untracked baseline snapshots
+- Agent model choice for git conflict resolution
+
+### Changed
+- Codex API key separated from OpenAI API key
+- Usage indicators remain visible when usage data is present
+
+### Fixed
+- Bash command diffs now display as attachments in tool call widgets
+- Tool call file matching stabilized with time cutoff and filename-based scoring
+- Failed MCP database queries no longer break subsequent DB operations
+- Auto-commit widget now shows success state instead of broken interactive form
+- Clearing API key in settings now actually removes it
+- EBADF errors no longer break all process spawning including sessions
+- Auto-commit no longer shows "No files were staged" error
+- Commit widget prefers tool result content
+
+## [0.54.1] - 2026-02-20
+
+
+### Added
+- Voice mode overhaul with persistent button, session tracking, and listen window
+- Automations extension for scheduled AI-powered tasks
+- Session context MCP server with session awareness tools
+- Extensions can now contribute document headers above any editor
+- Marketing screenshots work with packaged app, no dev server required
+
+### Fixed
+- Session read state now syncs properly between desktop and iOS
+- Marketing screenshots fail when launched from packaged Nimbalyst
+- Exclude automation documents from frontmatter header processing
+
+## [0.54.0] - 2026-02-20
+
+
+### Added
+- Clicking links in terminal opens them in default browser
+- Configurable document history retention in Advanced Settings
+- Custom tracker types fully supported in bottom panel and document header
+- Account deletion for Apple App Store compliance (5.1.1)
+- App Store compliance: privacy manifest and in-app privacy policy link
+- Tracker creation writes canonical frontmatter format
+- Playwright-based marketing screenshot and video capture system
+- Show restart indicator line in AI session transcripts (dev mode)
+
+### Changed
+- Unified file actions across context menus
+
+### Fixed
+- Share link fails until logout/login due to missing server URL
+- Improve session loading performance for large transcripts
+- Terminal cursor polish: bar style, focus-aware color, ghost cursor fix
+- Terminal cursor only blinks when terminal has focus
+- Terminal panel keeps terminals alive when hidden, fixing cursor position bug
+- Skip re-uploading TTL-expired sessions to sync server
+- Add optional chaining for terminal renderer setTheme call
+- Mobile chat input now clears immediately after sending
+- Model selector dropdown no longer clipped by agent panel overflow
+
+## [0.53.13] - 2026-02-19
+
+
+### Changed
+- Moved Blitz from beta to alpha feature flag
+
+## [0.53.12] - 2026-02-18
+
+
+### Added
+- QR code opens Nimbalyst iOS app when scanned with Camera
+- Extended context settings toggle for 1M context models
+
+### Fixed
+- Blitz sessions now show full worktree UI (git ops, terminal, merge)
+- Codex usage indicator shown without requiring provider to be enabled
+- Folder collapse state preserved in files-edited sidebar
+- iOS sessions reorder to top of list when viewed
+- iOS shows correct connection status dot when desktop is connected
+- Use SDK [1m] suffix for 1M context models
+
+## [0.53.11] - 2026-02-18
+
+
+### Added
+- Sonnet 4.6 support with effort slider, pin 1M context to Sonnet 4.5
+- Prompt for push notifications after iOS pairing
+- Redesigned Account & Sync settings panel, removed alpha gate
+
+### Changed
+- Migrate from Stytch B2C to B2B Discovery OAuth
+
+### Fixed
+- iOS push notifications suppressed because device always reported as active
+- Stale "waiting for response" indicator after git commit proposal
+- Stytch auth deep link now opens Nimbalyst instead of bare Electron
+- Codex 401 errors now show the OpenAI auth setup widget
+
+## [0.53.10] - 2026-02-18
+
+
+### Added
+- iOS slash command typeahead and image attachments
+- Session search walkthrough with HelpTooltip
+- PostHog analytics for sync account flows
+- Version tracking for collabv3 deploys
+
+### Fixed
+- Context window usage tracking from SDK per-step usage
+- Show compaction summary in transcript instead of hiding it
+- Collabv3 deploy script version parsing and wrangler define inheritance
+- Revert claude-agent-sdk downgrade (restore 0.2.45)
+
+## [0.53.9] - 2026-02-18
+
+
+### Added
+- Track sharing, export, and feature toggle usage in PostHog
+- OpenAI Codex 401 errors now show setup instructions
+- Teammates now require user approval for tool use
+- Queued prompts now show attachment indicators
+- Session open buttons now appear in agent mode file headers
+- File paths in FILE CHANGES widget are clickable
+
+### Changed
+- Unify session types and sync sessionType to iOS
+- Revert claude-agent-sdk 0.2.45 to 0.2.42
+- Update codex-sdk 0.101.0 to 0.104.0
+
+### Fixed
+- Codex beta toggle now enables the provider automatically
+- Teammate permission widgets no longer hidden by noise filter
+- Worktree file paths now persist correctly when navigating away and back
+- AI Sessions popover now groups worktree sessions correctly
+- Second queued prompt no longer gets empty response
+- Deny button in tool permission widget is now clearly visible
+- File-session links now work correctly for agent mode in worktrees
+- Hide system-generated user messages from transcript view
+- Exclude system-generated user messages from prompt history
+- Prevent tool calls from being hidden after teammate notifications
+- iOS session list shows model info and readable timestamps
+- Show file path as chip in session quick open to prevent text overlap
+- Restore horizontal scrolling in database browser tables
+- Resolve iOS test runtime crash from Int16 overflow and static var
+- Resolve Swift 6 strict concurrency errors in iOS tests
+
+## [0.53.8] - 2026-02-17
+
+
+### Added
+- Super Loop iterations now enforce progress reporting via MCP tool
+- Blocked Super Loop sessions show inline feedback widget
+- Onboarding survey asks AI referrals what model/prompt they used
+- Blitz sessions show model names instead of AI-chosen titles
+- Track Codex session starts in PostHog
+- Sync pending prompt state to iOS and show indicator
+
+### Changed
+- Model blitzes stored as ai_sessions instead of separate table
+
+### Fixed
+- Fix packaged Codex SDK loading in Electron
+- Resolve TypeScript errors in Super Loop blocked feedback
+- Clear stale isExecuting flags on startup and prevent sync overlap
+- Add missed files for FileTreeRow tree keyboard handler
+
+## [0.53.7] - 2026-02-17
+
+
+### Added
+- Brand iOS projects list with app icon and Nimbalyst name
+- Sync AI session context usage to iOS via encrypted client metadata
+- Agent-readable decryption instructions and session keep-alive
+
+### Fixed
+- iOS scroll to top functionality in session detail view
+- Reduce sync spam by increasing message sync debounce to 10s
+- Enable horizontal scrolling in database browser table rows
+- Mobile-created sessions now use user's default model preference
+- Breadcrumb filename click now clears file tree filter
+
+## [0.53.6] - 2026-02-17
+
+
+### Added
+- Error detection, reporting, and retry for iOS session detail view
+
+### Changed
+- Replaced old file tree with new virtualized implementation
+- Centralized file tree IPC listener to follow project patterns
+
+### Fixed
+- iOS voice mode crash when starting audio capture
+- Index WebSocket reconnection loop stops permanently after failed retry
+- File tree no longer jumps scroll when expanding directories
+
+## [0.53.5] - 2026-02-16
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Codex models now appear without an OpenAI API key
+- Sub-agent messages no longer lost when session ends early
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.53.4] - 2026-02-16
+
+
+### Added
+- Show "Waiting for N agents to finish" instead of generic "Thinking..." during multi-agent sessions
+- Codex usage indicator in sidebar for subscription users
+- Codex CLI prerequisites section in settings panel
+- Teammate spawn cards now show live status instead of error icon
+- Teammate messages now show as distinct notifications in chat
+- Share markdown files as encrypted links
+- Show expiry date in share link toast notifications
+
+### Changed
+- Move Super Loops from beta to alpha channel
+- Make Codex beta status notice more prominent in settings
+
+### Fixed
+- Alpha features now properly hide when switching off alpha channel
+- Fix endSession race when lead completes inside generator loop
+- Fix sub-agent output nesting and session lifecycle
+- Prevent BlitzDialog from overflowing viewport
+- OpenAI Codex provider now loads in packaged builds
+- Fix handleShutdownResult so it emits teammates:allCompleted when last teammate removed
+- Cancelled parallel agent spawns no longer show in transcript
+- Teammate messages no longer get dropped or stuck
+- Always attempt interrupt() for teammate messages instead of queueing
+- Cancelling rebase/merge no longer leaves conflict markers in files
+- Disable development environment toggle in SyncPanel
+- Prevent share operations from signing user out on JWT refresh failure
+- QR scanner reliability in release builds
+- Show provider icon and name in assistant transcript avatar
+- Make transcript avatar icons perfectly round
+- Skip TestFlight encryption compliance questions on upload
+
+## [0.53.3] - 2026-02-16
+
+
+### Added
+- Client-side encryption for shared sessions
+
+### Fixed
+- Reduce macOS build size from 1.5GB to 631MB by excluding unused node_modules
+- Auto-enable alpha features when switching to alpha release channel
+- Add macOS platform to NimbalystNative Package.swift
+- Update iOS CI to macos-15 runner with Xcode 26.2
+
+## [0.53.2] - 2026-02-16
+
+
+### Added
+- 30-day TTL for synced sessions to automatically clean up old data
+- Email magic link login for iOS app (alternative to QR code pairing)
+- Screenshot mode for App Store submission
+
+### Fixed
+- Cmd+F find routing in Agent Mode split screen now correctly targets the active editor
+- Unified iOS splash screen to simple logo on both iPhone and iPad
+- Session sharing no longer requires sync config to be set up
+- Project sync now triggers immediately and iOS re-pairing works correctly
+- Prevent QR scanner from setting invalid rectOfInterest
+- Update Xcode scheme and project settings for compatibility
+
+## [0.53.1] - 2026-02-16
+
+
+### Added
+- Sub-agents now appear in sidebar alongside teammates
+- Codex reasoning blocks expanded by default for better visibility
+- Codex sessions now show "Finished in" duration reflecting actual session time
+- AI sessions button shows cross-worktree file history
+- "Clear Gitignored Files" context menu action for worktrees
+- Shell environment and enhanced PATH passed to Codex SDK
+
+### Fixed
+- Auto-commit no longer blocks session when not viewing it
+- Fixed text[] cast in getMany query to match ai_sessions.id column type
+- Resolved race conditions and reliability issues in teammate management
+- Sequential teammate spawning instructions moved to deny responses
+- Codex reasoning blocks render inline instead of grouped at top
+- Escaped SQL LIKE wildcards and added clean gitignored feedback
+- Git clean exclude approach and trim preserve list
+- AI sessions button visible in agent mode file viewer
+- Resolved Codex CLI in packaged builds
+
+## [0.53.0] - 2026-02-16
+
+
+### Added
+- Native iOS app with SwiftUI navigation and encrypted sync
+- Voice mode for native iOS app with OpenAI Realtime API
+
+### Changed
+- Standardized wire protocol on camelCase across all sync layers
+- Removed deprecated tool packages system
+- Removed window title file tracking and IPC overhead
+
+### Fixed
+- Prevent bulk sync from clobbering isExecuting and lastReadAt state
+- Debounce session data reload during active streaming to prevent flickering
+- Enable drag-and-drop of standalone sessions into workstreams
+- Resolve TypeScript errors in AI protocol and UI components
+
+## [0.52.70] - 2026-02-15
+
+
+### Added
+- Super Loop iterations now carry learnings forward via progress.json
+- Super Loop progress.json snapshots visible in chat transcript with dedicated widget
+- Super Loop progress panel in files sidebar showing phase, iteration count, learnings, and blockers
+- Super Loop auto-commits .superloop to .gitignore in worktrees
+- Super Loop state hardening: startup recovery, session completion signaling, progress file resilience, force-resume for completed/failed/blocked loops
+- Force-resume dropdown with configurable iteration options (0/5/10/20)
+- Auto-approve commits option for git commit proposals with toggle in settings and widget
+- Virtualized session list for faster startup with many sessions
+- Codex file changes now show a rich widget with content preview
+
+### Changed
+- Renamed Ralph Loops to Super Loops (files, types, IPC channels, DB tables, UI)
+
+### Fixed
+- Restored Virtuoso virtualization in SessionHistory after accidental removal
+- Super Loop review fixes: pauseResolvers memory leak, forceResumeLoop atomicity
+- Codex blocking widgets no longer time out (removed MCP tool timeout for interactive widgets)
+- Session list items no longer re-render unnecessarily (React.memo + memoized date formatting)
+- Session list no longer slows down with many sessions (O(1) parent-to-children index)
+- Super Loop icon alignment in new menu
+- Added detailed logging to git commit staging for debugging
+
+## [0.52.69] - 2026-02-14
+
+
+### Added
+- Super Loops - autonomous AI agent iteration system (inspired by Ralph Loops)
+
+### Changed
+- Polish blitz creation dialog UI
+
+### Fixed
+- Command execution bash widget
+
+## [0.52.68] - 2026-02-13
+
+
+### Added
+- Blitz mode for parallel AI worktree sessions
+- Beta features configuration system with user-facing settings
+
+### Changed
+- Codex now gated behind beta flag only (no longer requires alpha channel)
+- Updated claude-agent-sdk 0.2.39 to 0.2.42 and codex-sdk 0.98.0 to 0.101.0
+
+### Fixed
+- Codex packaged binary path resolution
+- App icon path in packaged builds using app.getAppPath()
+- Blocking prompt icon now clears after commit and shows correctly in groups
+- TypeScript errors after SDK dependency update
+- Clarified beta features and Blitz descriptions
+
+### Removed
+- Activity History panel (reverted)
+
+## [0.52.67] - 2026-02-13
+
+
+### Added
+- Codex file changes now appear in "all session edits" sidebar
+- Show elapsed time at end of completed agent turns
+
+### Fixed
+- Extension MCP tools now load in worktree sessions
+- Prevent double-handling of teammate shutdown requests
+- Multi-agent teammate message delivery and session hang
+- Teammate/background agent output no longer leaks into main transcript
+- Background sub-agents now defer session end like teammates
+- Defer session end while teammates are still active
+- Codex provider crashes in production builds
+
+## [0.52.66] - 2026-02-13
+
+
+### Added
+- MCP support to OpenAI Codex provider
+- Codex SDK to update-libs command
+
+### Changed
+- Improved code quality in MCP servers and OpenAI Codex provider
+- Improved Codex model discovery security and performance
+- Restricted Codex to Allow Edits mode and use permission-based sandbox
+- Made shutdownHttpServer async to await transport cleanup
+
+### Fixed
+- Claude Code model selection not respected when initializing provider
+- Exclude hidden messages from activity history
+- Use proper Codex SDK system prompt configuration
+- Capture Codex thread IDs from thread.started events for proper session resumption
+- Persist all SDK events as raw_event for audit trail
+- Remove incorrect documentStateBySession cleanup on disconnect
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.65] - 2026-02-12
+
+
+### Added
+- Codex raw event storage and grouping in database
+- Codex tool calls now render with same widget as Claude Code
+
+### Changed
+- Improved Codex provider code quality and performance
+
+### Fixed
+- Global-scoped extension tools now visible without active file
+- Edit tool now shows red/green diffs after agent refactoring
+- Codex text extraction from item.text field
+- Codex output saving to database
+- TypeScript type errors in AgentToolHooks integration
+
+## [0.52.64] - 2026-02-12
+
+
+### Added
+- Enhanced quick open dialogs with cross-dialog navigation and file search
+- Binary path resolution for Codex SDK in packaged builds
+
+### Changed
+- Extracted shared agent infrastructure for multi-platform support
+
+### Fixed
+- @ mention file search now finds all workspace files
+- Transcript scroll-to-bottom button not clickable
+- Ctrl+` terminal shortcut not working on macOS and missing tracker tooltip shortcut
+- Git commit widget shows actual commit date instead of render time
+- TypeScript errors for Claude Agent SDK and Codex test
+- Video recording for E2E tests in Docker
+- Query type not exported by claude-agent-sdk
+
+## [0.52.63] - 2026-02-11
+
+
+### Added
+- OpenAI Codex provider rewritten from CLI spawning to SDK integration
+- Activity History panel (behind alpha flag)
+- Managed teammates for agent teams
+- Auto-continue AI sessions after restart
+
+### Changed
+- Bumped claude-agent-sdk from 0.2.37 to 0.2.39
+
+### Fixed
+- Improved rebase instructions to verify correct stash before restore
+- Sessions with more than 5000 messages now load fully
+- Worktree path used correctly for git commit operations in worktree sessions
+- CRLF line endings normalized in markdown import to fix mermaid/code block parsing
+
+## [0.52.62] - 2026-02-10
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Resolved all TypeScript typecheck errors across monorepo
+- Fixed per-package typecheck errors matching CI configuration
+- Fixed dark mode variants not applying to descendant elements
+- Added typecheck scripts to all CI-checked extension packages
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.61] - 2026-02-09
+
+
+### Added
+- Shareable session links via Cloudflare R2
+- Session HTML export and clipboard copy IPC handlers
+- Mobile-to-desktop git commit proposal sync
+- Syntax-highlighted JSON in database browser cell popup
+- New file creation rendered as syntax-highlighted preview instead of all-green diff
+
+### Changed
+- Updated @anthropic-ai/claude-agent-sdk to 0.2.37
+
+### Fixed
+- Claude Code subprocess now receives full shell environment
+- Database browser cell modal closes on Escape key
+- Frontmatter UI now appears immediately after Set Document Type
+- Nimbalyst mockup Style Guide updated with correct color palette and typography
+- Scroll button visibility and behavior in RichTranscriptView
+- "Already has a parent" error when selecting workstream child sessions
+- Excalidraw MCP tools now always visible to Claude Code agents
+- YAML frontmatter stripped from markdown new-file previews; fixed code syntax colors
+- Devcontainer npm install no longer overwrites host node_modules
+
+## [0.52.60] - 2026-02-06
+
+
+### Added
+- Splash screen displayed during app startup
+
+### Changed
+- Updated @anthropic-ai/claude-agent-sdk 0.2.32 to 0.2.34
+
+### Fixed
+- Normalized file paths in git commit handler for cross-platform compatibility
+- Resolved TypeScript errors breaking CI typecheck
+
+## [0.52.59] - 2026-02-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Reverted parallel initialization startup optimization
+
+### Fixed
+- Worktree merge errors now show a dialog instead of failing silently
+- Prevented bash heredoc content from creating false file tracking entries
+- Prevented open_workspace MCP tool from creating duplicate windows
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.58] - 2026-02-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Restored 'Use Standalone Binary' option for bun runtime
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.57] - 2026-02-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Faster app startup via parallel initialization
+
+### Fixed
+- Pinned PGLite to 0.3.14 to prevent regression from 0.3.15
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.56] - 2026-02-06
+
+
+### Added
+- Warning dialog when running x64 build on Apple Silicon via Rosetta
+
+### Fixed
+- Image generation now respects aspect ratio setting via Gemini API
+- Git index.lock race condition between status and commit operations
+- ToolPermissionWidget not rendering for compound Bash commands
+- Skip redundant permission prompts for built-in MCP tools
+- Handle EMFILE errors gracefully in file watchers
+- Suppress git errors when opening non-git workspaces
+- Updated mobile splash screen
+
+## [0.52.55] - 2026-02-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+- Removed experimental 'Use Standalone Binary' bun runtime feature for spawning Claude Code sessions
+
+## [0.52.54] - 2026-02-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed clicks being blocked after Claude Code login by properly passing auth error flag through IPC error handler and clearing pointer-events overlay
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.53] - 2026-02-06
+
+
+### Added
+- Agent Teams support for Claude Code sessions with UI toggle in Settings, teammate metadata parsing, and distinct teammate rendering with progress indicators
+
+### Fixed
+- Terminal no longer crashes when stored CWD points to a deleted directory (e.g., from a removed worktree)
+
+## [0.52.52] - 2026-02-06
+
+
+### Added
+- Onboarding "Other" referral source now includes a write-in text field
+- Effort level selector for Opus 4.6 sessions
+
+### Fixed
+- Prevent duplicate error dialog when database lock is detected
+
+## [0.52.51] - 2026-02-05
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Worktree git commits now target the correct directory
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.50] - 2026-02-05
+
+
+### Added
+- Diff/Full view toggle in history dialog
+- Pending-review dot indicator replaces Keep All banner in git repos
+- Claude Usage indicator enabled by default with disable button
+- Include executing state for mobile sync in session metadata
+- Interactive prompts generalized for Capacitor mobile app
+
+### Changed
+- Centralized git operation locking to prevent concurrent state corruption
+
+### Fixed
+- File rename now updates open tabs correctly
+- Prevent autosave from recreating deleted or renamed files
+- Git commit proposal now commits only selected files
+- Verify staged files match selection before committing
+- Stop Ctrl+ shortcuts from intercepting terminal input on macOS
+- Resolve ExitPlanMode SDK promise when approved from mobile
+- Remove window.focus() calls that steal foreground on startup
+- Increase minimum width of files scope dropdown
+- Files scope dropdown click-outside behavior
+- Destructure getClaudeCodeExecutableOptions correctly in check-login handler
+
+## [0.52.49] - 2026-02-05
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Restore code accidentally reverted by refactoring commit (Bun signature stripping, session pin transfer, ExitPlanMode null check)
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.48] - 2026-02-05
+
+
+### Added
+- Claude Opus 4.6 model support
+
+### Changed
+- Update claude-agent-sdk to 0.2.32 and mcp-sdk to 1.26.0
+
+### Fixed
+- Prevent duplicate ELECTRON_LOG handler registration
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.45] - 2026-02-05
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Strip Bun binary signature before macOS codesign to fix notarization
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.44] - 2026-02-05
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Use bash explicitly for claude-helper build scripts on Windows
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.43] - 2026-02-05
+
+
+### Added
+- Standalone Claude helper binary setting (experimental) for improved performance
+
+### Changed
+- CI now pins Bun version to 1.1.43 for deterministic builds
+- Claude helper binary build extended to support all platforms
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.42] - 2026-02-05
+
+
+### Added
+- Durable interactive prompts architecture for session persistence
+- Database dashboard in database browser extension
+- Support for reference images in image generation
+- PostHog analytics tracking for auto-update system
+- Startup delay for walkthrough triggers to improve UX
+
+### Changed
+- Git commit widget now renders from tool call data directly
+
+### Fixed
+- Header row pinning and column freezing disabled due to UX issues in spreadsheets
+
+### Removed
+- Unused git commit proposal atoms
+
+## [0.52.41] - 2026-02-04
+
+
+### Added
+- Claude usage indicator with pace tracking for monitoring API costs
+- CLI `--file` flag to open a specific file when launching a workspace
+- Project move/rename feature with automatic data migration
+- Worktree merge now allows uncommitted changes
+
+### Changed
+- Large text attachments now written to /tmp instead of sent inline
+- Worktree rebases use file-level conflict detection
+- Transcript search rewritten to use CSS Custom Highlight API
+- GitHub MCP template updated to use official remote server
+
+### Fixed
+- Session cancellation now properly stops SDK and rejects pending interactions
+- Attachment previews now center on screen instead of in scroll panel
+- Archived sessions toggle race condition
+- Session draft input displays correctly when creating sessions from rebase
+- Cross-platform path handling for worktree names
+- "Resolve with Agent" button now works for bad git state in worktrees
+- Hide dock icon when spawning Claude Code subprocess on macOS
+- Persist showUsageIndicator setting in AI settings
+- Hide redundant CODE provider badge for claude-code sessions
+- Register confirm-dialog with DialogProvider
+- Only show context window walkthrough after /context runs
+- Batch git log calls for performance
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.40] - 2026-02-04
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- ExitPlanMode now requires planFilePath parameter with cross-platform path support
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.39] - 2026-02-03
+
+
+### Added
+- OS notifications when AI sessions are blocked waiting for user input
+
+### Changed
+- Reduced verbose logging output
+
+### Fixed
+- Git commit widget only triggers on explicit "smart commit" requests
+
+## [0.52.38] - 2026-02-03
+
+
+### Added
+- Model picker for image generation with Gemini 2.5 Flash and Gemini 3 Pro options
+
+### Changed
+- Default to group-by-directory view in Files Edited sidebar
+
+### Fixed
+- Prevent duplicate git commit widgets from showing as active
+- Prevent HelpTooltip from appearing when returning to app window
+- Hide prompt additions feature in packaged builds
+- Show commit checkboxes for files in non-git directories
+- Show uncommitted files link when session has edits
+- Add run-name to CI workflow to distinguish from release runs
+
+## [0.52.37] - 2026-02-03
+
+
+### Changed
+- Reduced verbose logging in CustomTrackerLoader and agentMode atoms
+
+### Fixed
+- Build rexical before runtime in CI workflow to fix build dependency order
+- Include package-lock.json in version control
+
+## [0.52.36] - 2026-02-03
+
+
+### Changed
+- Default file scope mode now shows all session edits instead of just the current session
+
+### Fixed
+- Built-in themes now included in CI packaged builds
+
+## [0.52.35] - 2026-02-03
+
+
+### Added
+- HelpTooltip system for contextual UI help with hover tooltips
+- Status indicator on workstream/worktree parent headers showing active sessions
+- Plan status check integrated into prepare-commit command
+- Claude 500 error detection with link to Anthropic status page
+- Allow editing extension-registered file types in planning mode
+- Persist file scope mode at workspace level
+- Added status values, plan types, and best practices to plan mode prompt
+
+### Changed
+- Migrated crystal-dark theme to file-based theming system
+- Extracted plan mode prompts to shared module for reuse
+- Consolidated getAllFilesInDirectory into shared utility
+- Code cleanup and DRY improvements for worktree support
+
+### Fixed
+- Cross-platform path compatibility in httpServer.ts
+- Worktree path handling for mockups and document service
+- Properly count and display files in untracked directories
+- Scope 'all uncommitted files' to worktree when in worktree session
+- Include worktreeId in sessionStoreAtom when adding sessions
+- Path resolution now worktree-aware throughout the codebase
+- Remove premature git staging from commit command
+- Derive missing theme colors from base colors for custom themes
+- Clear unread indicator when selecting child session in SessionHistory
+- TypeScript type errors in electron package
+- Document header updates when file is externally modified
+- Prevent document header from losing content on field changes
+- Prevent tracker panel empty state flash during loading
+- Rename postcss.config.js to .mjs to eliminate module type warning
+- Convert sessionArchivedAtom to derived atom, restore draft persistence
+- Stack empty state links vertically in Files Edited sidebar
+- Prevent session mode/model atoms from diverging during reloads
+- Use user's default model when creating child sessions
+- Respect sort order for sub-sessions in workstreams and worktrees
+- Build all extensions in crystal-run.sh
+- Terminal cursor position corruption when switching tabs
+- Handle system/auto theme and Claude plugin-only extensions
+- Persist Claude SDK session ID immediately on init
+
+### Removed
+- Removed unused agent-mode-toggle help content
+
+## [0.52.33] - 2026-02-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+- Expanded visual communication guidance in Claude Code prompt
+- Refactored worktree file state to use centralized IPC listener architecture
+
+### Fixed
+<!-- Bug fixes go here -->
+- Fixed crash when loading tool permission dialogs from database
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.32] - 2026-02-02
+
+
+### Changed
+- ExitPlanMode migrated to durable DB-backed prompts
+- Interactive prompts (git commit proposals) now persist across app restarts
+
+### Fixed
+- Transcript no longer flashes when switching sessions
+- Transcript auto-scroll now uses per-session state to prevent scroll position bleeding between sessions
+
+## [0.52.31] - 2026-02-02
+
+
+### Added
+- "Copy Session ID" option to session context menu
+- Redesigned Files Edited sidebar with clearer scope modes
+
+### Changed
+- Simplified session scope filter to binary choice (This Session / All Sessions)
+- Centralized IPC listeners for file state and session list to prevent race conditions
+- Reduced verbose logging in main process
+
+### Fixed
+- Session model atom now initialized on add to prevent flash of default value
+- Restored data-session-id attributes to session components
+
+## [0.52.30] - 2026-02-02
+
+
+### Added
+- Support for .mdc files as markdown
+
+### Changed
+- Updated @anthropic-ai/claude-agent-sdk to 0.2.29
+- Mockup annotation prompt now uses capture_editor_screenshot
+
+### Fixed
+- Clear mockup annotation indicator when switching tabs
+- Include mockup annotations in capture_editor_screenshot tool
+- Theme variable for text selection indicator corrected
+- Theme variable for mockup annotation indicator text corrected
+- Mockup annotation data now properly passes through IPC serialization
+- Tailwind theme classes corrected for dark mode compatibility
+- ExtensionDevIndicator now updates reactively when setting changes
+- Built-in themes included in production build extraResources
+- Tracker bottom panel tab and icon behavior improved
+
+## [0.52.29] - 2026-02-01
+
+
+### Added
+- Flash animation when focusing existing worktree terminal
+- Smart commit detection for worktree rebase using git cherry
+- Support for deleted and renamed files in uncommitted files list
+- Inline rename for worktrees and sessions
+- Git panel refresh on session completion and visibility
+- E2E runner agent for containerized test execution
+
+### Changed
+- Session naming improved to put descriptive part first
+- Claude Code system prompt unified for all session types
+
+### Fixed
+- Running session no longer steals tab focus in worktrees
+- Linux terminal startup error resolved (bash args reorder)
+- Checkboxes now shown for all uncommitted files in Files Edited sidebar
+- Terminal scrollback corruption in Ghostty prevented
+- Stale stash corruption in worktree rebase/merge operations prevented
+- Rebase enabled for worktrees that are behind main even when merged
+- System message additions stripped from prompt history recall
+- Microphone entitlement removed to prevent unwanted permission prompts
+- Test database cleared on each Playwright test launch
+- Walkthroughs blocked when dialogs/overlays are visible
+- Sessions auto-unarchive when new message is sent
+- Copyright year updated to 2025-2026 in about page
+
+## [0.52.27] - 2026-02-01
+
+
+### Added
+- PDF attachment support for Claude providers
+
+### Fixed
+- Auto-update YML files now generated correctly for Windows and Linux
+
+## [0.52.26] - 2026-01-31
+
+
+### Added
+- AI session tabs and input now visible in FILES layout mode
+
+### Changed
+- Tracker panel shortcut changed to Cmd+T
+- Extension command namespaces standardized with nimbalyst- prefix
+- Tracker panel state migrated to Jotai atoms
+
+### Fixed
+- Empty screenshots no longer cause API errors
+- MCP tools now use session-specific document state
+- Document content read from disk for AI context
+- Auto-switch to agent mode when /implement command is used
+- Find-previous stack overflow in search
+
+## [0.52.25] - 2026-01-31
+
+
+### Added
+- File context and text selection support in agent mode (including worktrees)
+
+### Fixed
+- MCP tools (like git commit proposal) now work correctly in worktree sessions
+- Removed deprecated "no document open" warning from system prompt
+
+## [0.52.24] - 2026-01-31
+
+
+### Added
+- Optional email field to feedback survey
+- Diagnostic logging for theme and preload path debugging
+- Renderer eval MCP tool for debugging
+- Rebuild Extensions submenu to Extension Dev Mode
+- Git commit mode walkthrough
+- Fuzzy file search and content search shortcut to QuickOpen
+- Walkthrough system improvements and new walkthroughs
+- Layout controls walkthrough with markdown support
+
+### Changed
+- Unified document context handling across all AI providers
+- Eliminated hardcoded colors in favor of theme variables
+- Improved Prompt Additions widget for all AI providers
+- Reduced context usage for Claude Code by truncating long documents
+
+### Fixed
+- Email format validation in feedback survey
+- Onboarding dialog not showing for new users
+- Todo panel error on truthyness
+- Reverted bad user-select CSS changes
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.23] - 2026-01-31
+
+
+### Added
+- Terminal tab indicator showing when a command is running
+- Session tabs now wrap to multiple rows when overflowing
+- Text selection context included in AI chat messages
+- Enhanced prompt additions widget with document context, attachments, and persistence
+- Archive/unarchive functionality for individual sessions in worktrees
+
+### Changed
+- Moved document context from system prompt to user message for better context handling
+- Simplified text selection to just the selected text string
+- Optimized document content by omitting unchanged content between messages
+
+### Fixed
+- Suppressed error logs when user aborts Claude Code request
+- Prevented terminal display corruption from interleaved writes
+- Plan mode implementation now creates new session in worktree instead of workstream
+- Fixed worktree session tabs showing 'Untitled' after restart
+- Fixed new sessions in worktrees using 'New Session' instead of worktree name
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.22] - 2026-01-30
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Improved error handling for AskUserQuestion tool resolution in Claude Code sessions
+- Added comprehensive analytics diagnostics with fail-open error handling for better reliability
+- Fixed Intel Mac terminal support by enabling npmRebuild in Electron build configuration
+- Fixed text selection styling using correct CSS layer utilities
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.21] - 2026-01-30
+
+
+### Added
+- "No uncommitted changes" message when session has committed all its files
+- File scope filter and root checkbox to Files Edited sidebar
+- Cmd+Alt+W keyboard shortcut to create new worktree
+- Environment variables UI in Claude Code settings
+- Helpful error dialog for Bedrock MCP tool incompatibility
+- Analytics tracking for configured AI provider in claude_code_session_started event
+
+### Fixed
+- Text selection now enabled in AI session transcripts
+- Dropdown positioning, keyboard shortcuts, and IPC type safety improvements
+- New session dropdown menu no longer hidden behind search input
+- Login popup formatting improved with line breaks
+
+## [0.52.20] - 2026-01-30
+
+
+### Changed
+- Disabled text selection on UI chrome elements, opt-in for content areas
+
+### Fixed
+- Auto-updater now selects correct architecture on arm64 Macs
+- Block message send while image attachments are still processing
+
+## [0.52.19] - 2026-01-30
+
+
+### Added
+- Plan mode indicator displayed on user messages in transcript
+- Shift+Tab keyboard shortcut to toggle plan mode in Claude Code
+- `/clear` command now creates a new session in current context
+
+### Changed
+- Plan mode instructions moved from system prompt to user message for better visibility
+- AskUserQuestion state persisted using Jotai atoms for improved state management
+
+### Fixed
+- AskUserQuestion state now persists across session navigation
+- Object destroyed errors prevented when window refreshes during AI requests
+
+## [0.52.18] - 2026-01-30
+
+
+### Added
+- Offscreen editor mounting system for MCP tools
+- Session import dialog in Developer menu
+
+### Changed
+- GitCommitConfirmationWidget styling aligned with FileEditsSidebar
+
+### Fixed
+- FTS indexing now includes user prompts and assistant text for better search
+- Session content search now works reliably with time/direction filters
+- Optimized session list query to prevent redundant loading
+- WebSocket "Sent before connected" error in announceDevice
+- Improved performance by caching session files query and preventing extension double-load
+- Extension 'main' field now optional for Claude plugin-only extensions
+
+## [0.52.17] - 2026-01-29
+
+
+### Added
+- "Open in External Editor" context menu option with configurable editor path
+- License attribution for third-party themes
+
+### Changed
+- Themes separated from extension system for faster loading
+- Improved installed extensions panel layout and organization
+- Built-in commands and mockup editor migrated to extension system
+
+### Fixed
+- PID-based database locking to prevent corruption when multiple instances attempt to open
+- Slash command menu now responds to clicks and shows no duplicates
+- Extension MCP tools now register correctly when workspace path is set
+- Prevent extension initialization crash when aiTools is not an array
+- Prevent infinite render loop in GitCommitConfirmationWidget
+- Stop EISDIR errors when scanning .nimbalyst directories
+- Smart commit prompt now correctly references developer_git_commit_proposal tool
+- "Reveal in Finder" context menu now works correctly
+
+### Removed
+- Redundant database queries at startup
+
+## [0.52.16] - 2026-01-29
+
+
+### Added
+- Terms of Service and Privacy Policy links in onboarding flow
+- Single-session worktrees now display as flat items with worktree icon for better visibility
+- Current PATH shown in Advanced Settings for debugging environment issues
+- Terminal tab context menu with Clear option and list refresh listener
+- Analytics tracking for worktrees, plan mode, and git commits
+- Warning when archiving worktree with uncommitted changes
+
+### Changed
+- Review-branch command now supports flexible review scopes and parallel sub-agent processing
+- Archive worktree dialog logic extracted into reusable hook
+
+### Fixed
+- Alpha features toggle crash and auto-enable for upgrading users
+- Database init failure now shows recovery options instead of crashing
+- Terminal cleanup improved to prevent stale closures during auto-restart
+- Terminals associated with archived worktrees are now properly deleted
+- Terminal scrollback restoration and error handling improved
+- Worktree deletion now ensures disk cleanup before marking as archived
+- Sessions losing messages (speculative fix)
+- Terminal crash from corrupted scrollback with invalid code points
+
+## [0.52.14] - 2026-01-28
+
+
+### Added
+- Display worktree name in terminal tabs for better identification
+- YAML frontmatter instructions in plan mode prompt for structured plan metadata
+- ExitPlanMode now supports options: new session, approve, or continue with feedback
+
+### Changed
+- Plan mode agent now chooses plan name with validation on exit
+- Plan implementation uses natural prompt instead of /implement command
+- AskUserQuestion widget now uses 90% width for better display
+- Plan mode workflow now works more like the CLI
+
+### Fixed
+- Plan file link now opens correctly in workstream editor tabs
+- Developer mode selection from onboarding now properly updates Jotai atom
+
+### Removed
+- /plan slash command removed from Nimbalyst (plan mode is now internal)
+
+## [0.52.13] - 2026-01-28
+
+
+### Added
+- Collapsible "Other Uncommitted Files" section in git commit panel with persisted state
+
+### Fixed
+- Session list refresh handling and increased slow query threshold
+- Timezone handling in AI Usage Report graph
+- Dialog overlay issues by extracting DialogProvider
+- "Open in Files Mode" context menu now correctly switches to Files mode
+
+## [0.52.12] - 2026-01-28
+
+
+### Added
+- `/update-libs` command to update Anthropic Agent SDK and MCP library to latest versions
+
+### Fixed
+- Git operations (commit, status, diff) now work correctly in worktree sessions
+- Module import issue with store module in build
+
+## [0.52.11] - 2026-01-28
+
+
+### Added
+- Folder @ mentions in AI chat input with delimiter-separated fuzzy matching
+- Project-focused File menu items replacing generic Open Folder and Recent Files
+
+### Changed
+- Cmd+E and Cmd+K now toggle left panel when already in that mode
+- Files-edited sidebar title now reflects session type (Workstream vs Worktree)
+- Image generation feature gated behind alpha flag
+
+### Fixed
+- Auto-updater spinner no longer gets stuck after clicking "Remind me later"
+- Git commit panel sync issues when staging/unstaging files
+- Git commit proposal now properly rejects when no files to commit
+- Diff highlighting broken after theme changes
+
+## [0.52.10] - 2026-01-27
+
+
+### Added
+- Custom PATH configuration in Advanced Settings for managing shell environment variables
+
+### Changed
+- Unified git operations UI for both regular and worktree sessions
+- Made PATH detection async to avoid blocking startup
+- Gated card view mode behind alpha feature flag
+- Made "Enable All Alpha Features" a stored state with migration for existing users
+
+### Fixed
+- Improved PATH detection for homebrew and nvm installations
+- Treat missing lastKnownVersion as upgrade from <=0.52.10
+
+## [0.52.9] - 2026-01-27
+
+
+### Added
+- Unified cross-mode navigation history for seamless back/forward navigation across files
+- Enhanced keyboard shortcuts dialog with tabs and improved formatting
+- Unified onboarding flow with developer mode selection
+- Developer feature flags for worktrees and terminal
+
+### Changed
+- Remove developer section from keyboard shortcuts dialog
+
+### Fixed
+- Users with old databases can now start the app without errors
+- Make all onboarding fields optional except mode selection
+- Use standard --nim-* CSS variables in onboarding screens
+- Prevent race condition in navigation history restore
+- Make Cmd+Shift+A toggle AI chat panel correctly
+- Handle missing history array in navigation state restore
+- Restore list bullet and number visibility broken by Tailwind Preflight reset
+- Resolve remaining typecheck errors in session files, agent mode, and todo panel
+- Fix show archived sessions
+
+## [0.52.7] - 2026-01-26
+
+
+### Added
+- Collapsible todo panel in agent mode sidebar for tracking task progress
+- Collapsible left panel toggle for Files and Agent modes
+- Terminal integration with theme system for consistent styling
+
+### Fixed
+- Fallback to dark theme when configured theme ID is not found
+- Correct timezone handling for TIMESTAMPTZ session timestamps
+- Keep smart mode when AI proposes commit, show proposal UI inline
+- Restore processing state on renderer refresh
+- Handle WASM memory errors when restoring terminal scrollback
+
+## [0.52.6] - 2026-01-26
+
+
+### Added
+- Restore session unread state with database persistence
+- Developer option to show prompt additions
+- Confirmation dialog when archiving worktrees
+- Persist user-resized column widths in CSV spreadsheet
+- Checkbox file selection in FilesEditedSidebar for Manual/Worktree commit modes
+- Slow query diagnostics to PGLite database layer
+- Dialog for untracked files conflict during worktree rebase
+
+### Changed
+- Replace xterm.js with ghostty-web for terminal emulation
+- Improve archive button labels in session history
+
+### Fixed
+- Restore visibility of ChatSidebar New button
+- Clicking on a session under a worktree/workstream now behaves consistently
+- Prevent text wrapping in session history new menu
+- Scope git commit proposals to workstream instead of workspace
+- Improve checkbox selection and auto-clear committed files in GitOperationsPanel
+- Apply theme colors to file tree resize handle
+- Reduce vertical padding in AI input panel
+- Populate GitOperationsPanel commit message from MCP git_commit_proposal
+- Ensure state persistence handles missing fields from old data
+- Correct disabled state styling for Generate button in image-generation
+- Use correct theme variables and Tailwind classes in image-generation lightbox
+- Image generation lightbox uses correct theme colors and closes on Escape
+- Optimize smart commit prompt to reduce unnecessary analysis
+- Show ModelSelector for sessions without model and process mobile prompts
+- Strip whitespace padding from terminal scrollback restoration
+- Process queued prompts when user cancels AskUserQuestion
+- Aggregate session status for worktrees/workstreams in card view
+- Archived sessions disappear immediately from agent sessions panel
+- Correct text color classes in dark mode
+
+### Refactored
+- Complete Tailwind migration across all packages
+
+## [0.52.5] - 2026-01-25
+
+
+### Added
+- Show AI errors in transcript instead of silent failures
+- Add refresh button to worktree tab in git operations panel
+- Enable auto-restart for dev server via loop mode
+- Add context menu support to session history card view
+- Enable worktree rebase with uncommitted changes via auto-stashing
+- Migrate to Tailwind CSS with unified theming system
+
+### Changed
+- Session names now reflect user's request, not agent's solution
+- ChatSidebar now uses user's default model for new sessions
+- Model switching, persistence, and defaults improved for AI sessions
+
+### Fixed
+- Remove redundant type comparison in extractModelForProvider
+- Correct CSS typo in SessionHistory.css
+- Restore card view toggle and styling for session history
+- Correct Tailwind CSS for worktree view and restore card view toggle
+- Display (1M) suffix for extended context Claude Code models
+- Use ModelIdentifier as single source of truth for default models
+- Resolve TypeScript strict mode errors across codebase
+
+### Refactored
+- Migrate extensions to unified --nim-* CSS variables
+- Migrate components from inline styles to Tailwind CSS
+- Remove unused CSS import from ChatSidebar
+
+## [0.52.4] - 2026-01-25
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed AI provider field not syncing when model ID contains provider prefix
+
+### Removed
+- Removed deprecated DiffMode and WorktreeMode components
+
+## [0.52.3] - 2026-01-25
+
+
+### Added
+- Right-click context menu for workstreams
+- Allow adding new sessions to existing worktrees
+
+### Removed
+- Alternative Claude Code provider (alpha feature reverted)
+
+## [0.52.2] - 2026-01-24
+
+
+### Added
+- Card view display mode for session history
+- Real-time worktree display name sync across UI
+- Dynamic alpha feature registry system
+- Alternative Claude Code provider support (alpha)
+- Worktree terminal button and improved terminal switching
+
+### Fixed
+- Pasted text starting with '#' no longer incorrectly activates memory mode
+- Alpha feature settings now persist across sessions
+- New Worktree button now enabled in agent mode for git repos
+- Enter key no longer sends message during IME composition
+
+## [0.52.1] - 2026-01-23
+
+
+### Added
+- Update session uncommitted badges on git commit
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Prevent state bleeding between concurrent AI sessions
+- Skip unnecessary database lookups for non-worktree paths
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.52.0] - 2026-01-23
+
+
+### Added
+- Terminal bottom panel with dedicated storage for terminal sessions
+- Full commit details display in git commit widget (expanded commit info)
+- Auto-reconnect sync when network becomes available
+- Auto-approve pending reviews on git commit
+- Show uncommitted files count on workstream session items
+- Inline session renaming with improved session state management
+- Track Bash command file edits in session files and local history
+- File status colors in git commit widget
+- Prompt history quick-open dialog
+- Comprehensive log access tools for AI agents
+- Interactive git commit proposals with directory tree file picker
+- Session status indicators to quick open dialog
+- AI sessions now organize into workstreams for multi-file work
+- Image generation extension with Google Imagen API
+- Agent mode sessions now manage their own document context
+- Agent mode sessions now have embedded editor tabs
+- Custom editors can register menu items in header bar
+
+### Changed
+- Git status now uses event-driven updates instead of polling
+- Simplified normalizeWorkspaceState with deepMerge pattern
+- Improved session list icon system and alignment
+- Files Edited sidebar now shows only edited files
+- Deprecated React state-based AI session components removed
+- Extension get_logs disabled in favor of file-based log tools
+- Performance monitoring interval increased from 5 seconds to 10 seconds
+- Reduced verbose dev console logging
+
+### Fixed
+- Persist workstream selection and child sessions across reload
+- Chat button now opens sessions in Files mode instead of Agent mode
+- TypeScript configuration excludes collabv3 and electron/release from root
+- Restore prompt history navigation with up/down arrows
+- Voice commands now execute when AI is idle
+- Workstream headers now highlight when child session is active
+- Slash command typeahead no longer shows duplicate menus
+- Keyboard shortcuts now route to focused component in agent mode
+- Session timestamps now display correctly in workstream list
+- Queued prompts now auto-execute when AI finishes responding
+- Workstream child sessions show timestamps and affect sort order
+- Render single typeahead menu element to prevent duplicates
+- Workstream session selection and new session content bugs
+- Workstream child sessions appear and update immediately
+- Inherit session name when converting to workstream
+- Unify session state into single registry to fix sync bugs
+- Route git commit requests to active session instead of workstream
+- Prevent duplicate typeahead menu rendering during position calculation
+- TypeScript compilation errors resolved
+- Route CMD+F to focused component in agent workstream panel
+- Wire up compact button to send /compact command
+- Prevent AgentWorkstreamPanel rerenders on message updates
+- Prevent ChatSidebar from creating duplicate sessions on mount
+- Correct indentation for files inside folders in git commit widget
+- Parse array-format tool results in git commit widget
+- Restore AI session processing indicators and optimize transcript rendering
+- Persist MCP tool calls so git commit widget shows correct state after HMR
+- Git commit widget correctly shows success/cancelled state after HMR
+- Remove stale session processing state initialization
+- Sessions no longer incorrectly show as running after errors
+- Files Edited sidebar now shows Keep All for pending changes
+- Shrink agent session header and improve dark mode icon visibility
+- iPad split view session list no longer overlaps status bar
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.24] - 2026-01-22
+
+
+### Added
+- Custom Bash tool widget for terminal-style display
+- MCP tool search for Claude Code sessions
+- Visual feedback for attachment processing
+- Timing instrumentation to diagnose Windows hang issues
+- PowerShell script for Windows development (crystal-run.ps1)
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Infinite render loop and UI freeze in DiffMode on Windows
+- Windows backslashes in Files sidebar filename display
+- Path module usage for cross-platform workspace detection
+- Worktree session button disabled in non-git workspaces
+- MCP config migration incorrectly restoring deleted servers
+- TypeScript errors in CI checks
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.23] - 2026-01-21
+
+
+### Added
+- Send-time image compression for Claude API 5MB limit
+- Proprietary license file
+- Blockmap files included in public releases
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Shell detection and error handling in TerminalSessionManager
+- Packaged app crashes when processing HEIC images
+- ModelSelector dropdown closing when clicking help tooltips
+- /context parsing for Claude Agent SDK 0.2.x
+- TypeScript errors in ImageCompressor
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.22] - 2026-01-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- macOS build signing now uses correct target architecture for ripgrep
+- macOS CI builds now properly import certificates on both Apple Silicon and Intel runners
+- macOS artifacts maintain backwards compatibility with arm64 naming convention
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.21] - 2026-01-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- macOS artifacts now use user-friendly architecture names (Apple Silicon, Intel)
+- Updated Claude Agent SDK to 0.2.14
+
+### Fixed
+- ClaudeCodeProvider now properly cleans up resources on destroy
+- Home directory resolution now uses os.homedir() for reliability
+- Chat image attachments now automatically compressed for better performance
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.20] - 2026-01-21
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Claude Code login flow now uses interactive /login instead of setup-token
+- Linux node-pty packaging fixed by moving to extraResources
+- Session creation error handling and provider validation improved
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.19] - 2026-01-20
+
+
+### Added
+- Session branching for AI conversations
+- Worktree rename functionality to agentic coding UI
+- HTTP headers support and workspace MCP server detection
+- HTTP header support for MCP server configuration
+- Commands to open files and workspaces in new windows
+- Mobile voice mode with synced settings from desktop
+- Mobile voice mode UI and capture services
+- Mobile voice mode receives OpenAI API key from desktop
+- Smarter notification suppression for both desktop and mobile
+
+### Changed
+- MCP config migration and file watching
+- Bundled mcp-remote as dependency instead of downloading via npx
+- Agent mode state now uses Jotai atoms instead of prop drilling
+- Window mode and settings navigation state moved to Jotai atoms
+- Settings panels now self-contained with Jotai atoms
+- Tab editor content state refactored to avoid redundancy
+
+### Fixed
+- Provider fallback logic in session creation
+- LM Studio configuration storage and error handling
+- Session naming tool can only be called once
+- MCP server OAuth detection for HTTP servers with API key auth
+- New worktrees now default to the last used model
+- Workspace MCP server deletion by syncing both config locations
+- MCP config file watcher robustness and error handling
+- MCP analytics event naming and tracking
+- OAuth status warning icons to MCP server list
+- Visual indicator for project-specific MCP servers in global settings
+- Agent now sees why tool calls are denied in planning mode
+- Skip sync when server connection fails instead of full resync
+- OOM crashes during session sync with large histories prevented
+- Mobile session list now updates turn counts in real-time
+- Mobile push notifications now show session name as title
+- Mobile session creation works after app sits idle
+- Microphone permission only prompts when enabling voice mode
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.10] - 2026-01-16
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Windows Claude auth now uses 'login' command instead of deprecated 'setup-token'
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.9] - 2026-01-16
+
+
+### Added
+- SQLite extension as custom editor with query history and AI tools
+- Export markdown documents as PDF
+- Extension panels system with SQLite browser demo
+- Voice commands show countdown before submitting to agent
+- Voice mode live transcription streaming and token usage tracking
+- AI-generated project summary for voice mode context
+- AI chat panel receives context from extension panels
+- Manual pairing for devices that can't scan QR codes
+- Error bar support to visual display widget
+- Mobile push notifications for agent completion
+- Clearer mobile sync setup with encryption explanation
+- Faster AI session search with GIN index
+- Comprehensive Node.js version manager support for PATH detection (nvm, fnm, asdf, volta, n, nodenv, mise)
+- Enhanced font smoothing for Monaco code editor
+
+### Changed
+- Updated Claude Agent SDK to 0.2.7 for MCP tool search
+- Diff tree grouping setting persists per project
+
+### Fixed
+- Packaged builds no longer crash with 'process is not defined'
+- Prevent database corruption when restarting from Extension Dev panel
+- Voice agent now passes user requests verbatim to coding agent
+- Fullscreen shortcut no longer conflicts with Find on Windows
+- Voice commands no longer create duplicate queued prompts
+- iOS simulator builds without Rosetta on Apple Silicon
+- Normalized file tree row heights and simplified indentation
+- Reduced excessive indentation in grouped file-edits sidebar
+- iPad AI input safe area
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.5] - 2026-01-14
+
+
+### Added
+- Pre-flight conflict detection for worktree rebases
+- Claude Code Sonnet 1M context variant support
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.4] - 2026-01-14
+
+
+### Added
+- Archive worktree dialog after successful merge
+- Automatic terminal process cleanup when archiving worktrees
+- Worktree merge workflow now offers archive option
+- Pinned sessions appear at top of session list
+- Worktree system prompt instructions to keep agent in worktree context
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- `/context` command now works correctly in worktrees
+- Terminal no longer gets cut off at the bottom
+- Merge conflict detection and resolution with Claude Agent for worktrees
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.3] - 2026-01-14
+
+
+### Added
+- Commit squashing feature to git worktree DiffMode
+- Auto-stash functionality for merge operations
+- Fast-forward merges for git worktrees
+- Improved collapsed right panel UI in worktree mode
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- TypeScript compilation errors
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.2] - 2026-01-13
+
+
+### Added
+- Maximize button to worktree files mode
+
+### Changed
+- Folder nesting in diff screen now more IntelliJ-like
+- Strengthen wording around session naming tool call to ensure it's called before ending turn
+
+### Fixed
+- Terminal spawn failing in packaged app (posix_spawnp failed)
+- Session history now uses worktree creation time for 'created' sort
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.1] - 2026-01-13
+
+
+### Added
+- Git worktree integration for isolated AI coding sessions (alpha)
+- Worktree archiving with background cleanup queue
+- Multiple sessions per worktree support
+- Terminal session support for git worktrees
+- Session and worktree pinning in agent view
+- File mode layout for worktree sessions
+- Git rebase support for worktree branches
+- Worktree permission inheritance
+- Inline rename for sessions and terminals
+- Claude Code plugin marketplace GUI (alpha)
+- Walkthrough guide system for feature discovery
+- Voice mode settings UI with reactive state management
+- Voice agent tools and system prompt customization
+- PostHog analytics for voice mode, mobile app, and AI message queuing
+- Diff tree grouping preference persists per project
+- Directory grouping in file edits panels
+- Error detection and analytics for database initialization failures
+
+### Changed
+- Worktree mode changed from per-session to per-worktree
+- Worktree comparisons now relative to repo root branch
+- Expanded worktree name pool to 16,384 combinations
+- Softer database recovery dialog messaging
+- MCP server manual add option moved to top of templates
+- Removed broken GitLab and Slack MCP servers
+
+### Fixed
+- Prevent crash when archive API unavailable during hot reload
+- Voice transcription display now visible and no longer duplicates text
+- Diff viewer text no longer overlaps on long lines
+- Mobile back button now returns to session list instead of projects
+- Prevent incorrect "behind base" indicator after worktree merge
+- Use stored base branch for worktree git comparisons
+- Restore terminal working directory in worktree sessions
+- Resizable chat panel in file view
+- Improved worktree file opening robustness and error handling
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.51.0] - 2026-01-12
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Updated extension release channel restrictions
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.31] - 2026-01-12
+
+
+### Added
+- Clicking breadcrumb folders navigates to them in file tree
+
+### Changed
+- Pre-bundle Lexical and other deps to reduce Vite reloads during development
+
+### Fixed
+- DataModelLM files no longer show dirty state immediately on open
+- Markdown files no longer show dirty state immediately on open
+- Agent transcript diffs now show full context lines
+- Editors now correctly save dirty content on tab close and window close
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.30] - 2026-01-12
+
+
+### Added
+- Load Claude CLI plugins into Agent SDK provider for extended functionality
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.29] - 2026-01-11
+
+
+### Added
+- PostHog analytics for voice mode usage
+
+### Changed
+- Disabled Excalidraw relayout tool due to poor layout performance
+
+### Fixed
+- Mockup editor now shows updated content after accepting diff
+- CSV deleted rows now properly disappear after accepting diff
+- Resolved TypeScript errors in voice mode and MaterialSymbol
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.28] - 2026-01-11
+
+
+### Added
+- Voice control for coding agent via OpenAI Realtime API
+- Mobile now shows AI session context usage
+- Excalidraw diagrams create faster with batch tools
+
+### Changed
+- Lazy-initialize electron-store for custom user-data-dir support
+
+### Fixed
+- Excalidraw dark mode flash on load
+- Suppress Claude Agent SDK stream error dialog on session abort
+- Eliminate dynamic import to prevent electron-log duplication
+- Prevent duplicate IPC handler crashes on startup
+- Session back button returns to correct project on mobile
+- Question prompts remain accessible on mobile
+- Mobile session creation now uses correct project
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.27] - 2026-01-10
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- CSV files no longer save trailing empty columns
+- AI session lookups work across multiple windows
+- Built-in extensions now load in E2E tests
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.26] - 2026-01-09
+
+
+### Changed
+- Image and chart display MCP tool moved from alpha to general availability
+- Consolidated visual display functionality into unified display_to_user tool
+
+### Fixed
+- Improved error handling and validation messages for display_to_user tool
+- Resolved path shadowing in display_to_user MCP tool
+- Fixed validateDOMNesting warning by replacing nested button with span in VisualDisplayWidget
+- Improved single image display in VisualDisplayWidget
+
+## [0.50.25] - 2026-01-09
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Fixed all high and moderate npm audit vulnerabilities
+
+### Fixed
+- Packaged build works with Vite code splitting
+- Session naming tool uses correct MCP server prefix
+- Playwright tests work with dev server, screenshot tool finds correct editor
+- CSV select-all now selects only data columns, range delete works
+- CSV spreadsheet extension passes CI typecheck
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.24] - 2026-01-09
+
+
+### Added
+- Unified header bar for all editor types with breadcrumb navigation
+- Document type management for markdown files with submenu options
+- Mobile app now has dedicated project selection screen
+- Database Browser now handles large datasets smoothly
+- Claude can now detect when running against packaged build
+- Docker dev container support for E2E testing
+
+### Changed
+- Upgraded claude-agent-sdk to 0.2.2
+
+### Fixed
+- Excalidraw no longer saves on tab switch
+- Typing in AI input no longer causes lag from SessionHistory re-renders
+- DatamodelLM extension passes CI typecheck
+- Toggle Debug Tree menu item now works in header bar
+- Context usage display now shows correct /context data
+- Set Document Type submenu now visible in header bar menu
+- File tree auto-scroll now works when switching tabs
+- Consecutive AI edits now correctly update diff mode
+- Incorrect clickable links in agent transcript tool arguments
+- npm run dev -- user-data-dir=<dir> now works correctly
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.23] - 2026-01-08
+
+
+### Added
+- Excalidraw extension for AI-driven diagram editing with colors and viewport persistence
+- CSV spreadsheet cell-level diff highlighting for AI edits
+- CSV spreadsheet Cmd+A select-all and auto-expand on paste
+- CSV spreadsheet Tab key navigation while editing
+- Excalidraw layout tools and improved arrow binding
+- Feedback survey dark mode support
+
+### Changed
+- Improved state management with Jotai to eliminate unnecessary re-renders
+
+### Fixed
+- Auto-updater no longer flickers when starting download
+- Diff approval bar now appears for markdown, Monaco, and mockup files
+- Cmd+Y no longer opens document history when in agent mode
+- Claude Code now sees file-scoped extension tools
+- Sync connections no longer fail silently when limit reached
+- AI Usage Report graph now shows Claude Code token usage
+- CSV spreadsheet row operations now persist across re-renders
+- Agent now uses correct screenshot tool for all editors
+- CSV spreadsheet now preserves empty rows in the middle of data
+- CSV spreadsheet no longer adds metadata comment to plain CSV files
+- CSV spreadsheet Delete key now clears selected range
+- Session cancel now requires sessionId, preventing silent failures
+- TypeScript compiles cleanly with zero errors
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.22] - 2026-01-08
+
+
+### Added
+- Added clickable file paths to agent transcript UI
+- Added display_chart MCP tool for inline chart visualization
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed OAuth EADDRINUSE error with stale lock file cleanup
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.21] - 2026-01-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- MCP server environment variable expansion now works correctly
+- MCP server argument quoting fixed on Windows
+
+### Removed
+- Removed unofficial MCP servers from templates
+- Updated deprecated MCP server configurations
+
+## [0.50.20] - 2026-01-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Improved MCP OAuth error messages for missing commands
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.19] - 2026-01-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Replaced node-pty fork with official package for Windows compatibility
+
+### Fixed
+- MCP server command resolution on Windows
+- MCP server installation on Windows and improved cross-platform PATH resolution
+- Document scanner now continues scanning tracker files beyond limit
+- Tracker metadata refresh for agent-edited files
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.18] - 2026-01-06
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- File tree truncation causing folders to disappear
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.16] - 2026-01-05
+
+
+### Added
+- PostHog analytics tracking for permissions system interactions
+
+### Changed
+- Developer tools now include all one-time modals for testing
+
+### Fixed
+- Permissions modal UX improvements to prevent race conditions
+- Users can no longer click outside permissions modal to dismiss it
+- Permissions modal messaging made less intimidating
+
+## [0.50.15] - 2026-01-05
+
+### Fixed
+- AI diffs now show only new changes after approving with Keep All
+
+## [0.50.14] - 2026-01-05
+
+
+### Added
+- Context menu to convert text attachments back to prompt text
+
+### Changed
+- Diff colors now use CSS variables for dark mode support
+
+### Fixed
+- Mermaid diagram changes now show in diff mode
+- Extension manifest/output mismatches caught at build time
+- iOS-dev extension builds without tsconfig warning
+- Table action menu now positions correctly when document is scrolled
+- PDF viewer now loads in packaged builds
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.13] - 2026-01-05
+
+
+### Added
+- PDF extension build support for crystal-run
+
+### Changed
+- More efficient Nimbalyst build in worktrees
+
+### Fixed
+- PDF viewer now outputs ES module with .mjs extension
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.12] - 2026-01-04
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Extension SDK now exports complete EditorHost types
+
+### Fixed
+- Cmd+F in files mode now opens editor find instead of transcript find
+- AI chat in files mode now knows which document is open
+- Theme changes now apply to all open editors
+- Locally queued AI prompts now execute instead of sitting idle
+- Duplicate prompt queue submissions no longer possible
+- Removed outdated authentication error string matching logic
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.11] - 2026-01-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Simplified diff header UI
+
+### Fixed
+- CSV and other custom editors no longer re-render on autosave
+- Diff mode table widths now display correctly in Lexical editor
+- CSV spreadsheet delete now correctly clears cells
+- AI session search now works correctly
+- Session state changes no longer trigger unnecessary App re-renders
+- CSV spreadsheet now saves edits when tab is closed
+- File tree updates and dirty state no longer trigger editor re-renders
+- Custom editors now interactive on session restore
+- PDF and DataModelLM extension styles now load correctly after Vite 7 upgrade
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.10] - 2026-01-03
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed OpenAI model import mismatch causing connection errors
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.9] - 2026-01-02
+
+
+### Added
+- Inline session rename functionality
+- PostHog tracking for terminal usage
+- PostHog tracking for MCP configuration
+
+### Changed
+- Improved MCP logo appearance in light/dark modes
+- Moved 'test' button outside hidden section in MCP templates
+
+### Fixed
+- Connection tested state not resetting
+- AWS logo in MCP templates
+- Many MCP server configuration issues
+- PATH handling for MCP servers
+- Playwright MCP configuration
+- Doubled up login widgets display issue
+- Claude Code login button not showing
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.8] - 2026-01-02
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Added guidance for users to start a new session when using chat models
+
+### Fixed
+- Fixed broken build in PDF viewer package
+- Added module description to PDF viewer package for better clarity
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.7] - 2026-01-02
+
+
+### Added
+- 17 new MCP server templates with brand icons
+- Brand icons for MCP server templates replacing text fallbacks
+
+### Changed
+- Terminal history initialization refactored to use shell bootstrap files
+- Terminal initialization commands now filtered from output
+- Terminal sessions now respect light/dark theme
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.6] - 2026-01-02
+
+
+### Added
+- PostHog MCP server slash command for analytics queries
+- OAuth authorization support for MCP remote servers
+- On/off toggle for MCP servers
+- Template selection flow for MCP server configuration
+- PostHog template with improved connection testing
+- Terminal session support in agent mode (Alpha)
+- Terminal scrollback and command history persistence
+
+### Changed
+- Redesigned MCP servers configuration UI with template selection flow
+- Document changes in PostHog events list
+
+### Fixed
+- Mockup screen no longer goes white on accept for new files
+- Mockup diff slider hidden on new files
+- API keys no longer logged in console
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.5] - 2026-01-01
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Split CLAUDE.md into per-package documentation
+
+### Fixed
+- Editor screenshots now work for CSV and custom extension editors
+- CSV spreadsheet styles now load correctly after Vite 7 upgrade
+- Screenshot tools return proper errors instead of crashing sessions
+- Enter key now sends messages containing @ or / characters
+- Diff header buttons now visible in narrow panels
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.3] - 2025-12-31
+
+### Added
+- Mobile can cancel running sessions and answer questions via sync
+- Mobile AskUserQuestion prompts can now be cancelled
+- Extension dev menu shows process uptime
+- CSV cells save on click-away like Google Sheets
+- Extension errors now visible with detailed diagnostics
+- iOS development tools extension
+
+### Fixed
+- Encrypt project_id in mobile sync for privacy
+- Markdown view mode switch no longer crashes on diff header
+- CSV spreadsheet keyboard focus preserved after cell edits
+- Mobile sync commands now fail if encryption unavailable
+- CSV requires alpha release channel
+- Extension AI tools now return useful data instead of failing
+- PDF viewer no longer freezes in infinite loading loop
+- Opening already-open project focuses existing window instead of creating duplicate
+- Validate todos is an array before calling .filter()
+- Permissions on internal build
+
+## [0.50.2] - 2025-12-29
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Build extension-sdk before extensions in CI
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.1] - 2025-12-29
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Extensions now include dist folders in packaged builds
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.50.0] - 2025-12-29
+
+
+### Added
+- Monaco diff header now shows change count and navigation arrows
+- AI edits show pending review status with session links in file gutter
+- Mobile session list now supports pull-to-refresh
+- Mobile users can now choose project when creating new session
+- Database Browser now runs queries on Cmd+Enter
+- AI agents can now query PGLite database via MCP tool
+
+### Changed
+- Unified diff approval header across Monaco and Lexical editors
+
+### Fixed
+- Queued and mobile-synced messages now appear in transcript
+- Extensions now load correctly on Windows
+- Sync status icon now shows for newly authenticated users
+- Newly created files now show diff mode for AI edits
+- Extension SDK Documentation help link only visible to alpha users
+- Ctrl+W on Windows now closes tabs instead of the whole window
+- Sessions from other workspaces no longer appear in wrong project
+- Mobile session list no longer allows horizontal panning
+- Mobile keyboard no longer creates large gap below input
+- File tree no longer auto-scrolls while browsing folders
+- Mobile layout now respects iOS safe area properly
+- CSV spreadsheet no longer freezes when dialogs exist elsewhere
+
+## [0.49.14] - 2025-12-27
+
+
+### Added
+- Support wildcard domain patterns and "Allow All Domains" button
+
+### Fixed
+- Provider icons now visible in dark mode session picker
+
+## [0.49.13] - 2025-12-27
+
+
+### Added
+- Text attachments now clickable to preview content
+
+### Changed
+- Increase AI session message limit from 2000 to 5000
+
+### Fixed
+- Queued messages now appear in chat transcript
+- MockupViewer now uses EditorHost API for content management
+- MonacoCodeEditor fails diff view for source mode
+- Custom editors now properly save on close and support source mode
+- Thinking dots touch side of panel
+- File tree now shows all folders in workspaces with large dependency dirs
+- DatamodelLM editor no longer reloads on every user edit
+- Extension reload validation now correctly detects components export
+
+## [0.49.12] - 2025-12-26
+
+
+### Added
+- Context limit errors now show helpful widget with compact button
+- E2E tests for agent tool permission system
+
+### Changed
+- Use Claude Code native settings for tool permissions
+
+### Fixed
+- Quoted strings and heredocs no longer trigger compound command detection
+- Compound bash commands now require approval for each part
+- Trust toast now shows current permission mode when changing settings
+- Long Bash commands in permission dialog now scroll vertically
+- Bypass-all mode now skips compound command permission checks
+- Custom editor file changes no longer clobber user edits
+- Permission prompts no longer repeat and show specific patterns
+- Agentic panel now scrolls to show sent messages
+- Windows forced shutdowns no longer leave database locks
+
+## [0.49.11] - 2025-12-23
+
+
+### Added
+- Beta badge to Smart Permissions option in trust toast
+
+### Changed
+- Simplify permission trust model and add Allow All WebFetches option
+
+### Fixed
+- Update button label from "Trust Project" to "Save"
+
+## [0.49.10] - 2025-12-23
+
+
+### Added
+- Show dotfiles in file tree when "All Files" filter is selected
+
+### Fixed
+- Quick Open now finds all files including dotfiles and images
+- Session history spinner now animates during processing
+- WebSearch and WebFetch permission "Allow Always" now persists correctly
+
+## [0.49.9] - 2025-12-23
+
+
+### Changed
+- Redesign project trust dialog with clearer permission choices
+
+## [0.49.8] - 2025-12-23
+
+
+### Added
+- CSV spreadsheet supports clicking row/column headers to select entire rows/columns
+- MCP tools for AI agents to debug extensions
+
+### Fixed
+- CSV row header selection now correctly handles header rows
+- AI edits no longer trigger false autosaves in diff mode
+- CSV spreadsheet no longer types characters when Cmd+key is pressed
+- /compact command no longer shows false "no output" error
+- CSV spreadsheet cell editing now uses dark background in dark mode
+- OS notifications now show agent's final summary instead of first message
+- Allow All mode now bypasses URL permission prompts
+- CSV spreadsheet dark mode cell borders now visible and selection highlights correctly
+- CSV spreadsheet sorting now excludes empty rows and works from column headers
+- Workspaces now restore correctly after dev mode restart
+
+## [0.49.7] - 2025-12-22
+
+
+### Added
+- Extension dev mode indicator with restart button
+- New session button tooltip now shows Cmd+N shortcut
+- QuickOpen now searches all text file types
+
+### Changed
+- Remove obsolete permission mode setting from global settings
+
+### Fixed
+- URL permissions now persist correctly across AI sessions
+- Cmd+N now reliably triggers correct action based on current mode
+
+## [0.49.6] - 2025-12-22
+
+
+### Added
+- Archive toast now shows session name
+- Context menu "New File..." now opens full file dialog
+- Add /restart command for quick app restart during development
+
+### Changed
+- Remove internal clipboard, use system clipboard only
+
+### Fixed
+- CSV editor no longer steals keyboard input from dialogs
+- Queued messages now send reliably with 5-second fallback
+- Auto /context command no longer runs after agent errors
+- Typeahead menus no longer auto-select item under cursor on open
+- Parallel tool permissions now queue instead of overwriting
+- Dismissing trust toast no longer revokes workspace trust
+- New File menu item now works when triggered from Agent mode
+
+## [0.49.5] - 2025-12-22
+
+
+### Changed
+- Temporarily disable Windows code signing
+
+## [0.49.4] - 2025-12-22
+
+
+### Added
+- Undo/redo support for CSV spreadsheet editor
+
+### Fixed
+- Tabs now reliably reopen when using Cmd+Shift+T
+- Resolve DigiCert code signing action reference
+
+## [0.49.3] - 2025-12-22
+
+
+### Added
+- Edit button for queued messages
+- Enhanced New File dialog with file type selection and folder picker
+- Folder context menu now shows all file type options inline
+- Text selection context automatically included in AI prompts
+
+### Changed
+- Clarified agent vs chat terminology in UI
+- Use DigiCert signing manager to sign Windows builds
+
+### Fixed
+- Settings panel content now scrolls properly
+- Queued prompts now properly fail instead of silently completing
+- Restart tool now preserves session state and works reliably in dev
+
+### Removed
+- Removed unused mockupEnabled feature flag
+
+## [0.49.2] - 2025-12-21
+
+
+### Added
+- Agent tool permission system with workspace trust levels
+- Add restart_nimbalyst tool to extension dev MCP server
+- CSV spreadsheet right-click context menu
+- Open file button on edit tool result cards in agent transcript
+- Search button in agent mode header for session quick search
+
+### Changed
+- Use es-module-shims for extension loading
+
+### Fixed
+- Database backups no longer overwrite good data with corrupted/empty backups
+- URL patterns and directory permissions now persist across restarts
+- File mentions now match files with spaces in names
+- Single-line code blocks now render inline in AI chat
+- Extensions with minified variable names now load correctly
+- Slash command menu arrow keys now navigate in visual order
+
+## [0.49.1] - 2025-12-19
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Mockup images sent to Claude Code are now compressed and lower resolution to work around SDK display bug
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.49.0] - 2025-12-19
+
+
+### Added
+- Claude can ask clarifying questions during agentic sessions (AskUserQuestion tool support)
+- CSV spreadsheet extension with formula support
+- PDF viewer with text selection and fit-to-width zoom
+- Extension Developer Kit with MCP tools for hot-reloading extensions
+- Cmd+L shortcut to quickly search and open AI sessions
+- Extension SDK documentation with examples
+- CSV spreadsheet header row toggle with persistent settings
+- Copy button for AI responses and user messages in agent transcript
+- Visual diff viewer for AI-generated mockup changes
+- Optional word wrap for inline code blocks in AI chat
+
+### Changed
+- Alpha-only extensions are now hidden from stable channel users
+- Extension dev tools now validate manifests before install/reload
+- extension_reload now rebuilds before hot-reloading
+- Extensions now bundle their own utility libraries
+
+### Fixed
+- Increase MCP connection timeout to 20 seconds for slower server startups
+- Move extensionsReady state declaration to the top of the App component
+- Update @anthropic-ai/claude-agent-sdk to version 0.1.73
+- Update @anthropic-ai/claude-agent-sdk to version 0.1.72
+- Add Stytch public token configuration for OAuth integration in sync server
+- Update CapacitorMlkitBarcodeScanning to version 7.5.0
+- CSV spreadsheet extension now loads correctly
+- Session quick open now shows all sessions and filters instantly
+- Closing AI session now navigates to adjacent tab instead of first tab
+- Windows Claude Code installation via npm now detected correctly
+- Mockup image viewing when image is on disk instead of returned in tool call
+- Code block rendering in AI chat
+
+## [0.48.13] - 2025-12-17
+
+
+### Fixed
+- DataModel extension now loads correctly in production builds
+
+## [0.48.12] - 2025-12-17
+
+
+### Added
+- Mouse back/forward buttons now navigate between tabs
+- Analytics tracking for editor and navigation events
+
+### Changed
+- Prevent switching between SDK and Agent modes (prevents session corruption)
+- Clarification added to developer dropdown
+- Reduced logging output
+
+### Fixed
+- Images now display correctly in all tabs
+- DataModelNode and MockupNode screenshots now work correctly in all tabs
+- Windows-only Claude Code checks no longer run on macOS/Linux
+- DataModelLM editor now auto-reloads when AI edits .prisma files
+- Token counting now works correctly with Claude Agent SDK 0.1.62
+- Token counts display correctly for Claude Code sessions
+- Resized prompt input box
+
+## [0.48.11] - 2025-12-16
+
+
+### Added
+- DataModelLM can export schemas to SQL, JSON, DBML formats
+- Support for model and field descriptions from comments in Prisma parser
+- "Learn more" button for slash commands with explanation modal
+- Info about nimbalyst-local directory shown before creating
+
+### Changed
+- Downgraded @anthropic-ai/claude-agent-sdk to version 0.1.62
+
+### Fixed
+- List of edited files in sidebar no longer takes over the screen
+
+## [0.48.10] - 2025-12-16
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Build extensions before packaging in CI
+- Manual "Check for Updates" no longer hangs on checking state
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.48.9] - 2025-12-16
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Lexical editor crashes in production builds
+- Mobile queued prompts now process correctly
+- Agent transcript updates immediately when turn completes
+- Only add markdown header when creating markdown files
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.48.8] - 2025-12-16
+
+
+### Added
+- Extension system: extensions can now provide Claude Code slash commands
+- Extension system: extensions can open binary files with custom editors
+- Extension settings UI with enable/disable and configuration support
+- File context menu now opens files in system default app
+- Archive button shows undo toast, archived sessions show unarchive option
+
+### Changed
+- Updated to latest version of Anthropic Agent SDK
+- Removed 'New Window' option from application menu
+- Updated welcome message to recommend opening project root folder
+
+### Fixed
+- Tab state corruption preventing files from opening
+- Toast notification now appears below tabs
+- Slash command suggestions now match transcript content width
+- Archive button updates immediately after unarchiving
+- Datamodel and mockup screenshots work without files being open
+- Bundle built-in extensions in packaged app
+- Clarify file type error message
+- Search files button tooltip shows correct shortcut (Cmd+O)
+- QR pairing button now enabled when using default sync server URL
+- Stytch auth handlers now use production sync in production builds
+- Production builds no longer use dev sync server from persisted config
+- Ensure serverUrl is set before allowing login actions
+- Sync server now correctly uses production when selected in dev builds
+- Capacitor app icon
+- Mockup annotations now sent to AI when using "+ mockup annotations"
+- Skip button restored to data collection form, all fields optional
+
+## [0.48.7] - 2025-12-14
+
+
+### Added
+- Large text pastes become attachments to keep transcript clean
+- Close and Archive button on agent transcript panel
+- Mermaid diagrams now have Redraw button and better error messages
+- Auto-updater now uses subtle toast instead of popup window
+- Mobile app now allows device to sleep after inactivity
+- Easier browser testing for mobile sync
+
+### Fixed
+- Pasting text starting with '#' no longer triggers memory mode
+- Tracker typeahead no longer triggers on markdown headers
+- Closing Project Manager no longer reopens it indefinitely
+- DatamodelLM entity headers now readable
+- Remove update.html entry from vite config (file was deleted)
+- One failing editor tab no longer breaks the entire app
+- Custom editors now load correctly after app restart
+- New projects now sync to mobile immediately when enabled
+- Login widget no longer triggers on normal AI responses
+- Login widget no longer re-renders when scrolling old sessions
+- Use SDK's first-class auth error detection for login widget
+- Mobile session detail layout works correctly on iPhone and iPad
+- Skip export compliance prompt on TestFlight uploads
+- Update pod paths for Capacitor dependencies
+
+## [0.48.6] - 2025-12-13
+
+### Added
+- Auto-updater now uses subtle toast instead of popup window
+- Mobile app now allows device to sleep after inactivity
+- Easier browser testing for mobile sync
+
+### Fixed
+- One failing editor tab no longer breaks the entire app
+- Custom editors now load correctly after app restart
+- New projects now sync to mobile immediately when enabled
+- Login widget no longer triggers on normal AI responses
+- Login widget no longer re-renders when scrolling old sessions
+- Use SDK's first-class auth error detection for login widget
+- Mobile session detail layout works correctly on iPhone and iPad
+- Skip export compliance prompt on TestFlight uploads
+- Update pod paths for Capacitor dependencies
+
+## [0.48.5] - 2025-12-12
+
+### Added
+- Extension system with DatamodelLM as first plugin
+- Extensions can add slash commands and custom Lexical nodes
+- Extensions can add items to the New File menu
+- Extensions can use shared host dependencies like MaterialSymbol
+- DatamodelLM view modes and auto-layout
+- DatamodelLM now uses Prisma schema format (.prisma files)
+
+### Changed
+- Removed 'New Window' option from application menu
+- Updated welcome message to recommend opening project root folder
+
+### Fixed
+- Mobile app header no longer hidden under notch, input no longer cut off at bottom
+- Duplicate messages no longer appear in AI session sync
+- Error now shown to user when environment switch fails
+- Environment toggle now saves config when Stytch API unavailable
+- Stytch auth now defaults to production in dev builds
+- Sync server now correctly uses production when selected in dev builds
+- Ensure serverUrl is set before allowing login actions
+- Search files button tooltip shows correct shortcut (Cmd+O)
+- Capacitor app icon
+
+## [0.48.4] - 2025-12-11
+
+
+### Fixed
+- QR pairing button now enabled when using default sync server URL
+
+## [0.48.3] - 2025-12-11
+
+
+### Fixed
+- Stytch auth handlers now use production sync server in production builds
+
+## [0.48.2] - 2025-12-11
+
+
+### Added
+- Window title now shows AI session name when in agent mode
+- Settings now auto-save and display scope description for each setting
+
+### Changed
+- Updated Claude Agent SDK to version 0.1.65
+- Removed dangerous developer menu database features
+
+### Fixed
+- Production builds no longer use dev sync server from persisted config
+- Plaintext session titles no longer sent during sync (privacy improvement)
+- Claude Code allowed tools section now displays properly in settings
+- Global MCP servers now work correctly in Claude Agent sessions
+
+## [0.48.1] - 2025-12-11
+
+### Changed
+- Added diagnostic logging for PGLite database initialization
+
+### Fixed
+- Show clear error message when attempting to open binary files (PDF, PPTX, etc.)
+
+## [0.48.0] - 2025-12-10
+
+### Added
+- Production deployment configuration for CollabV3 sync server at sync.nimbalyst.com
+
+### Changed
+- Disabled console logs in AIService and ModelRegistry for cleaner output
+
+### Fixed
+- Mobile app no longer lags when typing in chat input
+- Sync now connects automatically after app restart
+- Auto-updater now downloads latest version even if update window sat idle
+- Analytics: ai_session_resumed event no longer fires incorrectly on app startup
+
+## [0.47.2] - 2025-12-10
+
+
+### Added
+- Universal Windows installer supporting both x64 and arm64 architectures
+
+### Changed
+- Role field now marked as required in data collection form
+
+### Fixed
+- Fixed Claude Code logout process on Windows
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.47.1] - 2025-12-09
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Improved git availability detection with more comprehensive checking
+- Updated Claude Agent SDK to version 0.1.62
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.47.0] - 2025-12-09
+
+
+### Added
+- Toast notification prompting users to install Claude commands in their workspace
+- Folder History dialog to browse and restore deleted files
+- AI chat @mention now supports CamelCase search for file matching
+- Document links now export as standard markdown and support fuzzy search
+- Session list shows relative dates (e.g., "2 hours ago") instead of absolute timestamps
+- AI Usage Report now shows token counts for Claude Code sessions
+- Multi-select files in file tree
+
+### Changed
+- Updated data collection form
+
+### Fixed
+- Mockup images now load correctly when reopening documents
+- Mockup image syntax now matches actual transformer format
+- AI Usage Report no longer resets token counts after each message
+- Clicking files in agent mode now properly switches to files mode
+- Session list now shows correct user message count
+- Claude Code sessions now work in new/existing projects
+- New projects no longer auto-open settings screen
+- History restore tests now work with diff preview mode
+- Git install popup no longer shown if git is not installed
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.11] - 2025-12-09
+
+
+### Added
+- Warning dialog before quitting with active AI session
+- Windows users now see a warning that they need Claude Code installed
+
+### Changed
+- Rebranded "Claude Code" to "Claude Agent" in UI
+
+### Fixed
+- AI input stays focused when switching modes or tabs
+- Slash command menu now shows best matches first
+- Project search now shows best matches first
+- Mermaid diagram edit mode now displays correctly in dark mode
+- Mermaid diagrams no longer intermittently show "[object Object]" error
+- @ typeahead menu now positions correctly when scrolled
+- Table action menu and dropdown now display correctly in dark mode
+- Table context menu and hover buttons now position correctly when scrolled
+- Mobile session view no longer requires refresh after JWT expires
+- Queued AI messages no longer fire immediately while AI is responding
+- QR pairing modal no longer overflows screen in dev mode
+- iOS mobile app now decrypts session titles and saves credentials
+- Session titles now display correctly on mobile
+- Magic link now requires HTTPS redirect URL in production
+- Session titles and queued prompts now encrypted end-to-end
+- No keychain access prompt when sync is disabled
+- Sync server now restricts CORS to allowed origins only
+- Mobile credentials now encrypted via iOS Keychain / Android Keystore
+- Speculative fix for NIM-118: cannot-open-file-editorregistry-error-prevents-tab-creation
+
+## [0.46.10] - 2025-12-08
+
+
+### Added
+- Added dirty filter indicator to file tree to show unsaved changes
+
+### Changed
+- Improved onboarding images for better display on different screen sizes
+- General UI polish and refinements to onboarding experience
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.8] - 2025-12-07
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Fixed onboarding dialog not displaying in production builds
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.7] - 2025-12-07
+
+
+### Added
+- Git status icons in file tree showing modified/untracked files
+- Toggle control to show/hide git status icons in file tree
+- Feature walkthrough with onboarding images for new users
+- Stytch authentication with Google OAuth and magic link email support
+- Server-side token validation for authentication via CollabV3
+- Session persistence across app restarts via encrypted safeStorage
+- Account & Sync panel (visible to alpha users only)
+- PostHog event tracking for Claude Code login/logout
+- PostHog tracking for AI messages using built-in Nimbalyst slash commands
+- First-launch detection for Claude Code installation status
+- simple-git dependency to electron module
+
+### Changed
+- Mockup nodes now use standard linked image markdown syntax `[![alt](screenshot.png)](file.mockup.html)` instead of custom syntax
+- Updated LINK and IMAGE transformer regexes to not match linked images
+
+### Fixed
+- Mobile app now shows "Running" indicator for desktop-initiated AI prompts
+- Encrypted tool names and message metadata in sync system (previously exposed as plaintext)
+
+### Security
+- Added security review documentation for upcoming audit
+- Tool names, attachments metadata, and content length now encrypted in synced messages
+
+## [0.46.6] - 2025-12-05
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Reverted node-pty for Windows Claude login due to stability issues
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.5] - 2025-12-05
+
+
+### Added
+- Virtualized AI transcript for smoother scrolling in long sessions
+- Standup changes summary generator (`/mychanges` command) for recent git commits
+- Mobile sync testing capability in desktop browser
+- Prompts navigation menu for mobile app
+
+### Changed
+- Renamed "wireframe" to "mockup" throughout codebase for consistency
+- Improved mockup annotations styling
+- Removed "Send to AI" button from UI
+- Updated `/plan` command to use `/mockup`
+- Use cross-env for build script environment variables (Windows compatibility)
+- Use node-pty for Windows Claude login
+
+### Fixed
+- AI transcript rendering performance improved
+- Duplicate thinking indicators no longer appear in AI transcript
+- Stale data now cleared when switching sessions on mobile
+- npm security vulnerabilities patched
+
+## [0.46.4] - 2025-12-04
+
+
+### Added
+- Cross-device AI session sync between desktop and mobile app
+- Mobile messages now trigger AI processing on desktop
+- Running/pending status indicators for AI sessions on mobile
+- QR code pairing for mobile app sync with E2E encryption
+- Device awareness showing connected devices in sync settings
+- Sync status button in navigation gutter with visual indicator
+- Unified settings view with project-level AI provider overrides
+- Database browser developer tool (Developer menu)
+- Incremental sync that only syncs changed sessions on startup
+- iOS Capacitor project files for mobile builds
+- CollabV3 sync system with E2E encryption (replaces Y.js for mobile sync)
+- Click to enlarge image attachments in AI chat input
+- Close attachment viewer with Escape key
+- Mockup nodes now support resizing with size persistence
+- Embed mockups as screenshot nodes in documents
+
+### Changed
+- Consolidated icons under unified MaterialSymbol system
+- Settings now opens as full view instead of modal window
+- Session history sorts by last message time instead of last activity
+- Removed abandoned v2 collab implementation
+
+### Fixed
+- Hidden messages now stay hidden when synced to mobile app
+- Mobile session list now matches desktop sort order
+- Session title updates now sync to mobile app
+- Token usage bar now shows actual usage instead of appearing full
+- Lazy-load session tabs to prevent slow startup with many open sessions
+- Sync no longer creates duplicate messages or excessive WebSockets
+- Mobile-queued prompts no longer duplicate or refire on desktop
+- Mobile-queued prompts now show thinking indicator on desktop
+- Mockup drawings render correctly on scrolled content
+- Mockup Edit button now opens file in tab
+- File tree items now have border-radius
+- SyncPanel and provider panels display correctly in settings
+
+### Removed
+- Abandoned v2 collab implementation (Y.js overuse)
+
+## [0.46.3] - 2025-12-03
+
+
+### Added
+- Slash command suggestions displayed in empty chat sessions
+- Mouseover tooltips for slash command suggestions
+- (+) button to expand and show all suggested slash commands
+- Description text for slash commands in autocomplete
+- `/mockup` command for creating mockups
+- "Are you sure?" confirmation dialog when starting fresh database
+- MockupLM instructions added to system prompt and `/plan` command
+- MCP tool for mockupLM with headless render fallback
+- Documentation update instructions to `/review-branch` command
+- PostHog tracking for slash command suggestion clicks
+- PostHog tracking for mockup file creation
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- `/compact` command broken after "prompt too long" error
+- Two absolute imports failing in modules
+- Command regex to list speckit in autocomplete
+- Directory naming: `.nimbalyst-local` corrected to `nimbalyst-local`
+- MockupLM annotations now sent to agent when present
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.2] - 2025-11-26
+
+
+### Added
+- MockupLM-style mockup editor with AI integration
+- Recursive scanning for Claude commands and agents (BMAD v4 fix)
+- Maximum file scan limit increased from 1,000 to 2,000
+- TypeScript files now show distinct TS icon in file tree
+- Message timestamps show date when not from today
+- AI usage analytics dashboard
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- AI-created files now open automatically from files panel
+- Claude Code session imports now show accurate data
+- Corrected missing dots in `.nimbalyst-local` directory references
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.1] - 2025-11-25
+
+
+### Added
+- Model version now displayed in selector for Claude Code
+- Prompt caching support for AI responses (reduces API costs and improves response times)
+
+### Changed
+- Session timestamps now match sort order for consistent display
+
+### Fixed
+- Users migrating from older versions now see all available Claude Code models
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.46.0] - 2025-11-24
+
+
+### Added
+- Users can now disable analytics in settings
+- Cmd+Shift+T now reopens last closed tab
+- Selection of different Claude models (Opus 4.5, Opus 4, Sonnet 4, etc.)
+- Remember what model was used when creating a new session
+
+### Changed
+- Refactor: consolidate all file opening to single clean API
+- Use store.ts app settings instead of localStorage for onboarding screen state
+- Update Claude Agent SDK to latest version to support Opus 4.5
+
+### Fixed
+- Skip onboarding check in Playwright tests
+- Agent file clicks now open in editor mode
+- Pinned tabs now protected from bulk close operations
+- Restore correct onboarding implementation
+- Onboarding dialog no longer appears in every window
+
+## [0.45.43] - 2025-11-24
+
+
+### Added
+- Pasted images now work in other markdown editors (use asset storage system instead of temp files)
+- @ mentioned files auto-attach for non-agent models
+- Configure models option to model selector dropdown
+
+### Fixed
+- Chat attachments no longer pollute project directories (now stored in dedicated assets folder)
+- Image attachments now display in transcript
+- API errors now display in chat instead of failing silently
+- Swap session action button order to match physical layout
+
+## [0.45.42] - 2025-11-23
+
+
+### Changed
+- Commit command now emphasizes impact over implementation in messages
+
+### Fixed
+- OpenAI, LMStudio, and Claude API providers now work correctly (responses and tool calls were not being displayed or executed)
+- AI diffs from non-Claude-Code providers now persist across app restarts
+
+## [0.45.41] - 2025-11-23
+
+
+### Added
+- Native spell check context menu with correction suggestions, "Learn Spelling", and "Ignore Spelling"
+
+### Changed
+- Remove redundant tab activation polling check
+
+### Fixed
+- Wait for editor ready before checking pending diffs
+- Prevent AI edits going to wrong document on tab switch
+- Restore Monaco diff mode on mount for code files (diff view was not displaying for code files)
+- Preserve manual edits during diff mode and save on tab close (manual edits were being lost when accepting/rejecting diffs or closing tabs)
+
+### Removed
+- Remove sharp dependency (no longer needed)
+
+## [0.45.40] - 2025-11-23
+
+
+### Added
+- Display image thumbnails in agent transcript
+- ExitPlanMode confirmation hook for planning mode
+- Memory mode to AIInput for Claude Code
+- Allow archiving active/selected sessions
+- Token usage tracking restored for all AI providers
+- Enhance FileGutter with git status and operation icons
+- Session archiving system with multi-select support
+- Enhanced session dropdown with name, provider icon, and status
+- User role question on first startup
+- Analytics for branch-review command
+- `.nimbalyst-local` directory with color in project root
+- Links to changelogs for agent-sdk and claude-code
+- Feedback survey button
+
+### Changed
+- Update session message count label from "messages" to "turns"
+- Remove dueDate field from plans tracker system
+- Windows build changed to x64 instead of arm64
+- Detect installed packages on the fly instead of saving state
+- Add identifying CSS classes to major React components
+- Use vite-plugin-monaco-editor to fix CSS 403 errors
+
+### Fixed
+- Hide WelcomeModal in Playwright tests
+- Update invoke method for session metadata to use correct namespace
+- Place implementation checkboxes after plan title, not before
+- Pass workspacePath prop to AgentTranscriptPanel for git status
+- Generate unique filenames for pasted images
+- Send images directly to Claude SDK instead of file paths
+- LMStudio messages not appearing in agent transcript
+- Add Monaco CSS import to fix 403 errors in dev mode
+- Hide FileGutter in agent mode to avoid duplicating sidebar
+- Close session tab when archiving
+- Prevent tab context menu from going off screen
+- Sync session dropdown across agent and files modes
+- Update sharp dependencies for cross-platform compatibility
+- Remove platform-specific sharp dependency that broke macOS installs
+- Windows was using the old icon
+- Add cross-platform path handling for Windows compatibility
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.39] - 2025-11-20
+
+
+### Added
+- MCP server configuration UI for alpha users
+- File type support to history dialog
+- Export pathResolver utility from utils
+- E2E test for file mention typeahead with all file types
+- Blue dot indicator for pending diffs
+- Track users who have opened from Crystal
+- Message displayed when file tree filter has no results
+- Support for --workspace and --filter CLI arguments to launch with specific workspace and filter
+
+### Changed
+- Improve file mention typeahead display and scrolling
+- Improve tracker loading and file mention path handling
+- Force TrackerTable reload when data changes
+- Maintain running state between queued messages
+- Update filter icon to use actual filter icon
+- Improve database corruption message
+- Remove redundant hamburger menu
+- Remove unused WorkspaceHeader function
+- Logging cleanup
+- Upgrade @modelcontextprotocol/sdk to 1.22.0
+
+### Fixed
+- Configure Monaco Editor to use local workers in Electron
+- Support URLs with parentheses in markdown links
+- Send completion token on error so UI knows agent turn is done
+- NIMBALYST_SYSTEM_MESSAGE showing when pressing up arrow
+- Wrong path parsing in non-render components
+- Queued messages race conditions with auto-context
+- CI build failures caused by peer dependency conflicts and missing MCP SDK dependencies
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.35] - 2025-11-20
+
+
+### Added
+- MCP server configuration UI for alpha users
+- File type support to history dialog
+- Export pathResolver utility from utils
+- E2E test for file mention typeahead with all file types
+- Blue dot indicator for pending diffs
+- Track users who have opened from Crystal
+- Message displayed when file tree filter has no results
+- Support for --workspace and --filter CLI arguments to launch with specific workspace and filter
+
+### Changed
+- Improve file mention typeahead display and scrolling
+- Improve tracker loading and file mention path handling
+- Force TrackerTable reload when data changes
+- Maintain running state between queued messages
+- Update filter icon to use actual filter icon
+- Improve database corruption message
+- Remove redundant hamburger menu
+- Remove unused WorkspaceHeader function
+- Logging cleanup
+
+### Fixed
+- Configure Monaco Editor to use local workers in Electron
+- Support URLs with parentheses in markdown links
+- Send completion token on error so UI knows agent turn is done
+- NIMBALYST_SYSTEM_MESSAGE showing when pressing up arrow
+- Wrong path parsing in non-render components
+- Queued messages race conditions with auto-context
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.34] - 2025-11-19
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Improve session history refresh experience
+- Correct function name in session delete handler
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.33] - 2025-11-19
+
+
+### Added
+- Tab-triggered content search to session history
+- E2E test for Monaco diff approval
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Prevent React event from being passed to createNewSession
+- Respect sort selection in session history grouping
+
+### Removed
+- Unnecessary log statements
+
+## [0.45.32] - 2025-11-19
+
+
+### Added
+- File tree filter for git modified files
+- Orange gutter indicator when running in dev mode
+
+### Changed
+- Replace orange dev mode background with "TEST MODE" text indicator
+- Update review-branch.md to include OS interoperability
+
+### Fixed
+- Session history timestamp display and timezone handling
+- Monaco diff approval bar now appears for AI edits to code files
+- Detect expired Claude Code sessions and show clear error message
+- Path bug causing slash commands not to load
+
+### Removed
+- Debug logs from MonacoDiffApprovalBar
+
+## [0.45.31] - 2025-11-18
+
+
+### Added
+- Planning mode file restrictions
+- Word boundaries in diff context stripping
+- Discord link to Help menu
+- Read/written file filters to file tree
+- Token usage category breakdown to AI chat
+- Auto-name sessions via MCP
+
+### Changed
+- Refactor: remove AgenticCodingWindow in favor of unified agent mode
+- Refactor: add mode field to separate session behavior from origin
+- Better display for MCP tool calls
+- Keep showing login button even when logged in (prevents OAuth expiry issues)
+- Log reduction
+
+### Fixed
+- Preserve search box when no sessions match in agent mode
+- Update Discord invite URL to correct link
+- Monaco diff editor disposal errors
+- Session not opening when switching from Files to Agent mode
+- Always fetch release notes from R2 for alpha channel
+- Remove duplicate Files header in agent sidebar
+- Fork AutoLinkPlugin to filter base64 URLs
+- Comment out console warnings for depth scanning limits
+- Prevent false diffs for hashtags in unchanged content
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.30] - 2025-11-17
+
+
+### Added
+- Session state tracking for cross-mode visibility
+- /bug-report command for interactive bug reports
+- Automated /release-public command with cumulative release notes
+- Automated public release notes from CHANGELOG
+- Release notes fetching from R2 for alpha channel updates
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Add performance limits to workspace manager file scanning
+- Prevent app freezing on large workspace directories
+- Remove unused Documentation button from Global Settings
+- Prevent Monaco diff editor disposal error when closing tabs
+- Resolve workspace-relative paths in workspace:open-file handler
+- File tree sync and auto-scroll issues
+- Prevent editor.registerCommand crash during HMR
+- Remove double scrollbars in Monaco markdown mode
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.29] - 2025-11-17
+
+
+### Added
+- Full-text search to session history
+- Floating actions to agent transcript
+- Inline diff mode for Monaco code editor
+- Markdown syntax highlighting to Monaco editor
+- Project-aware file opening from OS
+- Natural sorting to file tree
+- Release notes to alpha channel updates
+
+### Changed
+- Replace markdown mode conversion with view mode toggle
+
+### Fixed
+- Disable console logs for context fetching in AIService and TreeMatcher
+- Disable error markers in Monaco editor
+- Ensure DiffApprovalBar appears after view mode switch
+- Handle DMG/ZIP files without version in filename
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.28] - 2025-11-16
+
+
+### Added
+- Alpha release channel for internal testing
+- Image viewer for standalone image files
+- File tree filtering with type-specific icons
+- Find functionality to agent transcript
+- Tracker type assignment UI to document actions menu
+- Dual session opening from floating AI sessions dropdown
+- Claude Code session import and sync system
+
+### Changed
+- Replace dynamic imports with static imports
+- Persist file tree filter and icon visibility settings
+
+### Fixed
+- Debounce search input to prevent focus steal
+- Route search shortcuts through menu system
+- Remove quick open name match badge
+- Preserve newlines in user messages in transcript
+- OptimizedWorkspaceWatcher not sending file-changed-on-disk events
+- Monaco editor not updating when file changes on disk
+- Improve scrolling behavior for change groups in editor
+- Remove overly broad process exit error classification
+- FileTree auto-expand and selection clearing
+- Claude Code session import message filtering and ordering
+- Correct R2 bucket name in workflow
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.27] - 2025-11-16
+
+
+### Added
+- Alpha release channel for internal testing
+- Image viewer for standalone image files
+- File tree filtering with type-specific icons
+- Find functionality to agent transcript
+- Tracker type assignment UI to document actions menu
+- Dual session opening from floating AI sessions dropdown
+- Claude Code session import and sync system
+
+### Changed
+- Replace dynamic imports with static imports
+- Persist file tree filter and icon visibility settings
+
+### Fixed
+- Debounce search input to prevent focus steal
+- Route search shortcuts through menu system
+- Remove quick open name match badge
+- Preserve newlines in user messages in transcript
+- OptimizedWorkspaceWatcher not sending file-changed-on-disk events
+- Monaco editor not updating when file changes on disk
+- Improve scrolling behavior for change groups in editor
+- Remove overly broad process exit error classification
+- FileTree auto-expand and selection clearing
+- Claude Code session import message filtering and ordering
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.26] - 2025-11-14
+
+
+### Added
+- Database backup and corruption recovery system
+- Folder contents refresh on expansion
+- Review-branch slash command
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Built-in slash commands broken by user prompt addendum
+- Open document message showing to user
+- Message formatting to append current document name instead of prepend
+- Local network usage description for Nimbalyst
+- Token count and AI chat broken after merge
+- Correct context window usage calculation
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.25] - 2025-11-14
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+- Remove phone number detection from analytics
+
+## [0.45.24] - 2025-11-14
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Disable sourcemaps in production builds
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.23] - 2025-11-14
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Switch from accept/reject to undo/keep for clarity in diff approval actions
+- Use unified diff for guideposts instead of context-aware hashing
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.22] - 2025-11-13
+
+
+### Added
+- Strip unchanged context from agent transcript diffs for cleaner display
+
+### Changed
+- Comment out console logs for cleaner output during file operations
+- Logging cleanup in diff operations
+
+### Fixed
+- Handle markdown normalization in diff matching
+- Fix file watcher stats for Chokidar implementation
+- Prepend current document name to ClaudeCode messages in AIChat
+- Remove bad stopFileWatcher causing us to lose track of agent changes
+- Allow re-scrolling to current diff with navigation arrows
+- Separate pure formatting changes from text changes in inline diff
+- Handle formatting changes in inline diff
+
+### Removed
+- Reverted experimental markdown normalization for diff matching
+- Reverted red/green color coding changes
+- Reverted automatic diff acceptance behavior
+- Reverted hacky window refresh approach
+
+## [0.45.21] - 2025-11-13
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- AI diff view now properly refreshes when toggling diff view on/off
+- Disabled automatic acceptance of AI diffs when diff view is turned off, ensuring file content shown matches what's on disk
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.20] - 2025-11-13
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+- Disabled red/green color coding by default
+
+### Fixed
+- Fixed crash: "Error: The 'screen' module can't be used before the app 'ready' event"
+
+### Removed
+- Removed "Getting Started with Nimbalyst" screen
+
+## [0.45.18] - 2025-11-12
+
+
+### Added
+- Sub-agent result display in AI chat transcript
+- Better visuals for edit/write tools
+- Test normalized Lexical-sourced markdown for original content matching
+
+### Changed
+- Update Claude Agent SDK to latest version
+- Better UX for Claude Code auth settings
+- Hide mode-tag button until wired to sessionType
+
+### Fixed
+- Add diagnostic logging for AI diff display issues
+- Route notifications by workspace path instead of window ID
+- Export horizontal rules as --- instead of ***
+- Let dev mode locations fire normally (better for testing)
+- Improve diff matching with text-based guide posts
+- Copy as Markdown menu item now works and preserves newlines correctly
+- Dark mode theming for workspace actions and tracker icons
+- History dialog diff preview respects dark mode theme
+- Scrollbar theming in dark mode on macOS when user has always show scrollbars on
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.17] - 2025-11-12
+
+
+### Added
+- Improve search/replace bar with live updates and better UX
+
+### Changed
+- Hide mode-tag button until wired to sessionType
+- Remove unused editorRef from useIPCHandlers
+
+### Fixed
+- Export horizontal rules as --- instead of ***
+- Let dev mode locations fire normally (better for testing)
+- Improve diff matching with text-based guide posts
+- Copy as Markdown menu item now works and preserves newlines correctly
+- Dark mode theming for workspace actions and tracker icons
+- History dialog diff preview respects dark mode theme
+- Scrollbar theming in dark mode on macOS when user has always show scrollbars on
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.16] - 2025-11-11
+
+
+### Added
+- Floating button to show AI sessions for current document
+- Sort dropdown to session history panel
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Update session name in history list immediately after rename
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.15] - 2025-11-11
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Empty lines appearing at wrong positions in diff operations
+- Prevent duplicate snapshot creation and history dialog selection bugs
+- Remove debug logging that leaked document contents
+- Generate tagIds for incremental-approval tags and update pendingAIEditTagRef
+- Incremental diff baseline tracking for subsequent AI edits
+- Prevent accepted changes from reappearing in subsequent AI edits
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.14] - 2025-11-10
+
+
+### Added
+- Dispatch CLEAR_DIFF_TAG_COMMAND in additional edge cases
+- incremental-approval support to history dialog
+- E2E test for Accept All edge case and metadata parsing
+- E2E test for reject-then-accept-all diff behavior
+
+### Changed
+- Updated AI input placeholder text to 'Ask a question. @ for files. / for commands'
+- Improved no file opened screen design
+- Updated empty AI sidebar text
+
+### Fixed
+- Infinite autosave loop after editing files
+- Dev mode location analytics now fire normally (better for testing)
+- Prevent flashing reloads during tab switches in diff mode
+- Keyboard shortcuts now reliably target focused window
+- Preserve incremental diff state across file close/reopen
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.13] - 2025-11-10
+
+
+### Added
+- Git status indicators to FileEditsSidebar
+- PostHog events for tracking tab usage
+- is_dev_user property sent on all non-release builds with setOnce
+
+### Changed
+- Extract FileEditsSidebar inline styles to CSS
+
+### Fixed
+- Incremental diff accept/reject now properly clears pre-edit tag
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.12] - 2025-11-10
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- SQL parameter placeholder in mark session as read
+- Incremental diff accept/reject now clears pre-edit tag
+- OS notifications not appearing in development mode
+- Detection of tool packages installation
+
+### Performance
+- Optimized AI chat input rendering in long sessions by splitting transcript and input components
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.11] - 2025-11-09
+
+
+### Changed
+- Claude Code enabled by default for new installations
+- Improved login widget UX with better post-login experience
+- Enhanced error handling to avoid showing duplicate login messages
+
+### Fixed
+- Don't show model config screen on fresh install
+- Better logic around showing duplicate login messages
+- Don't show error in addition to login widget
+
+## [0.45.9] - 2025-11-09
+
+
+### Added
+- AI prompt queueing system for managing multiple AI requests
+- Tool packages system with version tracking for Claude Code
+- Typeahead search with keyboard navigation to workspace manager
+- Display project-relative paths in agent transcript
+
+### Changed
+- Tightened agentic panel UI spacing and improved CSS variable usage
+- Made entire folder row clickable to expand/collapse in file tree
+
+### Fixed
+- Cmd+Alt+Left tab navigation event name mismatch
+- TrackerTable now responds to filterType prop changes
+- Pass attachments to AI provider and prevent typeahead conflicts
+- Eliminated unnecessary session list reloads and race conditions
+- Fixed tab keyboard arrow navigation
+- Prevented double-loading of diff editor on file open
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.8] - 2025-11-08
+
+
+### Added
+<!-- New features go here -->
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+- Resolve peer dependency conflicts by hoisting ajv and terser
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.7] - 2025-11-08
+
+
+### Added
+- Working simple todo display
+
+### Changed
+- Upgraded vite-plugin-static-copy to 3.1.4 to fix chokidar dependencies
+- Upgraded npm to 11.x in CI to fix optional dependencies bug
+
+### Fixed
+- Prevent infinite loop in tab activation during diff application
+- Add zod dependency and externalize MCP SDK to fix dev mode build
+- Improved test reliability and fixed race conditions
+
+### Removed
+
+## [0.45.6] - 2025-11-07
+
+
+### Added
+- /implement command for plan execution and progress tracking
+
+### Changed
+- Upgraded Claude Agent SDK to latest version
+
+### Fixed
+- Terminal icon no longer shows for every Claude Code interaction
+- Analytics now only recorded on official release builds (not development builds)
+- Check login status now works correctly in packaged DMG
+- History dialog restore button now properly enables when showing diffs
+- Claude installation assumed available on Win32 platform
+
+## [0.45.5] - 2025-11-07
+
+
+### Added
+- Settings menu item for non-darwin platforms (File > Settings...)
+- E2E test for partial diff acceptance with rejections
+
+### Changed
+- Integrated ThresholdedOrderPreservingTree (TOPT) algorithm for order-preserving diffs
+- Improved TOPT matching for nested list structures
+- Use hybrid content-first matching for list item diffs
+- Reorganized and cleaned up DiffPlugin tests
+- Use electron-node for Claude Code login/logout operations
+
+### Fixed
+- External links now open in default browser instead of in-app
+- Reverted bad optimization for local changes that caused full document diff regressions
+- History dialog diff navigation now syncs with clicked diff groups
+- TOPT now forces exact text matches to prevent false alignments
+- Prevent unnecessary processing of children when content is unchanged
+- AI edit tag now clears properly after incremental diff operations
+- Console.log statements removed from diff utilities and various components
+- Electron-node authentication for Claude Code login/logout
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.4] - 2025-11-05
+
+
+### Added
+- TreeViewPlugin now displays diff state information for debugging
+
+### Changed
+- Markdown import/export preserves newlines and spacing more consistently
+- LiveNodeKeyState setup is now automated in diff operations
+- Reduced debug logging noise in DiffPlugin, SlashCommandService, and markdown import
+
+### Fixed
+- History dialog diff preview now displays changes correctly
+- Multi-section diff operations no longer create extra blank lines
+- Claude Code login/logout workflow improved
+- Window close behavior on macOS (removed darwin-specific check)
+
+## [0.45.3] - 2025-11-04
+
+
+### Added
+- Unified diff navigation for document history dialog
+- Token usage display for Claude Code AI sessions
+- Sound and OS notifications enabled by default for new users
+- Login required widget for Claude Code authentication
+- E2E tests for AI multi-round editing
+
+### Changed
+- Improved Claude Code login widget appearance
+- Claude Code now uses SDK-only authentication
+
+### Fixed
+- File watchers now stay active for all open tabs (no longer stop when switching tabs)
+- Cmd+N new file dialog now opens correctly in files mode
+- Unhandled promise rejection in Claude Code login check
+- AI diff approval system for consecutive edits
+- Adjacent diff changes now group correctly
+- Cache read tokens excluded from cumulative usage display
+- Session history no longer refreshes on input, improved status indicators
+- Title bar overlay error handling
+- Multiple debug console log noise issues
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.2] - 2025-11-03
+
+
+### Added
+- Separate /release-public command for public release phase
+- GitHub Actions workflow for publishing to public repository
+- Two-phase release process (internal testing, then public release)
+
+### Changed
+- Split /release command into two phases for internal testing
+- Updated electron-builder to publish to private repo first
+- Release workflow now publishes to nimbalyst-code (private) before nimbalyst (public)
+
+### Fixed
+- Session unread indicators now use timestamp-based tracking
+- PGlite database initialization error handling improved
+- Concurrent AI sessions now work properly in agent mode
+- Enhanced test helpers with better logging and tab selectors
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.45.1] - 2025-11-02
+
+
+### Added
+- Find/replace bar now integrated in fixed tab header
+- File-watcher-based diff approval for AI edits
+- OS notification support for AI completion
+- Completion sound notifications for AI responses
+- Auto-focus AI input when creating new session
+- Agent mode replacing separate session manager window
+
+### Changed
+- AI chat draft input now persisted to database
+- AgenticCodingWindow deprecated in favor of AgenticPanel
+- Optimized AgenticPanel event handler registrations
+- Memoized AISessionView to prevent unnecessary re-renders
+- Custom tracker loading extracted to separate service
+
+### Fixed
+- Reduced runtime package TypeScript errors from 33 to 9
+- Achieved zero TypeScript compilation errors in rexical
+- Improved TypeScript compilation with path mappings
+- Capture full text context for tracker item titles with whitespace
+- Consecutive AI edits now update diff view properly
+- Display user message count in agent session list
+- Resolve system theme to actual theme before rendering
+- Allow tab switching shortcuts when search bar focused
+- Route MCP tools to correct window using workspace path
+- Use relative paths in onboarding service file creation
+
+## [0.45.0] - 2025-10-31
+
+
+### Added
+
+Welcome to the first public alpha release of Nimbalyst, a markdown editor with integrated Claude Code support.
+
+**Core Features:**
+- Rich markdown editing with Lexical framework
+- Native Claude Code integration for AI-assisted editing
+- Document history with version snapshots
+- Multi-workspace support
+- File tree navigation
+- Live preview and syntax highlighting
+
+**AI Capabilities:**
+- Chat with Claude directly in your documents
+- AI-powered diff review and approval
+- Multiple AI provider support (Claude, OpenAI, LM Studio)
+- Streaming edits with real-time preview
+
+**Built for developers:**
+- Clean, distraction-free interface
+- Fast local-first architecture
+- Cross-platform (macOS, Windows, Linux)
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.44.0] - 2025-10-31
+
+
+### Added
+
+Welcome to the first public alpha release of Nimbalyst, a markdown editor with integrated Claude Code support.
+
+**Core Features:**
+- Rich markdown editing with Lexical framework
+- Native Claude Code integration for AI-assisted editing
+- Document history with version snapshots
+- Multi-workspace support
+- File tree navigation
+- Live preview and syntax highlighting
+
+**AI Capabilities:**
+- Chat with Claude directly in your documents
+- AI-powered diff review and approval
+- Multiple AI provider support (Claude, OpenAI, LM Studio)
+- Streaming edits with real-time preview
+
+**Built for developers:**
+- Clean, distraction-free interface
+- Fast local-first architecture
+- Cross-platform (macOS, Windows, Linux)
+
+### Changed
+<!-- Changes to existing functionality go here -->
+
+### Fixed
+<!-- Bug fixes go here -->
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.43.0] - 2025-10-31
+
+
+### Added
+- Added slider control for tracker progress fields
+- Added comprehensive analytics event tracking for feature usage
+- Show workspace onboarding dialog if not completed yet
+
+### Fixed
+- Fixed restart button not disabling and showing restarting status
+- Fixed missing onRestore callback in history dialog
+- Fixed agent transcript sidebar entries not spanning full width
+- Fixed code blocks without language specification being dropped on export
+- Fixed path.join implementation bug
+- Fixed config.json being appended to instead of overwritten when saving
+
+### Changed
+- Migrated organization to nimbalyst GitHub organization
+
+### Removed
+<!-- Removed features go here -->
+
+## [0.42.60] - 2025-10-30
+
+### Fixed
+- Fixed file selection not clearing when tab is closed
+- Fixed tracker document header not appearing on initial load
+- Fixed files not marked dirty when tracker updates frontmatter
+- Fixed error handling for missing directories in folder contents retrieval
+
+### Changed
+- Claude Code now updates database and notifies panel to check for updates
+- MCP stream tool now operates synchronously for better reliability
+- AI tools now require explicit file paths for better clarity
+
+### Removed
+- Removed deprecated getDocument tool
+
+### Internal
+- Modernized end-to-end test infrastructure
+
+
+<!-- system test edit 2026-02-24 -->
+<!-- system test: minor edit -->

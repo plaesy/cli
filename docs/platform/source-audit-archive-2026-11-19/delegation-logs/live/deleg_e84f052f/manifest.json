@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_e84f052f",
+  "started": "2026-11-18 11:22:49",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review ONLY Hermes Agent source/tests on pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent at SHA 40d1e95f37e409f9f618f32c170661c66b86a4f4, focusing API server, tools/approval, cron/delegation. Read-only; no tests/builds. Return verified source and test evidence, exact file/line citations, only distinct capability/task gaps not covered by existing Plaesy task backlog. If no unique task warranted, state that. Also provide total audit boundary.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_e84f052f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only audit Hermes source/tests on pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent at SHA 40d1e95f37e409f9f618f32c170661c66b86a4f4, focusing session persistence/recovery, memory/skill provenance/write approval, checkpoints/file isolation. Do not run tests/builds or edit files. Return exact source/test path and line evidence states and whether gaps warrant new Plaesy tasks versus mapped existing tasks.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_e84f052f/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 11:24:36"
+}

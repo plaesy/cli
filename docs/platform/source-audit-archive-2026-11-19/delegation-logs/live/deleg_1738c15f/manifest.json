@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_1738c15f",
+  "started": "2026-11-18 09:38:10",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review profile-specific Hermes instructions at /home/ubuntu/.hermes/profiles/default/skills/ if present and relevant. Do not modify any files; return only whether the replacement planning skill is current or stale and any actionable conflict.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_1738c15f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:38:30"
+}

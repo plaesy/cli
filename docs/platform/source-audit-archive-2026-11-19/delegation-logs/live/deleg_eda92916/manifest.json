@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_eda92916",
+  "started": "2026-11-18 16:44:44",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit pinned, clean Nimbalyst checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/nimbalyst at SHA 30482d5b719cd7609fb02645008c2f5088565ab9. Read existing ledger task and inventory DELTA-NIMBALYST entries. Inspect one concrete capability family (e.g., transcript/session persistence or CSV editor) across source and test assertions, exact paths/lines. Distinguish source, docs, test-read, test-run (do not run tests). Map existing tasks; report remaining unknowns. No edits/build/tests/upst",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_eda92916/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 17:00:58"
+}

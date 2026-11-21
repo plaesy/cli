@@ -1,0 +1,42 @@
+{
+  "delegation_id": "deleg_65a09640",
+  "started": "2026-11-18 10:07:57",
+  "task_count": 4,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue evidence-backed replacement audit, independent products Hermes Agent and Paperclip. Inspect only pinned snapshots under /home/ubuntu/.hermes/cache/scratch/replacement-audit; verify SHA first and follow exact source to tests (don't run broad suites). Report bounded feature families, exact paths and line ranges, evidence classification, gaps, test execution only if run. Read repo-specific AGENTS. Do not edit any files. Output concise structured findings.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_65a09640/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Continue evidence-backed replacement audit, independent products DeepSeek Harness, Nimbalyst, Orca. Inspect only pinned snapshots, verify SHA first; check repo AGENTS; source/test mapping in bounded features, exact paths/line refs, evidence categories and unknown gaps. No edits; don't execute entire suites or infer absence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_65a09640/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Continue evidence-backed replacement audit for Herald OS and OpenProject. Read only pinned detached snapshots and docs; verify SHA first, read AGENTS; enumerate bounded modules/workflows with exact path,line and evidence state, constraints/license if directly verified, precise unknowns. No edits, don't infer parity/absence; don't run broad tests.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_65a09640/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 3,
+      "goal": "Continue the four creative products audit Craft Anything, FigCraft, DeckCraft, WordCraft from pinned source. Verify SHA, inspect selected exact modules/docs and test definitions, report features with file+line citations and evidence status; no edits or claims absent/parity. Check if any concise exact tests can be run only after source inspection, avoiding all workspace heavyweight builds.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_65a09640/task-3.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:24:41"
+}

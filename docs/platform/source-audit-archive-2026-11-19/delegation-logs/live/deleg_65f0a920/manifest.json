@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_65f0a920",
+  "started": "2026-11-18 09:38:29",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read the three full result logs for in-flight delegation c8c29969 and the Plaesy baseline audit delegation 7adc67a3 from paths in delegation metadata/context. Do not edit. Report completed statuses/result summaries or whether they're still running; preserve exact evidence and errors. Relevant paths /home/ubuntu/.hermes/cache/delegation/live/deleg_c8c29969/task-0.log, task-1.log, task-2.log and /home/ubuntu/.hermes/cache/delegation/live/deleg_7adc67a3/task-0.log.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_65f0a920/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:39:00"
+}

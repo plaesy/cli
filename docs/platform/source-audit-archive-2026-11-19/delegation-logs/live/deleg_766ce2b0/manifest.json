@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_766ce2b0",
+  "started": "2026-11-15 09:07:53",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect the current task module and propose a precise correction for the added test fixture containing a Rust string with literal double backslashes before n (rather than newline escapes), but do not edit. Determine whether that prevents the test from reaching desired behavior or only changes metadata content. Report recommended next command. ",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_766ce2b0/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 09:23:20"
+}

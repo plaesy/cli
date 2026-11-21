@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_1a678055",
+  "started": "2026-11-15 18:26:52",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit of /home/ubuntu/cli issue metadata lock integration after recent changes. Enumerate every production writer of issue.json and every graph membership/lifecycle mutation, identify which acquire IssueGraphLock and any deadlock/nested-lock concerns. Do not edit files, do not run Cargo. Return exact file/function callsites and smallest safe next implementation sequence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_1a678055/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 18:27:37"
+}

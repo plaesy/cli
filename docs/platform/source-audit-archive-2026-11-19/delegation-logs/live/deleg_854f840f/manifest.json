@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_854f840f",
+  "started": "2026-11-18 16:37:13",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit the pinned Orca checkout at /home/ubuntu/.hermes/cache/scratch/replacement-audit/orca, expected SHA 65c84d41101e2e6255f64155985de873fc81c902. Read its existing Plaesy ledger task and inspect one bounded source family (agent protocol, task lifecycle, permissions, or integrations) plus relevant test assertions. Return exact paths/line evidence, distinguish documentation/source/test-read/test-run, map to existing Plaesy task, note remaining UNKNOWN; no tests/builds/edits/upstream changes.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_854f840f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:38:24"
+}

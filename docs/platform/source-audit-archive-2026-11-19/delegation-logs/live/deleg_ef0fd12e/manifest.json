@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ef0fd12e",
+  "started": "2026-11-13 08:53:57",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "For the active task, inspect the newly added memory captures CLI changes in /home/ubuntu/cli as a reviewer. Check exact diff and focused CLI/graph tests, identify bugs or missing docs (status filtering, output path, json behavior). Do not edit; report actionable issues and test command results, preserving all state.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ef0fd12e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 09:08:58"
+}

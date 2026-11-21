@@ -4,15 +4,16 @@ from __future__ import annotations
 import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-PLUGIN = Path(__file__).parents[1] / "plaesy-relay" / "__init__.py"
+PLUGIN = Path(__file__).parents[1] / "plaesy" / "relay.py"
 
 
 def load_plugin(monkeypatch: Any, tmp_path: Path) -> ModuleType:
-    monkeypatch.setenv("PLAESY_CLI_BIN", "/bin/true")
+    monkeypatch.setenv("PLAESY_CLI_BIN", sys.executable)
     monkeypatch.setenv("PLAESY_RELAY_AGENT_ID", "worker-b")
     monkeypatch.setenv("PLAESY_RELAY_PROJECT", str(tmp_path))
     spec = importlib.util.spec_from_file_location("plaesy_relay_plugin", PLUGIN)
@@ -254,7 +255,7 @@ def test_cli_invocation_is_argv_safe_and_project_scoped(tmp_path, monkeypatch):
 
     argv, kwargs = calls[0]
     assert argv[0] == [
-        "/bin/plaesy", "relay", "--db", str(tmp_path / ".plaesy" / "relay.sqlite"),
+        str(Path("/bin/plaesy")), "relay", "--db", str(tmp_path / ".plaesy" / "relay.sqlite"),
         "inbox", "--agent", "worker-b",
     ]
     assert kwargs["cwd"] == tmp_path

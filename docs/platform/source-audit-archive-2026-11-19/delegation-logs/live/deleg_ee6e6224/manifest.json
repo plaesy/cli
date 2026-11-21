@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ee6e6224",
+  "started": "2026-11-18 09:37:39",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Do a focused read-only primary-source verification of creative audit claims from actual detached snapshots (not prior inventory): Craft Anything, FigCraft, DeckCraft, WordCraft. Check exact pinned HEADs first, then inspect at least one README/rules/manifest and a relevant implementation/test path per product; report exact commands if any tests run, concise per-product evidence and gaps. Repo /home/ubuntu/cli; source root /home/ubuntu/.hermes/cache/scratch/replacement-audit; no edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ee6e6224/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:38:26"
+}

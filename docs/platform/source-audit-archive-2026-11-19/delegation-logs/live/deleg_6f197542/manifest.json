@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_6f197542",
+  "started": "2026-11-18 21:20:41",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect /home/ubuntu/cli and create an actionable evidence ledger for design↔code workflow R15, mapping existing source and tasks to the unmet acceptance gates. Read-only; no builds, no repo edits. Preserve pinned revisions/evidence status, point out owner-blocked gates.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_6f197542/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 21:21:22"
+}

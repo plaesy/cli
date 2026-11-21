@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_93874c0d",
+  "started": "2026-11-13 08:53:43",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Implement a read-only `plaesy memory captures` listing command in /home/ubuntu/cli. Existing graph recognizes type capture and CLI has projects/decisions/contexts listings. Inspect current status and command/printing patterns first. Add captures command with existing graph list filters: optional project/status, include inactive, limit, text/json output; output capture id/title/status/project/scope/updated/path as appropriate using established serialization pattern. No writes, no commit/reset/cle",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_93874c0d/task-0.log",
+      "status": "interrupted",
+      "exit_reason": "interrupted",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only reviewer: inspect /home/ubuntu/cli command and graph serialization patterns for adding `memory captures`; identify acceptance criteria, potential pitfalls, and tests. Do not edit files. Check current status and preserve it.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_93874c0d/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 09:10:14"
+}

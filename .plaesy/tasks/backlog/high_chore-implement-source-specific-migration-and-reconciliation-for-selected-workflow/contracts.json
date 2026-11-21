@@ -56,7 +56,7 @@
     {
       "id": "cargo-focused-tests",
       "check": "Focused tests matching 'migration' run and at least one passes",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked migration 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace --locked migration 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
       "expected": ">= 1",
       "status": "pending",
       "evidence": "test"

@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_7ecca65c",
+  "started": "2026-11-18 11:26:31",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect source and tests (do not run tests) in pinned Hermes checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent at 40d1e95f37e409f9f618f32c170661c66b86a4f4. Focus API server, tools, approval and automation/delegation. Return exact file/line evidence and evidence levels; compare to existing tasks, recommend edits or new task only if distinct. Read-only.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_7ecca65c/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Inspect source and tests (do not run tests) in pinned Hermes checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent at 40d1e95f37e409f9f618f32c170661c66b86a4f4. Focus persistence/recovery, skill and memory provenance, checkpoints. Give exact path/line evidence and compare to existing tasks. Read-only.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_7ecca65c/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 11:42:36"
+}

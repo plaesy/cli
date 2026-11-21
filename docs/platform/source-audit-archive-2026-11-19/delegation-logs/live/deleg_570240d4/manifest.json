@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_570240d4",
+  "started": "2026-11-13 16:23:07",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only inspect active Hermes memory provider discovery implementation and current config/provider binding. Identify what exact change makes provider name plaesy. Don't read secrets or edit. Provide file paths/line numbers.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_570240d4/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 16:24:39"
+}

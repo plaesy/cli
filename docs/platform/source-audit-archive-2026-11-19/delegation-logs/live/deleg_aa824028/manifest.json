@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_aa824028",
+  "started": "2026-11-18 21:22:57",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit .plaesy/tasks/backlog and canonical plan vs spec; detect broken dependencies, tasks with weak/missing acceptance and contract/check semantics. Read-only only. Return top five actionable fixes with exact paths, no assumptions.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_aa824028/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 21:23:49"
+}

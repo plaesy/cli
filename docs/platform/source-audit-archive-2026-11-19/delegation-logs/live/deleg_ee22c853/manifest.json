@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ee22c853",
+  "started": "2026-11-18 16:58:36",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect remaining Paperclip capability evidence in clean pinned checkout, preferably routine webhook delivery or retries and related tests. Verify HEAD SHA 7685b7a4fc00fb5469c4e1fb38b1d8ba534322af and clean tree; read existing inventory/task; exact source/assertion line ranges; map existing IDs, don't invent gaps; tests not run; no upstream edits/builds.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ee22c853/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:59:40"
+}

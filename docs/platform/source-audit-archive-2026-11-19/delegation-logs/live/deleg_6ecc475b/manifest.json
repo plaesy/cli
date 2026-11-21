@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_6ecc475b",
+  "started": "2026-11-18 16:42:34",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit one narrow next endpoint family in pinned OpenProject after project-parent selector. Verify SHA 729734e478b19b009b856c96d53eaad89d436254. Read existing ledger and inventory, inspect source implementation plus request-spec assertions for project/workspace lifecycle (not same available-parent selector), exact line numbers. Return observed behaviors and unknowns, tests not run, map existing task. No upstream edits/tests/builds.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_6ecc475b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:43:29"
+}

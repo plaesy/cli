@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3d459628",
+  "started": "2026-11-18 18:01:41",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Recommend a defensible first end-to-end workflow and cohort for the Plaesy replacement program based strictly on existing spec, plan, backlog, inventories and inspected incumbent evidence. Do not modify files. Distinguish agent recommendation from owner approval. Provide concise workflow scope, explicit exclusions, assumptions, evidence basis, risks, acceptance gates and why not select alternatives.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3d459628/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 18:02:08"
+}

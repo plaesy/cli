@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_5afb61e2",
+  "started": "2026-11-18 09:35:36",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit the bounded remaining target source inventory by chapter/family for Craft Anything, FigCraft, DeckCraft, WordCraft. Inspect the pinned detached snapshots and docs in batches, report enumerated features and evidence levels with paths/SHA, where coverage is absent, not exhaustive unless fully evidenced. Follow /home/ubuntu/cli/. Use prior source-inventory doc. No edits or claims of parity.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_5afb61e2/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:36:21"
+}

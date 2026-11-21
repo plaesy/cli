@@ -1,0 +1,34 @@
+{
+  "delegation_id": "deleg_c882bc53",
+  "started": "2026-11-18 16:22:54",
+  "task_count": 3,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only focused audit next 3 Hermes doc capability entries: HERMES-CAP-RUNTIME-001, TOOLS-001, APPROVAL-001 in /home/ubuntu/cli/docs/platform/hermes-capability-audit.md against pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent SHA 40d1e95f37e409f9f618f32c170661c66b86a4f4. Verify each candidate from official docs and relevant source/tests with exact line citations, map to existing Plaesy tasks, propose evidence-backed task acceptance refinements or distinct task ",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c882bc53/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only focused audit next 3 Hermes doc capability entries: HERMES-CAP-SESSION-001, API-001, DELEGATION-001 in /home/ubuntu/cli/docs/platform/hermes-capability-audit.md against pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/hermes-agent SHA 40d1e95f37e409f9f618f32c170661c66b86a4f4. Verify candidate behavior from official docs and source/tests, exact lines, map to current Plaesy tasks, recommend acceptance edits/new task if evidence proves distinct missing outcome. No test",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c882bc53/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Read-only focused audit next 3 Hermes doc capability entries: HERMES-CAP-AUTOMATION-001, KANBAN-001, MEMORY-001 from /home/ubuntu/cli/docs/platform/hermes-capability-audit.md against pinned Hermes SHA 40d1e95f37e409f9f618f32c170661c66b86a4f4. Verify docs/source/test contracts with exact citations; identify whether existing tasks cover outcomes or a new distinct task is justified, and acceptance criteria refinement if needed. No tests/builds/edits. Continue despite owner decision blockers, docume",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c882bc53/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:24:22"
+}

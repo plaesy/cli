@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_d0f00aa4",
+  "started": "2026-11-15 10:23:40",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review whether ureq 3.5.0 Agent::config_builder().timeout_global(Some(...)) covers response body consumption after call() returns. Cite exact dependency source lines/API docs. No edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d0f00aa4/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:24:25"
+}

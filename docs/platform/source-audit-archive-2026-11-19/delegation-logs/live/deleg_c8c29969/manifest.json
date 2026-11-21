@@ -1,0 +1,34 @@
+{
+  "delegation_id": "deleg_c8c29969",
+  "started": "2026-11-18 09:35:04",
+  "task_count": 3,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue evidence-backed source auditing for the Plaesy replacement program. Inspect the pinned Hermes and DeepSeek Harness detached checkouts against audit delta rows in docs/platform/replacement-source-inventory.md, focusing on heartbeat/worker lanes/prompt surface and profile composition/session format. Read implementations and focused tests; run narrowly scoped tests only if safe, report exact commands/results. Do not edit files. Cite pinned SHA, relative paths, evidence status, concrete cap",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c8c29969/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Continue evidence-backed source auditing for Nimbalyst, Orca, Paperclip pinned checkouts. Inspect delta leads in docs/platform/replacement-source-inventory.md against implementation and focused tests; run narrowly scoped tests if safe, no file edits. Return precise source paths, SHA, evidence level, contract and unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c8c29969/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Continue evidence-backed source auditing for Herald OS and OpenProject pinned checkouts. Verify audit delta leads against implementation/tests; run narrow tests only if safe/available. No edits. Report exact paths/SHA/evidence status and bounded unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c8c29969/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:38:42"
+}

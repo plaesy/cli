@@ -1,0 +1,59 @@
+{
+  "name": "herald-os",
+  "version": "0.1.0-alpha.5",
+  "private": true,
+  "description": "Herald OS: an agent-native operating system built on Hermes Agent.",
+  "license": "MIT",
+  "author": "Luke The Dev",
+  "homepage": "https://github.com/iamlukethedev/Herald-OS",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iamlukethedev/Herald-OS.git"
+  },
+  "bugs": "https://github.com/iamlukethedev/Herald-OS/issues",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "concurrently": {
+      "shell-quote": "1.11.0"
+    },
+    "dbus-next": {
+      "xml2js": "0.6.2"
+    },
+    "exceljs": {
+      "unzipper": "0.12.5",
+      "uuid": "11.1.1"
+    },
+    "pptxgenjs": {
+      "image-size": "2.0.4"
+    },
+    "usocket": {
+      "node-gyp": "12.4.0"
+    }
+  },
+  "allowScripts": {
+    "node-pty": true,
+    "esbuild": true,
+    "usocket": true,
+    "electron-winstaller": false
+  },
+  "scripts": {
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "sync-upstream": "bash scripts/sync-upstream.sh",
+    "dev": "npm run dev --workspace apps/desktop",
+    "build": "npm run build --workspace apps/desktop",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:bridge": "bash scripts/test-bridge.sh",
+    "dist:mac": "npm run dist:mac --workspace apps/desktop"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}

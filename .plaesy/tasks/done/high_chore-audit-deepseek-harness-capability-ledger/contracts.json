@@ -1,0 +1,126 @@
+{
+  "id": "high_chore-audit-deepseek-harness-capability-ledger",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/*/high_chore-audit-deepseek-harness-capability-ledger/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/high_chore-audit-deepseek-harness-capability-ledger/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_chore-audit-deepseek-harness-capability-ledger' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/spec-index-lists-task.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/*/high_chore-audit-deepseek-harness-capability-ledger/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/high_chore-audit-deepseek-harness-capability-ledger/task.md && grep -q '^status:' .plaesy/tasks/*/high_chore-audit-deepseek-harness-capability-ledger/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/frontmatter-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "ledger-present",
+      "check": "Capability ledger exists at docs/platform/audits/deepseek-harness.md",
+      "run": "test -s docs/platform/audits/deepseek-harness.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:08Z",
+          "actual": "exit code 1",
+          "run": "test -s docs/platform/audits/deepseek-harness.md"
+        }
+      ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/ledger-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "ledger-lint",
+      "check": "Ledger passes the markdown linter (plaesy binary)",
+      "run": "export PATH=\"$HOME/.local/bin:$PATH\" && plaesy validate markdown docs/platform/audits/deepseek-harness.md --no-baseline",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:08Z",
+          "actual": "exit code 127",
+          "run": "plaesy validate markdown docs/platform/audits/deepseek-harness.md --no-baseline"
+        },
+        {
+          "at": "2026-11-19T17:29:54Z",
+          "actual": "exit code 127",
+          "run": "plaesy validate markdown docs/platform/audits/deepseek-harness.md --no-baseline"
+        }
+      ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/ledger-lint.out",
+        "exit_code": 0,
+        "sha256": "6b970770cfc1d67b26e24a2403993f8e88f2326e96e197c243c38fb122ebb73b"
+      },
+      "evidence": "test"
+    },
+    {
+      "id": "ledger-rows",
+      "check": "Ledger has at least five capability rows",
+      "run": "grep -cE '^\\| ' docs/platform/audits/deepseek-harness.md || true",
+      "expected": ">= 5",
+      "status": "passed",
+      "histories": [
+        {
+          "at": "2026-11-19T17:20:08Z",
+          "actual": "command printed nothing to compare with the expected",
+          "run": "grep -cE '^\\| ' docs/platform/audits/deepseek-harness.md || true"
+        }
+      ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-deepseek-harness-capability-ledger/ledger-rows.out",
+        "exit_code": 0,
+        "sha256": "917df3320d778ddbaa5c5c7742bc4046bf803c36ed2b050f30844ed206783469"
+      },
+      "evidence": "doc"
+    }
+  ]
+}

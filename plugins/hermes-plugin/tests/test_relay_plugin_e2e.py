@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-PLUGIN = Path(__file__).parents[1] / "plaesy-relay" / "__init__.py"
+PLUGIN = Path(__file__).parents[1] / "plaesy" / "relay.py"
 BINARY = Path(__file__).parents[3] / "target" / "debug" / "plaesy"
 
 

@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_d3e72115",
+  "started": "2026-11-16 19:17:58",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect current Plaesy relay, agent lifecycle and runtime integrations. Propose the smallest safe way to automatically deliver messages to an active agent session without manual inbox/send; identify existing hooks/adapters, file ownership, security/injection risks, and focused tests. Do not edit files. Return source file citations/paths and evidence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d3e72115/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-16 19:19:00"
+}

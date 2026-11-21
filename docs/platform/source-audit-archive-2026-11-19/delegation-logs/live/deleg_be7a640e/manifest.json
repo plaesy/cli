@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_be7a640e",
+  "started": "2026-11-16 07:52:25",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Parallel security audit of `/home/ubuntu/cli/src/decisions.rs`: inventory every filesystem operation, threat, concrete fix, and regression test needed, focusing on cache root/ancestor, config, lock, downloads, staging promotion/removal. Read-only. Distinguish path-level mitigation from race-safe guarantees, and flag anything not closed. Return findings with exact line references.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_be7a640e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-16 07:53:19"
+}

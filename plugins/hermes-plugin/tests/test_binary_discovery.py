@@ -8,7 +8,7 @@ import stat
 from pathlib import Path
 from types import ModuleType
 
-PLUGIN = Path(__file__).parents[1] / "plaesy-memory" / "__init__.py"
+PLUGIN = Path(__file__).parents[1] / "plaesy" / "__init__.py"
 
 
 def load_plugin(monkeypatch, **environment: str) -> ModuleType:
@@ -36,7 +36,8 @@ def test_find_binary_prefers_configured_cli_path(tmp_path, monkeypatch):
 
 
 def test_find_binary_falls_back_to_path(tmp_path, monkeypatch):
-    binary = tmp_path / "plaesy"
+    name = "plaesy.exe" if os.name == "nt" else "plaesy"
+    binary = tmp_path / name
     binary.touch()
     binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
 

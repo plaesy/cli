@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_1f18571b",
+  "started": "2026-11-18 16:37:04",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit next narrow source family in pinned DeepSeek Harness checkout from the running audit. Verify current HEAD equals 39163dd30f703a79079e2d2446545cff3c453738 and clean. Read exact ledger task, then inspect source + test assertions for provider configuration/session persistence or execution lifecycle. Exact paths/line ranges, distinguish tests not run, no new build/test, no edits/upstream. Map finding to existing task; if previous audit result unavailable, select a clearly bounded source-based ",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_1f18571b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:38:31"
+}

@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_7ce450ce",
+  "started": "2026-11-15 10:36:43",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Re-review /home/ubuntu/cli/src/decisions.rs after adding cfg(unix) OpenOptionsExt + libc::O_NOFOLLOW to persistent .decisions.lock open. Verify compiles cross-platform target cfg, correctly rejects lock symlink, and any remaining race/ancestor risks. Do not edit. State precise limitations.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_7ce450ce/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:37:35"
+}

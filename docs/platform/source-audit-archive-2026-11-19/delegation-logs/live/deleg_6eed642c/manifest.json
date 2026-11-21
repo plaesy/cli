@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_6eed642c",
+  "started": "2026-11-18 21:04:21",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit canonical plan/task counts and stale claims; report exact paths, verified discrepancies and safe fixes only. Do not edit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_6eed642c/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only audit design↔code task coverage and acceptance executable quality. Report concrete gaps and recommended exact acceptance criteria/tasks. Do not edit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_6eed642c/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 21:20:30"
+}

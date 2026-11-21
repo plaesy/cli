@@ -1,0 +1,75 @@
+{
+  "id": "high_feature-add-authenticated-shared-messaging-and-session-delivery",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/*/high_feature-add-authenticated-shared-messaging-and-session-delivery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_feature-add-authenticated-shared-messaging-and-session-delivery/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/high_feature-add-authenticated-shared-messaging-and-session-delivery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_feature-add-authenticated-shared-messaging-and-session-delivery/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'high_feature-add-authenticated-shared-messaging-and-session-delivery' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_feature-add-authenticated-shared-messaging-and-session-delivery/spec-index-lists-task.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/*/high_feature-add-authenticated-shared-messaging-and-session-delivery/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/high_feature-add-authenticated-shared-messaging-and-session-delivery/task.md && grep -q '^status:' .plaesy/tasks/*/high_feature-add-authenticated-shared-messaging-and-session-delivery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_feature-add-authenticated-shared-messaging-and-session-delivery/frontmatter-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "focused-tests",
+      "check": "Focused tests matching 'shared_messaging' run and at least one passes",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace --locked shared_messaging 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "expected": ">= 1",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/high_feature-add-authenticated-shared-messaging-and-session-delivery/focused-tests.out",
+        "exit_code": 0,
+        "sha256": "a9742eb8ee320e006666aef25ae9aeed948247f3125c9cafa7cf97b7e7467dd5"
+      },
+      "evidence": "test"
+    }
+  ]
+}

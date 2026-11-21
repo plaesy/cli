@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_a54376aa",
+  "started": "2026-11-18 16:51:02",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit pinned clean Nimbalyst source in /home/ubuntu/.hermes/cache/scratch/replacement-audit/nimbalyst at SHA 30482d5b719cd7609fb02645008c2f5088565ab9. Read exact existing ledger and inventory; inspect one bounded source/test-assertion family, mapping to existing IDs; exact paths/lines; tests not run, no edits/build. Report remaining unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_a54376aa/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:52:20"
+}

@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3943ed39",
+  "started": "2026-11-18 16:44:12",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Correction: the ledger/inventory are accessible at `/home/ubuntu/cli/.plaesy/tasks/backlog/high_chore-audit-paperclip-capability-ledger/task.md` and `/home/ubuntu/cli/docs/platform/replacement-source-inventory.md`. Read these exact absolute paths; the latter has Paperclip candidates `F-PAPERCLIP-RUNTIME-001/002` and deltas. Continue bounded runtime execution/lease/stop-reconciliation audit in checkout `/home/ubuntu/.hermes/cache/scratch/replacement-audit/paperclip` pinned SHA `7685b7a4fc00fb5469",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3943ed39/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:45:14"
+}

@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_8d25072f",
+  "started": "2026-11-16 11:51:43",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Research authoritative Hermes Agent documentation architecture for gateway/API/MCP and whether it supports direct session-to-session messaging. Return concise factual findings with URLs and distinctions.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_8d25072f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Research best-practice messaging/broker semantics for direct communication among heterogeneous LLM agent runtimes and failure cases (delivery, identity, retries, offline peers, security). Produce compact recommended flow and scenario matrix.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_8d25072f/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-16 11:52:31"
+}

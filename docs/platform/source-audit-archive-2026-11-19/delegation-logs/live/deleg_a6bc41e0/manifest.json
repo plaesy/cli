@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_a6bc41e0",
+  "started": "2026-11-15 10:31:09",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect current diff of /home/ubuntu/cli/src/decisions.rs after lifecycle lock edit and identify any bug/incorrect claim in lock semantics, compatibility, lock placement. Source-only review, no edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_a6bc41e0/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:32:00"
+}

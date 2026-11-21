@@ -1,0 +1,19 @@
+name: plaesy
+version: "0.2.0"
+description: "Plaesy: cited vault memory search for Hermes, plus relay messaging between Plaesy agents."
+tags:
+  - memory
+  - search
+  - relay
+external_dependencies:
+  - name: plaesy
+    install: "Install the plaesy CLI from this repository (cargo build --locked --release, then put plaesy on PATH or set PLAESY_CLI_BIN)"
+    check: "plaesy --version"
+config_keys:
+  - memory.plaesy
+provides_tools:
+  - plaesy_relay_send
+provides_hooks:
+  - pre_llm_call
+  - post_llm_call
+kind: standalone

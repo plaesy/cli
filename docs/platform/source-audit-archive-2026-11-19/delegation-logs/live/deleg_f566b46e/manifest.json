@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_f566b46e",
+  "started": "2026-11-18 16:34:04",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only bounded audit for all four remaining creative tool repositories in parallel within this one audit: FigCraft pinned /home/ubuntu/.hermes/cache/scratch/replacement-audit/figcraft SHA e1883565479f3c763488fe0d7a149fafee33ebb9; DeckCraft /home/ubuntu/.hermes/cache/scratch/replacement-audit/deckcraft SHA 5c698493bc1f7ec36f90deb29df247b93330e654; WordCraft /home/ubuntu/.hermes/cache/scratch/replacement-audit/wordcraft SHA 29d862fabca05ba1e273a60041905c5ee8a7fb52; Herald OS /home/ubuntu/.herme",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_f566b46e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:35:07"
+}

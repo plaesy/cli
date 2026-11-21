@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_f05a1086",
+  "started": "2026-11-18 16:34:11",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit pinned OpenProject checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/openproject at SHA 729734e478b19b009b856c96d53eaad89d436254, read-only. Verify HEAD/worktree. Read ledger and inspect core work management/project APIs/docs/source/tests to map concrete capabilities to existing tasks and identify distinct gaps. No Ruby toolchain known, do not install or build/test. Exact path/lines, classify docs/source/test assertions and UNKNOWN.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_f05a1086/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:35:15"
+}

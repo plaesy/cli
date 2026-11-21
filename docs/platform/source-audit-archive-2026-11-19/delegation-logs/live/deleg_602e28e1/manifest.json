@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_602e28e1",
+  "started": "2026-11-18 09:37:55",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit the pinned snapshots for four creative products at /home/ubuntu/.hermes/cache/scratch/replacement-audit/ (Craft Anything, FigCraft, DeckCraft, WordCraft). Verify HEAD against SHAs ba46f341abf0c31e83d050bbc0f0d7ebba295367, e1883565479f3c763488fe0d7a149fafee33ebb9, 5c698493bc1f7ec36f90deb29df247b93330e654, 29d862fabca05ba1e273a60041905c5ee8a7fb52. The previous audit claimed missing checkouts, disproven by parent. Read exact primary files in each and specific source/test areas. Do not edit; r",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_602e28e1/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:38:42"
+}

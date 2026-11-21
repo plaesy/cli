@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_03b09bd8",
+  "started": "2026-11-18 09:42:34",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Reconcile backlog tasks with replacement spec/plan and assess whether item contracts satisfy their own acceptance gates. Read relevant project docs and existing task files; report gaps that block execution and suggest bounded next edits. Do not modify files. Project /home/ubuntu/cli; no upstream edits, no status/commit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_03b09bd8/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:43:50"
+}

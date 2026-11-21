@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_962d82d1",
+  "started": "2026-11-18 16:51:56",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit pinned clean Paperclip source for an additional bounded area such as authenticated webhook delivery/retry or run lease acquisition. Verify SHA and ledger first; inspect exact implementation + test assertions and map existing IDs. No tests/builds/edits/upstream modifications. Return source line ranges, not-run status, unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_962d82d1/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:53:32"
+}

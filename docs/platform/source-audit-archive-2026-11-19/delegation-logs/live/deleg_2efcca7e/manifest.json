@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_2efcca7e",
+  "started": "2026-11-15 08:57:49",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Research native Rust inference support for TypeSafe/System One decision model families (Laya, d1, Clef, Tev1, Nimble, Kev, PPLX-DECIDER). Determine which exact checkpoint formats/architectures and licenses exist, whether they can run without Ollama in Candle or another embeddable runtime, official APIs/repos, and model size/resource requirements. Use primary sources and cite links. Do not change any files or download model weights. Deliver capability matrix and hard constraints.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_2efcca7e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Inspect Plaesy CLI architecture and recommend the smallest safe implementation slice for a new `plaesy decisions` command with Plaesy-owned model location/config/list/pull/infer. Identify exact relevant files, config conventions, CLI parse dispatch/tests, Hugging Face download library already present, test strategy and pitfalls. Do not edit files, do not run model download or mutate repo. Check dirty worktree and avoid reading secrets.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_2efcca7e/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 09:00:45"
+}

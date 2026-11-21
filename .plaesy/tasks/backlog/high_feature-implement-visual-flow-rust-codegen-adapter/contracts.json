@@ -36,7 +36,7 @@
     {
       "id": "cargo-focused-tests",
       "check": "Focused tests matching 'visual_flow_codegen' run and at least one passes",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked visual_flow_codegen 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace --locked visual_flow_codegen 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
       "expected": ">= 1",
       "status": "pending",
       "evidence": "test"

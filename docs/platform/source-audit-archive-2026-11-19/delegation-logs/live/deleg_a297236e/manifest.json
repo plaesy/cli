@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_a297236e",
+  "started": "2026-11-15 18:33:44",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only review current issue metadata lock edits for correctness, API gaps, compile/runtime risks, and identify next focused regression test. Do not edit or run Cargo.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_a297236e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 18:34:21"
+}

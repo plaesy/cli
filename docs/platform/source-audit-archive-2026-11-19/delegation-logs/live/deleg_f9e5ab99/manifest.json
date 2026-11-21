@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_f9e5ab99",
+  "started": "2026-11-15 10:36:52",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect and test standard-library File::lock cross-process behavior on this Linux environment against an independent Rust process, using a small scratch binary or Python process probe; verify it blocks. Do not modify repo files. Report exact observed behavior only.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_f9e5ab99/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:37:33"
+}

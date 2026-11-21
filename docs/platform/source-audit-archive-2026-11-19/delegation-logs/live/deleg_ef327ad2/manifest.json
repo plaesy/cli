@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_ef327ad2",
+  "started": "2026-11-14 11:56:43",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Evaluate real task/agent orchestration tools for detecting and recovering failed worker tasks. Focus on tools usable in this environment (Paperclip, Hermes, CLI patterns) and state exact candidate tool, evidence, installation/use viability. Do not install or modify anything. Report recommended approach and a minimal safe isolated test.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ef327ad2/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Review design scope for Plaesy Advisor Council: compare arbitrary options and multi-perspective deliberation, implementable requirements, safety boundaries, and realistic simulations. Do not edit source. Use observed Plaesy existing architecture only if accessible; list precise gaps and acceptance tests.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ef327ad2/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 11:58:49"
+}

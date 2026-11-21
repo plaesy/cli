@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_49cfdce8",
+  "started": "2026-11-18 16:42:29",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue Paperclip audit in a second independent capability family: inspect exact pinned source plus test assertions for agent runtime executions/leases/stop reconciliation or task governance, beyond routines. Verify SHA 7685b7a4fc00fb5469c4e1fb38b1d8ba534322af and worktree. Read existing Paperclip ledger/inventory. Exact repo-relative paths/lines; tests not run; no changes/build/test/upstream modification. Map to existing capability IDs and identify UNKNOWN.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_49cfdce8/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:43:10"
+}

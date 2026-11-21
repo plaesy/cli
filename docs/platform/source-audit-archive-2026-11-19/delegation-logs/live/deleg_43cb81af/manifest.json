@@ -1,0 +1,34 @@
+{
+  "delegation_id": "deleg_43cb81af",
+  "started": "2026-11-13 08:37:16",
+  "task_count": 3,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Investigate adding typed relationship edges to Plaesy graph retrieval: inspect current changed worktree, docs, graph/search implementation. Recommend smallest concrete implementation slice and edge schema with evidence. Read-only, no edits. Preserve all state.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_43cb81af/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Research Hindsight current docs for typed graph/relation retrieval and temporal facts/episodes features. Return source URLs and exact documented behavior, separate fact vs candidate product adaptation. No edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_43cb81af/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Inspect Plaesy current graph/hygiene and capture metadata. Recommend independent low-risk graph feature Plaesy can implement now, perhaps resolving gaps or decision/evidence graph query. Read only, no edits. Include exact files/lines and focused verification.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_43cb81af/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 08:53:19"
+}

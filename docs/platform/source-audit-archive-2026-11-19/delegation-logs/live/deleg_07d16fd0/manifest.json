@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_07d16fd0",
+  "started": "2026-11-15 17:21:06",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only design review for safe fix to issue graph concurrency races in /home/ubuntu/cli. Inspect current dirty code and report a minimal viable protocol that covers update, create, direct metadata writers, rollback, and lifecycle moves without a global task metadata lock. Do not edit files or run Cargo builds. Identify whether protocol can be safely added now and exact tests needed.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_07d16fd0/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 17:21:43"
+}

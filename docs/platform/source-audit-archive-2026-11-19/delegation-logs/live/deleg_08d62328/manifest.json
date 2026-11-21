@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_08d62328",
+  "started": "2026-11-14 12:04:40",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review issue tracker implementation in /home/ubuntu/cli/src/tasks/issue.rs, src/cli/tasks_issue.rs, tasks_create.rs and command wiring. Identify correctness gaps/bugs with brief evidence. Do not modify files. Focus on validation/reference semantics and CLI behavior.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_08d62328/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 12:05:17"
+}

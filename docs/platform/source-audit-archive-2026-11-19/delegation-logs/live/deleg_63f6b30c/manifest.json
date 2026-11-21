@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_63f6b30c",
+  "started": "2026-11-18 21:11:45",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect canonical spec/index and plan/task counts against actual current repo. Report exact status and any inconsistencies; no edits/builds.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_63f6b30c/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 21:27:21"
+}

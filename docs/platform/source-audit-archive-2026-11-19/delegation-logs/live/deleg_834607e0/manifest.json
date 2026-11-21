@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_834607e0",
+  "started": "2026-11-12 10:45:35",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Review and test the current untracked wrapper patch in /home/ubuntu/cli/plaesy-memory/hermes-plugin/plaesy-memory/__init__.py. Inspect git tracking, existing plugin package metadata and tests. Safely create pytest tests covering executable discovery/arguments, and ensure the file is packaged/tracked or explain why this repository cannot be the source. Run tests. No install/production changes.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_834607e0/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-12 10:48:01"
+}

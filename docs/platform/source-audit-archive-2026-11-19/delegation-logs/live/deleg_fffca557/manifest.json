@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_fffca557",
+  "started": "2026-11-14 12:13:54",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Take the next concrete implementation step in Plaesy issue tracker using the verified problems in context: task data has global stable folder-name IDs, and current code now exposes issue listing. Inspect/create update command for metadata is currently absent. Add a safe metadata-edit CLI command for type,parent, repeatable deps/labels, assignee,milestone, preserving unspecified fields; validate the prospective collection atomically and restore old JSON on validation failure. Scope tightly and pr",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_fffca557/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 12:26:37"
+}

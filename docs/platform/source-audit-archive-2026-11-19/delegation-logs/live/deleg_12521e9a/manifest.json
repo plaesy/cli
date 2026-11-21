@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_12521e9a",
+  "started": "2026-11-14 11:48:15",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Independently inspect current Plaesy tasks tracker implementation and propose specific next improvement slice (CLI metadata editing/filtering/validation). Do not edit files. Include risks and recommended tests based on actual source.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_12521e9a/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 11:49:06"
+}

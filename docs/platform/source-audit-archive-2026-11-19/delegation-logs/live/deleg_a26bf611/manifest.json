@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_a26bf611",
+  "started": "2026-11-18 10:09:15",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Independently audit Plaesy existing replacement artifacts and task index for structural consistency: RP crosswalk, coverage count claims, acceptance evidence and unresolved owner decisions. Read-only. Report prioritized concrete next improvements, with file/line references; do not modify.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_a26bf611/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:10:28"
+}

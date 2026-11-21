@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_350ce20d",
+  "started": "2026-11-18 09:42:15",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only primary-source audit of the four pinned creative snapshots. Prior result incorrectly said snapshots absent. Verify HEAD and exact README/AGENTS/manifest/roadmap claims against source. Return short concrete evidence and unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_350ce20d/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:43:03"
+}

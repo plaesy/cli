@@ -1,0 +1,50 @@
+{
+  "delegation_id": "deleg_99effb63",
+  "started": "2026-11-18 16:33:52",
+  "task_count": 5,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue actual incumbent capability audit, not backlog commentary. Read the ledger task and source inventory, then audit next bounded capability family in pinned Paperclip checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/paperclip at 7685b7a4fc00fb5469c4e1fb38b1d8ba534322af. Verify SHA/worktree. Inspect docs, source, test assertions for focused API auth/session/approval/task lifecycle (or the next incomplete family specified by ledger). Return concrete IDs and exact paths/line evid",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_99effb63/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Continue actual incumbent capability audit, not backlog commentary. Read ledger and source inventory, then audit a bounded capability family in pinned DeepSeek Harness checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/deepseek-harness at SHA 39163dd30f703a79079e2d2446545cff3c453738. Verify SHA/worktree; inspect docs/source/tests, exact line citations; map concrete capabilities to existing tasks, label test assertions as not run, distinguish previous native-binding failure from produc",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_99effb63/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Continue actual incumbent capability audit, not backlog commentary. Audit bounded Nimbalyst capability ledger in pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/nimbalyst SHA 30482d5b719cd7609fb02645008c2f5088565ab9. Verify checkout SHA/worktree; inspect authoritative docs, source and test assertions for core workflows; provide IDs, exact lines, evidence status, task mapping and distinct missing deliverable candidates. No test/build/edits/upstream changes. Explicitly disting",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_99effb63/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 3,
+      "goal": "Continue actual incumbent capability audit, not backlog commentary. Audit bounded Orca capability ledger in pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/orca SHA 65c84d41101e2e6255f64155985de873fc81c902. Verify SHA/worktree; inspect docs/source/tests for core execution, workflow, and integrations; record capability IDs, exact line ranges, evidence status, existing task mapping, distinct gaps only. No tests/builds, no edits/upstream modifications. Be explicit if evidence i",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_99effb63/task-3.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 4,
+      "goal": "Continue actual incumbent capability audit, not backlog commentary. Audit bounded Craft Anything capability ledger in pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/craft-anything SHA ba46f341abf0c31e83d050bbc0f0d7ebba295367. Verify SHA/worktree; inspect docs/source/test assertions for core project workflow; cite exact file/lines; map to existing tasks and point out distinct missing acceptance/task gaps. Existing test result Craft Anything engine 714 passed/13 ignored only ",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_99effb63/task-4.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:50:02"
+}

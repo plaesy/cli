@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_fbcfc9c8",
+  "started": "2026-11-18 17:00:03",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Do NOT edit any files. Continue only independent source audit of pinned clean OpenProject checkout at /home/ubuntu/.hermes/cache/scratch/replacement-audit/openproject SHA 729734e478b19b009b856c96d53eaad89d436254. Read canonical inventory and ledger, then inspect a distinct narrowly scoped API capability (e.g. repository issue links adjacent semantics, project lifecycle authorization, time-entry permission) with exact implementation and focused request-spec assertion ranges. Map existing IDs; tes",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_fbcfc9c8/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 17:01:08"
+}

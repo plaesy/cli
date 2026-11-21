@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_560794bf",
+  "started": "2026-11-18 10:47:23",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit the RP-001–RP-046 crosswalk in /home/ubuntu/cli/docs/platform/replacement-backlog.md against actual .plaesy task contract files and issue metadata. Verify precisely which mapped task contracts have acceptance criteria that cover the claimed outcome, which are merely named, and list minimal bounded corrections to this crosswalk/umbrella task. Do not edit files, stage, commit, run builds, or treat folder count as completeness. Preserve unrelated worktree changes. Return exact paths",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_560794bf/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:49:12"
+}

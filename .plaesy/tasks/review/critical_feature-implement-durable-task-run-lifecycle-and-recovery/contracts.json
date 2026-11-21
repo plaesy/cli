@@ -1,0 +1,75 @@
+{
+  "id": "critical_feature-implement-durable-task-run-lifecycle-and-recovery",
+  "checklist": [
+    {
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/*/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task-file-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "acceptance-section-present",
+      "check": "Task has acceptance criteria section",
+      "run": "grep -q '^## Acceptance criteria' .plaesy/tasks/*/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-implement-durable-task-run-lifecycle-and-recovery/acceptance-section-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "spec-index-lists-task",
+      "check": "Spec task index lists this task",
+      "run": "grep -q 'critical_feature-implement-durable-task-run-lifecycle-and-recovery' .plaesy/spec/plaesy-agent-platform/spec.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-implement-durable-task-run-lifecycle-and-recovery/spec-index-lists-task.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "frontmatter-present",
+      "check": "task.md has spec, topic and status frontmatter",
+      "run": "head -1 .plaesy/tasks/*/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task.md | grep -q '^---$' && grep -q '^spec:' .plaesy/tasks/*/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task.md && grep -q '^status:' .plaesy/tasks/*/critical_feature-implement-durable-task-run-lifecycle-and-recovery/task.md",
+      "expected": "pass",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-implement-durable-task-run-lifecycle-and-recovery/frontmatter-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "evidence": "doc"
+    },
+    {
+      "id": "focused-tests",
+      "check": "Focused tests matching 'task_run' run and at least one passes",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace --locked task_run 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "expected": ">= 1",
+      "status": "passed",
+      "histories": [],
+      "receipt": {
+        "output": ".plaesy/receipts/critical_feature-implement-durable-task-run-lifecycle-and-recovery/focused-tests.out",
+        "exit_code": 0,
+        "sha256": "a1fb50e6c86fae1679ef3351296fd6713411a08cf8dd1790a4fd05fae8688164"
+      },
+      "evidence": "test"
+    }
+  ]
+}

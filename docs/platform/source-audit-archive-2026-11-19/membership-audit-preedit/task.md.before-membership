@@ -1,0 +1,49 @@
+---
+spec: plaesy-agent-platform
+topic: chore-complete-evidence-backed-feature-audit-for-11-incumbents
+title: Complete evidence-backed feature audit for 11 incumbents
+phase: implement
+status: backlog
+---
+
+# Complete evidence-backed feature audit for 11 incumbents
+
+## Goal
+
+Convert the partial discovery inventory into an owner-reviewable, evidence-backed leaf-capability map for all 11 named incumbents, then map each in-scope capability to existing Plaesy requirements, acceptance scenarios, and a deduplicated implementation or follow-up task.
+
+## Scope
+
+- Reconcile all RP-001–RP-046 rows in `docs/platform/replacement-backlog.md`; use pinned commits in `docs/platform/replacement-source-inventory.md` as discovery snapshots, not approved release baselines.
+- For each product, enumerate maintained user/operator docs and relevant source modules incrementally; inspect supported workflows, platform/edition/license conditions, inputs/outputs, lifecycle, permissions, failures, persistence, migration, and recovery. For OpenProject, use the bounded 12-family API v3 audit queue in `docs/platform/replacement-source-inventory.md`; the queue is prioritization, not complete coverage.
+- Distinguish documented, source-reviewed, test-read, test-executed, runtime-verified, inferred, and unknown evidence. Cite immutable source paths/lines or release docs; record commands and results only when actually run.
+- Reconcile each leaf capability with the current Plaesy baseline and feature measurement framework. Add acceptance scenarios only when behavior is evidenced; map shared capability gaps to one task, not one task per incumbent.
+- Update canonical `docs/platform/replacement-source-inventory.md`, `feature-measurement-framework.md`, and relevant acceptance documents; record coverage counts and remaining unknowns. Hermes API acceptance `AC-F-HERMES-API-001-13` records the pinned run-capacity/transport-TTL source-test assertion; it is read but not run and does not define broad queue/retry guarantees. OpenProject permission candidates `AC-OPENPROJECT-PERM-001`–`004`, work-package source assertion candidates `AC-OPENPROJECT-WP-001`–`046` (including activity/journal assertions WP-043–046), and saved-query candidates `AC-OPENPROJECT-QUERY-001`–`011` (including query configuration resource assertions QUERY-007–008, iCalendar-sharing assertions QUERY-009, default workspace-query execution assertions QUERY-010, and individual token-revocation assertions QUERY-011) and saved-view candidates `AC-OPENPROJECT-VIEW-001`–`004` are provisional audit inputs, not approved requirements or executed tests; VIEW-004 is source-reviewed only, not a request-test assertion.
+- Preserve incumbent source checkouts; never modify upstream code. Do not select scope, release baselines, or exclusions on behalf of owners.
+
+## Non-goals
+
+- Do not claim exhaustive parity from page counts, README lists, headings, or bounded searches.
+- Do not implement all candidate capabilities as part of this audit.
+- Do not mark a capability absent unless a bounded inspected scope supports that exact statement.
+
+## Deliverables
+
+- Per-product leaf inventory with stable IDs, source revision/permalink, evidence state, Plaesy requirement/scenario/task mapping, and unresolved questions.
+- Updated crosswalk from RP rows to existing Plaesy task IDs and any genuinely new deduplicated tasks.
+- Coverage report stating which source areas were inspected, which were not, evidence status, and owner decisions still needed.
+
+## Dependencies
+
+- Reuse existing research recovery and Plaesy baseline tasks; proceed on documentary/source inventory while exact owner-approved release baselines remain open, but label snapshot-derived evidence accordingly.
+
+## Acceptance criteria
+
+- [ ] All 11 targets have an auditable coverage ledger; each has explicit inspected/uninspected scope and an immutable revision or a named blocker.
+- [ ] Every accepted leaf capability links to source evidence and a stable requirement/scenario; unverified behavior stays labeled.
+- [ ] Every RP row maps to an existing Plaesy task, this audit task, another explicit status/dependency, or a justified unique new task; no unexplained orphan rows remain.
+- [ ] Shared gaps are deduplicated by deliverable and acceptance outcome; no product-by-product duplicate task clones.
+- [ ] `DeepSeek Harness` and `Orca` identity/version ambiguity is either resolved from source evidence or remains explicit UNKNOWN.
+- [ ] For each target, record repository license and relevant edition boundaries from pinned sources; flag copyleft or other material reuse obligations for legal review. Do not copy upstream implementation code into Plaesy as part of the audit.
+- [ ] Markdown and local-link validation pass for changed documents; task integrity check reports no broken references.
+- [ ] No upstream source is modified; no unrun test/runtime check is reported as verified.

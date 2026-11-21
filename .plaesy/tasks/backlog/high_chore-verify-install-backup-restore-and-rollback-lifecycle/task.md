@@ -29,7 +29,7 @@ Demonstrate documented install/upgrade/backup/restore/rollback for the first dec
 
 ## Dependencies
 
-- Owner-selected profile; child spec and persistence model.
+- Approved shared self-hosted profile; child spec and persistence model. Keep unsupported profiles UNKNOWN.
 
 ## Acceptance criteria
 

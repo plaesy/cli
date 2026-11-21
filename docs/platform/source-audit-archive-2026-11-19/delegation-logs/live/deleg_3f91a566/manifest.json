@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3f91a566",
+  "started": "2026-11-18 10:46:33",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Recover and inspect your own transcript for delegation deleg_a26bf611. It returned an empty consolidated result. Report whether it contains useful read-only findings about Plaesy replacement artifacts; if so concise evidence and paths. Do not edit files.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3f91a566/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 10:47:05"
+}

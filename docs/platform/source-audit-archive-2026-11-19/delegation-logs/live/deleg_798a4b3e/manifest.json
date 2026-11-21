@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_798a4b3e",
+  "started": "2026-11-18 11:22:04",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit Hermes Agent pinned checkout for source/test-backed capability contracts for APIs, tools/approval, sessions/delegation/automation; identify concrete unique Plaesy task gaps only. Do not modify any files, do not run tests/builds. Return exact paths/line ranges, evidence type, source SHA verified, mapped existing task IDs, task proposals only if clearly distinct.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_798a4b3e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only source/test-backed audit Hermes Agent sessions, persistence, recovery, skill/memory/provenance and checkpoints; find additional task gaps and cite exact evidence. No edits, no build/tests. Verify pinned SHA.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_798a4b3e/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 11:22:56"
+}

@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_78d9a0a3",
+  "started": "2026-11-15 13:14:50",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit all issue.json metadata writers and lifecycle operations in /home/ubuntu/cli. Determine exact writer set that must coordinate with tasks update-issue, whether per-task stable advisory locks are feasible without global lock, and safe rollback/CAS design. Do not edit files. Report paths/functions and concrete recommendation.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_78d9a0a3/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only audit filesystem primitives/dependencies available in /home/ubuntu/cli for per-issue metadata locking or atomic compare-and-swap. Inspect Cargo dependency state without modifying it, relevant DirHandle APIs, platforms. Recommend design and test plan to avoid lost updates and rollback clobber. Do not edit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_78d9a0a3/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 13:15:43"
+}

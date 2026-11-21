@@ -1,0 +1,34 @@
+{
+  "delegation_id": "deleg_5d5bd92b",
+  "started": "2026-11-18 11:29:58",
+  "task_count": 3,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect and reconcile RP-001–RP-016 existing backlog crosswalk against actual task.md / issue.json / contracts.json in /home/ubuntu/cli. Read-only only; no edits, tests or builds. Identify concrete missing distinct tasks or materially absent acceptance criteria (not merely generic criteria), cite task IDs and exact lines. Include owner decision blockers and do not assert full feature coverage.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_5d5bd92b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Inspect and reconcile RP-017–RP-034 existing backlog crosswalk against actual task.md / issue.json / contracts.json in /home/ubuntu/cli. Read-only only; no edits/tests/builds. Identify task scope gaps/conditional family tasks and actual missing distinct deliverables, cite IDs/lines. Avoid duplicating tasks; do not assert complete coverage from folder count.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_5d5bd92b/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Inspect per-product incumbent ledger task files and family audit packages for Hermes, Paperclip, DeepSeek, Nimbalyst, Orca, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald OS, OpenProject. Determine whether task contracts truly provide executable, evidence-specific audits or are still scaffolds; propose concrete task contract improvements only if needed. Read-only no edits/tests/builds.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_5d5bd92b/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 11:31:19"
+}

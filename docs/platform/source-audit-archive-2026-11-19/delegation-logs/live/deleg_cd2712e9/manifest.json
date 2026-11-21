@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_cd2712e9",
+  "started": "2026-11-13 16:21:43",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Independently inspect Hermes current memory provider plugin discovery protocol and determine exact repo changes needed for provider name plaesy, including plugin.yaml/provider dir resolution. Read-only, do not edit config or external plugin install. Return source evidence and safe rename plan.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_cd2712e9/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 16:23:36"
+}

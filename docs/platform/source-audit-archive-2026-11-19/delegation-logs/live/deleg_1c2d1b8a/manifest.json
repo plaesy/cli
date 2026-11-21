@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_1c2d1b8a",
+  "started": "2026-11-15 10:22:10",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Inspect exact order semantics of laya-decision 0.2.20: where Questions type defined, criteria order through Agent normalization/rendering, and whether input map order reaches tokenization. No edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_1c2d1b8a/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:23:28"
+}

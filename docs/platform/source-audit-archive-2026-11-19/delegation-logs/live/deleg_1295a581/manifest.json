@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_1295a581",
+  "started": "2026-11-15 10:23:21",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Find a minimal robust cross-process filesystem lock approach already present in /home/ubuntu/cli dependency graph or Rust std implementation project precedent. Inspect Cargo.lock and source. Do not modify. Report exact APIs, dependencies, and risks.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_1295a581/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 10:24:33"
+}

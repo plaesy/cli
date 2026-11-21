@@ -1,0 +1,34 @@
+{
+  "delegation_id": "deleg_d745a91f",
+  "started": "2026-11-15 09:06:34",
+  "task_count": 3,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit of task filesystem safety path operations in /home/ubuntu/cli. Find concrete exploitable gaps involving symlinked ancestors in move_task_as, block_task, lifecycle functions, task creation/listing. Do not edit files. Inspect existing dirty diff/status first, then report exact function, reproducible test idea, severity, and recommended minimal patch. Never reset/clean/commit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d745a91f/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only audit for concurrency and lost-update hazards in issue metadata operations under /home/ubuntu/cli. Inspect writers, snapshot reads, rollback, create/move/block/claim interactions. No edits. Report concrete races with call paths, whether already known, minimal safe repair options, and deterministic regression strategy. Inspect dirty state first; never modify it.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d745a91f/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 2,
+      "goal": "Read-only independent review of current /home/ubuntu/cli working tree and test coverage for task symlink protections. Inspect current git status/diff, locate validation and test commands. Identify high-value next concrete audit step that can be verified quickly, especially gaps not covered by current tests. Do not edit or clean/commit/reset. Report exact evidence and suggested test.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d745a91f/task-2.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 09:20:38"
+}

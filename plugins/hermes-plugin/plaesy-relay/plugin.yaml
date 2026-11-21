@@ -1,8 +1,0 @@
-name: plaesy-relay
-version: "0.1.0"
-description: Deliver Plaesy Relay messages to Hermes sessions at turn boundaries.
-provides_tools:
-  - plaesy_relay_send
-provides_hooks:
-  - pre_llm_call
-  - post_llm_call

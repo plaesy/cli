@@ -1,0 +1,26 @@
+{
+  "delegation_id": "deleg_3c32cf50",
+  "started": "2026-11-18 20:57:37",
+  "task_count": 2,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit of canonical planning docs in /home/ubuntu/cli. Compare .plaesy/spec/plaesy-agent-platform/spec.md, .plaesy/plan/plaesy-agent-platform/plan.md, docs/platform/replacement-spec.md, replacement-plan.md, replacement-backlog.md. Report only concrete inconsistencies, exact file/line references, and minimal safe targeted edits. Do not edit files, run builds/tests, or inspect upstream repos.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3c32cf50/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    },
+    {
+      "index": 1,
+      "goal": "Read-only audit of design↔code capability traceability in /home/ubuntu/cli. Inspect canonical spec R15, design-code related tasks, docs/platform feature-gap-register.md and measurement framework, contracts.json for the two design-code tasks, plus task issue metadata/dependencies if relevant. Report gaps and exact path/line references; distinguish checklist from executable validation. Do not edit, run builds/tests, or inspect upstream repos.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3c32cf50/task-1.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 20:58:48"
+}

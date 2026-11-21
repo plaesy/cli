@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ccb7a9ef",
+  "started": "2026-11-18 16:36:51",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue OpenProject audit using the existing canonical inventory, not README. Read /home/ubuntu/cli/docs/platform/replacement-source-inventory.md lines 50-138 and existing task .plaesy/tasks/backlog/high_chore-audit-openproject-capability-ledger/task.md. Pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/openproject at SHA 729734e478b19b009b856c96d53eaad89d436254. Choose next bounded API family not already richly covered (avoid redoing initial WP/membership/query assertions), ",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ccb7a9ef/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:37:37"
+}

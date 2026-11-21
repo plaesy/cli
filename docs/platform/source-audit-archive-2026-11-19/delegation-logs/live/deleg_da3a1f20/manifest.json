@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_da3a1f20",
+  "started": "2026-11-18 16:51:28",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Bounded audit of OpenProject repository-issue links: pinned checkout /home/ubuntu/.hermes/cache/scratch/replacement-audit/openproject SHA 729734e478b19b009b856c96d53eaad89d436254. Inspect implementation and request-spec assertions, exact ranges, map DELTA-OPENPROJECT-REPOSITORY-ISSUE-001, distinguish tests not run, state unknowns. No edits/build/tests/upstream.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_da3a1f20/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:52:37"
+}

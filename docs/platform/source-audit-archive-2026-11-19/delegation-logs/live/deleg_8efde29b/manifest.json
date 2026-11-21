@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_8efde29b",
+  "started": "2026-11-18 16:43:19",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit pinned Herald OS source/test assertions for runtime enforcement of file batch controls and permissions (or next narrow family) at /home/ubuntu/.hermes/cache/scratch/replacement-audit/herald-os SHA d8733e9393c7186e5e8c843ea4abc97d9173ee45. Verify clean checkout, read existing Plaesy ledger/inventory, inspect exact handler and relevant tests, classify assertion vs runtime (do not run tests). Map to existing DELTA-HERALD-FILE-BATCH-001 and audit task, report unknowns. No build/test/edit/upstr",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_8efde29b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:45:12"
+}

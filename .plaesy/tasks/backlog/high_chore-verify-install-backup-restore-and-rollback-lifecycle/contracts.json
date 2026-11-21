@@ -36,7 +36,7 @@
     {
       "id": "focused-tests",
       "check": "install_e2e test target lists at least one test",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked --test install_e2e -- --list 2>&1 | grep -c ': test$'",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked -p plaesy --test install_e2e -- --list 2>&1 | grep -c ': test$'",
       "expected": ">= 1",
       "status": "pending",
       "evidence": "test"

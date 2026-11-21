@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_94e0252a",
+  "started": "2026-11-18 16:53:50",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Continue Paperclip capability audit beyond lease/routine/auth. Verify pinned clean checkout + ledger, inspect one distinct lifecycle family with source and test assertions, exact paths/lines, map existing IDs, tests not run; no builds/tests/edits/upstream. Focus issue checkout service/authorization or task governance and identify unknowns.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_94e0252a/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:54:42"
+}

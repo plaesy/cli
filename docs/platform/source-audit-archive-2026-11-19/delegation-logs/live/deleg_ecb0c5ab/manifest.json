@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_ecb0c5ab",
+  "started": "2026-11-14 12:13:32",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Deliver findings from your review of the issue tracker implementation in /home/ubuntu/cli; no edits. Summarize verified bugs/gaps and file-line evidence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_ecb0c5ab/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-14 12:18:46"
+}

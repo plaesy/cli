@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_16e59a9b",
+  "started": "2026-11-13 09:09:25",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Read-only audit of command/filter documentation and tests before updating capture status semantics. Report whether any project-specific status convention applies to capture. Preserve files; no edits.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_16e59a9b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-13 09:12:29"
+}

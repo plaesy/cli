@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_3570529e",
+  "started": "2026-11-15 18:40:54",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit /home/ubuntu/cli/src/decisions.rs implementation and related CLI/docs for correctness/security. Focus concrete exploitable races, config atomicity, download staging safety, model removal/status handling. Return prioritized findings with exact file:line and minimal fixes; do not edit.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_3570529e/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-15 18:46:09"
+}

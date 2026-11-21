@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_dbabc72a",
+  "started": "2026-11-18 16:54:21",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Bounded Craft Anything source audit following previous docs-only slice. Verify `/home/ubuntu/.hermes/cache/scratch/replacement-audit/craft-anything` HEAD equals `ba46f341abf0c31e83d050bbc0f0d7ebba295367`, clean; read existing Plaesy task and inventory. Inspect actual rebuild orchestration and build/check source plus focused test assertions, exact paths/line ranges; map existing RP-021 and existing capability IDs; assertions not executed, no tests/builds/edits/upstream changes; report unknowns an",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_dbabc72a/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 17:10:56"
+}

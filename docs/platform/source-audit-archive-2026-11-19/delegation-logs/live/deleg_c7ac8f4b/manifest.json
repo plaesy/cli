@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_c7ac8f4b",
+  "started": "2026-11-18 16:43:59",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Run another bounded OpenProject audit in pinned clean checkout SHA 729734e478b19b009b856c96d53eaad89d436254: choose a concrete API v3 family such as time entries, reminders or repository issues. Read implementation plus request-spec assertions, exact source paths and ranges, classify test assertions not executed, map existing ledger and unknowns. No test/build/edit/upstream changes.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_c7ac8f4b/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:47:55"
+}

@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_7adc67a3",
+  "started": "2026-11-18 09:36:30",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Independently audit Rust/Plaesy current baseline against specific 18 new delta capabilities from docs/platform/replacement-source-inventory.md. Read project docs/platform decisions, relevant current Rust CLI/services/Studio source and focused tests only. Determine whether each delta is already covered, partial or unknown; cite exact Plaesy file paths and evidence. Read-only, no edits and no parity claims beyond evidence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_7adc67a3/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 09:37:41"
+}

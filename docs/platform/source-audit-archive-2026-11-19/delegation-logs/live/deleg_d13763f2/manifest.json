@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_d13763f2",
+  "started": "2026-11-18 21:19:47",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit current replacement program remaining gaps, specifically 11 incumbent coverage matrix and design-code acceptance. Read-only, repo /home/ubuntu/cli, no builds, no edits. Report immediate next useful independent artifact step and blockers with files/evidence.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_d13763f2/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 21:50:40"
+}

@@ -1,0 +1,163 @@
+# Plaesy feature implementation checklist
+
+**Purpose:** A single, evidence-backed checklist for Plaesy implementation and replacement planning. Consult this before comparative research or implementation so agents do not repeat discovery work.
+
+**Scope of this snapshot:** Plaesy CLI at its checked-out state and a bounded inspection of Plaesy Studio. This is not an exhaustive audit of every repository, deployed service, or runtime. `unknown` means not verified in this review, not necessarily absent. Status is about implementation evidence—not design intent.
+
+## Status key
+
+- **Implemented** — code path exists and focused test/runtime evidence was checked or is cited from a current assessment with the exact check.
+- **Partial** — a narrower capability exists, but does not meet the stated replacement behavior.
+- **Not implemented (verified)** — the inspected implementation/docs explicitly say the capability is absent, or the scoped source inspection found no implementation. Scope of inspection is stated.
+- **Unknown** — not sufficiently inspected or tested to classify.
+- **Design only** — requirement/proposal exists; implementation has not been verified.
+
+Do not change a status based on a plan, another agent’s summary, or a feature in an upstream backend. Update it only with implementation path plus a focused acceptance-test command/result and date. Backend-dependent capabilities must remain labeled as such.
+
+## A. Agent execution and orchestration
+
+| ID | Feature | Status | Current implementation/evidence | Gap / acceptance checklist |
+|---|---|---|---|---|
+| EXEC-01 | Task records and lifecycle | **Implemented (CLI-local)** | `docs/commands/tasks.md`; `src/tasks/`; current-state snapshot reports task lifecycle tests. | [ ] Verify chosen task workflow end-to-end. [ ] Verify persistence/recovery and cross-process ownership for selected profile. |
+| EXEC-02 | Task delegation to a provider | **Partial** | CLI has `tasks run`/delegate paths; docs say work can dispatch to a delegate provider/chain. | [ ] Select supported provider/version. [ ] Contract-test inputs, outputs, permissions, timeout, failure, cancellation and retry. |
+| EXEC-03 | Native Plaesy agent runtime | **Unknown / not verified** | Inspected CLI help exposes workflows/loop, not a verified managed agent runtime; Studio exposes workflow executors, not a verified general-purpose agent runtime. `docs/platform/current-state-assessment.md:17-19,31`. | [ ] Decide native runtime vs external harness orchestration. [ ] If native: define session/run lifecycle, tool loop, isolation and supervision. |
+| EXEC-04 | Runtime adapter contract | **Design only / unverified implementation** | Product/decision docs permit external harness backends; no conformance-tested support matrix identified. `docs/platform/decisions.md:55-60`; `docs/platform/automation.md`. | [ ] Define versioned adapter interface. [ ] Test one real backend and fake failure adapter. [ ] Record auth, tool grants, events, cancellation, usage/cost and offline behavior. |
+| EXEC-05 | Durable run state, restart recovery and cancellation | **Design only / not demonstrated end-to-end** | Current-state assessment says loop tests do not establish durable scheduler, external side-effect recovery or service supervision (`current-state-assessment.md:15-19,31`). Studio has durable workflow/task processing per `CI-QA-REPORT.md`; no agent-specific run contract verified. | [ ] Persist run IDs/state/transitions. [ ] Inject crashes at each boundary. [ ] Verify cancel/stop and reconcile ambiguous external effects. |
+| EXEC-06 | Parallel tasks / isolated worktrees | **Partial / unsafe default for shared edits** | `docs/commands/tasks.md:34` says CLI parallel execution shares project directory and creates no isolated worktrees. | [ ] Default to isolated worktrees or explicitly gate shared mode. [ ] Test overlapping edits and safe integration. |
+| EXEC-07 | Agent assignment, handoff and dependencies | **Partial** | Local task metadata/dependencies exist (`docs/commands/tasks.md`); shared agent-aware ownership/handoff is not established (`docs/platform/agent-collaboration.md:82-86`). | [ ] Assign/claim/reassign with audit and summary. [ ] Block unmet dependencies. [ ] Verify cross-session races. |
+| EXEC-08 | Agent run controls/operations | **Unknown / not verified** | Studio worker operates in API process according to `CI-QA-REPORT.md`; separately deployable worker and agent run controls not verified. | [ ] Pause/resume/cancel/retry/recover run. [ ] Operator sees truthful state and reason. |
+
+## B. Messaging, sessions and collaboration
+
+| ID | Feature | Status | Current implementation/evidence | Gap / acceptance checklist |
+|---|---|---|---|---|
+| COL-01 | Local durable direct messages | **Implemented (same local SQLite store)** | `src/relay.rs`; `docs/commands/relay.md`. Send/inbox/ack and idempotent IDs. | [ ] Keep focused tests for duplicate/conflicting IDs, reopen/restart and ack routing. |
+| COL-02 | Claim leases and token-checked ack | **Implemented (local queue)** | `src/relay.rs`; `docs/commands/relay.md`. Bounded leases and opaque tokens; same-file consumers only. | [ ] Test competing processes (not only threads), stale token, expiry and redelivery side-effect limits. |
+| COL-03 | Relay polling/wait | **Implemented (polling only)** | `src/cli/relay.rs`; `docs/commands/relay.md:29-37`. Polling interval; no push/wake. | [ ] Report queued vs acknowledged accurately. [ ] Do not call polling realtime. |
+| COL-04 | Authenticated shared/multi-host Relay | **Not implemented (verified by Relay docs)** | `docs/commands/relay.md:65-68` and `docs/platform/agent-collaboration.md:3` state no shared authenticated API/remote delivery. | [ ] Authenticated service/client, TLS, project ACLs, rate/size limits, durable retry and multi-host tests. |
+| COL-05 | Agent identity and project authorization | **Not implemented for Relay identity (verified)** | Relay `from`/`agent` are caller-supplied labels; docs state they are not authenticated. Studio inspected auth covers human sessions/OIDC/RBAC, not verified agent principals (`crates/auth/`, `crates/sdk-contracts/src/lib.rs`). | [ ] Define principal/tenant/project model. [ ] Test least privilege, revocation, cross-project denial and task-scoped credentials. |
+| COL-06 | Session discovery/presence | **Not implemented (explicitly documented)** | `docs/platform/agent-collaboration.md:47-55`. File claims are not session discovery. | [ ] Register session ID, agent, task/scope, worktree/base revision, heartbeat/state. [ ] Test stale expiry and offline display without transcript access. |
+| COL-07 | Delivery to an existing active/idle runtime session | **Not implemented / adapter behavior unknown** | Docs say optional Hermes supervisor starts a one-shot turn and does not wake an existing idle session (`agent-collaboration.md:68-74`). | [ ] Adapter contract for safe-point queue/injection, acknowledgement, busy/idle/terminated and revocation. [ ] Never report read/injected without receiver evidence. |
+| COL-08 | Multi-agent task/thread/channel messaging | **Partial** | Relay supports direct addressed local messages; collaboration doc lists threads/channels as requirements (`agent-collaboration.md:88-92`). | [ ] Define thread/channel ACLs, retention, export/deletion, notifications and delivery states. |
+| COL-09 | File claims | **Implemented (advisory, local)** | `src/files.rs`, `docs/commands/files.md`; current-state assessment reports claim/list/who/release, TTL, ownership checks and path safety tests. | [ ] Do not imply OS write lock. [ ] Test abrupt process loss and stale-claim recovery. |
+| COL-10 | Semantic file event stream / replay | **Partial / design exists** | `spec/files-realtime-collaboration/spec.md:49,53-60` says current snapshot watcher is interim and can miss short-lived transitions; durable cursor journal remains. | [ ] Cursor/replay journal, retention, process-level tests, reconnect and project isolation. |
+| COL-11 | Safe shared-worktree writes/conflict resolution | **Design only; safety not verified** | `agent-collaboration.md:61-80,103-115` requires enforced boundary; local claims are advisory. | [ ] CAS/fencing at apply boundary. [ ] Detect out-of-band writer. [ ] Preserve conflicts; fail closed if coordinator unavailable. |
+| COL-12 | Git branch/index/worktree integration | **Unknown / not verified** | Design requirements only in `agent-collaboration.md:76-80,110`. | [ ] Serialize or isolate index/HEAD operations. [ ] Test concurrent stage/commit, stale base and rollback. |
+
+## C. Workflow engine and Studio
+
+| ID | Feature | Status | Current implementation/evidence | Gap / acceptance checklist |
+|---|---|---|---|---|
+| STU-01 | Durable workflow/task processing | **Partial (workflow engine)** | `crates/workflow-engine/src/postgres.rs`; repo QA report describes leases, heartbeats, recovery, retries, dead-letter handling and worker loop. Not rerun in this assessment. | [ ] Rerun focused tests. [ ] Separate worker deploy mode or document API-process coupling. |
+| STU-02 | Executor registration/allowlisting | **Implemented (workflow extension point)** | `crates/workflow-engine/src/lib.rs`, `crates/executors/src/lib.rs`, `crates/workflow-engine/src/http.rs`; explicit registration/allowlisting. | [ ] Verify production defaults and deny unsupported node types. [ ] Agent capability grants remain separate work. |
+| STU-03 | First-class agent identity in Studio | **Not implemented in inspected auth/contracts (bounded finding)** | `crates/sdk-contracts/src/lib.rs`, `crates/auth/src/session.rs`, `crates/auth/src/oidc.rs`; `CI-QA-REPORT.md` identifies first-class agents/external runner as missing. | [ ] Define agent principal and task-bound delegated credentials. [ ] Test tenant/resource authorization for agent actions. |
+| STU-04 | Agent inbox/messaging/session contract | **Not found in inspected gateway/auth/workflow paths** | Bounded subagent inspection of `crates/api-gateway/src/lib.rs`, `crates/auth/`, `crates/workflow-engine/`, `crates/sdk-contracts/src/lib.rs`; this was not a full repo audit. | [ ] Specify durable message/outbox, idempotency, ACL, offline delivery and adapter acknowledgement. |
+| STU-05 | Human user auth/RBAC/approval | **Implemented (human-facing foundations; bounded)** | `crates/auth/src/oidc.rs`, `session.rs`, `rbac.rs`, `approval.rs`; gateway accepts authenticator/evaluator. QA report documents tenant-isolation checks; not rerun. | [ ] Re-run auth/tenant tests. [ ] Do not assume this covers agents or delegated tools. |
+| STU-06 | Admin UI / workflow builder | **Partial** | `apps/admin-studio/app.js` collection browser; `apps/studio-builder/app.js` workflow preview/draft persistence per inspected source. | [ ] Agent roster/conversation/run/task operations UI remains unverified. |
+| STU-07 | Worker deployment and operations metrics | **Partial** | `deploy/kubernetes.yaml` defines `plaesy-api`; QA report says worker runs in API process and metrics/queue observability remain. | [ ] Separate worker if selected profile requires it. [ ] Add queue/run/retry/latency/correlation observability and operational tests. |
+
+## D. Memory, policy and developer integrations
+
+| ID | Feature | Status | Current implementation/evidence | Gap / acceptance checklist |
+|---|---|---|---|---|
+| MEM-01 | Plaesy memory/knowledge CLI and index | **Implemented (existing product capability)** | CLI memory docs and `src/memory/`; `current-state-assessment.md:19` reports local index/search/serve/schedule/remember/update/archive/forget commands. | [ ] Test migration/export and policy-scoped access for selected agent workflow. |
+| MEM-02 | MCP and Hermes-compatible memory access | **Implemented (integration capability, not runtime replacement)** | `docs/memory/overview.md`, `docs/memory/architecture.md`, `docs/memory/mcp.md`. | [ ] Verify exact client compatibility/version. [ ] Do not infer orchestration or runtime parity. |
+| POL-01 | Policy-scoped autonomous execution and memory writes | **Design only / not demonstrated end-to-end** | `docs/platform/automation.md:3,34-48`; current-state assessment P1. | [ ] Allowed/denied/sensitive/conflict tests; provenance, undo, budget, stop and recovery evidence. |
+| POL-02 | Audit trail and secret redaction for agent execution | **Unknown / not verified end-to-end** | Requirements in `docs/platform/security.md`, collaboration docs; no complete agent-run audit test cited. | [ ] Canary secret tests across prompt/tool/error/log/export; correlate task/run/tool decisions without exposing private content. |
+| DEV-01 | External developer/runtime integrations | **Partial** | Memory protocols and delegate-provider building blocks exist; exact current provider matrix was not fully inventoried. | [ ] Publish tested backend/version matrix, requirements, credentials boundary, feature differences and support policy. |
+
+## E. Product lifecycle, security and operations
+
+| ID | Feature | Status | Current implementation/evidence | Gap / acceptance checklist |
+|---|---|---|---|---|
+| LIFE-01 | Managed local/remote instance lifecycle | **Not established by inspected CLI surface** | `current-state-assessment.md:17-19` says current help describes memory/agent workflows and does not expose cohesive instance-management/runtime surface. | [ ] Install/configure/start/stop/status/upgrade/remove journeys on supported profiles. |
+| LIFE-02 | Web/Desktop product journeys | **Unknown / not verified as integrated released product** | Target requirements in `product.md:32-35`; current-state assessment says product surface is incomplete. | [ ] Demonstrate install/open/login/remote-target flows and recovery on supported OS/profile. |
+| LIFE-03 | Backup/restore/upgrade/rollback | **Not verified** | `current-state-assessment.md:35,54` says no deployment/recovery operation was run; product requirements specify journeys. | [ ] Disposable backup/restore/corruption/key-loss/upgrade/rollback drills with integrity evidence. |
+| SEC-01 | Human OIDC/session/RBAC | **Partial / Studio foundations exist** | Studio auth files cited above; CLI Relay identity remains unauthenticated. | [ ] Define scope across modules and test end-to-end authorization, not just login. |
+| SEC-02 | Local storage protection | **Partial** | CLI Relay creates owner-only DB on Unix/rejects exposed DB permissions per `src/relay.rs` and `agent-collaboration.md:3`; parent dirs/sidecars/backups and non-Unix are not secured by this. | [ ] Validate directory/sidecar/backup policy and OS matrix. |
+| SEC-03 | Tenant/ownership model | **Design decision open** | `docs/platform/decisions.md:8,28`; blocks shared/remote schema and auth design. | [ ] Owner approves hierarchy, resource ownership/transfer, identity and minimum authorization together. |
+| SEC-04 | Supply chain, cross-platform, accessibility | **Unknown / not demonstrated in this assessment** | `current-state-assessment.md:37` lists these as unverified. | [ ] Supported OS matrix, signed artifacts/SBOM, install/uninstall, accessibility evidence. |
+| OPS-01 | Observability/SLO/support/retention | **Design/unknown** | Open decisions in `decisions.md:26-33`; Studio QA reports missing metrics/queue observability. | [ ] Named owner, measured limits, retention/export/deletion, backup, restore and incident runbook. |
+| MIG-01 | Incumbent workflow/data migration and rollback | **Not verified** | `current-state-assessment.md:29,57,67`; no owner-approved workflow inventory/cutover evidence. | [ ] Per-workflow parity, import reconciliation, parallel run, rollback rehearsal; no incumbent disabled before gate passes. |
+
+## F. Incumbent comparison status
+
+The inspected repository has integration notes and product direction, but no complete, evidence-linked capability matrix for all named incumbents. `docs/memory/comparison.md` is a memory/Nexus comparison and is **not** a platform replacement comparison.
+
+**Current pinned-source cross-reference:** `replacement-source-inventory.md` now records immutable discovery head SHAs for all 11 requested repositories and partial pinned-source audits for Hermes, Paperclip, and DeepSeek Harness. These are not owner-approved release baselines, and no target has an exhaustive leaf-capability audit. The Hermes API acceptance set and DeepSeek session-persistence scenarios remain candidate evidence; none are verified against a running incumbent or Plaesy replacement. Use that inventory as the source-side research index, not as evidence that the product rows below have been fully compared. The other eight targets now also have bounded pinned-source reviews recorded in the inventory, but all 11 reviews remain partial and none is an exhaustive leaf-feature audit.
+
+| Target | Pinned discovery snapshot | Audit state | Next evidence step |
+|---|---|---|---|
+| Hermes Agent | `40d1e95f37e409f9f618f32c170661c66b86a4f4` | Partial documentation audit; 29 API candidates; no runtime rerun | Complete leaf workflows against approved release; run focused incumbent scenarios and map to Plaesy tests/tasks. |
+| Paperclip | `7685b7a4fc00fb5469c4e1fb38b1d8ba534322af` | Partial documentation/code/test-assertion review; no tests run | Reconcile each capability with route/service implementation and focused tests; complete leaf inventory and runtime checks. |
+| DeepSeek Harness | `39163dd30f703a79079e2d2446545cff3c453738` | Partial architecture/session review; 8 persistence acceptance leads; no tests run | Confirm product boundary, inspect remaining package workflows, run focused persistence/shutdown tests. |
+| Nimbalyst | `30482d5b719cd7609fb02645008c2f5088565ab9` | Partial source/test spot-check; tests not run | Enumerate leaf workflows and validate persistence, worktree isolation, auth and recovery scenarios. |
+| Orca | `65c84d41101e2e6255f64155985de873fc81c902` | Partial README/test-lead review; remote transport not runtime verified | Resolve product boundary; inspect transport/auth implementation and run local/remote execution tests. |
+| Craft Anything | `ba46f341abf0c31e83d050bbc0f0d7ebba295367` | Partial README/agent-rule review; no runtime tests | Inventory tool contracts, consent and build/check workflow; exercise selected scenarios safely. |
+| FigCraft | `e1883565479f3c763488fe0d7a149fafee33ebb9` | Partial README/manifest/roadmap review; no runtime tests | Audit command leaves, import/export and collaboration/auth behavior; run format round-trip tests. |
+| DeckCraft | `5c698493bc1f7ec36f90deb29df247b93330e654` | Partial README/manifest/roadmap review; no runtime or fidelity tests | Audit authoring commands and run representative PPTX round-trip, render and recovery scenarios. |
+| WordCraft | `29d862fabca05ba1e273a60041905c5ee8a7fb52` | Partial README/manifest/roadmap/agent-rule review; no runtime or fidelity tests | Audit document workflows and run representative DOCX round-trip, layout and recovery scenarios. |
+| Herald OS | `d8733e9393c7186e5e8c843ea4abc97d9173ee45` | Partial README/bridge/security/privacy/source-lead review; no suite or OS behavior tests | Validate permission gates, approval/audit/redaction and supported OS actions in an isolated runtime. |
+| OpenProject | `729734e478b19b009b856c96d53eaad89d436254` | Partial structural/docs/source-test assertion scan; read permission assertions for Markdown visibility, API project/work-package responses, membership visibility, role access, group-role propagation, membership role validation, group-membership deletion cascades, and group-membership creation, notification suppression, custom-message delivery, placeholder principals, invalid-create validation, and immutable PATCH fields (`AC-OPENPROJECT-MEMBER-001`–`010`, `AC-OPENPROJECT-ROLE-001`); tests not run; no module-level inventory or edition-boundary audit | Select in-scope modules/edition; enumerate leaf workflows and API contracts, run focused permission tests, and test migration/recovery. |
+
+All SHA values above are discovery snapshots, not a claim that those versions were selected for eventual parity testing. Exact evidence and limitations are maintained in [replacement-source-inventory.md](replacement-source-inventory.md).
+
+**Coverage gate:** 0/11 owner-approved target baselines; 0/11 exhaustive leaf audits; 0 verified incumbent acceptance runs; 0 verified replacement acceptance runs. Do not claim complete comparison or replacement until these denominators are updated from reproducible evidence.
+
+### Legacy comparison notes (historical, incomplete)
+
+The rows that follow capture earlier bounded notes and must not override the pinned-source audit state above. “Unknown” or “not located” is not proof of absence. Where a later pinned audit provides evidence, update the relevant row rather than treating this historical snapshot as current.
+
+The inspected repository has integration notes and product direction, but no complete, evidence-linked capability matrix for all named incumbents. `docs/memory/comparison.md` is a memory/Nexus comparison and is **not** a platform replacement comparison.
+
+The following legacy table retains the earlier bounded comparisons; consult the current pinned-source cross-reference above for present status.
+
+| System | Comparison status in inspected repository | Exact next step |
+|---|---|---|
+| Hermes Agent | **Partial** — integration-specific behavior documented in `docs/platform/agent-collaboration.md`, `docs/commands/relay.md`, `docs/memory/`; not full parity. | Add version/commit, supported workflow, session/tool/delivery behavior, permissions, recovery, data import/export, and sourced acceptance comparison. |
+| Paperclip | **Partial** — bounded source-inspection findings in project history; no full workflow matrix located in inspected docs. | Link prior evidence; compare task/run lifecycle, scheduling, approval, agent backend, UI/ops, migration. |
+| DeepSeek Harness | **Partial** — discovery snapshot is pinned in the current cross-reference; exact owner-approved target/boundary unresolved and leaf audit incomplete. | Resolve intended product boundary; complete pinned source audit and focused verification. |
+| Claude Code | **Partial** — named as permitted external backend in `decisions.md`; no full comparison matrix. | Compare selected workflow, tool approval/isolation, event/cancel, cost, data and migration. |
+| Codex | **Partial** — named as permitted external backend in `decisions.md`; no full comparison matrix. | Same rubric and workflow as other backends; pin version and evidence. |
+| Orca | **Partial** — discovery snapshot is pinned; exact owner-approved target/product boundary remains unresolved and no exhaustive matrix is complete. | Resolve product boundary; audit supported workflows, transport/auth, delivery and recovery against pinned source. |
+| Other products (e.g. Nexus Memory) | **Partial, different scope** — `docs/memory/comparison.md` compares memory products, not agent platform capabilities. | Keep memory comparison separate; include only if a real user workflow requires it. |
+
+“Not located” does not prove research never existed. If earlier research is in session history, another repository, or private notes, link it here rather than repeating it. Record product/version, source URL/commit, date accessed, workflow, observed/documented distinction, Plaesy code/test mapping, uncertainty, and next owner for each comparison.
+
+## G. Release acceptance checklist for first replacement slice
+
+Do not claim replacement until all mandatory items for the chosen workflow are evidenced:
+
+- [ ] Owner selected first workflow, deployment profile, runtime strategy and explicit exclusions; decisions recorded in `decisions.md`.
+- [ ] User workflow and incumbent baseline are reproducible with version/config/source recorded.
+- [ ] Plaesy task/run/message identifiers and state transitions persist across restart.
+- [ ] Agent principal is authenticated and authorized for the project/task/tools; revocation tested.
+- [ ] Delivery states distinguish queued, runtime-accepted, acknowledged, failed and unknown; no false “seen” claim.
+- [ ] Duplicate delivery, lost ack, timeout, crash, stale lease, offline recipient and retry are fault-tested.
+- [ ] Tool permissions, budgets, cancellation and secret redaction are verified with synthetic inputs.
+- [ ] Output artifact and actual test evidence are attached; completion cannot be inferred from agent prose alone.
+- [ ] Concurrent work either uses isolated worktrees or has tested enforced write/conflict handling.
+- [ ] Backup/export/import and rollback tested before any cutover; incumbent remains usable through parallel-run.
+- [ ] Focused tests rerun on the integrated checkout; limitations, backend dependencies and residual risks documented.
+
+## H. Agent work protocol (avoid repeating research)
+
+1. Read this checklist plus [open decisions](decisions.md), [current-state assessment](current-state-assessment.md), and the feature’s linked spec before starting.
+2. Search the cited implementation/test paths and prior comparison notes. If evidence is missing, update the existing row/note; do not start an unbounded vendor survey.
+3. Take one row or disjoint set of rows as the task boundary. State files owned, acceptance criteria, and dependencies before parallel edits.
+4. Report exact paths changed, commands and observed outcomes, evidence label, and remaining unknowns. Do not promote design-only to implemented.
+5. Integrator reviews the combined diff and reruns focused tests. Update status only after that verification.
+
+## Sources and scope
+
+- [Platform documentation index](README.md)
+- [Current-state assessment](current-state-assessment.md)
+- [Open decisions](decisions.md)
+- [Product requirements](product.md)
+- [Agent collaboration](agent-collaboration.md)
+- [Autonomous operation and memory](automation.md)
+- [Relay command](../commands/relay.md)
+- [Task commands](../commands/tasks.md)
+- [File collaboration spec](../../spec/files-realtime-collaboration/spec.md)
+- [Memory comparison (different scope)](../memory/comparison.md)
+- Plaesy Studio evidence paths are identified in the Studio columns; no Studio tests were run for this checklist. A full multi-repository verification remains outstanding.

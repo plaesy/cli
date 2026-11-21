@@ -1,0 +1,18 @@
+{
+  "delegation_id": "deleg_2d667288",
+  "started": "2026-11-18 16:36:58",
+  "task_count": 1,
+  "model": "Medium",
+  "provider": null,
+  "tasks": [
+    {
+      "index": 0,
+      "goal": "Audit Paperclip source and tests incrementally: inspect exact existing task and inventory, verify pinned clean checkout, then take next bounded evidence family beyond already documented org/issue/approval/budget. Return source and test line evidence, mark tests not run, map to task, identify gaps. Read-only, no builds/tests/edit/upstream.",
+      "log": "/home/ubuntu/.hermes/cache/delegation/live/deleg_2d667288/task-0.log",
+      "status": "completed",
+      "exit_reason": "completed",
+      "model": "Medium"
+    }
+  ],
+  "completed": "2026-11-18 16:38:16"
+}

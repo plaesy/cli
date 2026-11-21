@@ -1,6 +1,6 @@
 # Spec: first replacement vertical slice (agent execution)
 
-Status: approved by the product owner on 2026-11-19. Owned paths in section 9 were assigned to their tasks on the same date. Owner open questions in section 10 stay UNKNOWN.
+Status: approved by the product owner on 2026-11-19. Owned paths in section 9 were assigned to their tasks on the same date. Delegated cohort, success, incumbent baseline, NFR and cutover decisions are in `docs/platform/decisions.md` (Delegated decisions, 2026-11-19); they are revocable, not personal owner approval. Remaining questions not listed there stay UNKNOWN.
 Parent: `.plaesy/spec/plaesy-agent-platform/spec.md` (requirements R2–R7, R9).
 Task: `critical_feature-specify-first-replacement-vertical-slice`.
 
@@ -106,12 +106,13 @@ Integrator-only files: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, 
 
 ## 10. Open questions (UNKNOWN, owner and review trigger)
 
-- Target cohort and success outcome. Owner: product owner. Review before the first implementation claim.
-- Incumbent baseline for agent execution: which product and pinned version. Owner: product owner, with the research owner. Review after `high_chore-recover-and-compare-incumbent-research`.
-- NFR thresholds: latency, throughput, recovery time, retention. Owner: product/operations owner. Not set here; no thresholds are invented.
-- Budget values in section 6 and the retry default in section 4. Owner: product owner. Proposed defaults only.
-- Shared profile hosting topology and backup/restore support model. Owner: product/operations owner.
-- Cutover appetite and rollback authority. Owner: product owner. Relevant to R13, not to this slice.
+The cohort, success outcome, incumbent baseline, availability/latency/recovery NFRs and parallel-run duration are delegated and revocable per `docs/platform/decisions.md`; they are not UNKNOWN. Remaining open questions:
+
+- Step/time budget values and maximum retry attempts. Owner: product/engineering; set before the first runtime test that depends on them.
+- Retention/legal or compliance requirements beyond the delegated 30-day run-log/evidence default. Legal/compliance owner; before any retention claim.
+- Shared profile hosting topology and backup/restore support model beyond the delegated RPO/RTO. Operations owner; before deployment qualification.
+- Exact cutover and rollback authorization after the delegated two-week parallel run. Owner approval is required before incumbent shutdown, irreversible migration, or cutover.
+- Exact DeepSeek Harness and Orca identity/version if those comparisons are in scope; delegated targets are recorded in `docs/platform/decisions.md` and remain revocable by observed evidence.
 
 ## 11. Exit criteria for this draft
 

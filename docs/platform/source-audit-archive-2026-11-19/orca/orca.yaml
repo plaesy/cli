@@ -1,0 +1,4 @@
+scripts:
+  setup: |
+    node config/scripts/development/setup/run-internal-dev-setup.mjs
+    pnpm install

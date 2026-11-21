@@ -36,7 +36,7 @@
     {
       "id": "rust-tests-pass",
       "check": "Locked Rust tests and Clippy pass for the IR crate or module",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo fmt --check && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo fmt --check && cargo test --workspace --locked && cargo clippy --locked --all-targets -- -D warnings",
       "expected": "pass",
       "status": "pending",
       "evidence": "test"
@@ -52,7 +52,7 @@
     {
       "id": "cargo-focused-tests",
       "check": "Focused tests matching 'design_code_ir' run and at least one passes",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked design_code_ir 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace --locked design_code_ir 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
       "expected": ">= 1",
       "status": "pending",
       "evidence": "test"
