@@ -1,0 +1,43 @@
+[package]
+name = "plaesy-adapter-memory"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Mesin memori: SQLite, FTS5, HNSW, ONNX (ADR 0003: adapter)."
+
+[dependencies]
+plaesy-mdlint = { path = "../../support/mdlint" }
+axum = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+dirs = { workspace = true }
+laya-decision = { workspace = true }
+libc = { workspace = true }
+lru = { workspace = true }
+notify = { workspace = true }
+ort = { workspace = true }
+parking_lot = { workspace = true }
+regex = { workspace = true }
+rmcp = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tokenizers = { workspace = true }
+tokio = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+ureq = { workspace = true }
+usearch = { workspace = true }
+uuid = { workspace = true }
+walkdir = { workspace = true }
+
+[dev-dependencies]
+filetime = { workspace = true }
+proptest = { workspace = true }
+tempfile = { workspace = true }

@@ -22,7 +22,7 @@ the models folder for your OS (table below). Lookup order at runtime: `embedding
 
 ## File locations
 
-Defaults follow each OS's convention (implemented in `src/memory/paths/mod.rs`, using the `dirs` crate). Models are a
+Defaults follow each OS's convention (implemented in `crates/plaesy/adapter/memory/src/memory/paths/mod.rs`, using the `dirs` crate). Models are a
 cache: they can be deleted and `make model` downloads them again. Data (database) is kept.
 
 | OS      | Models (cache)                                      | Database (persistent local data)                    |

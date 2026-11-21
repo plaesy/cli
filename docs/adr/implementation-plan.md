@@ -83,7 +83,7 @@ Keputusan owner: dialek pertama; apakah subquery dan window function masuk.
 
 ## Fase 3: design-ir/1
 
-Status sekarang (2026-11-21): format DTCG diterapkan; validator semantik dan lenient di Rust (`src/designir/`); codegen ke modul Rust dengan tabel konstanta; round trip struktural ke kode lulus untuk 20 korpus. Yang belum: codegen Dioxus `rsx!`, dan korpus dari desain nyata.
+Status sekarang (2026-11-21): format DTCG diterapkan; validator semantik dan lenient di Rust (`crates/plaesy/adapter/design-ir/src/designir/`); codegen ke modul Rust dengan tabel konstanta; round trip struktural ke kode lulus untuk 20 korpus. Yang belum: codegen Dioxus `rsx!`, dan korpus dari desain nyata.
 
 Masuk: Fase 0 keluar. ADR 0010 diterima lewat delegasi.
 
@@ -92,7 +92,7 @@ Kerja:
 1. `domain/design` di Rust: node, komponen, variant, token, layout. Aturan di ADR 0010 bagian "Aturan semantik". Validator Node sudah ada sebagai referensi.
 2. Format token DTCG: sudah diterapkan. Konversi contoh dilakukan oleh skrip sekali jalan (sudah selesai).
 3. Korpus: 20 fixture sintetis sudah ada di `docs/adr/corpus/design-ir-1/` (dibuat `tools/gen-design-corpus.js`). Ganti atau tambah dengan desain nyata saat tersedia.
-4. Codegen ke Dioxus 0.7.10 (`src/designir/dioxus_codegen.rs`): ada, dikompilasi dengan feature `designir-dioxus`. Render diuji dengan dioxus-ssr 0.7.10.
+4. Codegen ke Dioxus 0.7.10 (`crates/plaesy/adapter/design-ir/src/designir/dioxus_codegen.rs`): ada, dikompilasi dengan feature `designir-dioxus`. Render diuji dengan dioxus-ssr 0.7.10.
 5. Round trip struktural ke modul Rust (ID, hierarki, kind, scope, nilai token) pada korpus: 100% (sudah diukur, lulus). Round trip ke komponen Dioxus belum ada.
 
 Keluar: round trip struktural 100% pada korpus 20 fixture melalui adapter; aturan semantik di Rust lulus uji negatif.

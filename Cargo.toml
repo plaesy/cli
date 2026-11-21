@@ -1,101 +1,80 @@
-[package]
-name = "plaesy"
-version = "0.0.1"
-edition = "2021"
-rust-version = "1.92"
-authors = ["Mahbub Zulkarnain"]
-description = "Plaesy CLI for agent workflows and offline-first memory"
-license = "MIT"
-repository = "https://github.com/plaesy/cli"
-readme = "README.md"
-keywords = ["memory", "vector-search", "hermes", "embeddings", "semantic-search", "mcp"]
-categories = ["database", "embedded-systems"]
-autobins = false
+# Virtual manifest: the Plaesy packages live under crates/plaesy/ (ADR 0003).
+# Shared versions are declared once in [workspace.dependencies]; members inherit them.
 
-[features]
-default = []
-# Codegen design IR ke komponen Dioxus (ADR 0010). Opsional agar build default tidak berubah.
-designir-dioxus = ["dep:dioxus", "dep:dioxus-ssr"]
+[workspace]
+resolver = "2"
+members = [
+    "crates/plaesy/interface/client",
+    "crates/plaesy/adapter/design-ir",
+    "crates/plaesy/adapter/memory",
+    "crates/plaesy/adapter/relay",
+    "crates/plaesy/adapter/runtime",
+    "crates/plaesy/domain/api",
+    "crates/plaesy/domain/app",
+    "crates/plaesy/domain/data",
+    "crates/plaesy/domain/design",
+    "crates/plaesy/domain/flow",
+    "crates/plaesy/domain/identity",
+    "crates/plaesy/domain/workflow",
+    "crates/plaesy/dto",
+    "crates/plaesy/interface/cli",
+    "crates/plaesy/kernel",
+    "crates/plaesy/plaesy",
+    "crates/plaesy/service",
+    "crates/plaesy/support/analysis",
+    "crates/plaesy/support/common",
+    "crates/plaesy/support/designlint",
+    "crates/plaesy/support/loop",
+    "crates/plaesy/support/mdlint",
+    "crates/plaesy/support/tasks",
+]
+default-members = ["crates/plaesy/plaesy"]
 
-[[bin]]
-name = "plaesy"
-path = "src/main.rs"
-
-[dependencies]
-# Async runtime
-tokio = { version = "1.40", features = ["full"] }
-
-# Vector search
-usearch = { version = "2.15", default-features = false }
-
-# ONNX Runtime (embeddings)
-ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
-
-# SQLite storage
-rusqlite = { version = "0.32", features = ["bundled"] }
-
-# File watching
-notify = { version = "8", features = ["macos_fsevent"] }
-walkdir = "2.4"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0", features = ["preserve_order"] }
-indexmap = { version = "2", features = ["serde"] }
-regex = "1"
-quick-xml = "0.37"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+[workspace.dependencies]
+axum = { version = "0.8", features = ["json"] }
 base64 = "0.22"
-pulldown-cmark = "0.12"
-ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
-
-# Concurrency
-parking_lot = "0.12"
-
-# Observability
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
-thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
-keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
-
-# Per-OS standard directories (cache, data, home) for model and database defaults
+criterion = { version = "0.5", features = ["html_reports"] }
+dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"] }
+dioxus-ssr = { version = "=0.7.10" }
 dirs = "5"
-
-# Memory efficiency
+filetime = "0.2.29"
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false, features = ["std", "io", "sink"] }
+indexmap = { version = "2", features = ["serde"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+laya-decision = { path = "vendor/laya-decision", version = "=0.2.20" }
+libc = "0.2.191"
 lru = "0.12"
+notify = { version = "8", features = ["macos_fsevent"] }
+ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
+parking_lot = "0.12"
+proptest = "1.4"
+pulldown-cmark = "0.12"
+quick-xml = "0.37"
+regex = "1"
+rmcp = { version = "3.9", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
 serde_yaml = "0.9"
 sha2 = "0.10"
-uuid = { version = "1", features = ["v4"] }
-toml = "0.8"
+tempfile = "3.8"
+thiserror = "1.0"
 tokenizers = { version = "0.23.2", default-features = false, features = ["fancy-regex"] }
-laya-decision = { path = "vendor/laya-decision", version = "=0.2.20" }
-
-# Dioxus 0.7 stable (ADR 0010). Hanya dipakai dengan feature designir-dioxus.
-dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"], optional = true }
-
-# Render HTML untuk uji komponen (ADR 0010). Versi sama dengan dioxus.
-dioxus-ssr = { version = "=0.7.10", optional = true }
-
-# HTTP server for MCP Streamable HTTP transport (n8n, Dify, Kilo Code, Paperclip, etc.)
-axum = { version = "0.8", features = ["json"] }
+tokio = { version = "1.40", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io-util"] }
-futures-util = { version = "0.3", default-features = false, features = ["std", "io", "sink"] }
-libc = "0.2.191"
-rmcp = { version = "3.9", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
-
-[target.'cfg(windows)'.dependencies]
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+usearch = { version = "2.15", default-features = false }
+uuid = { version = "1", features = ["v4"] }
+walkdir = "2.4"
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_System_JobObjects"] }
 winreg = "0.52"
-
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-proptest = "1.4"
-tempfile = "3.8"
-tokio = { version = "1.40", features = ["full"] }
-futures = "0.3"
-filetime = "0.2.29"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [profile.release]
 opt-level = 3
@@ -109,33 +88,6 @@ inherits = "release"
 [profile.dev]
 opt-level = 1
 
-[[bench]]
-name = "hnsw_search"
-harness = false
-
-[[bench]]
-name = "embedding"
-harness = false
-
-[[bench]]
-name = "end_to_end"
-harness = false
-
 # esaxx-rs hard-codes a static MSVC CRT (/MT), which conflicts with the /MD objects of ort/cxx on Windows.
 [patch.crates-io]
 esaxx-rs = { path = "vendor/esaxx-rs" }
-
-[workspace]
-# Root tetap [package] "plaesy" sementara src/ belum dipindah (ADR 0003, langkah 10).
-# Virtual manifest dibuat saat paket root dipindah ke crates/plaesy/plaesy.
-members = [
-    "crates/plaesy/kernel",
-    "crates/plaesy/dto",
-    "crates/plaesy/domain/flow",
-    "crates/plaesy/domain/data",
-    "crates/plaesy/domain/api",
-    "crates/plaesy/domain/app",
-    "crates/plaesy/domain/design",
-    "crates/plaesy/service",
-    "crates/editor/flow",
-]

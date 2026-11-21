@@ -28,7 +28,7 @@ Plaesy menggantikan banyak produk (Hermes Agent, Paperclip, DeepSeek Harness, Ni
 
 Struktur harus memisahkan aturan bisnis, penyimpanan, transport, DTO, dan klien, serta mencegah dependensi yang melanggar arah.
 
-Repo saat ini: satu package Rust di `src/` (355 file) dan crate skeleton flow editor di `crates/editor/flow` (nama paket `flow-editor`). Crate ini akan dipindah ke `crates/plaesy/interface/client/` sesuai ADR 0011.
+Repo saat ini (sejak 2026-11-21, langkah 10 selesai): workspace virtual di root, semua paket di `crates/plaesy/`. Tidak ada lagi `src/` di root. Crate skeleton flow editor sudah dipindah ke `crates/plaesy/interface/client/` dengan nama `plaesy-interface-client` (ADR 0011).
 
 ## Dorongan keputusan
 
@@ -338,6 +338,53 @@ Aturan konversi:
 1. `cargo build --workspace` dan `cargo test --workspace` lulus pada setiap langkah di "Implementation checklist".
 2. `cargo tree` untuk setiap `domain/*` tidak memuat `tokio`, `axum`, `rusqlite`, atau crate I/O lain.
 3. Setiap crate berada di bawah `crates/plaesy/` dan namanya diawali `plaesy-`.
+
+## Hasil migrasi (langkah 10, 2026-11-21)
+
+Status: diterapkan atas permintaan pengguna (perintah `/goal`: migrasikan `src/` ke struktur folder terbaru). Keputusan pemetaan di bawah dapat diubah; tidak ada keputusan owner yang dilangkahi.
+
+Setiap modul lama dipindah ke crate berikut tanpa mengubah isi logika. Di tiap `lib.rs` ada alias `pub(crate) use plaesy_<crate>::<modul>;`, sehingga path `crate::<modul>::...` tetap berlaku. Facade `plaesy` mengekspor ulang setiap modul, sehingga `plaesy::<modul>` dan binary tidak berubah.
+
+| Crate | Modul lama (`src/`) | Konteks ADR |
+|---|---|---|
+| `plaesy-domain-identity` | `identity`, `authz`, `secrets` | identity |
+| `plaesy-domain-workflow` | `runstore`, `task_run`, `policy` | workflow |
+| `plaesy-adapter-memory` | `memory`, `decisions` | memory (adapter sqlite dan ONNX) |
+| `plaesy-adapter-relay` | `relay` | adapter relay |
+| `plaesy-adapter-runtime` | `adapter`, `runtime` | adapter runtime |
+| `plaesy-adapter-design-ir` | `designir`, `irvalidate` | design (ADR 0010); fitur `designir-dioxus` |
+| `plaesy-common` | `common`, `config`, `evidence`, `exclude`, `expected`, `files`, `imagegen`, `installer`, `mcpserver`, `projects`, `sessions`, `trimmer`; `version()` dan `VERSION` | belum ada konteks |
+| `plaesy-mdlint` | `mdlint` | belum ada konteks |
+| `plaesy-tasks` | `tasks`, `checklist` | workflow |
+| `plaesy-analysis` | `analyze`, `graph`, `validate`, `reach` | belum ada konteks |
+| `plaesy-designlint` | `designlint`, `evals` | belum ada konteks |
+| `plaesy-loop` | `delegate`, `loop_run` | workflow |
+| `plaesy-interface-cli` | `cli` | interface/cli |
+| `plaesy-interface-client` | (dari `crates/editor/flow`) | interface/client (ADR 0011) |
+| `plaesy` (facade) | `lib.rs`, `main.rs`, `tests/`, `benches/`, `examples/`, `build.rs` | plaesy (facade) |
+
+Yang belum ada dan tidak dibuat sekarang (agar rencana tidak tampak selesai): `interface/http`, `ws`, `mcp`, `acp`, `plugin/sdk`, `adapter/sqlite` sebagai crate terpisah, `adapter/http-client`, `adapter/sync`, `adapter/codegen-*`, `adapter/import-*`, dan konteks `app`/`api`/`data` di service. Semuanya tetap rencana di `docs/adr/implementation-plan.md`.
+
+Bukti kriteria penerimaan:
+
+- `cargo build --workspace --locked`, `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, dan `cargo fmt --all -- --check` dijalankan di tree ini (lihat hasil commit).
+- Kriteria 2 (`plaesy-domain-*` tidak mencapai tokio, axum, rusqlite, ureq, notify, ort, usearch, keyring, reqwest, hyper lewat dependensi normal) dan kriteria 3 (nama `plaesy*`, manifest di `crates/plaesy/`, kecuali `vendor/`) diuji oleh `crates/plaesy/plaesy/tests/architecture_test.rs` dengan `cargo metadata`. Tes ini ikut `cargo test --workspace`, sehingga `make verify` dan CI menjalankannya.
+- `Cargo.lock`: hanya entri paket path yang bertambah; versi dependensi eksternal tidak berubah.
+
+Celah yang ditemukan dan ditutup pada migrasi ini:
+
+- `tests/sessions_cli.rs` memanggil `complete` dari `doing`, padahal `complete` hanya boleh dari `review` (c00930f). Tes diperbarui ke alur `move doing review` lalu `complete`. Peringatan "Manual completion only; checklist and goal were not verified." sebelumnya tidak pernah dicetak; sekarang dicetak untuk tugas tanpa item checklist.
+- `cargo test`, `clippy`, dan CI di root hanya memilih paket facade setelah root menjadi virtual manifest. Makefile, CI, `CLAUDE.md`, dan `contracts.json` tugas sudah memakai `--workspace` atau `-p plaesy`. Kontrak yang memakai `cargo test --locked <filter>` di root bisa lulus tanpa menjalankan tes apa pun.
+- `src/bin/cli.rs` tidak pernah dibangun (`autobins = false`) dan memanggil API yang ada. Berkas dihapus; isi terakhirnya ada di commit `551afd3`.
+- Tes `designir`, `irvalidate`, dan `domain/*` memakai `CARGO_MANIFEST_DIR/docs/adr`; path sudah disesuaikan ke kedalaman crate baru.
+
+Keterbatasan yang masih terbuka (dicatat, bukan disembunyikan):
+
+- `irvalidate` (validator semantik untuk flow, data, api, app) tumpang tindih dengan `domain/*` dan `service/validate.rs`. Keduanya belum digabung; perlu ADR sendiri dan uji paritas Rust-Node tetap hijau.
+- `plaesy-domain-identity` dan `plaesy-domain-workflow` masih memakai `std::fs` dan `sha2`. Lolos kriteria `cargo tree`, tetapi I/O belum dipindah ke port `service`.
+- `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang `pub` dengan `#[doc(hidden)]`, karena dipakai tes lintas crate. Sebaiknya dipindah ke modul uji bersama.
+- Pembagian `support/*` bukan konteks ADR. Pemetaan itu perlu keputusan lanjutan (usulan: konteks `tooling`, atau masuk konteks yang ada).
+- Delegasi: pemetaan di atas dan penghapusan `src/bin/cli.rs` didelegasikan dan dapat dicabut.
 
 ## Open items
 

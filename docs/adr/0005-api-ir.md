@@ -71,7 +71,7 @@ Pengguna perlu mendefinisikan endpoint API secara visual: method, path, tipe req
 
 - `examples/api-ir-1/orders.json` lolos `ajv validate --spec=draft2020` terhadap `api-ir-1.schema.json`.
 - Uji negatif (method `FETCH` dan `responses` kosong) ditolak dengan benar.
-- Aturan semantik ada di Rust (`src/irvalidate/api.rs`) dan lolos contoh serta fixture negatif. Generator OpenAPI belum ada.
+- Aturan semantik ada di Rust (`crates/plaesy/adapter/design-ir/src/irvalidate/api.rs`) dan lolos contoh serta fixture negatif. Generator OpenAPI belum ada.
 
 ## Opsi yang dipertimbangkan
 

@@ -44,7 +44,7 @@ query
   SearchResult + Citation (path:line:revision)
 ```
 
-### Modules (`src/memory/`)
+### Modules (`crates/plaesy/adapter/memory/src/memory/`)
 
 | Module | Responsibility |
 |--------|----------------|
@@ -58,7 +58,7 @@ query
 | `mcp` | MCP server over stdio/HTTP with read tools plus note-create and query-gap-resolution tools |
 | `config`, `metrics`, `error` | TOML/env configuration, in-process counters with Prometheus text export, `MemoryError` (`thiserror`) |
 
-Binary: `plaesy` (`src/main.rs`). Memory operations are under the `memory` subcommand, including indexing, search, links, hygiene, stats and watch. `plaesy memory serve` runs the JSON service on stdin/stdout; `plaesy memory serve --mcp` runs the MCP server.
+Binary: `plaesy` (`crates/plaesy/plaesy/src/main.rs`). Memory operations are under the `memory` subcommand, including indexing, search, links, hygiene, stats and watch. `plaesy memory serve` runs the JSON service on stdin/stdout; `plaesy memory serve --mcp` runs the MCP server.
 
 ## Storage
 

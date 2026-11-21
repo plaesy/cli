@@ -35,8 +35,8 @@
     },
     {
       "id": "focused-tests",
-      "check": "flow-editor tests run and at least one passes",
-      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked -p flow-editor 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
+      "check": "plaesy-interface-client tests run and at least one passes",
+      "run": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --locked -p plaesy-interface-client 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print s+0}'",
       "expected": ">= 1",
       "status": "pending",
       "evidence": "test"

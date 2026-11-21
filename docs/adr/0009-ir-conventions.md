@@ -116,7 +116,7 @@ Keadaan terakhir (2026-11-21): `npm run check` lulus untuk 10 contoh positif, 20
 
 - Positif: satu tempat untuk aturan lintas-IR. ADR per-IR menjadi lebih pendek dan tidak saling bertentangan.
 - Negatif: skema yang sebelumnya terbuka di akar (`additionalProperties: true`) menjadi tertutup. Dokumen yang memakai field baru harus menunggu MINOR atau memakai `extensions`.
-- Netral: mode lenient ada di dua tempat, keduanya berbasis skema JSON: alat Node (`docs/adr/tools/lenient.js`) dan modul Rust (`src/irvalidate/lenient.rs`, berlaku untuk kelima IR).
+- Netral: mode lenient ada di dua tempat, keduanya berbasis skema JSON: alat Node (`docs/adr/tools/lenient.js`) dan modul Rust (`crates/plaesy/adapter/design-ir/src/irvalidate/lenient.rs`, berlaku untuk kelima IR).
 
 ## Kriteria penerimaan
 

@@ -1,0 +1,62 @@
+[package]
+name = "plaesy"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+description = "Plaesy CLI for agent workflows and offline-first memory"
+license = "MIT"
+authors = ["Mahbub Zulkarnain"]
+repository = "https://github.com/plaesy/cli"
+readme = "../../../README.md"
+keywords = ["memory", "vector-search", "hermes", "embeddings", "semantic-search", "mcp"]
+categories = ["database", "embedded-systems"]
+autobins = false
+
+[features]
+default = []
+designir-dioxus = ["plaesy-adapter-design-ir/designir-dioxus"]
+
+[[bin]]
+name = "plaesy"
+path = "src/main.rs"
+
+[dependencies]
+plaesy-domain-identity = { path = "../domain/identity" }
+plaesy-domain-workflow = { path = "../domain/workflow" }
+plaesy-adapter-memory = { path = "../adapter/memory" }
+plaesy-adapter-relay = { path = "../adapter/relay" }
+plaesy-adapter-runtime = { path = "../adapter/runtime" }
+plaesy-adapter-design-ir = { path = "../adapter/design-ir" }
+plaesy-common = { path = "../support/common" }
+plaesy-mdlint = { path = "../support/mdlint" }
+plaesy-tasks = { path = "../support/tasks" }
+plaesy-analysis = { path = "../support/analysis" }
+plaesy-designlint = { path = "../support/designlint" }
+plaesy-loop = { path = "../support/loop" }
+plaesy-interface-cli = { path = "../interface/cli" }
+clap = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+walkdir = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+criterion = { workspace = true }
+filetime = { workspace = true }
+futures = { workspace = true }
+proptest = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+
+[[bench]]
+name = "hnsw_search"
+harness = false
+
+[[bench]]
+name = "embedding"
+harness = false
+
+[[bench]]
+name = "end_to_end"
+harness = false
+

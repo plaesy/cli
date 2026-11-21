@@ -4,7 +4,7 @@
 #   install-model.sh             embedding model  all-MiniLM-L6-v2          (~90 MB)
 #   install-model.sh --rerank    + cross-encoder  ms-marco-MiniLM-L-6-v2    (~90 MB, optional reranking)
 #
-# Destinations (same rule as src/memory/paths.rs):
+# Destinations (same rule as crates/plaesy/adapter/memory/src/memory/paths.rs):
 #   Linux    $XDG_CACHE_HOME/plaesy/models   (default ~/.cache/plaesy/models)
 #   macOS    ~/Library/Caches/plaesy/models
 #   Windows  %LOCALAPPDATA%/plaesy/models    (Git Bash: $LOCALAPPDATA)

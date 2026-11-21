@@ -34,17 +34,17 @@ Complete API reference for library, CLI, and protocols.
 
 | Module | Purpose | Location |
 |--------|---------|----------|
-| `error` | Error types and `Result<T>` alias | `src/memory/error/mod.rs` |
-| `indexer` | Document extraction and chunking | `src/memory/indexer/mod.rs` |
-| `embeddings` | ONNX embedding engine | `src/memory/embeddings/mod.rs` |
-| `storage` | SQLite + HNSW persistence | `src/memory/storage/mod.rs` |
-| `search` | Query engine and ranking | `src/memory/search/mod.rs` |
-| `rerank` | Cross-encoder reranking (optional) | `src/memory/search/rerank.rs` |
-| `hygiene` | Index health audit | `src/memory/hygiene/mod.rs` |
-| `config` | Settings and validation | `src/memory/config/mod.rs` |
-| `metrics` | Prometheus-compatible metrics | `src/memory/metrics/mod.rs` |
-| `service` | Hermes-compatible JSON protocol | `src/memory/service/mod.rs` |
-| `mcp` | MCP server tools | `src/memory/mcp/mod.rs` |
+| `error` | Error types and `Result<T>` alias | `crates/plaesy/adapter/memory/src/memory/error/mod.rs` |
+| `indexer` | Document extraction and chunking | `crates/plaesy/adapter/memory/src/memory/indexer/mod.rs` |
+| `embeddings` | ONNX embedding engine | `crates/plaesy/adapter/memory/src/memory/embeddings/mod.rs` |
+| `storage` | SQLite + HNSW persistence | `crates/plaesy/adapter/memory/src/memory/storage/mod.rs` |
+| `search` | Query engine and ranking | `crates/plaesy/adapter/memory/src/memory/search/mod.rs` |
+| `rerank` | Cross-encoder reranking (optional) | `crates/plaesy/adapter/memory/src/memory/search/rerank.rs` |
+| `hygiene` | Index health audit | `crates/plaesy/adapter/memory/src/memory/hygiene/mod.rs` |
+| `config` | Settings and validation | `crates/plaesy/adapter/memory/src/memory/config/mod.rs` |
+| `metrics` | Prometheus-compatible metrics | `crates/plaesy/adapter/memory/src/memory/metrics/mod.rs` |
+| `service` | Hermes-compatible JSON protocol | `crates/plaesy/adapter/memory/src/memory/service/mod.rs` |
+| `mcp` | MCP server tools | `crates/plaesy/adapter/memory/src/memory/mcp/mod.rs` |
 
 ### Prelude
 
@@ -60,7 +60,7 @@ Imports: `Result`, `MemoryError`, common types.
 
 #### `SearchEngine`
 
-**Location**: `src/memory/search/mod.rs:50` (struct definition)
+**Location**: `crates/plaesy/adapter/memory/src/memory/search/mod.rs:50` (struct definition)
 
 **Constructor**:
 
@@ -123,7 +123,7 @@ pub async fn links(&self, path: &str, direction: LinkDirection) -> Result<Vec<Li
 
 #### `SearchResult`
 
-**Location**: `src/memory/storage/mod.rs:150`
+**Location**: `crates/plaesy/adapter/memory/src/memory/storage/mod.rs:150`
 
 ```rust
 pub struct SearchResult {
@@ -143,7 +143,7 @@ pub struct SearchResult {
 
 #### `Citation`
 
-**Location**: `src/memory/search/mod.rs:200`
+**Location**: `crates/plaesy/adapter/memory/src/memory/search/mod.rs:200`
 
 ```rust
 pub struct Citation {
@@ -169,7 +169,7 @@ impl CitationBuilder {
 
 #### `SearchFilter`
 
-**Location**: `src/memory/search/mod.rs:280`
+**Location**: `crates/plaesy/adapter/memory/src/memory/search/mod.rs:280`
 
 ```rust
 pub struct SearchFilter {
@@ -192,7 +192,7 @@ Tier is inferred from directory name if not declared in frontmatter:
 
 #### `MemoryConfig`
 
-**Location**: `src/memory/config/mod.rs:30`
+**Location**: `crates/plaesy/adapter/memory/src/memory/config/mod.rs:30`
 
 ```rust
 pub struct MemoryConfig {
@@ -224,7 +224,7 @@ Defaults per OS (Windows: `%LOCALAPPDATA%/Plaesy`, Linux: `~/.local/share/plaesy
 
 #### `EmbeddingEngine`
 
-**Location**: `src/memory/embeddings/mod.rs:80`
+**Location**: `crates/plaesy/adapter/memory/src/memory/embeddings/mod.rs:80`
 
 ```rust
 pub struct EmbeddingEngine;
@@ -248,7 +248,7 @@ Output: 384-dimensional f32 vector, L2-normalized.
 
 #### `Database`
 
-**Location**: `src/memory/storage/mod.rs:60`
+**Location**: `crates/plaesy/adapter/memory/src/memory/storage/mod.rs:60`
 
 ```rust
 pub struct Database;

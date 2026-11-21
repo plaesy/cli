@@ -115,7 +115,7 @@ Any agent (Hermes, Claude Code, an MCP client, a cron job) that already
 indexes this vault automatically sees `type: decision`/`type: project`
 notes the moment they're written by *any other* agent — no separate sync
 step, no re-teaching, no per-agent memory file, no character budget. The
-`graph` module (`src/memory/graph/mod.rs`) builds this view by reading the
+`graph` module (`crates/plaesy/adapter/memory/src/memory/graph/mod.rs`) builds this view by reading the
 same `documents.metadata` JSON column the search index already populates,
 so it requires no schema migration and stays in sync with whatever is on
 disk at query time.

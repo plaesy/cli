@@ -65,7 +65,7 @@ plaesy validate markdown docs/adr --no-baseline
 
 Belum ada langkah CI yang menjalankan keduanya. Ditunda sesuai keputusan owner; lihat Fase 0 di rencana.
 
-Kode Rust ada di `src/designir/` (design-ir/1: validasi, codegen modul Rust dan komponen Dioxus 0.7, round trip, lenient) dan `src/irvalidate/` (flow, data, api, app: validasi; kelima IR: lenient). Diuji dengan `cargo test --locked --lib` (default) dan `cargo test --locked --lib --features designir-dioxus`. Uji paritas Node vs Rust ada (`tools/semantic-expected.json`, dibuat `tools/gen-semantic-expected.js`). Render komponen Dioxus diuji lewat dioxus-ssr (`cargo test --locked --lib --features designir-dioxus`). Belum ada: korpus dari desain nyata dan CI.
+Kode Rust ada di `crates/plaesy/adapter/design-ir/src/designir/` (design-ir/1: validasi, codegen modul Rust dan komponen Dioxus 0.7, round trip, lenient) dan `crates/plaesy/adapter/design-ir/src/irvalidate/` (flow, data, api, app: validasi; kelima IR: lenient). Diuji dengan `cargo test --locked --lib` (default) dan `cargo test --locked --lib --features designir-dioxus`. Uji paritas Node vs Rust ada (`tools/semantic-expected.json`, dibuat `tools/gen-semantic-expected.js`). Render komponen Dioxus diuji lewat dioxus-ssr (`cargo test --locked --lib --features designir-dioxus`). Belum ada: korpus dari desain nyata dan CI.
 
 ## Struktur folder
 
@@ -77,9 +77,9 @@ Kode Rust ada di `src/designir/` (design-ir/1: validasi, codegen modul Rust dan 
 - `examples-lenient/`: dokumen dengan field dari versi lebih baru. Harus INVALID dengan skema ketat dan VALID setelah lenient.
 - `corpus/design-ir-1/`: 20 fixture desain sintetis, dibuat oleh `tools/gen-design-corpus.js`. Bukan data desain nyata.
 - `tools/`: `check-ir.js` (pemeriksa utama), `validate-ir.js` (semantik), `lenient.js` (mode lenient), `gen-design-corpus.js` (generator korpus).
-- `src/designir/` (kode Rust, di paket utama): validasi, codegen, round trip, dan lenient untuk design-ir/1.
-- `src/irvalidate/` (kode Rust): validator semantik untuk flow, data, api, dan app, serta lenient berbasis skema untuk kelima IR.
-- `src/designir/dioxus_codegen.rs`: codegen ke komponen Dioxus 0.7 (feature `designir-dioxus`). `dioxus_sample.rs` adalah keluaran untuk `order-desk-ui.json` yang dikompilasi dengan feature itu.
+- `crates/plaesy/adapter/design-ir/src/designir/` (kode Rust, di paket utama): validasi, codegen, round trip, dan lenient untuk design-ir/1.
+- `crates/plaesy/adapter/design-ir/src/irvalidate/` (kode Rust): validator semantik untuk flow, data, api, dan app, serta lenient berbasis skema untuk kelima IR.
+- `crates/plaesy/adapter/design-ir/src/designir/dioxus_codegen.rs`: codegen ke komponen Dioxus 0.7 (feature `designir-dioxus`). `dioxus_sample.rs` adalah keluaran untuk `order-desk-ui.json` yang dikompilasi dengan feature itu.
 - `implementation-plan.md`: rencana fase dan keputusan yang dibutuhkan.
 
 ## Menulis atau mengganti ADR

@@ -1,0 +1,14 @@
+[package]
+name = "plaesy-mdlint"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Lint Markdown (belum ada konteks di ADR 0003)."
+
+[dependencies]
+pulldown-cmark = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

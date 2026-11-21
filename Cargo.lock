@@ -1445,10 +1445,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flow-editor"
-version = "0.0.1"
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3181,28 +3177,58 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 name = "plaesy"
 version = "0.0.1"
 dependencies = [
- "axum",
- "base64 0.22.1",
  "chrono",
  "clap",
  "criterion",
- "dioxus",
- "dioxus-ssr",
- "dirs 5.0.1",
  "filetime",
  "futures",
- "futures-util",
- "indexmap",
- "keyring",
+ "plaesy-adapter-design-ir",
+ "plaesy-adapter-memory",
+ "plaesy-adapter-relay",
+ "plaesy-adapter-runtime",
+ "plaesy-analysis",
+ "plaesy-common",
+ "plaesy-designlint",
+ "plaesy-domain-identity",
+ "plaesy-domain-workflow",
+ "plaesy-interface-cli",
+ "plaesy-loop",
+ "plaesy-mdlint",
+ "plaesy-tasks",
+ "proptest",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "walkdir",
+]
+
+[[package]]
+name = "plaesy-adapter-design-ir"
+version = "0.0.1"
+dependencies = [
+ "dioxus",
+ "dioxus-ssr",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "plaesy-adapter-memory"
+version = "0.0.1"
+dependencies = [
+ "axum",
+ "chrono",
+ "clap",
+ "dirs 5.0.1",
+ "filetime",
  "laya-decision",
  "libc",
  "lru",
  "notify",
  "ort",
  "parking_lot",
+ "plaesy-mdlint",
  "proptest",
- "pulldown-cmark",
- "quick-xml",
  "regex",
  "rmcp",
  "rusqlite",
@@ -3214,7 +3240,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokenizers 0.23.2",
  "tokio",
- "tokio-util",
  "toml",
  "tracing",
  "tracing-subscriber",
@@ -3222,9 +3247,80 @@ dependencies = [
  "usearch",
  "uuid",
  "walkdir",
- "windows-sys 0.59.0",
- "winreg",
+]
+
+[[package]]
+name = "plaesy-adapter-relay"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "keyring",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
+name = "plaesy-adapter-runtime"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-workflow",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
+name = "plaesy-analysis"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "keyring",
+ "plaesy-common",
+ "quick-xml",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "ureq 3.5.0",
  "zip 2.6.1",
+]
+
+[[package]]
+name = "plaesy-common"
+version = "0.0.1"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "dirs 5.0.1",
+ "libc",
+ "notify",
+ "parking_lot",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "ureq 3.5.0",
+ "uuid",
+ "winreg",
+]
+
+[[package]]
+name = "plaesy-designlint"
+version = "0.0.1"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -3271,7 +3367,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-domain-identity"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-domain-workflow"
+version = "0.0.1"
+dependencies = [
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
 name = "plaesy-dto"
+version = "0.0.1"
+
+[[package]]
+name = "plaesy-interface-cli"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "clap",
+ "dirs 5.0.1",
+ "plaesy-adapter-memory",
+ "plaesy-adapter-relay",
+ "plaesy-analysis",
+ "plaesy-common",
+ "plaesy-designlint",
+ "plaesy-loop",
+ "plaesy-mdlint",
+ "plaesy-tasks",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "toml",
+ "ureq 3.5.0",
+]
+
+[[package]]
+name = "plaesy-interface-client"
 version = "0.0.1"
 
 [[package]]
@@ -3279,6 +3420,34 @@ name = "plaesy-kernel"
 version = "0.0.1"
 dependencies = [
  "serde_json",
+]
+
+[[package]]
+name = "plaesy-loop"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "libc",
+ "plaesy-common",
+ "plaesy-tasks",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "ureq 3.5.0",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "plaesy-mdlint"
+version = "0.0.1"
+dependencies = [
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -3292,6 +3461,21 @@ dependencies = [
  "plaesy-domain-flow",
  "plaesy-kernel",
  "serde_json",
+]
+
+[[package]]
+name = "plaesy-tasks"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "libc",
+ "plaesy-adapter-memory",
+ "plaesy-common",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

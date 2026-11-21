@@ -14,7 +14,7 @@ Build the web visual flow editor in Dioxus on top of the Rust IR core, using a s
 
 ## Scope
 
-- Editor crate `crates/editor/flow/`.
+- Editor crate `crates/plaesy/interface/client/`.
 - Save and load of flows as versioned IR through the core API only.
 
 ## Non-goals
@@ -23,24 +23,24 @@ Build the web visual flow editor in Dioxus on top of the Rust IR core, using a s
 
 ## Deliverables
 
-- Editor crate `crates/editor/flow/`.
+- Editor crate `crates/plaesy/interface/client/`.
 - Save and load of flows as versioned IR through the core API only.
 
 ## Dependencies
 
 - `high_feature-implement-visual-flow-ir-core-in-rust`
-- Workspace registration is done (2026-11-19): `crates/editor/flow` is a skeleton member of the workspace with no dependencies yet.
+- Workspace registration is done (2026-11-19): `crates/plaesy/interface/client` (dulu `crates/editor/flow`) is a skeleton member of the workspace with no dependencies yet.
 
 ## Acceptance criteria
 
 - [ ] A flow saved from the editor loads back as the same IR.
 - [ ] The editor reaches the core only through the documented API.
-- [ ] `cargo test --locked -p flow-editor` passes with a non-zero test count.
+- [ ] `cargo test --locked -p plaesy-interface-client` passes with a non-zero test count.
 
 ## Parallel execution
 
 - Lane: H (visual flow IR, codegen and editor (R16))
-- Owned paths (exclusive write): `crates/editor/flow/` (skeleton exists, registered in the workspace). This task owns it from here on.
+- Owned paths (exclusive write): `crates/plaesy/interface/client/` (skeleton exists, registered in the workspace). This task owns it from here on.
 - Integrator-only shared files, never edited inside a task: `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/main.rs`, `src/cli/mod.rs`, `.github/workflows/ci.yml`, `rust-toolchain.toml`
-- Focused tests: `cargo test --locked -p flow-editor` passes with a non-zero test count.
+- Focused tests: `cargo test --locked -p plaesy-interface-client` passes with a non-zero test count.
 - Claim rule: claim only when every dependency in `issue.json` is `done` and no unassigned-owner marker remains. Work in its own `git worktree` and branch.

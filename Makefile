@@ -20,19 +20,19 @@ help:
 	@echo "  make check-artifacts       List machine-local .plaesy files tracked by git (read-only)"
 
 build:
-	cargo build --locked
+	cargo build --workspace --locked
 
 release:
 	cargo build --release
 
 test:
-	cargo test --all --locked
+	cargo test --workspace --locked
 
 test-one:
-	cargo test --all --locked $(TEST)
+	cargo test --workspace --locked $(TEST)
 
 eval:
-	cargo test --test relevance_eval --locked -- --nocapture
+	cargo test -p plaesy --test relevance_eval --locked -- --nocapture
 
 bench:
 	cargo bench --locked
@@ -43,7 +43,7 @@ lme:
 	cargo run --release --locked --example longmemeval -- "$(DATA)" --stride $(STRIDE)
 
 lint:
-	cargo clippy --all-targets --locked -- -D warnings
+	cargo clippy --workspace --all-targets --locked -- -D warnings
 
 fmt:
 	cargo fmt

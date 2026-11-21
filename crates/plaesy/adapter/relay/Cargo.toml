@@ -1,0 +1,21 @@
+[package]
+name = "plaesy-adapter-relay"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Antrean relay antar-agent (ADR 0003: adapter/relay)."
+
+[dependencies]
+chrono = { workspace = true }
+keyring = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

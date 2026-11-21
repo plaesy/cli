@@ -1,0 +1,18 @@
+[package]
+name = "plaesy-adapter-design-ir"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Validator dan codegen design-ir/1 serta irvalidate (ADR 0010)."
+
+[features]
+# Codegen design IR ke komponen Dioxus (ADR 0010). Opsional agar build default tidak berubah.
+designir-dioxus = ["dep:dioxus", "dep:dioxus-ssr"]
+
+[dependencies]
+dioxus = { workspace = true, optional = true }
+dioxus-ssr = { workspace = true, optional = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

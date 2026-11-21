@@ -15,6 +15,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Fixed
 
+- `plaesy tasks complete` now prints that a manual completion has no checklist verification when the task has no checklist items.
+
 - Allow `memory curate` and scheduled curation to read the daemon-maintained index without attempting
   a conflicting vault sync.
 - Detect additional provider-formatted credentials during memory hygiene without exposing matched values.

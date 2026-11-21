@@ -86,7 +86,7 @@ Skema hanya memeriksa bentuk. Aturan berikut dicek di `domain/data`:
 
 - `examples/data-ir-1/crm.json` lolos `ajv validate --spec=draft2020` terhadap `data-ir-1.schema.json`.
 - Uji negatif (`on_delete` tidak dikenal, `limit` di atas 1000, dan `primary_key` kosong) ditolak dengan benar.
-- Validasi semantik ada di Rust (`src/irvalidate/data.rs`) dan lolos contoh serta fixture negatif. Codegen SQL belum ada.
+- Validasi semantik ada di Rust (`crates/plaesy/adapter/design-ir/src/irvalidate/data.rs`) dan lolos contoh serta fixture negatif. Codegen SQL belum ada.
 
 ## Opsi yang dipertimbangkan
 
