@@ -666,9 +666,16 @@ impl ServerHandler for PlaesyMcpServer {
         _context: RequestContext<RoleServer>,
     ) -> impl std::future::Future<Output = std::result::Result<ListToolsResult, McpError>> + Send + '_
     {
+        let read_only = self.engine.is_read_only();
         std::future::ready(
             serde_json::from_value::<Vec<Tool>>(tools())
-                .map(ListToolsResult::with_all_items)
+                .map(|all| {
+                    let visible: Vec<Tool> = all
+                        .into_iter()
+                        .filter(|tool| !(read_only && WRITE_TOOLS.contains(&tool.name.as_ref())))
+                        .collect();
+                    ListToolsResult::with_all_items(visible)
+                })
                 .map_err(|e| {
                     McpError::internal_error(format!("invalid MCP tool schema: {e}"), None)
                 }),
@@ -676,6 +683,9 @@ impl ServerHandler for PlaesyMcpServer {
     }
 
     fn get_tool(&self, name: &str) -> Option<Tool> {
+        if self.engine.is_read_only() && WRITE_TOOLS.contains(&name) {
+            return None;
+        }
         serde_json::from_value::<Vec<Tool>>(tools())
             .ok()?
             .into_iter()
