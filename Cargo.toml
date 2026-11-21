@@ -9,6 +9,7 @@ members = [
     "crates/plaesy/adapter/memory",
     "crates/plaesy/adapter/relay",
     "crates/plaesy/adapter/runstore",
+    "crates/plaesy/adapter/sqlite",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",
     "crates/plaesy/domain/app",
