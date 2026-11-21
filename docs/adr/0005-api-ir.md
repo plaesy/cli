@@ -1,10 +1,12 @@
 # ADR 0005: API IR (api-ir/1)
 
-- Status: proposed. Belum disetujui owner.
+- Status: diusulkan (belum disetujui).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan).
-- Version: api-ir/1 (usulan)
-- Related: ADR 0002 (flow-ir/1, isi endpoint), ADR 0003 (struktur folder), ADR 0004 (data-ir/1, sumber data), ADR 0009 (konvensi IR)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: `api-ir/1`: endpoint, DTO, dan auth
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002 (flow), 0003 (crate), 0004 (data), 0009 (konvensi IR)
 
 ## Context
 

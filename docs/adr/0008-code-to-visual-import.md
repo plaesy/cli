@@ -1,9 +1,12 @@
 # ADR 0008: Impor kode ke visual (import-code)
 
-- Status: proposed. Belum disetujui owner.
+- Status: diusulkan (belum disetujui).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan).
-- Related: ADR 0002 (flow-ir/1), ADR 0004 (data-ir/1), ADR 0005 (api-ir/1), ADR 0006 (app-ir/1), ADR 0009 (konvensi IR), ADR 0010 (design-ir/1)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: adapter `import-*` untuk membaca kode dan skema yang sudah ada
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002, 0004, 0005, 0006, 0009, 0010
 
 ## Context
 

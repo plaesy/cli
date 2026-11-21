@@ -1,9 +1,12 @@
 # ADR 0011: Struktur klien (plaesy-interface-client)
 
-- Status: proposed. Belum disetujui owner.
+- Status: diusulkan (belum disetujui).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan)
-- Related: ADR 0003 (struktur crate; bagian klien dipindah ke sini), ADR 0009 (konvensi IR), ADR 0010 (design IR)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: crate klien `plaesy-interface-client` (fitur `web`, `desktop`, `mobile`)
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0003, 0009, 0010
 
 ## Context
 

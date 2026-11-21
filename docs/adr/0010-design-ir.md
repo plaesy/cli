@@ -1,11 +1,12 @@
 # ADR 0010: Design IR dan konversi desain-kode (design-ir/1)
 
-- Status: proposed untuk bagian format dan node. Bagian yang diwarisi dari ADR 0001 tetap berstatus "accepted under delegation" (lihat "Warisan dari ADR 0001").
+- Status: diusulkan untuk format dan node (belum disetujui). Bagian yang diwarisi dari ADR 0001 berstatus diterima lewat delegasi owner (2026-11-18).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan untuk bagian format dan token)
-- Version: design-ir/1 (usulan)
-- Menggantikan: ADR 0001 (design-code IR) dan ADR 0007 (design IR). Keduanya berstatus `superseded` dan menunjuk ke ADR ini.
-- Related: ADR 0009 (konvensi IR), ADR 0006 (app-ir/1 merujuk desain), ADR 0008 (impor kode ke visual)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: `design-ir/1` dan konversi desain, kode, dan IR
+- Menggantikan: ADR 0001 (desain-kode IR), ADR 0007 (design IR)
+- Digantikan oleh: -
+- Terkait: ADR 0006, 0008, 0009
 
 ## Context
 

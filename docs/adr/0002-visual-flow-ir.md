@@ -1,84 +1,121 @@
-# ADR 0002: Language-neutral visual flow IR
+# ADR 0002: Visual flow IR yang netral bahasa (flow-ir/1)
 
-- Status: accepted for the decisions listed (node catalogue, CEL expressions, retry formula, loop limits, approval channel, Rust as first codegen adapter), accepted in chat by the owner on 2026-11-18. Bagian "IR format (flow-ir/1)" dan "Validasi" adalah usulan dan belum disetujui owner. Versi tetap `flow-ir/1`.
-- Approver: owner, by chat approval on 2026-11-18 (no named person recorded).
-- Version: flow-ir/1 (accepted untuk keputusan di atas; bagian "IR format" masih usulan)
-- Governs: spec R16; tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen`
-- Related: ADR 0009 (konvensi IR), ADR 0010 (design IR). Flow IR is separate because flows are logic, not layout.
+- Status: diterima sebagian. Keputusan yang tercantum di "Keputusan yang diterima" sudah disetujui owner. Format dan aturan validasi di "Usulan format" belum disetujui.
+- Tanggal: 2026-11-18 (persetujuan lewat chat)
+- Pengambil keputusan: owner (persetujuan di chat, tanpa nama orang tercatat)
+- Berlaku untuk: `flow-ir/1`
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0009 (konvensi IR), ADR 0010 (design IR). Flow dipisah dari desain karena flow adalah logika, bukan tata letak.
+- Spec: R16. Task: `high_chore-decide-visual-flow-ir-and-codegen-adr`, `high_feature-implement-visual-flow-editor-and-codegen`.
 
-## Context
+## Ringkasan untuk pembaca cepat
 
-Users author flows in a visual editor. A flow is stored once as IR, then generated into a chosen language (Rust, Go, JavaScript, or others) through an adapter. The IR must not contain any target-language field. Plaesy itself is implemented in Rust (R14). The editor is Dioxus (owner choice).
+- Flow disimpan sekali sebagai IR netral. Dari IR itu dibuat kode untuk bahasa target lewat adapter.
+- Sudah diterima: katalog node, ekspresi CEL, rumus retry, batas loop, kanal persetujuan, dan Rust sebagai adapter codegen pertama.
+- Belum diterima: bentuk JSON dokumen flow dan daftar aturan validasi di bagian "Usulan format".
 
-## Decision drivers
+## Konteks
 
-- Language neutrality: the IR never names a language, runtime, or library.
-- Explicit behaviour: every step has typed inputs and outputs and a defined failure outcome.
-- Stable identity: node IDs survive edits, reordering, and re-import.
-- Forward compatibility: unknown fields are kept, not dropped.
-- Explicit loss: a node a target cannot express is reported, never silently skipped.
+Pengguna membuat flow di editor visual. Flow disimpan sebagai IR, lalu dibuat menjadi kode untuk bahasa yang dipilih (Rust, Go, JavaScript, atau lainnya). IR tidak boleh memuat field yang menyebut bahasa target. Plaesy ditulis dalam Rust (R14). Editor memakai Dioxus (pilihan owner).
 
-## Considered options
+## Dorongan keputusan
 
-1. **Code-first flows (users write code, editor shows a graph).** Rejected for slice 1: ties the model to one language.
-2. **Vendor flow format (copy another product's schema).** Rejected: copies a product, not a model we own.
-3. **Plaesy-owned IR with a fixed node catalogue.** Chosen.
+- Netral bahasa: IR tidak menyebut bahasa, runtime, atau library.
+- Perilaku eksplisit: setiap langkah punya input dan output bertipe, dan hasil gagal yang jelas.
+- Identitas stabil: ID node tetap setelah diedit, diurutkan ulang, atau diimpor ulang.
+- Kompatibilitas maju: field yang tidak dikenal disimpan, tidak dibuang (aturan final di ADR 0009).
+- Kehilangan eksplisit: node yang tidak bisa diekspresikan target dicatat, tidak dilewati diam-diam.
 
-## Node catalogue (flow-ir/1, slice one)
+## Opsi yang dipertimbangkan
 
-Verified against Windmill's public OpenFlow schema ([openflow.openapi.yaml](https://github.com/windmill-labs/windmill/blob/main/openflow.openapi.yaml), schema version 1.835.0). Each module has `id`, `kind`, `inputs` and `outputs` (typed), and an error policy. Plaesy renames kinds and does not copy Windmill's JSON.
+1. **Flow berbasis kode** (pengguna menulis kode, editor menampilkan graf). Ditolak untuk iris pertama: model terikat ke satu bahasa.
+2. **Format flow vendor** (menyalin skema produk lain). Ditolak: menyalin produk, bukan model milik sendiri.
+3. **IR milik Plaesy dengan katalog node tetap.** Dipilih.
 
-### Module kinds included in slice one
+## Keputusan yang diterima
 
-| Plaesy kind | Windmill equivalent | Purpose |
-| --- | --- | --- |
-| `action` | `script` (PathScript), `rawscript` | Calls a named operation with a typed contract. Inline code is not stored in the IR. |
-| `subflow` | `flow` (PathFlow) | Calls another flow by ID and version. |
-| `pass` | `identity` | Passes values through, for mapping and debugging. |
-| `branch_one` | `branchone` | First matching branch runs; a default branch is required. |
-| `branch_all` | `branchall` | Runs all branches, sequential or parallel, each with its own failure policy. |
-| `for_each` | `forloopflow` | Iterates a list with `iterator`, `parallel`, `parallelism`, and `skip_failures`. |
-| `while` | `whileloopflow` | Loops with `max_iterations` and `max_duration_secs`, both required. |
-| `approval` | a script with `suspend` | Waits for `required_events` approvals, with `timeout` and an outcome on timeout. |
+### Katalog node (iris pertama)
 
-### Step-level settings included in slice one
+Katalog diverifikasi terhadap skema OpenFlow publik milik Windmill (versi schema 1.835.0, [openflow.openapi.yaml](https://github.com/windmill-labs/windmill/blob/main/openflow.openapi.yaml)). Plaesy mengganti nama kind dan tidak menyalin JSON Windmill.
 
-- `retry`: `constant` or `exponential`, with a `retry_if` expression.
-- `timeout`: maximum runtime in seconds.
-- `stop_after_if`: early termination after a step.
-- `skip_if`: conditional skip.
-- `continue_on_error`: flow continues when the step fails.
-- `scope`: per-step permission scope (for example `domain:action[:resource]`). A step may only narrow the flow's scope, never widen it. Maps to R5 (least privilege) and R9 (tool and policy boundaries).
-- `early_return`: ends the flow with an explicit output.
-- `failure_handler`: one per flow; runs after retries are exhausted.
-- `preprocessor`: runs before the first step on external triggers; script or rawscript only.
+Setiap module punya `id`, `kind`, `inputs`, `outputs` (bertipe), dan kebijakan error.
 
-### Excluded from slice one (with reason)
+| Kind Plaesy | Padanan Windmill | Fungsi |
+|---|---|---|
+| `action` | `script` (PathScript), `rawscript` | Memanggil operasi bernama dengan kontrak bertipe. Kode inline tidak disimpan di IR. |
+| `subflow` | `flow` (PathFlow) | Memanggil flow lain dengan ID dan versi. |
+| `pass` | `identity` | Meneruskan nilai, untuk pemetaan dan debug. |
+| `branch_one` | `branchone` | Cabang pertama yang cocok dijalankan. Cabang default wajib. |
+| `branch_all` | `branchall` | Semua cabang dijalankan, berurutan atau paralel, dengan kebijakan gagal masing-masing. |
+| `for_each` | `forloopflow` | Iterasi daftar dengan `iterator`, `parallel`, `parallelism`, `skip_failures`. |
+| `while` | `whileloopflow` | Loop dengan `max_iterations` dan `max_duration_secs`, keduanya wajib. |
+| `approval` | script dengan `suspend` | Menunggu `required_events` persetujuan, dengan `timeout` dan hasil saat timeout. |
 
-- `aiagent`, `aidecision`, memory settings, and AI transforms: AI nodes are a separate capability and need their own ADR.
-- `identity` used as an AI step: not needed.
-- `debounce`: marked EE in Windmill's schema; not in slice one.
-- `mock`: kept as a test fixture concept, not a runtime node.
-- `sleep` and `cache_ttl`: deferred until the runtime exists.
+Pengaturan di tingkat langkah:
 
-## Codegen contract
+- `retry`: `constant` atau `exponential`, dengan `retry_if`.
+- `timeout`: batas waktu dalam detik.
+- `stop_after_if`: berhenti awal setelah langkah.
+- `skip_if`: lewati bersyarat.
+- `continue_on_error`: flow lanjut walau langkah gagal.
+- `scope`: izin per langkah, misalnya `domain:action[:resource]`. Langkah hanya boleh mempersempit scope flow, tidak boleh memperluasnya. Terkait R5 dan R9.
+- `early_return`: mengakhiri flow dengan output eksplisit.
+- `failure_handler`: satu per flow. Dijalankan setelah retry habis.
+- `preprocessor`: dijalankan sebelum langkah pertama pada pemicu eksternal. Hanya untuk `script` atau `rawscript`.
 
-- Each target is an adapter implementing one trait: generate per node kind, or report a loss.
-- The adapter must support every kind it claims. A kind it cannot express is listed in its loss report.
-- Generated code passes the same flow fixtures as the IR for that adapter.
+Tidak masuk iris pertama:
 
-## IR format (flow-ir/1)
+- `aiagent`, `aidecision`, memori, dan transformasi AI: butuh ADR sendiri.
+- `identity` sebagai langkah AI: tidak diperlukan.
+- `debounce`: ditandai EE di skema Windmill.
+- `mock`: konsep fixture uji, bukan node runtime.
+- `sleep` dan `cache_ttl`: ditunda sampai runtime ada.
 
-Usulan format di dalam `flow-ir/1`. Versi tidak berubah. Owner perlu mengonfirmasi bagian ini.
+### Kontrak codegen
+
+- Setiap target adalah adapter yang mengimplementasikan satu trait: menghasilkan kode per kind, atau melaporkan kehilangan.
+- Adapter harus mendukung setiap kind yang diklaimnya. Kind yang tidak bisa diekspresikan masuk laporan kehilangan.
+- Kode hasil codegen lulus fixture flow yang sama dengan IR untuk adapter itu.
+
+### Ekspresi: CEL
+
+- CEL (Common Expression Language, crate `cel`, lisensi MIT) dipilih. Ekspresi selalu berhenti karena CEL tidak Turing-complete. Evaluasi bisa dihentikan lewat `cel::Interrupt`, sehingga ada batas waktu ([cel-rust](https://github.com/cel-rust/cel-rust)).
+- Rhai ditolak. Ia bahasa skrip penuh. Keamanannya bergantung pada `set_max_operations`, dan fungsi Rust eksternal dihitung sebagai satu operasi walau biayanya besar ([Rhai max operations](https://rhai.rs/book/safety/max-operations.html)).
+
+### Rumus retry
+
+- Jeda sebelum percobaan ke-k (k ≥ 2) = min(base × multiplier^(k−2), cap). Default: base 1 detik, multiplier 2, cap 60 detik, tanpa jitter (deterministik untuk uji fixture).
+- Simulasi: 3 percobaan → jeda 1 dan 2 detik (total 3 detik). 5 percobaan → 1, 2, 4, 8 detik (total 15 detik). 8 percobaan → total 123 detik, cap aktif pada percobaan ke-8.
+- `retry_if` adalah ekspresi CEL atas objek error.
+
+### Batas loop
+
+- `for_each`: waktu total = ceil(N / P) × d. Default usulan: maksimum 10.000 item dan paralelisme maksimum 50. Pada d = 0,2 detik: 10.000 item dengan P = 10 butuh 200 detik; dengan P = 50 butuh 40 detik. 100.000 item dengan P = 50 butuh 400 detik.
+- `while`: batas efektif = min(max_iterations, ceil(max_duration / d)). Default usulan: `max_iterations` 1.000, `max_duration_secs` 3.600. Pada d = 1 detik batas 1.000 iterasi; pada d = 10 detik batas durasi aktif di 360 iterasi.
+- Kedua field wajib, sehingga tidak ada loop tanpa batas.
+
+### Kanal persetujuan
+
+- Utama: API HTTP yang mengembalikan URL lanjut sekali pakai dengan masa berlaku, plus halaman web di editor Dioxus. Windmill juga memakai URL rahasia untuk approver ([dokumentasi approval Windmill](https://www.windmill.dev/docs/flows/flow_approval)).
+- Setiap approval wajib punya `required_events`, `timeout` eksplisit, dan hasil untuk timeout dan penolakan.
+
+### Adapter codegen pertama
+
+- Rust. Keputusan 2026-11-18, untuk menguji dengan aplikasi Plaesy sendiri. Go dan JavaScript menyusul sebagai adapter terpisah.
+
+## Usulan format (belum disetujui)
+
+Bagian ini adalah usulan. Versi tetap `flow-ir/1`. Owner perlu mengonfirmasi bagian ini sebelum dianggap berlaku.
 
 ### Serialisasi
 
-- **Kanonik: JSON** (UTF-8). Disimpan di database dan dikirim lewat API sebagai JSON.
-- **Validasi: JSON Schema** (draft 2020-12). Editor dan backend memakai schema yang sama.
-- **YAML opsional** untuk dibaca dan diedit manusia. Dikonversi ke JSON sebelum diproses. Tidak ada dua bentuk yang diproses berbeda.
-- **Tidak ada** field yang menyebut bahasa target, runtime, atau library.
+- Kanonik: JSON (UTF-8). Disimpan di database dan dikirim lewat API.
+- Validasi bentuk: JSON Schema draft 2020-12 (`schemas/flow-ir-1.schema.json`).
+- YAML boleh untuk dibaca dan diedit manusia, tetapi dikonversi ke JSON sebelum diproses. Tidak ada dua bentuk yang diproses berbeda.
+- Tidak ada field yang menyebut bahasa target, runtime, atau library.
 
-### Bentuk dokumen
+### Contoh dokumen
 
 ```json
 {
@@ -118,19 +155,19 @@ Usulan format di dalam `flow-ir/1`. Versi tidak berubah. Owner perlu mengonfirma
 
 ### Aturan bentuk
 
-- **`id` dokumen** dan **`id` module** tidak pernah berubah saat diedit, diurutkan ulang, atau diimpor ulang.
-- **Module** memiliki `id`, `kind`, `inputs`, dan `outputs`, serta kebijakan error `on_error`: `fail`, `continue`, atau id module penanganan.
-- **Referensi data** memakai jalur: `flow.input.<nama>` untuk input flow, dan `<id_module>.<output>` untuk output module yang sudah dijalankan sebelumnya. Referensi ke module yang belum dijalankan adalah error validasi.
-- **Ekspresi** (`when`, `retry_if`, `stop_after_if`, `skip_if`) berupa string CEL sesuai usulan di atas.
-- **Tipe** memakai subset JSON Schema: `string`, `number`, `boolean`, `object`, `array`, dan `null`. Tipe lain didefinisikan sebagai object dengan `$ref`.
-- **Field yang tidak dikenal** disimpan apa adanya saat dibaca dan ditulis ulang. Tidak dibuang.
-- **Konstruksi yang tidak dipetakan** oleh adapter codegen tercatat di laporan kehilangan. Tidak dilewati diam-diam.
-- **Inline code** tidak disimpan di IR. Langkah `action` hanya merujuk operasi bernama.
+- `id` dokumen dan `id` module tidak berubah saat diedit, diurutkan ulang, atau diimpor ulang.
+- Module punya `id`, `kind`, `inputs`, `outputs`, dan `on_error` (`fail`, `continue`, atau id module penanganan).
+- Referensi data: `flow.input.<nama>` untuk input flow, dan `<id_module>.<output>` untuk module yang sudah jalan. Referensi ke module yang belum jalan adalah error validasi.
+- Ekspresi (`when`, `retry_if`, `stop_after_if`, `skip_if`) adalah string CEL.
+- Tipe memakai subset JSON Schema: `string`, `number`, `boolean`, `object`, `array`, `null`. Tipe lain didefinisikan dengan `$ref`.
+- Field yang tidak dikenal masuk `extensions` (ADR 0009).
+- Konstruksi yang tidak dipetakan adapter masuk laporan kehilangan.
+- Inline code tidak disimpan di IR. `action` hanya merujuk operasi bernama.
 
-### Pemetaan kind ke field
+### Field per kind
 
 | `kind` | Field khusus |
-| --- | --- |
+|---|---|
 | `action` | `operation`, `inputs`, `outputs` |
 | `subflow` | `flow_id`, `flow_version`, `inputs`, `outputs` |
 | `pass` | `inputs`, `outputs` |
@@ -140,84 +177,55 @@ Usulan format di dalam `flow-ir/1`. Versi tidak berubah. Owner perlu mengonfirma
 | `while` | `condition`, `modules`, `max_iterations` (wajib), `max_duration_secs` (wajib) |
 | `approval` | `required_events`, `timeout_secs` (wajib), `on_timeout`, `on_reject` |
 
-### Pemicu
+Pemicu flow (event UI dari `domain/app` atau endpoint dari `domain/api`) disimpan di konteks itu, bukan di dokumen flow.
 
-Pemicu flow (event UI dari `domain/app`, atau endpoint dari `domain/api`) disimpan di konteks itu, bukan di dokumen flow.
+### Aturan semantik (domain/flow)
 
-### Berkas pendukung
+Skema hanya memeriksa bentuk. Aturan berikut dicek di `domain/flow::validate`:
 
-- Skema bentuk (JSON Schema draft 2020-12): `schemas/flow-ir-1.schema.json`
-- Contoh lengkap yang memakai semua kind: `examples/flow-ir-1/kirim-faktur.json`
+- Id module unik dalam satu flow.
+- Referensi data hanya ke input flow atau module yang sudah jalan.
+- Tidak ada siklus, kecuali lewat `while` dan `for_each` yang punya batas.
+- Ekspresi CEL bisa di-parse.
+- Scope langkah hanya menyempitkan scope flow.
+- `failure_handler` merujuk id module yang ada.
+- Batas loop (`max_iterations`, `max_duration_secs`, `parallelism`) tidak boleh dilampaui walau skema membolehkannya.
+- Subflow merujuk flow dan versi yang ada, dan tidak rekursif.
+- Kehilangan saat codegen dicatat per module.
 
-Skema hanya memeriksa bentuk. Aturan berikut wajib dicek di `domain/flow` (fungsi `validate`):
+## Bukti dan catatan
 
-- **Id module unik** dalam satu flow.
-- **Referensi data** (`<id_module>.<output>`, `flow.input.<nama>`) hanya boleh merujuk input flow atau module yang dijalankan sebelumnya.
-- **Tidak ada siklus** dalam urutan module, kecuali lewat `while` dan `for_each` yang punya batas.
-- **Ekspresi CEL** harus bisa diparse. Ekspresi di `retry_if`, `when`, `condition`, `stop_after_if`, dan `skip_if` diperiksa saat validasi.
-- **Scope langkah** hanya boleh menyempitkan scope flow, tidak boleh melebarkannya.
-- **`failure_handler`** harus merujuk id module yang ada.
-- **Batas loop** (`max_iterations`, `max_duration_secs`, `parallelism`) tidak boleh dilampaui meskipun skema membolehkannya.
-- **Subflow** harus merujuk flow dan versi yang ada, dan tidak boleh membentuk rekursi.
-- **Kehilangan** saat codegen dicatat per module. Tidak ada module yang dilewati diam-diam.
+- Scope per langkah ada di skema Windmill. Plaesy mengadopsinya karena mendukung R5 dan R9.
+- Kind module, pengaturan langkah, retry, approval, timeout, early return, dan failure module diambil dari skema OpenFlow publik Windmill, bukan dari halaman pemasaran. Verifikasi ulang terhadap versi terbaru sebelum mengklaim paritas.
+- Catatan komunitas: deskripsi retry eksponensial Windmill tidak sama dengan rumusnya ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy mendefinisikan rumus secara eksplisit.
+- Dokumentasi approval Windmill berbeda soal default timeout (30 menit atau tanpa batas). Plaesy mewajibkan timeout eksplisit.
 
-Status validasi: contoh `kirim-faktur.json` lolos `ajv validate --spec=draft2020` terhadap `flow-ir-1.schema.json`. Uji negatif (module tanpa `default`, `max_iterations` di atas batas, dan `kind` yang salah) ditolak dengan benar. Validasi semantik di `domain/flow` belum ada.
+## Konfirmasi
 
-## Confirmation
+Yang sudah dijalankan (2026-11-21):
 
-- `examples/flow-ir-1/kirim-faktur.json` dan `retry-parallel-branches.json` lolos `ajv validate --spec=draft2020` terhadap `flow-ir-1.schema.json`.
-- Uji negatif: id module duplikat, referensi module yang tidak ada, `kind` tidak dikenal, dan `integer` sebagai tipe port ditolak.
-- `tools/validate-ir.js` melaporkan OK untuk contoh dan error untuk kesalahan yang disisipkan.
+- `examples/flow-ir-1/kirim-faktur.json` dan `retry-parallel-branches.json` VALID terhadap skema (`docs/adr/tools/check-ir.js`).
+- Fixture negatif `examples-negative/flow-ir-1/unknown-module-kind.json` dan `integer-port-type.json` INVALID (`check-ir.js`).
+- `tools/validate-ir.js` melaporkan semantik OK untuk kedua contoh.
 
-## Acceptance criteria (implementasi `flow-ir/1`)
+Belum ada: validasi semantik di Rust, interpreter, dan codegen.
 
-1. `domain/flow::validate` mengimplementasikan semua aturan di bagian "Validasi" dan lulus uji untuk setiap aturan, termasuk uji negatif.
-2. `domain/flow::eval` menjalankan kedua contoh dan menghasilkan output yang sama dengan fixture yang ditulis bersama contoh.
-3. Codegen Rust menghasilkan kode yang dikompilasi dan lulus fixture yang sama dengan interpreter (uji konformansi).
-4. Versi tetap `flow-ir/1`. Perubahan semantik membutuhkan ADR baru dan versi baru.
+## Kriteria penerimaan (implementasi flow-ir/1)
 
-## Consequences
+1. `domain/flow::validate` mengimplementasikan semua aturan semantik dan lulus uji positif dan negatif untuk setiap aturan.
+2. `domain/flow::eval` menjalankan kedua contoh dan menghasilkan output yang sama dengan fixture.
+3. Codegen Rust menghasilkan kode yang dikompilasi dan lulus fixture yang sama dengan interpreter.
+4. Versi tetap `flow-ir/1`. Perubahan semantik butuh ADR baru dan versi baru.
 
-- Positive: one model for all target languages; loops, approvals, and error paths are explicit.
-- Negative: the catalogue is larger, so the first editor build is larger.
-- Neutral: no target language is chosen by this ADR.
+## Konsekuensi
 
-## Evidence
+- Positif: satu model untuk semua bahasa target. Loop, approval, dan jalur error eksplisit.
+- Negatif: katalog lebih besar, sehingga editor awal juga lebih besar.
+- Netral: ADR ini tidak memilih bahasa target selain Rust sebagai adapter pertama.
 
-- Per-step scope is in Windmill's schema, and Plaesy adopts it because it serves R5 and R9.
-- Module kinds, step settings, retry, approval, timeout, early return and failure module are taken from Windmill's public OpenFlow schema, not from the marketing site. Verify again against the current version before any parity claim.
-- A community note reports that Windmill's exponential retry description disagrees with its formula ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy's retry must define the formula explicitly.
-- Windmill's approval docs disagree on the default timeout (30 minutes versus indefinite). Plaesy requires an explicit timeout for every `approval` node.
+## Open items
 
-## Proposed resolutions (research and simulation; owner confirms)
-
-### Expression language for pass and branch
-
-- **Chosen proposal: CEL** (Common Expression Language, the `cel` crate, MIT, targets full conformance with cel-spec, runs the conformance suite in CI). CEL is non-Turing-complete, so expressions always terminate. Evaluation can be interrupted through `cel::Interrupt`, which gives a time bound ([cel-rust](https://github.com/cel-rust/cel-rust)).
-- **Rejected for expressions: Rhai.** It is a full scripting language. Its safety depends on `set_max_operations` and related caps, and an external Rust function counts as one operation regardless of its real cost ([Rhai max operations](https://rhai.rs/book/safety/max-operations.html)). A flow expression should not be a general program.
-
-### Retry formula (explicit, simulated)
-
-- Delay before attempt k (k ≥ 2) = min(base × multiplier^(k−2), cap). Defaults: base 1 s, multiplier 2, cap 60 s, no jitter (deterministic for fixture tests).
-- Simulation: 3 attempts → waits 1 s, 2 s (total 3 s). 5 attempts → 1, 2, 4, 8 s (total 15 s). 8 attempts → total 123 s, cap engaged at attempt 8.
-- `retry_if` is a CEL expression over the error object.
-
-### Loop limits (simulated)
-
-- `for_each`: wall time = ceil(N / P) × d. Proposed defaults: at most 10,000 items and parallelism at most 50. Simulation at d = 0.2 s: 10,000 items with P = 10 takes 200 s; with P = 50 takes 40 s. 100,000 items with P = 50 takes 400 s, so the 10,000-item default stays inside typical interactive bounds.
-- `while`: effective bound = min(max_iterations, ceil(max_duration / d)). Proposed defaults: `max_iterations` 1,000 and `max_duration_secs` 3,600. Simulation: with d = 1 s the bound is 1,000 iterations (1,000 s); with d = 10 s the duration cap binds at 360 iterations (3,600 s). Both fields are required, so neither bound can be omitted.
-
-### Approval channel (proposal)
-
-- Primary: HTTP API that returns a single-use resume URL with an expiry, plus a web page in the Dioxus editor. Windmill also uses generated secret URLs for approvers ([Windmill approval docs](https://www.windmill.dev/docs/flows/flow_approval)).
-- Approvals require `required_events`, an explicit `timeout`, and an outcome for timeout and rejection.
-
-## Still owner decisions
-
-Accepted on 2026-11-18: the proposals above (CEL, the retry formula, loop limits, and the approval channel).
-
-| # | Question | Owner | Why it stays open |
-| --- | --- | --- | --- |
-| 1 | Approver and acceptance date for this ADR | product owner | Accepted in chat on 2026-11-18; a named approver can be added if required. |
-| 2 | First codegen adapter | product owner | Decided 2026-11-18: Rust, for testing with Plaesy's own application. Go and JavaScript follow later as separate adapters. |
-| 3 | Confirm or change the proposed expression language, retry defaults, loop limits and approval channel above | product owner | Accepted 2026-11-18. |
+| # | Pertanyaan | Pemilik | Status |
+|---|---|---|---|
+| 1 | Setujui bagian "Usulan format" (JSON, bentuk dokumen, aturan validasi) | owner | terbuka |
+| 2 | Nama approver tercatat | owner | opsional; persetujuan di chat sudah berlaku |

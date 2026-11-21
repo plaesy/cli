@@ -1,11 +1,12 @@
-# ADR 0003: Struktur folder dan crate
+# ADR 0003: Struktur folder dan crate Rust (backend)
 
-- Status: proposed (belum disetujui). Bagian struktur klien dipisah ke ADR 0011.
+- Status: diusulkan (belum disetujui). Bagian struktur klien dipindah ke ADR 0011.
 - Tanggal: 2026-11-21
-- Deciders: owner (belum memberi persetujuan)
-- Governs: batas layering Rust. Referensi ke task `t_5c6cc4ca` dihapus: task itu tidak ditemukan di `.plaesy/tasks/` pada 2026-11-21.
-- Related: ADR 0002 (flow-ir/1), ADR 0004 (data-ir/1), ADR 0005 (api-ir/1), ADR 0006 (app-ir/1), ADR 0008 (impor kode ke visual), ADR 0009 (konvensi IR), ADR 0010 (design IR, menggantikan 0001 dan 0007), ADR 0011 (struktur klien)
-- Format: MADR (Markdown Architectural Decision Records), disederhanakan
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: crate Rust backend, `domain/*`, `service`, `adapter/*`, `interface/*`
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002, 0004, 0005, 0006, 0008, 0009, 0010, 0011
 
 Cara membaca dokumen ini: bagian "Decision" berisi keputusan yang akan diimplementasi. Bagian "Considered options" menjelaskan alternatif yang ditolak dan alasannya. Bagian "Confirmation" menjelaskan cara memeriksa bahwa implementasi mengikuti keputusan ini.
 

@@ -1,10 +1,12 @@
-# ADR 0009: Konvensi bersama untuk semua IR Plaesy
+# ADR 0009: Konvensi bersama untuk semua IR
 
-- Status: proposed. Belum disetujui owner. Aturan yang berasal dari ADR yang sudah diterima (0001 dan 0002) dicatat di bagian "Asal aturan".
+- Status: diusulkan (belum disetujui). Aturan yang berasal dari ADR 0001 dan 0002 dicatat di bagian "Asal aturan".
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan)
-- Berlaku untuk: `flow-ir/1` (ADR 0002), `data-ir/1` (ADR 0004), `api-ir/1` (ADR 0005), `app-ir/1` (ADR 0006), `design-ir/1` (ADR 0010), dan impor kode (ADR 0008)
-- Related: ADR 0003 (struktur crate), ADR 0011 (struktur klien)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: semua IR dan jalur impor
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002, 0003, 0004, 0005, 0006, 0008, 0010
 
 ## Context
 

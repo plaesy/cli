@@ -64,7 +64,7 @@ Keluar:
 - Dua contoh di `examples/flow-ir-1/` menghasilkan output yang sama pada interpreter dan kode hasil codegen.
 - `cargo tree -p plaesy-domain-flow` tidak memuat `tokio`, `axum`, atau `rusqlite`.
 
-Keputusan owner: approval bagian format flow-ir/1 (ADR 0002 "IR format").
+Keputusan owner: approval bagian format flow-ir/1 (ADR 0002, bagian "Usulan format").
 
 ## Fase 2: data-ir/1
 

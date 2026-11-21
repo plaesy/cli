@@ -1,10 +1,12 @@
 # ADR 0006: App IR (app-ir/1)
 
-- Status: proposed. Belum disetujui owner.
+- Status: diusulkan (belum disetujui).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan).
-- Version: app-ir/1 (usulan)
-- Related: ADR 0002 (flow-ir/1, aksi tombol), ADR 0003 (struktur folder), ADR 0004 (data-ir/1, sumber data), ADR 0005 (api-ir/1), ADR 0009 (konvensi IR), ADR 0010 (design IR, menggantikan 0007)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: `app-ir/1`: layar, komponen, dan binding aksi
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002 (flow), 0003 (crate), 0004 (data), 0005 (api), 0009 (konvensi IR), 0010 (design)
 
 ## Context
 

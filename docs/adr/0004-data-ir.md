@@ -1,10 +1,12 @@
 # ADR 0004: Data IR (data-ir/1)
 
-- Status: proposed. Belum disetujui owner.
+- Status: diusulkan (belum disetujui).
 - Tanggal: 2026-11-21
-- Approver: owner (belum ada persetujuan).
-- Version: data-ir/1 (usulan)
-- Related: ADR 0002 (visual flow IR), ADR 0003 (struktur folder dan crate), ADR 0009 (konvensi IR)
+- Pengambil keputusan: owner (belum ada persetujuan)
+- Berlaku untuk: `data-ir/1`: skema database dan query
+- Menggantikan: -
+- Digantikan oleh: -
+- Terkait: ADR 0002 (flow), 0003 (crate), 0009 (konvensi IR)
 
 ## Context
 
