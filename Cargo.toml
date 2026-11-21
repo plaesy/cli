@@ -15,7 +15,7 @@ autobins = false
 [features]
 default = []
 # Codegen design IR ke komponen Dioxus (ADR 0010). Opsional agar build default tidak berubah.
-designir-dioxus = ["dep:dioxus"]
+designir-dioxus = ["dep:dioxus", "dep:dioxus-ssr"]
 
 [[bin]]
 name = "plaesy"
@@ -74,6 +74,9 @@ laya-decision = { path = "vendor/laya-decision", version = "=0.2.20" }
 
 # Dioxus 0.7 stable (ADR 0010). Hanya dipakai dengan feature designir-dioxus.
 dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"], optional = true }
+
+# Render HTML untuk uji komponen (ADR 0010). Versi sama dengan dioxus.
+dioxus-ssr = { version = "=0.7.10", optional = true }
 
 # HTTP server for MCP Streamable HTTP transport (n8n, Dify, Kilo Code, Paperclip, etc.)
 axum = { version = "0.8", features = ["json"] }

@@ -115,3 +115,51 @@ fn every_synthetic_corpus_document_generates_all_its_nodes() {
     }
     assert_eq!(count, 20);
 }
+
+/// Uji render: komponen sampel dirender ke HTML oleh dioxus-ssr, lalu setiap ID node
+/// dari dokumen sumber dicek ada di keluaran.
+#[cfg(feature = "designir-dioxus")]
+mod render {
+    use super::order_desk;
+    use crate::designir::codegen::node_rows;
+    use crate::designir::dioxus_sample::{CpButton, PgOrders};
+    use dioxus::prelude::*;
+
+    fn render_root(app: fn() -> Element) -> String {
+        let mut vdom = VirtualDom::new(app);
+        vdom.rebuild_in_place();
+        dioxus_ssr::render(&vdom)
+    }
+
+    #[test]
+    fn button_component_renders_its_nodes_and_label() {
+        let html = render_root(CpButton);
+        assert!(html.contains("data-plaesy-id=\"nd_button_root\""), "{html}");
+        assert!(
+            html.contains("data-plaesy-id=\"nd_button_label\""),
+            "{html}"
+        );
+        assert!(html.contains("Label"), "{html}");
+    }
+
+    #[test]
+    fn page_component_renders_every_page_node_id() {
+        let doc = order_desk();
+        let html = render_root(PgOrders);
+        let page_rows: Vec<_> = node_rows(&doc)
+            .into_iter()
+            .filter(|row| row.scope == "page:pg_orders")
+            .collect();
+        assert!(!page_rows.is_empty());
+        for row in page_rows {
+            let needle = format!("data-plaesy-id=\"{}\"", row.id);
+            assert!(html.contains(&needle), "node {} tidak dirender", row.id);
+        }
+    }
+
+    #[test]
+    fn rendered_style_carries_the_colour_token() {
+        let html = render_root(CpButton);
+        assert!(html.contains("background-color: #2563EB"), "{html}");
+    }
+}
