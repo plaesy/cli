@@ -1,0 +1,11 @@
+[package]
+name = "plaesy-domain-app"
+version = "0.0.1"
+edition = "2021"
+publish = false
+description = "Plaesy domain app: validasi semantik (ADR 0003). Tanpa I/O."
+
+[dependencies]
+plaesy-kernel = { path = "../../kernel" }
+plaesy-domain-flow = { path = "../flow" }
+serde_json = "1"

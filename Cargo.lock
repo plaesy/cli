@@ -3228,6 +3228,73 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-domain-api"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-flow",
+ "plaesy-kernel",
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-domain-app"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-flow",
+ "plaesy-kernel",
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-domain-data"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-flow",
+ "plaesy-kernel",
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-domain-design"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-flow",
+ "plaesy-kernel",
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-domain-flow"
+version = "0.0.1"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-dto"
+version = "0.0.1"
+
+[[package]]
+name = "plaesy-kernel"
+version = "0.0.1"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "plaesy-service"
+version = "0.0.1"
+dependencies = [
+ "plaesy-domain-api",
+ "plaesy-domain-app",
+ "plaesy-domain-data",
+ "plaesy-domain-design",
+ "plaesy-domain-flow",
+ "plaesy-kernel",
+ "serde_json",
+]
+
+[[package]]
 name = "plotters"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

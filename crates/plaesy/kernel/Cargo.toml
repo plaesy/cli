@@ -1,0 +1,9 @@
+[package]
+name = "plaesy-kernel"
+version = "0.0.1"
+edition = "2021"
+publish = false
+description = "Plaesy kernel: primitif bersama tanpa I/O (ADR 0003)."
+
+[dependencies]
+serde_json = "1"

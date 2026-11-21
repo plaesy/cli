@@ -1,0 +1,9 @@
+[package]
+name = "plaesy-domain-flow"
+version = "0.0.1"
+edition = "2021"
+publish = false
+description = "Plaesy domain flow: validasi semantik flow-ir/1 (ADR 0002). Tanpa I/O."
+
+[dependencies]
+serde_json = "1"

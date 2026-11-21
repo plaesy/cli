@@ -1,0 +1,8 @@
+[package]
+name = "plaesy-dto"
+version = "0.0.1"
+edition = "2021"
+publish = false
+description = "Plaesy DTO: bentuk data untuk API, editor, dan event. Tanpa logika bisnis (ADR 0003)."
+
+[dependencies]

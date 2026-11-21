@@ -126,4 +126,16 @@ harness = false
 esaxx-rs = { path = "vendor/esaxx-rs" }
 
 [workspace]
-members = ["crates/editor/flow"]
+# Root tetap [package] "plaesy" sementara src/ belum dipindah (ADR 0003, langkah 10).
+# Virtual manifest dibuat saat paket root dipindah ke crates/plaesy/plaesy.
+members = [
+    "crates/plaesy/kernel",
+    "crates/plaesy/dto",
+    "crates/plaesy/domain/flow",
+    "crates/plaesy/domain/data",
+    "crates/plaesy/domain/api",
+    "crates/plaesy/domain/app",
+    "crates/plaesy/domain/design",
+    "crates/plaesy/service",
+    "crates/editor/flow",
+]
