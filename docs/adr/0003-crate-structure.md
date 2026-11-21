@@ -392,8 +392,8 @@ Keterbatasan dan keputusannya:
   - `interface/mcp` (`plaesy-interface-mcp`): server JSON-RPC 2.0 stdio dengan `initialize`, `tools/list`, `tools/call`. Ditulis tanpa `rmcp`, agar kontrak stdout eksplisit.
   - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, replay, `Gap`) dan server WebSocket memakai `tokio-tungstenite`. Pilihan library ini keputusan default yang didelegasikan.
   - `adapter/sync` (`plaesy-adapter-sync`): log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log bertahan di SQLite (`SqliteChangeLog`), dan `MemoryChangeLog` dipakai untuk tes.
-  - `interface/acp` (`plaesy-interface-acp`): ADR tidak merinci protokol ACP. Bentuk metode `initialize` dan `document/*` adalah default sementara dan harus dicocokkan dengan spesifikasi owner.
-- Yang masih terbuka: spesifikasi ACP yang sebenarnya (hanya owner yang bisa memberikannya).
+  - `interface/acp` (`plaesy-interface-acp`): agen ACP v1 lewat stdio, subset `initialize`, `session/new`, `session/prompt` (dijawab `end_turn` dengan pesan bahwa belum ada model), dan `session/cancel`. Sumber: https://agentclientprotocol.com/protocol/v1/overview. Operasi dokumen ada sebagai ekstensi `_plaesy/document/*`; aturan penamaan ekstensi ACP belum diverifikasi.
+- ACP: subset v1 sudah diimplementasikan. Yang belum: metode klien-ke-agen (`fs/*`, `terminal/*`, `session/request_permission`), `session/load`, dan model bahasa sungguhan.
 
 ## Open items
 
