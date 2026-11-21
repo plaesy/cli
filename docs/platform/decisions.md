@@ -63,18 +63,22 @@ The owner wants Plaesy to be better than, and ultimately able to replace, Hermes
 
 Resolve product/module scope and tenant/ownership hierarchy with identity/authorization together first. These are implementation gates for shared/remote APIs and data contracts. Next approve enforced shared-write boundary and fail-closed/degraded mode, overlap/confirmation semantics, Git/lease protocol, one CLI namespace and the deterministic pre-implementation test set. Those gates block implementation of the affected shared collaboration, schema/API and stable CLI contracts; isolated local-only work may proceed only if it does not bake in unresolved assumptions. Runtime adapter conformance, full fault-injection coverage, recovery drills, accessibility and data lifecycle evidence are release gates for the capabilities they cover; live injection/shared collaboration must not be advertised before required conformance evidence exists. Every gate needs named accountable product/engineering/security owner, chosen option, rationale, affected components, test/evidence, and approval date. Record decisions in dated ADRs and link them here. Until authorized owners approve, unresolved decisions remain open; recommendations here do not silently select policy on their behalf.
 
-## Design-code IR (ADR, proposed)
+## Design-code IR (ADR 0009 and 0010)
 
-Status: IR ADR (0001) accepted 2026-11-18 under the owner's delegation. Implementation of `high_feature-implement-design-code-ir-round-trip` may start. Spec R15 and task `high_chore-decide-design-code-ir-schema-and-target-adr` govern this record.
+Status: ADR 0001 (design-code IR) and ADR 0007 (design IR) are superseded by ADR 0010 (design IR and design-code conversion, proposed). Cross-IR conventions are in ADR 0009 (proposed). Spec R15 and task `high_chore-decide-design-code-ir-schema-and-target-adr` govern this record. The ADR index and reading order are in `docs/adr/README.md`.
 
-- **IR schema version:** `ir/1` as a proposal. The version is bumped on any breaking change to the node set or lowering contract.
-- **Node set:** frame, auto-layout constraints, component and variant, style and token, vector and image asset, text, and stable node ID. Every node carries a source map entry to its code span or design path.
-- **Reuse:** the token model in `src/designlint/` (`tokens.rs`, `colour.rs`, `fonts.rs`, `images.rs`) is the starting point. Decide per type whether it is reused, extended, or replaced.
-- **Lowerings:** design → IR, IR → design, IR → code per target, and code → IR. Each direction lists what is reported as lost. No construct is dropped silently.
-- **Edit policy:** owner decision open. Options are one-way regeneration, guarded merge with source-map preservation, or manual edits that are never parsed back.
-- **Targets:** owner decision open. No design tool or code framework is approved yet.
-- **Fidelity threshold:** not set. It is UNKNOWN until owner approval, and no round-trip result may be reported as passing before then.
+- **IR schema version:** `design-ir/1` (proposal, ADR 0010). Version rules are in ADR 0009: MAJOR for breaking changes, MINOR for additive fields.
+- **Node set:** frame, rect, text, image, vector, instance, and opaque (ADR 0010). Auto-layout and style are on the node. Unsupported constructs become `opaque` nodes with their source location.
+- **Reuse:** the token model in `src/designlint/` is the starting point for token types. Decide per type whether it is reused, extended, or replaced when Phase 3 of `docs/adr/implementation-plan.md` starts.
+- **Lowerings:** design → IR, IR → design, IR → code, and code → IR. Each direction reports lost constructs in the loss-report form defined in ADR 0009.
+- **Edit policy:** guarded merge (option B), inherited from ADR 0001 under the owner's delegation of 2026-11-18. Edits outside managed regions are preserved and not parsed.
+- **Fidelity:** structural round trip must be 100% on a corpus of at least 20 fixtures (node IDs, hierarchy, token values). Corpus content is still open with the owner and QA. No round-trip result may be reported as passing before the corpus exists.
+- **Targets:** source design format and first code target are still open with the owner. No design tool or code framework is approved yet.
 - **Rust:** the IR and converters are core logic and must be Rust, per R14.
+
+## Visual flow IR (ADR 0002, partly accepted)
+
+Status: accepted on 2026-11-18 in chat by the owner for the node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. The JSON document format and validation rules are still a proposal in ADR 0002 and need owner approval. Version `flow-ir/1`. Spec R16 and tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen` govern this record.
 
 ## Owner decisions for the first replacement slice (2026-11-19)
 
@@ -85,24 +89,28 @@ Source: product owner, answered in the Nimbalyst decision prompt on 2026-11-19. 
 3. **Runtime strategy (spec open question 3):** deterministic fake adapter first, then a bounded native runtime. External harness orchestration (Claude Code, Codex) is not enabled in the first slice. Links: R4, R9. Tasks: `high_feature-define-runtime-adapter-and-fake-conformance-suite`, `high_feature-implement-bounded-supervised-runtime-execution-and-usage-reporting`.
 4. **Identity hierarchy (spec open question 4):** single organization. Agent principals are scoped per project, with grants and revocation. Links: R5. Multi-tenant hierarchy is out of scope for the first slice.
 
-**Still UNKNOWN (owner and review trigger to be named by the owner):** target cohort and success outcome; incumbent baseline workflow and pinned version; NFR thresholds (performance, reliability, security, retention); migration and cutover appetite, rollback authority; support model; exact DeepSeek Harness and Orca identity and version. Do not infer thresholds for these.
+**Remaining UNKNOWN at the time of this entry (2026-11-19):** target cohort and success outcome; incumbent baseline workflow and pinned version; NFR thresholds (performance, reliability, security, retention); migration and cutover appetite, rollback authority; support model; exact DeepSeek Harness and Orca identity and version. These are superseded only where explicitly delegated below; other items remain UNKNOWN.
 
-## Owner decision status: remaining items recorded as UNKNOWN (2026-11-19)
+## Owner decision status: delegated decisions and remaining unknowns (2026-11-19)
 
-These items are not decided. Each has an accountable owner and a review trigger. No threshold or disposition is inferred.
+The owner delegated these choices to the assistant, revocable at any time. Record them as delegated defaults, not as personal owner approval. The detailed values and rationale are in [Delegated decisions](#delegated-decisions-2026-11-19-revocable-by-the-owner).
 
-| Item | Status | Owner | Review trigger |
+| Item | Status | Delegated value | Reopen trigger |
 | --- | --- | --- | --- |
-| Target cohort and success outcome | UNKNOWN | product owner | before the first implementation claim |
-| Incumbent baseline product and pinned version for agent execution | UNKNOWN | product owner with research owner | after `high_chore-recover-and-compare-incumbent-research` |
-| Replacement, integration, or exclusion for each listed product: Hermes Agent, Paperclip, DeepSeek Harness, Nimbalyst, Orca, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald-OS, OpenProject | UNKNOWN until each audit task closes | product owner | when each `high_chore-audit-*` task closes |
-| Measurable NFRs: performance, reliability, security, accessibility, retention | UNKNOWN | product and operations owner | before the NFR task closes |
-| Migration and cutover appetite, rollback authority | UNKNOWN | product owner | before R13 gate work |
-| Support model | UNKNOWN | product and operations owner | before the first release |
-| Exact DeepSeek Harness and Orca identity and version | UNKNOWN | research owner | when the audit tasks for those products start |
-| UI and Rust boundary beyond the decided Dioxus web surface | UNKNOWN | product owner with architecture owner | before the desktop or mobile surface is planned |
+| First-slice target cohort | Delegated, revocable | 3–5 people already running agent workflows on the same project; one operator is primary | Owner revokes or changes cohort |
+| Success outcome | Delegated, revocable | 100 synthetic runs, zero false successes, all ten failure injections pass, and one real recovery after injected restart | Owner revokes or changes success criteria |
+| Incumbent baseline for agent-execution comparison | Delegated, revocable | Hermes Agent at commit `40d1e95f37e409f9f618f32c170661c66b86a4f4` | Owner names a different incumbent or revision |
+| Control-plane availability | Delegated, revocable | 99.9% over 28 days | Owner revokes or changes NFR |
+| Read latency | Delegated, revocable | p95 below 200 ms, using threshold-count SLIs for error budget | Owner revokes or changes NFR |
+| Run-state recovery | Delegated, revocable | RPO ≤1 hour; RTO ≤4 hours; monthly restore drill | Owner revokes or changes NFR |
+| Parallel run | Delegated, revocable | Two weeks; pre-written rollback criteria and variance limits; reconcile each batch and before cutover | Owner revokes or changes cutover plan |
+| Replacement/integration/exclusion for other named products | UNKNOWN until each audit task closes | None | At each `high_chore-audit-*` close |
+| Support model | Delegated, revocable | Business hours, one named owner; Sev 1 response within 4 working hours; Sev 2 next business day | Owner revokes or changes support model |
+| Exact DeepSeek Harness and Orca identity/version | Delegated, revocable in section below | DeepSeek Harness `deepseek-ai/deepseek-harness`, npm `@deepseek-ai/dsh`, `v0.2.2-rc.5`; Orca `stablyai/orca`, desktop `v1.4.263` | Evidence contradicts identity/version or owner revokes |
+| Legal/compliance retention | UNKNOWN | No delegated choice | Counsel input required |
+| UI and Rust boundary beyond decided Dioxus web surface | UNKNOWN | No delegated choice | Before desktop/mobile planning |
 
-Decided on 2026-11-19: first workflow, deployment profile, runtime strategy, identity direction (section above).
+Decided by the owner on 2026-11-19: first workflow, deployment profile, runtime strategy, and identity direction (section above). The delegated choices do not authorize incumbent shutdown, production cutover, or irreversible data migration; those remain gated by the cutover criteria and explicit authorization.
 
 ## Comparison identity evidence (2026-11-19, evidence only, not a decision)
 
@@ -114,7 +122,7 @@ Gathered for spec open question "exact DeepSeek Harness and Orca product/version
 
 ## Default technical decisions applied (best practice, 2026-11-19, changeable by owner)
 
-The owner asked for best-practice defaults for the open technical choices. These defaults are engineering choices, not owner approvals. Business items (cohort, success outcome, baseline, NFR thresholds, cutover, support, DeepSeek/Orca) are not covered here and stay UNKNOWN.
+The owner asked for best-practice defaults for open technical choices. These defaults are engineering choices, not owner approvals. At the time, business items (cohort, success outcome, baseline, NFR thresholds, cutover, support, DeepSeek/Orca) were not covered and stayed UNKNOWN; the later delegated decisions below supersede those statuses where specified.
 
 - **Native runtime:** bounded child-process adapter. Only programs on an explicit allowlist run. The environment is cleared except PATH, SYSTEMROOT, TEMP, TMP. stdin is closed. stdout and stderr are capped at 64 KiB each. Timeout and cancellation kill the process. External effects are off by default. This is a host process, not a sandbox. Container or VM isolation is required before real tools run.
 - **Key distribution:** one HMAC key per deployment and key id, stored in the OS credential store under one service name (`KeyringKeySource`). Keys never appear in envelopes, logs, or the repository. Rotation adds a new key id and retires the old one.

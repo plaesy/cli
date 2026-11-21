@@ -137,7 +137,7 @@ Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 ## Konsekuensi
 
 - Positif: satu IR desain untuk app (ADR 0006) dan konversi kode.
-- Negatif: contoh dan skema dari ADR 0007 perlu penyesuaian kind (`rect` dan `instance` tetap, `layout` dipindah ke frame).
+- Negatif: contoh dan skema dari ADR 0007 perlu penyesuaian kecil: kind `opaque` ditambahkan dan field `construct` serta `source` dipakai di node itu. Tidak ada kind yang dihapus.
 - Netral: tidak ada renderer yang dipilih.
 
 ## Kriteria penerimaan

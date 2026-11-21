@@ -90,7 +90,7 @@ Konteks `flow`, `app`, `api`, `data`, dan `design` mengikuti pola yang sama: IR 
 | `data` | `data-ir/1` | 0004 | `schemas/data-ir-1.schema.json`, `examples/data-ir-1/` |
 | `api` | `api-ir/1` | 0005 | `schemas/api-ir-1.schema.json`, `examples/api-ir-1/` |
 | `app` | `app-ir/1` | 0006 | `schemas/app-ir-1.schema.json`, `examples/app-ir-1/` |
-| `design` | `design-ir/1` | 0007 | `schemas/design-ir-1.schema.json`, `examples/design-ir-1/` |
+| `design` | `design-ir/1` | 0010 | `schemas/design-ir-1.schema.json`, `examples/design-ir-1/` |
 | impor kode ke visual | (memakai IR di atas) | 0008 | belum ada skema |
 
 Validasi semantik untuk kelima IR: `tools/validate-ir.js` (prototipe Node).
@@ -347,5 +347,5 @@ Aturan konversi:
 - Nama paket `flow-editor` di-rename menjadi `plaesy-interface-client` (modul `features/flow`). Referensi di `CLAUDE.md` dan task backlog ikut diperbarui saat rename.
 - `plugins/hermes-plugin/` di root adalah integrasi Python untuk runtime Hermes. Usulan: tetap di luar pohon crate, dan dipindah ke `integrations/hermes/` hanya jika owner memutuskan.
 - Validasi semantik untuk kelima IR sudah ada sebagai prototipe Node. Implementasi di `domain/*` dalam Rust tetap diperlukan.
-- IR yang sudah ada dan statusnya: `flow-ir/1` (ADR 0002), `data-ir/1` (ADR 0004), `api-ir/1` (ADR 0005), `app-ir/1` (ADR 0006), dan `design-ir/1` (ADR 0007). Semuanya memiliki skema dan contoh yang lolos ajv, tapi belum disetujui owner.
+- IR yang sudah ada dan statusnya: `flow-ir/1` (ADR 0002), `data-ir/1` (ADR 0004), `api-ir/1` (ADR 0005), `app-ir/1` (ADR 0006), dan `design-ir/1` (ADR 0010, menggantikan 0007). Semuanya memiliki skema dan contoh yang lolos ajv, tapi belum disetujui owner.
 - Impor kode ke visual (ADR 0008) belum punya skema dan contoh.
