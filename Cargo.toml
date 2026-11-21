@@ -20,6 +20,7 @@ members = [
     "crates/plaesy/plugin/sdk",
     "crates/plaesy/adapter/codegen-js",
     "crates/plaesy/adapter/codegen-go",
+    "crates/plaesy/adapter/model-ollama",
     "crates/plaesy/interface/acp",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",

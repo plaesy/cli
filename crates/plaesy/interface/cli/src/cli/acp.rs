@@ -74,12 +74,27 @@ pub fn run(args: &Args) -> CliResult {
         .into());
     }
     let getenv: Getenv = Arc::new(|name: &str| std::env::var(name).ok());
-    let provider = delegate::build(entry, getenv).map_err(|error| error.to_string())?;
+    // Ollama lokal memakai loop alat (api/chat). Penyedia lain tetap teks saja.
+    let model: Box<dyn ModelBackend + '_> = if entry.kind == "ollama" {
+        let endpoint = if entry.endpoint.is_empty() {
+            "http://127.0.0.1:11434".to_owned()
+        } else {
+            entry.endpoint.clone()
+        };
+        Box::new(plaesy_adapter_model_ollama::OllamaModel {
+            endpoint,
+            model: entry.model.clone(),
+            timeout: Duration::from_secs(120),
+        })
+    } else {
+        let provider = delegate::build(entry, getenv).map_err(|error| error.to_string())?;
+        Box::new(ProviderModel { provider })
+    };
 
     let plaesy_dir = args.path.join(".plaesy");
     std::fs::create_dir_all(&plaesy_dir)?;
     let store = SqliteStore::open(plaesy_dir.join("documents.sqlite"))?;
-    let agent = Agent::with_model(&store, Box::new(ProviderModel { provider }));
+    let agent = Agent::with_model(&store, model);
 
     let stdin = io::stdin();
     let stdout = io::stdout();

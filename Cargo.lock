@@ -3306,6 +3306,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-model-ollama"
+version = "0.0.1"
+dependencies = [
+ "plaesy-interface-acp",
+ "serde_json",
+ "ureq 3.5.0",
+]
+
+[[package]]
 name = "plaesy-adapter-relay"
 version = "0.0.1"
 dependencies = [
@@ -3487,6 +3496,7 @@ dependencies = [
  "clap",
  "dirs 5.0.1",
  "plaesy-adapter-memory",
+ "plaesy-adapter-model-ollama",
  "plaesy-adapter-relay",
  "plaesy-adapter-sqlite",
  "plaesy-analysis",
