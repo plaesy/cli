@@ -3563,6 +3563,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-plugin-sdk"
+version = "0.0.1"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "plaesy-service"
 version = "0.0.1"
 dependencies = [
