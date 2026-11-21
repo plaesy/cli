@@ -12,6 +12,7 @@
 //!   for each (ADR 0009, section 2).
 
 pub mod codegen;
+pub mod dioxus_codegen;
 pub mod lenient;
 pub mod roundtrip;
 pub mod validate;
@@ -87,3 +88,13 @@ pub fn token_value_string(value: &Value) -> String {
         other => other.to_string(),
     }
 }
+
+#[cfg(test)]
+#[path = "dioxus_test.rs"]
+mod dioxus_test;
+
+/// Komponen Dioxus hasil generate dari `order-desk-ui.json`. Hanya dikompilasi dengan
+/// feature `designir-dioxus`, sehingga keluaran generator benar-benar valid terhadap Dioxus 0.7.
+#[cfg(feature = "designir-dioxus")]
+#[allow(dead_code)]
+mod dioxus_sample;

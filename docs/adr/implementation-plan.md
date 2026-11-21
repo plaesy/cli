@@ -92,7 +92,7 @@ Kerja:
 1. `domain/design` di Rust: node, komponen, variant, token, layout. Aturan di ADR 0010 bagian "Aturan semantik". Validator Node sudah ada sebagai referensi.
 2. Format token DTCG: sudah diterapkan. Konversi contoh dilakukan oleh skrip sekali jalan (sudah selesai).
 3. Korpus: 20 fixture sintetis sudah ada di `docs/adr/corpus/design-ir-1/` (dibuat `tools/gen-design-corpus.js`). Ganti atau tambah dengan desain nyata saat tersedia.
-4. `adapter` desain↔IR dan codegen ke Rust/Dioxus. Belum ada.
+4. Codegen ke Dioxus 0.7.10 (`src/designir/dioxus_codegen.rs`): ada, dikompilasi dengan feature `designir-dioxus`. Render dan uji runtime belum ada.
 5. Round trip struktural ke modul Rust (ID, hierarki, kind, scope, nilai token) pada korpus: 100% (sudah diukur, lulus). Round trip ke komponen Dioxus belum ada.
 
 Keluar: round trip struktural 100% pada korpus 20 fixture melalui adapter; aturan semantik di Rust lulus uji negatif.
