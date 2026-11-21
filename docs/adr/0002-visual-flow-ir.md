@@ -1,6 +1,6 @@
 # ADR 0002: Visual flow IR yang netral bahasa (flow-ir/1)
 
-- Status: diterima sebagian. Keputusan yang tercantum di "Keputusan yang diterima" sudah disetujui owner. Format dan aturan validasi di "Usulan format" belum disetujui.
+- Status: diterima. Keputusan di "Keputusan yang diterima" disetujui owner di chat (2026-11-18). Format dan aturan validasi di "Format" diterima lewat delegasi owner (2026-11-21, dapat dicabut; lihat `docs/platform/decisions.md`).
 - Tanggal: 2026-11-18 (persetujuan lewat chat)
 - Pengambil keputusan: owner (persetujuan di chat, tanpa nama orang tercatat)
 - Berlaku untuk: `flow-ir/1`
@@ -13,7 +13,7 @@
 
 - Flow disimpan sekali sebagai IR netral. Dari IR itu dibuat kode untuk bahasa target lewat adapter.
 - Sudah diterima: katalog node, ekspresi CEL, rumus retry, batas loop, kanal persetujuan, dan Rust sebagai adapter codegen pertama.
-- Belum diterima: bentuk JSON dokumen flow dan daftar aturan validasi di bagian "Usulan format".
+- Diterima lewat delegasi (2026-11-21, dapat dicabut): bentuk JSON dokumen flow dan aturan validasi di bagian "Format".
 
 ## Konteks
 
@@ -104,9 +104,9 @@ Tidak masuk iris pertama:
 
 - Rust. Keputusan 2026-11-18, untuk menguji dengan aplikasi Plaesy sendiri. Go dan JavaScript menyusul sebagai adapter terpisah.
 
-## Usulan format (belum disetujui)
+## Format (diterima lewat delegasi, 2026-11-21)
 
-Bagian ini adalah usulan. Versi tetap `flow-ir/1`. Owner perlu mengonfirmasi bagian ini sebelum dianggap berlaku.
+Bagian ini diterima lewat delegasi owner pada 2026-11-21 dan bisa dicabut. Versi tetap `flow-ir/1`. Perubahan format butuh ADR baru atau pencabutan delegasi.
 
 ### Serialisasi
 
@@ -197,6 +197,7 @@ Skema hanya memeriksa bentuk. Aturan berikut dicek di `domain/flow::validate`:
 
 - Scope per langkah ada di skema Windmill. Plaesy mengadopsinya karena mendukung R5 dan R9.
 - Kind module, pengaturan langkah, retry, approval, timeout, early return, dan failure module diambil dari skema OpenFlow publik Windmill, bukan dari halaman pemasaran. Verifikasi ulang terhadap versi terbaru sebelum mengklaim paritas.
+- Semua tautan di bagian ini dapat diakses (diperiksa 2026-11-21). Isi klaim tidak diverifikasi ulang satu per satu; verifikasi ulang diperlukan sebelum klaim paritas dengan Windmill.
 - Catatan komunitas: deskripsi retry eksponensial Windmill tidak sama dengan rumusnya ([issue 11545](https://github.com/windmill-labs/windmill/issues/11545)). Plaesy mendefinisikan rumus secara eksplisit.
 - Dokumentasi approval Windmill berbeda soal default timeout (30 menit atau tanpa batas). Plaesy mewajibkan timeout eksplisit.
 
@@ -227,5 +228,5 @@ Belum ada: validasi semantik di Rust, interpreter, dan codegen.
 
 | # | Pertanyaan | Pemilik | Status |
 |---|---|---|---|
-| 1 | Setujui bagian "Usulan format" (JSON, bentuk dokumen, aturan validasi) | owner | terbuka |
+| 1 | Pencabutan atau koreksi format JSON dan aturan validasi | owner | tidak ada; diterima lewat delegasi |
 | 2 | Nama approver tercatat | owner | opsional; persetujuan di chat sudah berlaku |

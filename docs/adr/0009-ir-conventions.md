@@ -1,6 +1,6 @@
 # ADR 0009: Konvensi bersama untuk semua IR
 
-- Status: diusulkan (belum disetujui). Aturan yang berasal dari ADR 0001 dan 0002 dicatat di bagian "Asal aturan".
+- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut; lihat `docs/platform/decisions.md`). Aturan yang berasal dari ADR 0001 dan 0002 dicatat di bagian "Asal aturan".
 - Tanggal: 2026-11-21
 - Pengambil keputusan: owner (belum ada persetujuan)
 - Berlaku untuk: semua IR dan jalur impor
@@ -127,6 +127,6 @@ Keadaan saat ADR ini ditulis: pemeriksaan bentuk lulus untuk 10 contoh positif d
 
 ## Open items
 
-- Owner menyetujui aturan `extensions` dan penutupan skema akar (bagian 2).
+- Aturan `extensions` dan penutupan skema akar (bagian 2) diterima lewat delegasi. Owner dapat mencabut.
 - Daftar kode `reason` awal untuk setiap IR.
 - Tempat mode lenient: library Rust atau CLI.

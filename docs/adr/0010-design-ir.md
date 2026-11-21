@@ -1,6 +1,6 @@
 # ADR 0010: Design IR dan konversi desain-kode (design-ir/1)
 
-- Status: diusulkan untuk format dan node (belum disetujui). Bagian yang diwarisi dari ADR 0001 berstatus diterima lewat delegasi owner (2026-11-18).
+- Status: diterima lewat delegasi owner (2026-11-21, dapat dicabut). Bagian yang diwarisi dari ADR 0001 sudah diterima lewat delegasi owner (2026-11-18). Implementasi format token DTCG dijadwalkan di Fase 3 rencana.
 - Tanggal: 2026-11-21
 - Pengambil keputusan: owner (belum ada persetujuan)
 - Berlaku untuk: `design-ir/1` dan konversi desain, kode, dan IR
@@ -61,7 +61,7 @@ Kind node: `frame`, `rect`, `text`, `image`, `vector`, `instance`, dan `opaque`.
 
 - `tokens`: kelompok `color`, `space`, `radius`, `font`, dan `shadow`. Nama berformat `kategori.nama`, misalnya `color.primary`.
 - Rujukan token harus ada dan kategorinya harus cocok dengan tempat pemakaian (misalnya `color.*` tidak boleh dipakai sebagai `radius`).
-- Usulan (belum disetujui): memakai format W3C DTCG (`$value`, `$type`) agar token bisa dipertukarkan. Ini dicatat di Open items. Sampai disetujui, format internal tetap seperti di atas.
+- Keputusan (delegasi, 2026-11-21): format token mengikuti W3C DTCG 2025.10 (`$value`, `$type`, alias dengan `{...}`). Schema dan contoh `design-ir/1` diubah ke DTCG di Fase 3. Sampai itu, contoh di repo masih memakai bentuk internal dan dianggap tertinggal.
 
 ### Aturan semantik (domain/design)
 
@@ -149,8 +149,7 @@ Format token DTCG tidak dimasukkan sebagai keputusan di sini. Lihat Open items.
 
 ## Open items
 
-- Owner menyetujui format token: DTCG atau bentuk internal.
-- Owner menyetujui daftar kind node (bagian "Node").
-- Sumber desain pertama dan target kode pertama.
+- Keputusan delegasi (dapat dicabut): format token DTCG; daftar kind node di bagian "Node".
+- Keputusan delegasi (dapat dicabut): sumber desain pertama adalah format JSON desain Plaesy sendiri (`design-ir/1`), tanpa alat desain pihak ketiga; target kode pertama adalah Rust dengan komponen Dioxus, sejalan dengan adapter codegen pertama di ADR 0002.
 - Isi korpus fixture (20) dan QA yang memverifikasinya.
 - Impor dari format desain lain: ADR tersendiri.

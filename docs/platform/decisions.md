@@ -78,7 +78,20 @@ Status: ADR 0001 (design-code IR) and ADR 0007 (design IR) are superseded by ADR
 
 ## Visual flow IR (ADR 0002, partly accepted)
 
-Status: accepted on 2026-11-18 in chat by the owner for the node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. The JSON document format and validation rules are still a proposal in ADR 0002 and need owner approval. Version `flow-ir/1`. Spec R16 and tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen` govern this record.
+Status: accepted on 2026-11-18 in chat by the owner for the node catalogue, CEL expressions, retry formula, loop limits, approval channel, and Rust as the first codegen adapter. The JSON document format and validation rules were accepted under the delegation below on 2026-11-21. Version `flow-ir/1`. Spec R16 and tasks `high_chore-decide-visual-flow-ir-and-codegen-adr` and `high_feature-implement-visual-flow-editor-and-codegen` govern this record.
+
+## Delegated architecture decisions (2026-11-21, revocable by the owner)
+
+The owner's standing delegation of 2026-11-19 covers open technical choices in these records. Each item below is recorded as delegated, not as personal owner approval. The owner may revoke any item; a revocation reopens the affected ADR and its phase in `docs/adr/implementation-plan.md`.
+
+1. **Flow JSON format and validation rules (ADR 0002, "Format"):** accepted as proposed. Reopen if the owner wants a different serialization or rule set.
+2. **Cross-IR conventions (ADR 0009):** `extensions` on every closed object, closed root schemas, prefix table, single loss-report shape, input limits 5 MB and depth 64. Lenient reader mode is not implemented.
+3. **Design token format (ADR 0010):** W3C DTCG 2025.10. The schema and examples move to DTCG in Phase 3; until then the repo examples still use the internal form and are treated as lagging.
+4. **Design node kinds (ADR 0010):** frame, rect, text, image, vector, instance, opaque.
+5. **First design source (ADR 0010):** the Plaesy JSON design format (`design-ir/1` itself). No third-party design tool is selected; this avoids a vendor format dependency.
+6. **First code target (ADR 0010):** Rust with Dioxus components, consistent with the first codegen adapter in ADR 0002.
+
+Not delegated here: ADR 0003, 0004, 0005, 0006, 0008, 0011 remain proposed. The design fixture corpus (20 fixtures) and the Rust validators are implementation work.
 
 ## Architecture ADR index (2026-11-21)
 
@@ -86,10 +99,10 @@ Full index, status meanings, and reading order: `docs/adr/README.md`. Summary of
 
 - ADR 0003 (crate structure): proposed. Client structure split to ADR 0011.
 - ADR 0004 (data IR), 0005 (API IR), 0006 (app IR), 0008 (code-to-visual import): proposed.
-- ADR 0009 (cross-IR conventions): proposed. Owner approval needed for the `extensions` rule and closed root schemas.
-- ADR 0010 (design IR): proposed for format and nodes; inherited edit policy B and structural fidelity from ADR 0001 are delegated, revocable.
+- ADR 0009 (cross-IR conventions): accepted under delegation (2026-11-21, revocable). Includes the `extensions` rule and closed root schemas.
+- ADR 0010 (design IR): accepted under delegation (2026-11-21, revocable): DTCG token format, node kinds, JSON design source, Rust/Dioxus first target. DTCG implementation and the 20-fixture corpus are Phase 3 work.
 - ADR 0011 (client structure): proposed.
-- Open with owner: flow JSON format (ADR 0002), design token format and node kinds (ADR 0010), and first design source and code target.
+- ADR 0002 (flow IR): accepted in chat for the decisions; JSON format and validation rules accepted under delegation (2026-11-21, revocable).
 
 ## Owner decisions for the first replacement slice (2026-11-19)
 

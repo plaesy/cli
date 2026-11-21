@@ -24,15 +24,15 @@ Folder ini berisi keputusan arsitektur untuk IR (representasi antara), struktur 
 | ADR | Judul | Status | Yang sudah diterima | Yang masih usulan |
 |---|---|---|---|---|
 | [0001](0001-design-code-ir.md) | Canonical IR desain-kode | digantikan (0009, 0010) | - | - |
-| [0002](0002-visual-flow-ir.md) | Visual flow IR (flow-ir/1) | diterima sebagian | Katalog node, CEL, rumus retry, batas loop, kanal approval, Rust sebagai adapter pertama | Bentuk JSON dan aturan validasi |
+| [0002](0002-visual-flow-ir.md) | Visual flow IR (flow-ir/1) | diterima | Katalog node, CEL, rumus retry, batas loop, kanal approval, Rust sebagai adapter pertama, bentuk JSON dan aturan validasi (delegasi) | Verifikasi ulang klaim paritas dengan Windmill |
 | [0003](0003-crate-structure.md) | Struktur crate backend | diusulkan | - | Seluruh struktur crate |
 | [0004](0004-data-ir.md) | Data IR (data-ir/1) | diusulkan | - | Seluruh isi |
 | [0005](0005-api-ir.md) | API IR (api-ir/1) | diusulkan | - | Seluruh isi; OpenAPI 3.1 sebagai keluaran |
 | [0006](0006-app-ir.md) | App IR (app-ir/1) | diusulkan | - | Seluruh isi |
 | [0007](0007-design-ir.md) | Design IR (design-ir/1) | digantikan (0010) | - | - |
 | [0008](0008-code-to-visual-import.md) | Impor kode ke visual | diusulkan | - | Bahasa pertama, parser |
-| [0009](0009-ir-conventions.md) | Konvensi bersama untuk semua IR | diusulkan | - | Seluruh isi; mode lenient |
-| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diusulkan (bagian warisan 0001 diterima lewat delegasi) | Edit B, fidelity 100% pada 20 fixture, batas input (warisan) | Format token, kind node, sumber desain dan target kode pertama |
+| [0009](0009-ir-conventions.md) | Konvensi bersama untuk semua IR | diterima (delegasi) | Versi, `extensions`, ID, laporan kehilangan, batas input, validasi | Mode lenient (belum diimplementasi) |
+| [0010](0010-design-ir.md) | Design IR dan konversi desain-kode | diterima (delegasi) | Format token DTCG, kind node, sumber desain (JSON Plaesy), target kode (Rust/Dioxus), edit B, fidelity 100% pada 20 fixture | Implementasi DTCG dan korpus 20 fixture (Fase 3) |
 | [0011](0011-client-structure.md) | Struktur klien | diusulkan | - | Seluruh isi |
 
 ## Istilah

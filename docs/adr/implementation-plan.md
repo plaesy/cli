@@ -36,14 +36,14 @@ Kerja:
 1. Tambah langkah CI di `.github/workflows/ci.yml`: `npm ci && npm run check` di `docs/adr/tools/`, dan `node validate-ir.js` untuk semua contoh. Hanya saat `docs/adr/**` berubah.
 2. Tambah pemeriksaan Markdown untuk `docs/adr/` (`plaesy validate markdown docs/adr --no-baseline`) ke CI.
 3. Registrasikan ADR 0002–0011 di `docs/platform/decisions.md`. File itu punya perubahan belum di-commit milik owner; koordinasikan sebelum mengubahnya.
-4. Owner menyetujui atau menolak ADR 0009 (konvensi) dan ADR 0010 (desain).
+4. Keputusan delegasi 2026-11-21 untuk ADR 0002, 0009, dan 0010 sudah tercatat di `docs/platform/decisions.md`. Owner dapat mencabutnya.
 
 Keluar:
 
 - CI menjalankan pemeriksaan bentuk dan Markdown, dan lulus.
 - Status setiap ADR di `docs/platform/decisions.md` sama dengan header ADR.
 
-Keputusan owner: 0009 (`extensions` dan penutupan skema akar), 0010 (format token), urutan fase.
+Keputusan: 0009 dan 0010 diterima lewat delegasi (dapat dicabut). Urutan fase tetap berlaku sampai owner mengubahnya.
 
 ## Fase 1: flow-ir/1
 
@@ -64,7 +64,7 @@ Keluar:
 - Dua contoh di `examples/flow-ir-1/` menghasilkan output yang sama pada interpreter dan kode hasil codegen.
 - `cargo tree -p plaesy-domain-flow` tidak memuat `tokio`, `axum`, atau `rusqlite`.
 
-Keputusan owner: approval bagian format flow-ir/1 (ADR 0002, bagian "Usulan format").
+Keputusan: format flow-ir/1 diterima lewat delegasi (ADR 0002, bagian "Format").
 
 ## Fase 2: data-ir/1
 
@@ -94,7 +94,7 @@ Kerja:
 
 Keluar: korpus 20 fixture lulus round trip 100%; aturan semantik lulus uji negatif.
 
-Keputusan owner: format token; sumber desain pertama; isi korpus.
+Keputusan delegasi: format token DTCG, sumber desain JSON Plaesy. Masih terbuka: isi korpus 20 fixture (perlu QA dan kriteria pemilihan).
 
 ## Fase 4: api-ir/1
 
