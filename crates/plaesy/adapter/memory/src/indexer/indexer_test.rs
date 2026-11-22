@@ -391,3 +391,10 @@ async fn test_watcher_reports_new_file() {
         "events: {events:?}"
     );
 }
+
+#[test]
+fn decode_text_keeps_utf8_and_falls_back_to_latin1() {
+    assert_eq!(decode_text("halo é".as_bytes().to_vec()), "halo é");
+    // 0xE9 adalah "é" di ISO-8859-1 dan bukan UTF-8 yang valid.
+    assert_eq!(decode_text(vec![b'c', b'a', b'f', 0xE9]), "café");
+}

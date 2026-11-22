@@ -63,14 +63,23 @@ fn read_index_file(path: &Path) -> std::io::Result<String> {
         .read(true)
         .custom_flags(O_NOFOLLOW)
         .open(path)?;
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-    Ok(content)
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    Ok(decode_text(bytes))
 }
 
 #[cfg(not(target_os = "linux"))]
 fn read_index_file(path: &Path) -> std::io::Result<String> {
-    std::fs::read_to_string(path)
+    std::fs::read(path).map(decode_text)
+}
+
+/// Mendekode isi berkas. UTF-8 dipakai bila valid. Selain itu setiap byte dipetakan ke
+/// karakter Latin-1, sehingga berkas ISO-8859 tetap terindeks dan tidak gagal.
+fn decode_text(bytes: Vec<u8>) -> String {
+    match String::from_utf8(bytes) {
+        Ok(text) => text,
+        Err(error) => error.into_bytes().into_iter().map(char::from).collect(),
+    }
 }
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
