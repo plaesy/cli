@@ -27,3 +27,4 @@ workspace = true
 
 [dev-dependencies]
 playwright-rs = "=0.21.1"
+tokio = { workspace = true }

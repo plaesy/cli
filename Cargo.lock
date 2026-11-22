@@ -4796,6 +4796,7 @@ dependencies = [
  "dioxus-signals",
  "playwright-rs",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
