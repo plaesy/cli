@@ -176,7 +176,7 @@ pub mod search;
 /// Configuration sources (in precedence order):
 /// 1. Environment variables (MEMORY_*)
 /// 2. Project config (.plaesy/settings.json)
-/// 3. User config (<root>/Plaesy/settings.json, written by `plaesy onboard`)
+/// 3. User config (<root>/.plaesy/settings.json, written by `plaesy onboard`)
 /// 4. Hardcoded defaults
 ///
 /// See [`config`] module documentation for details.
@@ -210,7 +210,7 @@ pub mod serve;
 /// `memory config mcp`: per-app integration snippets for MCP clients.
 pub use config::mcp as config_mcp;
 
-/// `<root>/Plaesy/settings.json`, written by `plaesy onboard`.
+/// `<root>/.plaesy/settings.json`, written by `plaesy onboard`.
 pub mod settings;
 
 /// `plaesy onboard`: first-run setup (settings, model download, first index).

@@ -442,9 +442,8 @@ Options: `--vault PATH`, `--root PATH`, `--yes`, `--no-model`, `--rerank`, and `
 its vault itself and does not require the ordinary memory vault selector.
 
 First-run setup: choose or confirm a vault, download the embedding model, optionally index notes,
-and write settings to `<local app data>/Plaesy/settings.json` (Windows:
-`%LOCALAPPDATA%\Plaesy\settings.json`; Linux: `~/.local/share/Plaesy/settings.json`; macOS:
-`~/Library/Application Support/Plaesy/settings.json`).
+and write settings to `~/.plaesy/settings.json` on Windows, Linux, and macOS alike (`PLAESY_ROOT`
+or `--root` changes the home folder).
 
 ---
 

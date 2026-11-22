@@ -246,7 +246,7 @@ pub(super) enum Command {
         /// Vault: the folder with the notes to index.
         #[arg(long)]
         vault: Option<PathBuf>,
-        /// Folder that holds Plaesy/settings.json (default: your local app data folder).
+        /// Folder that holds .plaesy/settings.json (default: your home folder).
         #[arg(long)]
         root: Option<PathBuf>,
         /// Do not download the embedding model.

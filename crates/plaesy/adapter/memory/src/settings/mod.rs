@@ -1,8 +1,8 @@
-//! User settings written by `plaesy onboard`: `<root>/Plaesy/settings.json`.
+//! User settings written by `plaesy onboard`: `<root>/.plaesy/settings.json`.
 //!
-//! The root defaults to the platform data-local directory (`%LOCALAPPDATA%` on Windows,
-//! `~/.local/share` on Linux, `~/Library/Application Support` on macOS). Set `PLAESY_ROOT` to use
-//! another root. The file has the same schema as the project file `.plaesy/settings.json`
+//! The root defaults to the user's home directory, the same on Windows, Linux, and macOS, like
+//! `~/.claude` and `~/.hermes`. Set `PLAESY_ROOT` to use another root. The file has the same
+//! schema as the project file `.plaesy/settings.json`
 //! (see [`crate::memory::config::MemoryConfig`]). It sits below `.plaesy/settings.json` and
 //! `MEMORY_*` variables in the precedence order of [`crate::memory::config::MemoryConfig::load`].
 
@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 pub const SETTINGS_VERSION: u32 = 1;
 
 /// Folder name under the root that holds `settings.json`.
-pub const SETTINGS_DIR: &str = "Plaesy";
+pub const SETTINGS_DIR: &str = ".plaesy";
 
 /// The fields that onboarding writes. Every field is optional; absent means "use the default".
 ///
@@ -139,13 +139,21 @@ impl Settings {
     }
 }
 
-/// Settings file location: `<root>/Plaesy/settings.json`, where `<root>` is `PLAESY_ROOT` or the platform default.
+/// Settings file location: `<root>/.plaesy/settings.json`, where `<root>` is `PLAESY_ROOT` or the home directory.
 pub fn default_path() -> Option<PathBuf> {
     root_from(
         std::env::var_os("PLAESY_ROOT").map(PathBuf::from),
-        dirs::data_local_dir(),
+        dirs::home_dir(),
     )
     .map(|root| file_in_root(&root))
+}
+
+/// Default root for `plaesy onboard`: `PLAESY_ROOT`, else the home directory.
+pub fn default_root() -> Option<PathBuf> {
+    root_from(
+        std::env::var_os("PLAESY_ROOT").map(PathBuf::from),
+        dirs::home_dir(),
+    )
 }
 
 /// Settings file location for an explicit root.

@@ -10,7 +10,7 @@
 //!
 //! 1. Environment variables (MEMORY_*)
 //! 2. Project settings (.plaesy/settings.json)
-//! 3. User settings (`<root>/Plaesy/settings.json`, written by `plaesy onboard`)
+//! 3. User settings (`<root>/.plaesy/settings.json`, written by `plaesy onboard`)
 //! 4. Default values
 //!
 //! # Example
@@ -215,7 +215,7 @@ impl MemoryConfig {
     ///
     /// Configuration is loaded in this order (later sources override):
     /// 1. Defaults (hardcoded)
-    /// 2. `<root>/Plaesy/settings.json` written by `plaesy onboard` (see [`crate::memory::settings`])
+    /// 2. `<root>/.plaesy/settings.json` written by `plaesy onboard` (see [`crate::memory::settings`])
     /// 3. `.plaesy/settings.json` (project settings)
     /// 4. Environment variables (MEMORY_*)
     ///

@@ -1,6 +1,6 @@
 //! `plaesy onboard`: first-run setup.
 //!
-//! Asks where the notes are, writes `<root>/Plaesy/settings.json`, downloads the models that are
+//! Asks where the notes are, writes `<root>/.plaesy/settings.json`, downloads the models that are
 //! missing and indexes the notes. Every question has a default, and `--yes` accepts all defaults so
 //! the same steps run unattended (`--vault <DIR>` is then required).
 
@@ -46,7 +46,7 @@ pub struct OnboardOptions {
     pub yes: bool,
     /// Vault: the folder with the notes to index.
     pub vault: Option<PathBuf>,
-    /// Install root that holds `Plaesy/settings.json` (default: the platform data folder).
+    /// Install root that holds `.plaesy/settings.json` (default: your home folder).
     pub root: Option<PathBuf>,
     /// Skip every model download.
     pub no_model: bool,
@@ -136,8 +136,8 @@ pub async fn run(opts: OnboardOptions) -> Result<()> {
         ));
     }
     let ask = Prompt { yes: opts.yes };
-    let default_root = dirs::data_local_dir()
-        .ok_or_else(|| MemoryError::ConfigError("no platform data folder; pass --root".into()))?;
+    let default_root = settings::default_root()
+        .ok_or_else(|| MemoryError::ConfigError("no home folder; pass --root".into()))?;
 
     println!("Plaesy Memory setup");
     println!();
@@ -146,7 +146,7 @@ pub async fn run(opts: OnboardOptions) -> Result<()> {
     let root = match &opts.root {
         Some(r) => r.clone(),
         None => ask.path(
-            "Install folder (settings and data go under <folder>\\Plaesy)",
+            "Install folder (settings go under <folder>/.plaesy)",
             &default_root,
         )?,
     };

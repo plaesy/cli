@@ -112,7 +112,7 @@ pub struct OnboardArgs {
     pub args: Vec<String>,
 }
 
-/// `plaesy onboard`: first-run setup for the memory engine. Writes `<root>/Plaesy/settings.json`.
+/// `plaesy onboard`: first-run setup for the memory engine. Writes `<root>/.plaesy/settings.json`.
 ///
 /// # Errors
 ///

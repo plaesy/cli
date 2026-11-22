@@ -21,7 +21,7 @@ fn empty_env_root_falls_back_to_platform() {
 #[test]
 fn file_lives_under_plaesy_folder() {
     let p = file_in_root(Path::new("/r"));
-    assert!(p.ends_with(Path::new("Plaesy").join("settings.json")));
+    assert!(p.ends_with(Path::new(".plaesy").join("settings.json")));
 }
 
 #[test]
