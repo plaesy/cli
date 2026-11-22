@@ -86,13 +86,6 @@ pub fn run(args: &Args) -> CliResult {
             model: entry.model.clone(),
             timeout: Duration::from_secs(120),
         })
-    } else if entry.kind == "openai" {
-        // Runtime harus offline (CLAUDE.md). Adapter OpenAI memanggil jaringan, jadi dinonaktifkan
-        // di CLI. Crate-nya tetap ada. Keputusan default ini bisa dicabut.
-        return Err(
-            "penyedia openai dinonaktifkan: runtime harus offline (CLAUDE.md); pakai penyedia lokal seperti ollama"
-                .into(),
-        );
     } else {
         let provider = delegate::build(entry, getenv).map_err(|error| error.to_string())?;
         Box::new(ProviderModel { provider })
