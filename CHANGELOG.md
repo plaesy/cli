@@ -21,6 +21,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   a conflicting vault sync.
 - Detect additional provider-formatted credentials during memory hygiene without exposing matched values.
 
+### Changed
+
+- Move first-run setup to `plaesy onboard`; `plaesy memory onboard` now points to the new command.
+- Replace the memory TOML config with `settings.json`: user settings at `<root>/Plaesy/settings.json`
+  (written by `plaesy onboard`) and project settings at `.plaesy/settings.json`. Both use the same
+  nested schema. `memory.toml` and `~/.hermes/memory.toml` are no longer read.
+- The schedule snapshot is now `<config dir>/plaesy/schedule/settings.json`.
+
 ### Removed
 
 - Remove the unused Spec-Kit commands and standalone Hermes Python plugin; Hermes can use the
