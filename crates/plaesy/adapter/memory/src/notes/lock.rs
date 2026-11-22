@@ -2,6 +2,10 @@
 
 use super::*;
 
+/// Heartbeat period is one second. A lock directory untouched for longer than this came from
+/// a writer that exited without releasing it (killed process, crash), so it is reclaimable.
+const LOCK_STALE_AFTER: Duration = Duration::from_secs(15);
+
 /// A best-effort cross-process lock for the remember write path.
 ///
 /// The graph preflight and file admission must be serialized: separate processes have separate
@@ -16,7 +20,7 @@ pub(crate) struct WriteLock {
 impl WriteLock {
     /// Whether a live memory daemon currently owns this vault's write boundary.
     ///
-    /// The daemon refreshes the lock directory every second. Match `acquire`'s ten-minute stale
+    /// The daemon refreshes the lock directory every second. Match `acquire`'s stale
     /// threshold so read-only commands can use its continuously maintained index without trying
     /// to become a competing writer.
     pub(crate) fn daemon_is_active(root: &Path) -> bool {
@@ -31,7 +35,7 @@ impl WriteLock {
             .modified()
             .ok()
             .and_then(|time| time.elapsed().ok())
-            .is_some_and(|age| age > Duration::from_secs(600))
+            .is_some_and(|age| age > LOCK_STALE_AFTER)
     }
 
     pub(crate) fn acquire(root: &Path) -> Result<Self> {
@@ -47,7 +51,7 @@ impl WriteLock {
                 .modified()
                 .ok()
                 .and_then(|time| time.elapsed().ok())
-                .map(|age| age > Duration::from_secs(600))
+                .map(|age| age > LOCK_STALE_AFTER)
                 .unwrap_or(false);
             if stale {
                 // The daemon heartbeat stopped, so permit recovery after a crash. An active
@@ -119,12 +123,12 @@ impl WriteLock {
                         )));
                     }
                     // A crashed writer must not permanently disable memory. Only reclaim a lock
-                    // whose directory has been untouched for ten minutes.
+                    // whose directory has been untouched for longer than LOCK_STALE_AFTER.
                     let stale = lock_meta
                         .modified()
                         .ok()
                         .and_then(|t| t.elapsed().ok())
-                        .map(|age| age > Duration::from_secs(600))
+                        .map(|age| age > LOCK_STALE_AFTER)
                         .unwrap_or(false);
                     if stale {
                         let _ = std::fs::remove_dir(&path);
