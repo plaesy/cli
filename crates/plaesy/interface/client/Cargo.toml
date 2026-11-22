@@ -24,3 +24,6 @@ required-features = ["web"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+playwright-rs = "=0.21.1"

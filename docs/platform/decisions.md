@@ -177,3 +177,10 @@ Keputusan ini diambil tanpa persetujuan pemilik, sebagai default teknis. Pemilik
 - **Model embedding vault:** `multilingual-e5-small` (`model.onnx` dan `tokenizer.json` dari `intfloat/multilingual-e5-small` di Hugging Face, sumber yang sama dengan `onboard/mod.rs`), disimpan di `<cache>/plaesy/models/multilingual-e5-small`. Semantic search aktif setelah indeks vektor dibangun dengan `plaesy memory index`.
 - **Mode tulis vault:** `plaesy-vault` didaftarkan tanpa `--read-only` agar daemon memegang lock tulis. Penulisan diverifikasi pada vault scratch, bukan vault pemilik.
 - **OpenAI:** diaktifkan atas persetujuan pemilik (2026-11-22). Ini melanggar aturan CLAUDE.md "runtime offline": penyedia `openai` sekarang memanggil jaringan saat dijalankan. Aturan CLAUDE.md perlu direvisi agar konsisten.
+
+## Target pengganti tambahan (disetujui pemilik, 2026-11-22)
+
+- **Orchestrator.inc (Agent Orchestrator):** https://github.com/OrchestratorInc/agent-orchestrator, lisensi Apache-2.0. Target pengganti.
+- **Orca (Stably AI):** https://github.com/stablyai/orca. Target pengganti, sudah tercatat sebagai incumbent.
+
+Ejaan "orcharstrator.inc" dari pemilik dipetakan ke Agent Orchestrator. Kepemilikan dan entitas hukumnya belum diverifikasi (lihat `docs/platform/feature-inventory/orchestrator-candidates.md`).
