@@ -4,6 +4,7 @@
 pub mod acp;
 pub mod advisor;
 pub mod analyze;
+pub mod approvals;
 pub mod codegen_cmd;
 pub mod common;
 pub mod decisions;
@@ -48,6 +49,8 @@ pub struct Cli {
 pub enum Command {
     /// Read-only model advice for comparing options and triaging tasks
     Advisor(advisor::Args),
+    /// Approve, revoke, or check persisted approvals for external actions
+    Approvals(approvals::Args),
     /// Typed, structured decisions using locally managed decision models
     Decisions(decisions::Args),
     /// Show Plaesy CLI version and environment status
@@ -150,6 +153,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Relay(args) => relay::run(&args),
         Command::Files(args) => files::run(&args),
         Command::Projects(args) => projects::run(&args),
+        Command::Approvals(args) => approvals::run(&args),
         Command::Sessions(args) => sessions::run(&args),
         Command::Memory(args) => memory::run(&args),
         Command::Onboard(args) => memory::run_onboard(&args),
