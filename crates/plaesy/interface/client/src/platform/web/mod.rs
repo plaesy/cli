@@ -3,7 +3,9 @@
 //! Layar ini read-only: menampilkan modul, alur data, dan masalah validasi lokal dari
 //! `features::flow`. Editing dan pengambilan dokumen dari server belum ada.
 
-use crate::features::flow::model::{edges, validate, LocalIssue, ModuleView};
+use crate::features::flow::model::{
+    edges, modules_from_flow_json, validate, LocalIssue, ModuleView,
+};
 use dioxus::prelude::*;
 
 /// Menjalankan aplikasi web. Dipanggil dari titik masuk biner (lihat `examples/web.rs`).
@@ -13,11 +15,40 @@ pub fn run() {
 
 #[component]
 fn App() -> Element {
-    let modules = sample_modules();
+    // Dokumen flow-ir/1 nyata, disematkan saat compile (tanpa jaringan, sesuai aturan offline).
+    let loaded = modules_from_flow_json(include_str!("kirim-faktur.json"));
     rsx! {
-        FlowView { name: "contoh-flow".to_owned(), modules }
+        style { {STYLE} }
+        match loaded {
+            Ok((name, modules)) => rsx! { FlowView { name, modules } },
+            Err(message) => rsx! { main { h1 { "Gagal memuat flow" } p { "{message}" } } },
+        }
     }
 }
+
+/// Gaya dasar: tema terang dan gelap, lebar baca yang nyaman, dan kartu per bagian.
+const STYLE: &str = r#"
+:root { color-scheme: light dark; --bg: #f7f7f8; --fg: #1d1d1f; --muted: #6b6b73;
+  --card: #ffffff; --line: #e3e3e8; --accent: #2f6fdb; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #161618; --fg: #ececf1; --muted: #9a9aa3;
+    --card: #1f1f23; --line: #2e2e35; --accent: #6ea3ff; }
+}
+:root[data-theme="dark"] { --bg: #161618; --fg: #ececf1; --muted: #9a9aa3;
+  --card: #1f1f23; --line: #2e2e35; --accent: #6ea3ff; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 1.6rem; margin: 0 0 16px; }
+h2 { font-size: 1rem; margin: 0 0 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; margin-bottom: 16px; }
+ul { margin: 0; padding-left: 20px; }
+li { margin: 6px 0; }
+code { font: 14px ui-monospace, Consolas, monospace; color: var(--accent); }
+p { margin: 0; }
+"#;
 
 #[derive(Props, Clone, PartialEq)]
 struct FlowViewProps {
@@ -83,20 +114,4 @@ fn describe(issue: &LocalIssue) -> String {
             format!("modul {module} merujuk ke sumber tidak dikenal: {source}")
         }
     }
-}
-
-/// Contoh modul untuk ditampilkan sampai layar memuat dokumen dari server.
-fn sample_modules() -> Vec<ModuleView> {
-    vec![
-        ModuleView {
-            id: "m1".to_owned(),
-            kind: "action".to_owned(),
-            inputs: vec![("id".to_owned(), "flow.input.id".to_owned())],
-        },
-        ModuleView {
-            id: "m2".to_owned(),
-            kind: "pass".to_owned(),
-            inputs: vec![("total".to_owned(), "m1.amount".to_owned())],
-        },
-    ]
 }
