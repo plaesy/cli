@@ -6,7 +6,7 @@
 use crate::features::flow::model::{edges, validate, LocalIssue, ModuleView};
 use dioxus::prelude::*;
 
-/// Titik masuk web. Dipanggil dari `main` aplikasi pemanggil.
+/// Menjalankan aplikasi web. Dipanggil dari titik masuk biner (lihat `examples/web.rs`).
 pub fn run() {
     dioxus::launch(App);
 }

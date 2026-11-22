@@ -14,7 +14,7 @@ mobile = []
 [dependencies]
 serde_json = { workspace = true }
 # Renderer web (ADR 0011, delegasi owner: Dioxus). Hanya aktif dengan fitur `web`.
-dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "macro", "html", "hooks"] }
+dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "logger", "macro", "html", "hooks"] }
 # Dipakai langsung oleh makro rsx! yang dihasilkan Dioxus.
 dioxus-signals = { version = "0.7", optional = true }
 
