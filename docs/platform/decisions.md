@@ -184,3 +184,15 @@ Keputusan ini diambil tanpa persetujuan pemilik, sebagai default teknis. Pemilik
 - **Orca (Stably AI):** https://github.com/stablyai/orca. Target pengganti, sudah tercatat sebagai incumbent.
 
 Ejaan "orcharstrator.inc" dari pemilik dipetakan ke Agent Orchestrator. Kepemilikan dan entitas hukumnya belum diverifikasi (lihat `docs/platform/feature-inventory/orchestrator-candidates.md`).
+
+## Daftar target pengganti (diperbarui pemilik, 2026-11-22)
+
+Target pengganti yang berlaku, dengan inventaris fitur di `docs/platform/feature-inventory/`:
+
+- Hermes Agent: https://github.com/NousResearch/hermes-agent
+- DeepSeek Harness: https://github.com/deepseek-ai/deepseek-harness
+- Orca: https://github.com/stablyai/orca
+- Agent Orchestrator (Orchestrator.inc): https://github.com/OrchestratorInc/agent-orchestrator
+- OpenBot: https://github.com/nightly-labs/openbot
+- OpenProject: https://github.com/opf/openproject
+- Paperclip, Nimbalyst, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald OS: sesuai ADR 0003 dan inventarisnya.
