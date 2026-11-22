@@ -28,6 +28,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   (written by `plaesy onboard`) and project settings at `.plaesy/settings.json`. Both use the same
   nested schema. `memory.toml` and `~/.hermes/memory.toml` are no longer read.
 - The schedule snapshot is now `<config dir>/plaesy/schedule/settings.json`.
+- Read `PLAESY_MCP_TOKEN` from `<root>/.plaesy/.env` (same `KEY=VALUE` format as Hermes) when the
+  environment variable is not set. The environment variable still wins.
 
 ### Removed
 

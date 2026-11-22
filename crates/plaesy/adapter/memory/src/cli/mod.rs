@@ -152,7 +152,10 @@ async fn run(cli: Cli) -> Result<()> {
         read_only,
     } = cli.command
     {
-        let auth_token = auth_token.or_else(|| std::env::var("PLAESY_MCP_TOKEN").ok());
+        let auth_token = match auth_token {
+            Some(token) => Some(token),
+            None => crate::memory::settings::env_file::value("PLAESY_MCP_TOKEN")?,
+        };
         return serve::run(config, mcp, transport, port, auth_token, read_only).await;
     }
 

@@ -237,6 +237,8 @@ pub fn save(path: &Path, settings: &Settings) -> Result<()> {
     result.map_err(|e| MemoryError::ConfigError(format!("cannot write {}: {e}", path.display())))
 }
 
+pub mod env_file;
+
 #[cfg(test)]
 #[path = "settings_test.rs"]
 mod settings_test;
