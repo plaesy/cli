@@ -1,1 +1,4 @@
-//! Kerangka modul platform (ADR 0011). Isi oleh pekerjaan terpisah.
+//! Titik masuk per platform (ADR 0011). Hanya platform `web` yang sudah ada.
+
+#[cfg(feature = "web")]
+pub mod web;

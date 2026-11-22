@@ -7,12 +7,20 @@ description = "Permukaan klien (ADR 0011): adapter HTTP/WS, router shell, dan gu
 
 [features]
 default = []
-web = []
+web = ["dep:dioxus", "dep:dioxus-signals"]
 desktop = []
 mobile = []
 
 [dependencies]
 serde_json = { workspace = true }
+# Renderer web (ADR 0011, delegasi owner: Dioxus). Hanya aktif dengan fitur `web`.
+dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "macro", "html", "hooks"] }
+# Dipakai langsung oleh makro rsx! yang dihasilkan Dioxus.
+dioxus-signals = { version = "0.7", optional = true }
+
+[[example]]
+name = "web"
+required-features = ["web"]
 
 [lints]
 workspace = true
