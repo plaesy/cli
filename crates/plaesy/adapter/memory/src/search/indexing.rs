@@ -182,6 +182,9 @@ impl SearchEngine {
                 }
                 Ok(IndexOutcome::Unchanged) => summary.unchanged += 1,
                 Ok(IndexOutcome::Forgotten) => summary.removed += 1,
+                Err(MemoryError::ExtractionError { reason, .. }) if reason == "file is empty" => {
+                    summary.skipped_empty += 1;
+                }
                 Err(e) => {
                     self.metrics.record_error("index_file_failed");
                     summary.failed.push((rel, e.to_string()));

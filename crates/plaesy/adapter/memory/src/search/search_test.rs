@@ -602,8 +602,9 @@ async fn test_bad_file_does_not_abort_sync() {
     let e = engine(false).await;
     let s = e.index_directory(root).await.expect("index");
     assert_eq!(s.indexed, 2);
-    assert_eq!(s.failed.len(), 1);
-    assert_eq!(s.failed[0].0, "empty.md");
+    // Berkas kosong dilewati (tidak ada teks untuk diindeks), bukan dihitung sebagai gagal.
+    assert_eq!(s.skipped_empty, 1);
+    assert!(s.failed.is_empty(), "failed: {:?}", s.failed);
     let hits = e.keyword_search("placeholder", 5).await.expect("kw");
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].source_path, "tmpl.md");

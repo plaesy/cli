@@ -47,10 +47,11 @@ pub(super) async fn dispatch(
             require_dir(&root)?;
             let s = engine.index_directory(&root).await?;
             println!(
-                "indexed {} | unchanged {} | removed {} | chunks written {} | failed {}",
+                "indexed {} | unchanged {} | removed {} | empty skipped {} | chunks written {} | failed {}",
                 s.indexed,
                 s.unchanged,
                 s.removed,
+                s.skipped_empty,
                 s.chunks,
                 s.failed.len()
             );

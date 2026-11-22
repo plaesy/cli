@@ -129,6 +129,8 @@ pub struct IndexSummary {
     pub chunks: usize,
     /// Files that failed: `(path, error message)`. Failures never abort the sync.
     pub failed: Vec<(String, String)>,
+    /// Files with no text to index (empty or whitespace only). Skipped, not a failure.
+    pub skipped_empty: usize,
 }
 
 /// Top hits whose wikilinks are followed by `search_expanded`.
