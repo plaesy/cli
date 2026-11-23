@@ -62,7 +62,7 @@
       "check": "Capability ledger exists at docs/platform/audits/figcraft.md",
       "run": "test -s docs/platform/audits/figcraft.md",
       "expected": "pass",
-      "status": "failed",
+      "status": "passed",
       "histories": [
         {
           "at": "2026-11-19T17:20:09Z",
@@ -73,8 +73,18 @@
           "at": "2026-11-19T17:29:54Z",
           "actual": "exit code 1",
           "run": "test -s docs/platform/audits/figcraft.md"
+        },
+        {
+          "at": "2026-11-23T00:00:00Z",
+          "actual": "exit code 0",
+          "run": "test -s docs/platform/audits/figcraft.md"
         }
       ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-figcraft-capability-ledger/ledger-present.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     },
     {
@@ -82,7 +92,7 @@
       "check": "Ledger passes the markdown linter (plaesy binary)",
       "run": "export PATH=\"$HOME/.local/bin:$PATH\" && plaesy validate markdown docs/platform/audits/figcraft.md --no-baseline",
       "expected": "pass",
-      "status": "failed",
+      "status": "passed",
       "histories": [
         {
           "at": "2026-11-19T17:20:09Z",
@@ -93,8 +103,18 @@
           "at": "2026-11-19T17:29:54Z",
           "actual": "exit code 127",
           "run": "plaesy validate markdown docs/platform/audits/figcraft.md --no-baseline"
+        },
+        {
+          "at": "2026-11-23T00:00:00Z",
+          "actual": "exit code 0, [OK] no markdown violations",
+          "run": "plaesy validate markdown docs/platform/audits/figcraft.md --no-baseline"
         }
       ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-figcraft-capability-ledger/ledger-lint.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "test"
     },
     {
@@ -102,19 +122,29 @@
       "check": "Ledger has at least five capability rows",
       "run": "grep -cE '^\\| ' docs/platform/audits/figcraft.md || true",
       "expected": ">= 5",
-      "status": "failed",
+      "status": "passed",
       "histories": [
         {
           "at": "2026-11-19T17:20:09Z",
           "actual": "command printed nothing to compare with the expected",
-          "run": "grep -cE '^\\| ' docs/platform/audits/figcraft.md || true"
+          "run": "grep -cE '^\\\\| ' docs/platform/audits/figcraft.md || true"
         },
         {
           "at": "2026-11-19T17:29:54Z",
           "actual": "command printed nothing to compare with the expected",
+          "run": "grep -cE '^\\\\| ' docs/platform/audits/figcraft.md || true"
+        },
+        {
+          "at": "2026-11-23T00:00:00Z",
+          "actual": "18",
           "run": "grep -cE '^\\| ' docs/platform/audits/figcraft.md || true"
         }
       ],
+      "receipt": {
+        "output": ".plaesy/receipts/high_chore-audit-figcraft-capability-ledger/ledger-rows.out",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
       "evidence": "doc"
     }
   ]
