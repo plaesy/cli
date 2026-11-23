@@ -442,11 +442,11 @@ pub(super) enum ProjectsSubcommand {
 /// Subcommands for `memory config`.
 #[derive(Subcommand, Debug, Clone)]
 pub(super) enum ConfigSubcommand {
-    /// Print integration snippets for MCP clients (Claude Code, CrewAI, n8n, Dify, Kilo Code, Paperclip).
+    /// Print integration snippets for MCP clients, including Claude, Codex, and Hermes.
     ///
     /// Use `--app` to print only one client's snippet, or `--list` to print every app's snippet.
     Mcp {
-        /// Print snippets for only this app (e.g. `claude-code`, `crewai`, `n8n`, `dify`, `kilocode`, `paperclip`).
+        /// Print snippets for only this app (e.g. `claude-code`, `codex`, `hermes`).
         #[arg(long)]
         app: Option<String>,
         /// Print every app's snippet.
@@ -455,8 +455,8 @@ pub(super) enum ConfigSubcommand {
         /// Path or command name for the `plaesy` executable to embed in the snippets.
         #[arg(long, default_value = "plaesy")]
         binary: String,
-        /// Notes directory to embed in the snippets.
-        #[arg(long, default_value = "./notes")]
+        /// Override the configured notes directory in stdio snippets.
+        #[arg(long, default_value = "")]
         notes_dir: String,
         /// HTTP URL of the MCP server (when using `--transport http`).
         #[arg(long)]

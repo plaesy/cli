@@ -11,6 +11,27 @@ plaesy delegate --chain local --prompt "..."    # named fallback chain
 plaesy delegate report                          # token usage and cost per provider, chain, and task
 ```
 
+The built-in `claude-cli` entry is enabled. `codex-cli` is available but disabled by
+default; it runs `codex exec --ephemeral -`, which reads the prompt from stdin.
+Enable both local CLI providers and an ordered fallback chain in `.plaesy/config.json`:
+
+```json
+{
+  "delegate": {
+    "providers": [
+      {"name": "claude-cli", "type": "cli", "enabled": true, "command": "claude", "args": ["-p"]},
+      {"name": "codex-cli", "type": "cli", "enabled": true, "command": "codex", "args": ["exec", "--ephemeral", "-"]}
+    ],
+    "chains": {"local": ["claude-cli", "codex-cli"]}
+  }
+}
+```
+
+CLI providers use each program's own login and model configuration. A chain tries
+the next provider only for a retryable failure. Hermes uses the [MCP connection](../memory/mcp.md)
+to access Plaesy tools; Hermes one-shot mode takes the prompt as a command-line
+argument and bypasses approvals, so it is not a built-in `delegate` provider.
+
 Usage is logged to `.plaesy/analysis/delegate-usage.jsonl`, one line per answered call. Each line
 records the provider, chain, task (for `plaesy tasks run`), tokens, and wall time.
 

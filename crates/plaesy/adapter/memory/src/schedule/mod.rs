@@ -224,6 +224,9 @@ async fn run_action(engine: &SearchEngine, root: &Path, action: Action) -> Resul
     }
     match action {
         Action::Index => {
+            if WriteLock::daemon_is_active(root) {
+                return Ok("index maintained by active memory daemon".into());
+            }
             let s = engine.index_directory(root).await?;
             Ok(format!(
                 "indexed={} unchanged={} removed={} failed={}",

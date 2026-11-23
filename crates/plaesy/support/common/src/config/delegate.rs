@@ -88,6 +88,13 @@ impl DelegateConfig {
                     ..Default::default()
                 },
                 DelegateProviderConfig {
+                    name: "codex-cli".into(),
+                    kind: "cli".into(),
+                    command: "codex".into(),
+                    args: vec!["exec".into(), "--ephemeral".into(), "-".into()],
+                    ..Default::default()
+                },
+                DelegateProviderConfig {
                     name: "kilo-cli".into(),
                     kind: "cli".into(),
                     command: "kilo".into(),
