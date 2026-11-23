@@ -75,20 +75,20 @@ kilo mcp add plaesy-memory \
 1. Start the memory server: `plaesy memory serve --mcp --transport http --port 8080`
 2. In n8n, add "MCP Server Trigger" node
 3. Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-   `memory_stats`, `memory_remember`, and `memory_resolve_gap`
+   `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 **Option B - MCP Client (n8n calls remote MCP server):**
 
 - Set "Server URL" to: `http://127.0.0.1:8080/mcp`
 - Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-  `memory_stats`, `memory_remember`, and `memory_resolve_gap`
+  `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 ### Dify
 
 In Dify: Knowledge / MCP Server / Add MCP Server → select "Streamable HTTP".
 Server URL: `http://127.0.0.1:8080/mcp`
 Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-`memory_stats`, `memory_remember`, and `memory_resolve_gap`
+`memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 ### Claude Code (quick reference)
 

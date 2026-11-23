@@ -6,6 +6,7 @@ resolver = "2"
 members = [
     "crates/plaesy/interface/client",
     "crates/plaesy/adapter/design-ir",
+    "crates/plaesy/adapter/import-tasks",
     "crates/plaesy/adapter/memory",
     "crates/plaesy/adapter/relay",
     "crates/plaesy/adapter/runstore",

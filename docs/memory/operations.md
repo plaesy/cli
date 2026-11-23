@@ -74,7 +74,7 @@ Do not mix models in one database. To compare, use a separate `MEMORY_DB_PATH` p
 claude mcp add plaesy-memory -e MEMORY_WATCH_DIR=<vault> -- plaesy memory serve --mcp
 ```
 
-The server exposes eight tools: six read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`, `memory_stats`) and two bounded write tools (`memory_remember`, `memory_resolve_gap`). `memory_curate` is a bounded review report; it does not edit notes. The write tools create a new note or close a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
+The server exposes nine tools: six read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`, `memory_stats`) and three bounded write tools (`memory_remember`, `memory_remember_session`, `memory_resolve_gap`). `memory_curate` is a bounded review report; it does not edit notes. The write tools create a new note or close a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
 
 **Hermes:** connect through its MCP client support using the generated configuration from `plaesy memory --vault "<vault>" config mcp --app hermes`. The same `plaesy memory serve` command is used; there is no separate `memory` executable or plugin binary.
 

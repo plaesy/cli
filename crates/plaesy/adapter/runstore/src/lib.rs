@@ -4,3 +4,7 @@ pub mod file;
 
 pub use file::{checksum, RunLog};
 pub use plaesy_domain_workflow::runstore::{Recovered, RunLogError, RunSink};
+
+#[cfg(test)]
+#[path = "audit_test.rs"]
+mod audit_test;

@@ -149,6 +149,29 @@ fn tools() -> Value {
             "annotations": write_safe
         },
         {
+            "name": "memory_remember_session",
+            "description": "Save a summary of one working session as a note in the sessions folder (tier episodic): title, session date (YYYY-MM-DD), summary, and links (http or https only). The note is indexed at once and found by memory_search. Creates files only; an existing note is never overwritten.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string" },
+                    "date": { "type": "string", "description": "Session date, YYYY-MM-DD." },
+                    "summary": { "type": "string", "description": "Markdown summary of what was done, decided and left open." },
+                    "links": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "items": {
+                            "type": "object",
+                            "properties": { "label": { "type": "string" }, "url": { "type": "string" } },
+                            "required": ["label", "url"]
+                        }
+                    }
+                },
+                "required": ["title", "date", "summary"]
+            },
+            "annotations": write_safe
+        },
+        {
             "name": "memory_resolve_gap",
             "description": "Close an open query gap from memory_missing once the question has been answered. It reopens if the same query misses again.",
             "inputSchema": {
@@ -412,6 +435,50 @@ async fn run_tool(
                 ));
             }
             let path = engine.remember(&note).await?;
+            let text = format!("saved {}", path.display());
+            Ok(tool_text(
+                text,
+                json!({ "path": path.display().to_string() }),
+            ))
+        }
+        "memory_remember_session" => {
+            let text_arg = |key: &str| {
+                args.get(key)
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string()
+            };
+            let date = chrono::NaiveDate::parse_from_str(&text_arg("date"), "%Y-%m-%d")
+                .map_err(|_| ToolError::Invalid("date must be YYYY-MM-DD".into()))?;
+            let mut links = Vec::new();
+            if let Some(items) = args.get("links") {
+                let items = items
+                    .as_array()
+                    .ok_or_else(|| ToolError::Invalid("links must be an array".into()))?;
+                for item in items {
+                    let field = |key: &str| {
+                        item.get(key)
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                            .ok_or_else(|| {
+                                ToolError::Invalid(
+                                    "each link needs string fields label and url".into(),
+                                )
+                            })
+                    };
+                    links.push(crate::memory::notes::SessionLink {
+                        label: field("label")?,
+                        url: field("url")?,
+                    });
+                }
+            }
+            let summary = crate::memory::notes::SessionSummary {
+                title: text_arg("title"),
+                date,
+                summary: text_arg("summary"),
+                links,
+            };
+            let path = engine.remember_session(&summary).await?;
             let text = format!("saved {}", path.display());
             Ok(tool_text(
                 text,
