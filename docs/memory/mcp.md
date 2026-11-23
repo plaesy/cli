@@ -5,8 +5,8 @@
 - **stdio** (default): MCP over stdin/stdout.
 - **http**: Streamable HTTP at `/mcp`.
 
-Both transports sync/watch the notes directory in the background. Six tools are read-only; two
-bounded write tools create a new note or resolve a query gap. `memory_curate` combines health,
+Both transports sync/watch the notes directory in the background. Six tools are read-only; three
+bounded write tools create a new note, save a session summary, or resolve a query gap. `memory_curate` combines health,
 unanswered-query, duplicate, unlinked-note, and topic-index candidates into one bounded review; it
 does not modify vault files. No tool replaces or deletes a note.
 The server uses the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). Both

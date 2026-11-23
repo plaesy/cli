@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add optional global Codex and Claude lifecycle hooks and a shared `learning-loop` skill to retrieve Plaesy memory at session start and preserve durable project outcomes at closeout. MCP `memory_remember` now accepts typed graph metadata; read-only mode also rejects session-summary writes.
 - Add `plaesy tasks board`, a text view of every spec's tasks as one column per status folder with a count per column and titles cut to 60 characters.
 - Add `plaesy dashboard`: a static offline HTML page of task counts and delegate usage totals.
 - Relay messages report a status (`menunggu`, `diambil`, `selesai`, `gagal`) and attempt count; a released or expired claim retries up to five attempts before it becomes `gagal`, and done messages can be purged after a retention period. The CLI does not yet expose release or purge.

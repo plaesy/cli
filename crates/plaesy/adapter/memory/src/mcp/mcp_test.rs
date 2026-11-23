@@ -303,9 +303,9 @@ async fn remember_session_tool_saves_indexed_summary_and_rejects_bad_input() {
     assert!(text.contains("Tanggal: 2026-11-23"));
     assert!(text.contains("- [PR 12](https://example.com/pull/12)"));
     let hits = e.search("quartzmeadow", 3).await.expect("search");
-    assert!(hits
-        .iter()
-        .any(|h| h.source_path.ends_with("sesi-2026-11-23-checkpoint-work.md")));
+    assert!(hits.iter().any(|h| h
+        .source_path
+        .ends_with("sesi-2026-11-23-checkpoint-work.md")));
 
     let bad_date = rpc(
         &e,
@@ -379,6 +379,61 @@ async fn remember_creates_indexed_note_and_never_overwrites() {
     .await;
     assert_eq!(escape["result"]["isError"], true);
     assert!(!dir.path().parent().unwrap().join("outside").exists());
+}
+
+#[tokio::test]
+async fn remember_graph_note_is_listed_and_rejects_incomplete_metadata() {
+    let (e, dir) = engine().await;
+    e.set_watch_root(dir.path().to_path_buf());
+    let call = |id: u64, args: Value| json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"memory_remember","arguments":args}});
+    let project = rpc(
+        &e,
+        call(1, json!({"title":"Studio A","body":"Current project.","note_type":"project","id":"studio-a"})),
+    )
+    .await;
+    assert_eq!(project["result"]["isError"], false, "{project}");
+    let context = rpc(
+        &e,
+        call(2, json!({"title":"Studio A checkpoint","body":"Next: review layout.","note_type":"context","id":"studio-a-checkpoint","project":"studio-a"})),
+    )
+    .await;
+    assert_eq!(context["result"]["isError"], false, "{context}");
+    let graph = crate::memory::graph::load_graph(&e.database())
+        .await
+        .expect("graph");
+    assert!(graph.notes.iter().any(
+        |note| note.id == "studio-a-checkpoint" && note.project.as_deref() == Some("studio-a")
+    ));
+
+    let incomplete = rpc(
+        &e,
+        call(
+            3,
+            json!({"title":"Missing id","body":"No id.","note_type":"context"}),
+        ),
+    )
+    .await;
+    assert_eq!(incomplete["result"]["isError"], true);
+    let invalid = rpc(
+        &e,
+        call(4, json!({"title":"Invalid scope","body":"Bad list.","note_type":"context","id":"bad-scope","scope":[7]})),
+    )
+    .await;
+    assert_eq!(invalid["result"]["isError"], true);
+}
+
+#[tokio::test]
+async fn read_only_rejects_session_capture() {
+    let (e, dir) = engine().await;
+    e.set_watch_root(dir.path().to_path_buf());
+    e.set_read_only(true);
+    let result = rpc(
+        &e,
+        json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"memory_remember_session","arguments":{"title":"Checkpoint","date":"2026-11-23","summary":"No write"}}}),
+    )
+    .await;
+    assert_eq!(result["result"]["isError"], true);
+    assert!(!dir.path().join("sessions").exists());
 }
 
 #[tokio::test]
