@@ -1,0 +1,13 @@
+[package]
+name = "plaesy-plugins"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Model plugin: manifest, pemeriksaan ABI, capability, dan batas sumber daya (ADR 0003: plugin)."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

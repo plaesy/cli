@@ -1,5 +1,6 @@
 //! Utilitas bersama, konfigurasi, dan VERSION.
 
+pub mod chat_webhook;
 pub mod common;
 pub mod config;
 pub mod evidence;
@@ -16,6 +17,7 @@ pub mod sessions;
 pub mod telemetry;
 pub mod trimmer;
 pub mod workspaces;
+pub mod voice;
 
 /// Release version, read from the repository-root `VERSION` file at build time.
 pub const VERSION: &str = include_str!("../../../../../VERSION");

@@ -22,9 +22,11 @@ pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
 pub mod openapi_cmd;
+pub mod output;
 pub mod projects;
 pub mod reach;
 pub mod relay;
+pub mod remote;
 pub mod sessions;
 pub mod status;
 pub mod tasks;
@@ -39,6 +41,7 @@ pub mod telemetry;
 pub mod trim;
 pub mod validate;
 pub mod workspace;
+pub mod voice;
 
 use clap::{Parser, Subcommand};
 
@@ -49,6 +52,9 @@ pub type CliResult = Result<(), Box<dyn std::error::Error>>;
 #[derive(Debug, Parser)]
 #[command(name = "plaesy", version = crate::version(), about = "Plaesy CLI for memory and agent workflows", arg_required_else_help = true)]
 pub struct Cli {
+    /// No color and no decorative glyphs (NO_COLOR is also honored). Place it before the subcommand.
+    #[arg(long, global = true)]
+    pub plain: bool,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -69,6 +75,8 @@ pub enum Command {
     Init(init::Args),
     /// Serve scoped list, read, and write tools for this project's .plaesy/ folder over MCP
     Mcp(mcp::Args),
+    /// Read-only HTTP status and task API (/health, /tasks, /events), loopback by default
+    Remote(remote::Args),
     /// Install the plaesy CLI to a well-known bin directory
     Install,
     /// Remove the installed plaesy binary and PATH entry while preserving user data
@@ -174,6 +182,8 @@ impl Command {
             Self::Telemetry(_) => return None,
         })
     }
+    /// Voice commands: parse transcribed text into a task command without running it
+    Voice(voice::Args),
 }
 
 /// Prints the help of one command group, for a group run with no subcommand.
@@ -199,6 +209,9 @@ pub fn print_group_help(name: &str) -> CliResult {
 /// The command fails. The caller prints the error and exits with status 1.
 pub fn run(cli: Cli) -> CliResult {
     let name = cli.command.telemetry_name();
+    let no_color = std::env::var_os("NO_COLOR");
+    let style = output::Style::resolve(cli.plain, no_color.as_deref());
+    crate::common::log::set_color_enabled(style.color);
     let started = std::time::Instant::now();
     let result = dispatch(cli.command);
     if let Some(name) = name {
@@ -226,6 +239,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Dashboard(args) => dashboard::run(&args),
         Command::Init(args) => init::run(&args),
         Command::Mcp(args) => mcp::run(&args),
+        Command::Remote(args) => remote::run(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
         Command::Repair => install::repair(),
@@ -256,5 +270,6 @@ fn dispatch(command: Command) -> CliResult {
         Command::Export(args) => export::run(&args),
         Command::Validate(args) => validate::run(&args),
         Command::Telemetry(args) => telemetry::run(&args),
+        Command::Voice(args) => voice::run(&args),
     }
 }

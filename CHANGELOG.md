@@ -20,6 +20,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   call that would exceed a daily cost budget (`daily_cost_budget_micro_usd`) as well as the token budget.
 - Add `plaesy tasks create-subtask` and `plaesy tasks children` for parent-child task hierarchies. A
   missing parent is refused under the issue graph lock, so no orphaned subtask is created.
+- Add `plaesy voice parse "<text>"`, which turns a transcribed Indonesian or English sentence into a create,
+  complete, or list task command and prints it as JSON without running it. Audio capture and speech
+  recognition are not included.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,
@@ -39,6 +42,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Add `plaesy update --check --manifest <PATH>`, which compares the installed version with a local
   JSON manifest without network access. Downloading releases is not implemented.
 - Add `memory_remember_session` to the memory MCP server: saves a session summary (title, date, summary, http(s) links) as an indexed note in the `sessions` folder, found by the existing search.
+- Add `plaesy remote serve --port <n>`, a read-only HTTP API for the project's task board: `GET /health`, `GET /tasks` (JSON summary), and `GET /events` (Server-Sent Events). It binds to loopback by default; a non-loopback `--bind` requires a bearer token (`--auth-token` or `PLAESY_REMOTE_TOKEN`, at least 32 bytes).
+- Add a global `--plain` flag (place it before the subcommand) and honor `NO_COLOR`: log lines then
+  carry no ANSI color. `--plain` also turns off decorative glyphs for the call sites that use them.
 
 ### Fixed
 
