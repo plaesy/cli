@@ -50,7 +50,9 @@ The repository is a Cargo workspace (virtual root manifest). Every package lives
 
 ## Repository state
 
-- Git branch is `main`. The program branch `chore/plaesy-program-refactor` also exists on origin.
+- The default branch is `main`. Check the active branch with `git branch --show-current` before committing; integration work for agent features lives on `integrate/agent-features`.
+- `.claude/worktrees/agent-*` holds worktrees from agent sessions. They are not source of truth; read `main` or the active branch instead.
+- Disk: a full workspace build needs many GB under `target/`. `cargo clean` can fail while MCP servers hold `plaesy.exe`; stop those processes first.
 - Commit policy: `CLAUDE.md` is tracked. After a change passes `make verify` (or the equivalent Cargo commands) and the Markdown lint, commit it without asking. Use the commit proposal flow and report the commit hash.
 - CONTRIBUTING.md says the project runs no CI, but `.github/workflows/ci.yml` exists. It runs fmt, clippy, tests, and an installer end-to-end test on three OSes. Check the workflow before assuming it is inactive.
 - `docs/platform/` describes target designs. Do not present a planned capability as implemented; check the code and tests first.
