@@ -82,14 +82,14 @@ For each primary workflow, inspect desktop and narrow layouts, keyboard route an
 
 ## Design assessment, 2026-11-23
 
-The FigCraft file has 49 frames. Home opens the product areas directly: Agents, Work, Knowledge, Studio and System. Each area opens its feature pages, and the linked decision journeys continue to review, confirmation, result or recovery. The replacement map and prototype guide remain secondary design-review aids. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants. These screens are illustrative and do not prove that the underlying feature exists.
+The FigCraft file has 69 frames. Home opens the product areas directly: Agents, Work, Knowledge, Studio and System. Each area has a focused sidebar with named destinations and relevant creation actions. Agents and Work detail pages use the same area navigation; the conversation page keeps its recent sessions above the area links. The linked decision journeys continue to review, confirmation, result or recovery. The replacement map and prototype guide remain secondary design-review aids. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants. These screens are illustrative and do not prove that the underlying feature exists.
 
 | Route from Home | Feature pages reached through the product UI |
 |---|---|
-| Agents | Conversation and approval, organization and budgets, backends and plugins, schedules, developer review, remote sessions, profile and skills |
-| Work | Task board, timeline, reports, members and roles, mobile task creation and review |
-| Knowledge | Evidence search, source preview and task-linked citations |
-| Studio | Design and components, presentations and presenter view, documents and import/revision/conflict review, build comparison and refinement, flow editor |
+| Agents | Conversation and approval, organization and budgets, backends and plugins, schedules, developer review, remote sessions, profile and skills; create agent, start conversation, add backend, and create or edit a schedule |
+| Work | Task board, timeline, reports, members and roles; create task, create project, invite member and mobile task creation |
+| Knowledge | Evidence search, source preview and task-linked citations; create note |
+| Studio | Choose a new artifact, then open design and components, presentations and presenter view, documents and import/revision/conflict review, build comparison and refinement, or flow editor; choose a new slide layout |
 | System | Instance control, desktop command and voice review, consent and receipt, offline and permission recovery, platform architecture |
 
 | Source | Representative FigCraft workflow | Design work still required before UX acceptance |
@@ -116,6 +116,9 @@ The prototype also shows mobile task creation → review → receipt, an offline
 - Expanded isolated text-only prototype hit areas to at least 32 px on desktop and 44 px on mobile. A clickable design layer does not supply a semantic button, keyboard behavior or screen-reader name.
 - Bound shared semantic colors across the existing screens and created a four-state button component set. The Light mode and component behavior still require visual and implementation review.
 - Inspected the prototype navigation graph after connecting the product areas: all 47 product and reference frames are reachable from Home while excluding the replacement map and prototype guide from the route. The Plaesy brand links back to Home on 35 screens. This checks prototype navigation, not task success with users.
+- Added creation journeys with task, agent and schedule setup, check-answers review and outcome; project and note setup with outcome; backend setup and member invitation with outcome; a Studio artifact chooser; a new conversation entry; and a slide layout chooser. Editing an existing schedule also leads to a change review and outcome. These are static target states, not working form controls or persisted data.
+- Replaced mixed sidebar destinations on the five area roots and aligned the Agents and Work detail sidebars. Kept recent sessions distinct from product navigation on the conversation page. Visually inspected representative root, detail, mobile and document screens after the change.
+- Rechecked the visible prototype navigation graph: all 67 product frames are reachable from Home, with no destination pointing to a missing frame. The two separate design-review frames are intentionally outside the product route. This checks reachability only; creation outcomes and editor state still need implemented behavior and task-based usability testing.
 
 ### UX acceptance gate
 
