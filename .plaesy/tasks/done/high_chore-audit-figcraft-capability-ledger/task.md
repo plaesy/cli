@@ -3,7 +3,7 @@ spec: plaesy-agent-platform
 topic: chore-audit-figcraft-capability-ledger
 title: Audit FigCraft capability ledger
 phase: research
-status: backlog
+status: done
 ---
 
 # Audit FigCraft capability ledger
