@@ -6,7 +6,9 @@ resolver = "2"
 members = [
     "crates/plaesy/interface/client",
     "crates/plaesy/adapter/design-ir",
+    "crates/plaesy/adapter/import-tasks",
     "crates/plaesy/adapter/memory",
+    "crates/plaesy/adapter/pty",
     "crates/plaesy/adapter/relay",
     "crates/plaesy/adapter/runstore",
     "crates/plaesy/adapter/sqlite",
@@ -43,10 +45,12 @@ members = [
     "crates/plaesy/plaesy",
     "crates/plaesy/service",
     "crates/plaesy/support/analysis",
+    "crates/plaesy/support/collab",
     "crates/plaesy/support/common",
     "crates/plaesy/support/designlint",
     "crates/plaesy/support/loop",
     "crates/plaesy/support/mdlint",
+    "crates/plaesy/support/plugins",
     "crates/plaesy/support/tasks",
 ]
 default-members = ["crates/plaesy/plaesy"]
@@ -75,6 +79,7 @@ lru = "0.12"
 notify = { version = "8", features = ["macos_fsevent"] }
 ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
 parking_lot = "0.12"
+portable-pty = "0.9"
 proptest = "1.4"
 pulldown-cmark = "0.12"
 quick-xml = "0.37"

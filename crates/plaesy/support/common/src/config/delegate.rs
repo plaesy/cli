@@ -39,6 +39,10 @@ pub struct DelegateProviderConfig {
     /// anthropic, ollama, openai: model id.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub model: String,
+    /// anthropic, ollama, openai: models tried in order after `model` when a call
+    /// fails with a retryable error. They reuse the same endpoint and key.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fallback_models: Vec<String>,
     /// ollama, openai: base URL.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub endpoint: String,
@@ -48,6 +52,24 @@ pub struct DelegateProviderConfig {
     /// Daily input plus output token cap for a billable provider. `0` means no cap.
     #[serde(skip_serializing_if = "is_zero")]
     pub daily_token_budget: i64,
+    /// Price per million input tokens, in micro-USD (1 USD = 1_000_000). Set from the
+    /// provider's published price in local config; the runtime never fetches it. `0` means unpriced.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub input_micro_usd_per_mtok: i64,
+    /// Price per million output tokens, in micro-USD. `0` means unpriced.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub output_micro_usd_per_mtok: i64,
+    /// Daily cost cap for a billable provider, in micro-USD. `0` means no cap. It needs a price.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub daily_cost_budget_micro_usd: i64,
+}
+
+impl DelegateProviderConfig {
+    /// True when at least one token price is set, so a call can be costed.
+    #[must_use]
+    pub fn is_priced(&self) -> bool {
+        self.input_micro_usd_per_mtok > 0 || self.output_micro_usd_per_mtok > 0
+    }
 }
 
 impl DelegateConfig {

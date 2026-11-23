@@ -9,6 +9,8 @@ description = "Antarmuka baris perintah (ADR 0003: interface/cli)."
 
 [dependencies]
 plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
+plaesy-adapter-runstore = { path = "../../adapter/runstore" }
+plaesy-domain-workflow = { path = "../../domain/workflow" }
 plaesy-adapter-codegen-js = { path = "../../adapter/codegen-js" }
 plaesy-adapter-codegen-go = { path = "../../adapter/codegen-go" }
 plaesy-adapter-import-sql = { path = "../../adapter/import-sql" }

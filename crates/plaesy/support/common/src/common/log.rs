@@ -3,6 +3,21 @@
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Process-wide switch for ANSI color. The CLI turns it off for `--plain` and `NO_COLOR`.
+static COLOR_ENABLED: AtomicBool = AtomicBool::new(true);
+
+/// Turns ANSI color on or off for every `Logger` in this process.
+pub fn set_color_enabled(enabled: bool) {
+    COLOR_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+/// Whether `Logger` currently writes ANSI color.
+#[must_use]
+pub fn color_enabled() -> bool {
+    COLOR_ENABLED.load(Ordering::Relaxed)
+}
 
 const RED: &str = "\x1b[0;31m";
 const GREEN: &str = "\x1b[0;32m";
@@ -104,12 +119,16 @@ impl Logger {
             level.label(),
             self.name
         );
-        let colored = format!("{}{plain}{RESET}", level.color());
+        let shown = if color_enabled() {
+            format!("{}{plain}{RESET}", level.color())
+        } else {
+            plain.clone()
+        };
         // Terminal output is best-effort: a closed pipe must not abort the command.
         let _ = if level.goes_to_stderr() {
-            writeln!(io::stderr(), "{colored}")
+            writeln!(io::stderr(), "{shown}")
         } else {
-            writeln!(io::stdout(), "{colored}")
+            writeln!(io::stdout(), "{shown}")
         };
         if let Some(path) = &self.file {
             let _ = append_line(path, &plain);

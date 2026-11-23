@@ -134,7 +134,7 @@ fn tools() -> Value {
         },
         {
             "name": "memory_remember",
-            "description": "Save a new note for the memory: a Markdown file under the notes root, indexed at once so it can be cited. Creates files only; an existing note is never overwritten, and folders must stay inside the notes root. Notes written here are marked source: agent, and a confidence of high is stored as medium: the owner raises it by hand.",
+            "description": "Save a new indexed note. Optional graph fields classify a project, decision, context, knowledge, capture, or preference so other agents can retrieve it by project. Search before writing: this tool creates files only and never overwrites an existing note. Notes are marked source: agent; high confidence is stored as medium.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -142,9 +142,38 @@ fn tools() -> Value {
                     "body": { "type": "string" },
                     "folder": { "type": "string", "description": "Relative folder under the notes root. Default: the vault's inbox folder (for example 00. Inbox), else inbox." },
                     "tier": { "type": "string", "enum": ["core", "episodic", "semantic", "procedural", "archive"], "default": "semantic" },
-                    "confidence": { "type": "string", "enum": ["high", "medium", "low"], "default": "medium", "description": "high is stored as medium." }
+                    "confidence": { "type": "string", "enum": ["high", "medium", "low"], "default": "medium", "description": "high is stored as medium." },
+                    "note_type": { "type": "string", "enum": ["project", "decision", "context", "knowledge", "capture", "preference"], "description": "Graph note type. Requires id." },
+                    "id": { "type": "string", "description": "Stable graph id; required with note_type." },
+                    "status": { "type": "string", "description": "Lifecycle status for the graph type, not task progress." },
+                    "project": { "type": "string", "description": "Owning project id." },
+                    "scope": { "type": "array", "items": { "type": "string" }, "description": "Additional project ids this note applies to." },
+                    "supersedes": { "type": "array", "items": { "type": "string" }, "description": "Decision ids replaced by this decision." }
                 },
                 "required": ["title", "body"]
+            },
+            "annotations": write_safe
+        },
+        {
+            "name": "memory_remember_session",
+            "description": "Save a summary of one working session as a note in the sessions folder (tier episodic): title, session date (YYYY-MM-DD), summary, and links (http or https only). The note is indexed at once and found by memory_search. Creates files only; an existing note is never overwritten.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string" },
+                    "date": { "type": "string", "description": "Session date, YYYY-MM-DD." },
+                    "summary": { "type": "string", "description": "Markdown summary of what was done, decided and left open." },
+                    "links": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "items": {
+                            "type": "object",
+                            "properties": { "label": { "type": "string" }, "url": { "type": "string" } },
+                            "required": ["label", "url"]
+                        }
+                    }
+                },
+                "required": ["title", "date", "summary"]
             },
             "annotations": write_safe
         },
@@ -208,7 +237,11 @@ fn render_hits(hits: &[SearchHit]) -> String {
 }
 
 /// Tool yang menulis ke vault. Ditolak bila engine berjalan dengan `serve --read-only`.
-const WRITE_TOOLS: &[&str] = &["memory_remember", "memory_resolve_gap"];
+const WRITE_TOOLS: &[&str] = &[
+    "memory_remember",
+    "memory_remember_session",
+    "memory_resolve_gap",
+];
 
 #[cfg(test)]
 async fn call_tool(engine: &SearchEngine, name: &str, args: &Value) -> Value {
@@ -390,6 +423,66 @@ async fn run_tool(
                     .unwrap_or("")
                     .to_string()
             };
+            let graph_keys = [
+                "note_type",
+                "id",
+                "status",
+                "project",
+                "scope",
+                "supersedes",
+            ];
+            let graph = if graph_keys.iter().any(|key| args.get(key).is_some()) {
+                let read_string = |key: &str| -> std::result::Result<Option<String>, ToolError> {
+                    args.get(key)
+                        .map(|value| {
+                            value.as_str().map(str::to_owned).ok_or_else(|| {
+                                ToolError::Invalid(format!("`{key}` must be a string"))
+                            })
+                        })
+                        .transpose()
+                };
+                let read_list = |key: &str| -> std::result::Result<Vec<String>, ToolError> {
+                    Ok(args
+                        .get(key)
+                        .map(|value| {
+                            value
+                                .as_array()
+                                .and_then(|items| {
+                                    items
+                                        .iter()
+                                        .map(|item| item.as_str().map(str::to_owned))
+                                        .collect::<Option<Vec<_>>>()
+                                })
+                                .ok_or_else(|| {
+                                    ToolError::Invalid(format!(
+                                        "`{key}` must be an array of strings"
+                                    ))
+                                })
+                        })
+                        .transpose()?
+                        .unwrap_or_default())
+                };
+                let note_type = read_string("note_type")?
+                    .filter(|value| !value.trim().is_empty())
+                    .ok_or_else(|| {
+                        ToolError::Invalid("`note_type` is required for graph fields".into())
+                    })?;
+                let id = read_string("id")?
+                    .filter(|value| !value.trim().is_empty())
+                    .ok_or_else(|| {
+                        ToolError::Invalid("`id` is required with `note_type`".into())
+                    })?;
+                Some(crate::memory::notes::GraphFields {
+                    note_type,
+                    id,
+                    status: read_string("status")?,
+                    project: read_string("project")?,
+                    scope: read_list("scope")?,
+                    supersedes: read_list("supersedes")?,
+                })
+            } else {
+                None
+            };
             let note = crate::memory::notes::NewNote {
                 folder: text_arg("folder"),
                 title: text_arg("title"),
@@ -404,7 +497,7 @@ async fn run_tool(
                     .and_then(Value::as_str)
                     .unwrap_or("medium")
                     .to_string(),
-                graph: None,
+                graph,
             };
             if note.title.trim().is_empty() || note.body.trim().is_empty() {
                 return Err(ToolError::Invalid(
@@ -412,6 +505,50 @@ async fn run_tool(
                 ));
             }
             let path = engine.remember(&note).await?;
+            let text = format!("saved {}", path.display());
+            Ok(tool_text(
+                text,
+                json!({ "path": path.display().to_string() }),
+            ))
+        }
+        "memory_remember_session" => {
+            let text_arg = |key: &str| {
+                args.get(key)
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string()
+            };
+            let date = chrono::NaiveDate::parse_from_str(&text_arg("date"), "%Y-%m-%d")
+                .map_err(|_| ToolError::Invalid("date must be YYYY-MM-DD".into()))?;
+            let mut links = Vec::new();
+            if let Some(items) = args.get("links") {
+                let items = items
+                    .as_array()
+                    .ok_or_else(|| ToolError::Invalid("links must be an array".into()))?;
+                for item in items {
+                    let field = |key: &str| {
+                        item.get(key)
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                            .ok_or_else(|| {
+                                ToolError::Invalid(
+                                    "each link needs string fields label and url".into(),
+                                )
+                            })
+                    };
+                    links.push(crate::memory::notes::SessionLink {
+                        label: field("label")?,
+                        url: field("url")?,
+                    });
+                }
+            }
+            let summary = crate::memory::notes::SessionSummary {
+                title: text_arg("title"),
+                date,
+                summary: text_arg("summary"),
+                links,
+            };
+            let path = engine.remember_session(&summary).await?;
             let text = format!("saved {}", path.display());
             Ok(tool_text(
                 text,
