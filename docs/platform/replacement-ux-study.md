@@ -82,7 +82,15 @@ For each primary workflow, inspect desktop and narrow layouts, keyboard route an
 
 ## Design assessment, 2026-11-23
 
-The FigCraft file has 49 frames. Home links to the 11-target replacement map and a prototype guide; every frame is reachable from Home through those routes. The replacement map links each named source to a representative workflow, while the guide indexes supporting screens and failure states. These screens evaluate the experience architecture and important decisions; they are illustrative and do not prove that the underlying feature exists. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants.
+The FigCraft file has 49 frames. Home opens the product areas directly: Agents, Work, Knowledge, Studio and System. Each area opens its feature pages, and the linked decision journeys continue to review, confirmation, result or recovery. The replacement map and prototype guide remain secondary design-review aids. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants. These screens are illustrative and do not prove that the underlying feature exists.
+
+| Route from Home | Feature pages reached through the product UI |
+|---|---|
+| Agents | Conversation and approval, organization and budgets, backends and plugins, schedules, developer review, remote sessions, profile and skills |
+| Work | Task board, timeline, reports, members and roles, mobile task creation and review |
+| Knowledge | Evidence search, source preview and task-linked citations |
+| Studio | Design and components, presentations and presenter view, documents and import/revision/conflict review, build comparison and refinement, flow editor |
+| System | Instance control, desktop command and voice review, consent and receipt, offline and permission recovery, platform architecture |
 
 | Source | Representative FigCraft workflow | Design work still required before UX acceptance |
 |---|---|---|
@@ -107,7 +115,7 @@ The prototype also shows mobile task creation → review → receipt, an offline
 - Checked text contrast against the nearest containing solid background and corrected five low-contrast cases; the static heuristic then found none. This does not inspect gradients, transparency, focus rendering, real platform fonts or browser output, and is not a WCAG conformance test.
 - Expanded isolated text-only prototype hit areas to at least 32 px on desktop and 44 px on mobile. A clickable design layer does not supply a semantic button, keyboard behavior or screen-reader name.
 - Bound shared semantic colors across the existing screens and created a four-state button component set. The Light mode and component behavior still require visual and implementation review.
-- Inspected the prototype navigation graph after adding the guide: all 49 frames are reachable from Home. This checks discoverability in the design artifact, not task success with users.
+- Inspected the prototype navigation graph after connecting the product areas: all 47 product and reference frames are reachable from Home while excluding the replacement map and prototype guide from the route. The Plaesy brand links back to Home on 35 screens. This checks prototype navigation, not task success with users.
 
 ### UX acceptance gate
 
