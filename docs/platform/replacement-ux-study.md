@@ -49,6 +49,11 @@ Checked on 2026-11-23 as design research. These moving product pages complement 
 | [Paperclip agents](https://docs.paperclip.ing/guides/org/agents/) and [approvals](https://docs.paperclip.ing/guides/day-to-day/approvals/) | Agent roster, run detail, budgets, and approval requests have distinct inspection paths. | Give roster, run, cost, and approval views their own task-focused layouts. |
 | [Orca worktrees](https://github.com/stablyai/orca/blob/main/docs/site/content/docs/model/worktrees.mdx) | Parallel work is scoped to worktrees, with a separate diff review path. | Expose worktree identity beside each session and keep review attached to its branch. |
 | [OpenProject Gantt](https://www.openproject.org/docs/user-guide/gantt-chart/) and [boards](https://www.openproject.org/docs/user-guide/agile-boards/) | Project work can be viewed and changed through both timeline and board views. | Provide table, board, and timeline projections of the same work items instead of treating a board as the whole project model. |
+| [Hermes scheduled tasks](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard) | A scheduled job has a prompt, schedule, delivery target, state, last and next run, plus pause, edit, trigger and delete paths. | Review trigger, destination, actor and permissions before activation; keep a run receipt and a route to pause. |
+| [DeepSeek plugin manager](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-plugin-manager/README.md) | A plugin bundle is inspected before installation, installation output is visible and stoppable, configuration is separate, and enabling follows installation. | Keep review, install, configure and enable as separate states; make requested access and disabled status explicit. |
+| [Orca remote worktrees](https://github.com/stablyai/orca/blob/main/docs/site/content/docs/recipes/remote-worktrees.mdx) and [Nimbalyst sessions](https://github.com/nimbalyst/nimbalyst/blob/main/README.md) | Agent sessions retain worktree and execution target context; a remote agent can continue during a client disconnect. | Keep remote host, worktree, last event and uncertain run state visible; preserve unsent input until reconnection is confirmed. |
+| [DeckCraft presentation features](https://github.com/storytold/deckcraft/blob/main/README.md) and [WordCraft review/features](https://github.com/storytold/wordcraft/blob/main/README.md) | Presenter view and file exchange are distinct from slide editing; document review and format import/export extend beyond page text. | Provide presenter controls and a source-versus-import review before treating an imported document as editable. |
+| [OpenProject members](https://www.openproject.org/docs/user-guide/members/) and [Herald OS system permissions](https://github.com/iamlukethedev/Herald-OS/blob/main/docs/SYSTEM-BRIDGE.md) | Membership visibility and inherited roles affect what can be shown or changed; system actions have permission tiers and audit requirements. | Explain denial from the actual policy without exposing hidden data; preview an external or system action and retain its receipt. |
 
 ## Interaction rules
 
@@ -75,10 +80,34 @@ Sources: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/), [W3C target size](https:
 
 For each primary workflow, inspect desktop and narrow layouts, keyboard route and visible focus state, local and remote scope, permissions, happy path, error/recovery path, empty/degraded state, and the resulting receipt or history. Link representative screens as a prototype. Mark illustrative values and unimplemented target surfaces clearly. Before calling any replacement path complete, connect it to pinned incumbent scenarios and Plaesy implementation evidence using the measurement framework.
 
-## Current design gaps
+## Design assessment, 2026-11-23
 
-The FigCraft file now includes distinct target screens for agent conversation and human review, organization and budgets, backend configuration, coding diff review, app recreation comparison, visual design, presentations, documents, project timeline, desktop command and consent, and offline recovery. The agent approval journey includes a decision, confirmation and receipt; the desktop command links to its consent preview. These screens complement Home, task board, evidence search, flow editor, instance overview, mobile review and the visual system.
+The FigCraft file has 48 frames. Its replacement audit map links each named source to a representative workflow. These screens evaluate the experience architecture and important decisions; they are illustrative and do not prove that the underlying feature exists. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants.
 
-The replacement audit map in FigCraft links each named source to a representative workflow screen. The schedule and skills screen shows trigger, agent, permission scope, next run and history summary; editing and activation remain to be designed.
+| Source | Representative FigCraft workflow | Design work still required before UX acceptance |
+|---|---|---|
+| Hermes Agent | Conversation → human review → confirmation → receipt; schedule list → activation review → receipt; scoped profile and skills | Failure and retry of scheduled runs, session resume, memory controls and verified profile isolation |
+| Paperclip | Agent organization, budget guardrails, approvals and project work | Delegation and goal changes, multi-organization scoping, detailed spend inspection and approval escalation |
+| DeepSeek Harness | Backend catalog → plugin spec review → installed but disabled configuration | Installation progress/stop, plugin enable and rollback, provider secret validation and failure recovery |
+| Nimbalyst | Developer diff review, worktree context and remote handoff | File and terminal editing, per-hunk decision, session search/resume and mobile diff review |
+| Orca | Parallel session/worktree context, remote reconnect and diff review | SSH setup/test, remote command recovery, mobile handoff and branch merge lifecycle |
+| Craft Anything | Study → Build → Check → Ready comparison; failed check → evidence → refinement instruction → run progress | Target capture, completed recheck, approval result history and actual build permissions |
+| FigCraft | Design editor → component variants, variables and prototype inspector | Vector editing, actual auto-layout manipulation, asset import/export and collaboration conflicts |
+| DeckCraft | Slide editor → presenter view with notes, timer and display controls | Animation authoring, playback failures, recording, export and PPTX fidelity review |
+| WordCraft | Document editor, source-versus-import review and individual revision decision | Complex layout, DOCX round-trip, revision history and export comparison |
+| Herald OS | Command search → action consent → receipt; voice transcript → consent | Live voice capture and retention choices, OS permission tiers, audit inspection and action failure recovery |
+| OpenProject | Task board, timeline, project report and member/role visibility | Work item detail and dependency editing, role mutation, group administration and report drill-down |
 
-This is broad **concept coverage**, not a validated replacement journey. The remaining design work includes skills configuration and schedule activation, presenter mode, document round-trip behavior, vector and component editing, remote execution handoff, project reporting and member permissions, voice interaction, mobile creation paths, and representative error, empty, conflict and permission-denied flows. The prototype still needs end-to-end navigation, responsive variants, keyboard and focus specification, user testing, and source-by-source acceptance evidence. None of these screens may be counted as implementation or feature parity.
+The prototype also shows mobile task creation → review → receipt, an offline snapshot with an unsent draft, a document conflict, and a permission-denied recovery path. These examples establish a pattern; each product workflow still needs its own states and responsive layout. Similar applications should be assessed by the capability family they exercise, not by superficial screen resemblance.
+
+### Prototype checks performed
+
+- Visually inspected the new workflow screens in FigCraft and corrected visible overlaps and navigation duplication.
+- At the 44-frame audit, inspected 1,362 text layers and 102 layers with prototype interactions. A structural check found no text layer outside its frame and no navigation action pointing to a missing frame. Four more frames and the design tokens/component set were added afterward.
+- Checked text contrast against the nearest containing solid background and corrected five low-contrast cases; the static heuristic then found none. This does not inspect gradients, transparency, focus rendering, real platform fonts or browser output, and is not a WCAG conformance test.
+- Expanded isolated text-only prototype hit areas to at least 32 px on desktop and 44 px on mobile. A clickable design layer does not supply a semantic button, keyboard behavior or screen-reader name.
+- Bound shared semantic colors across the existing screens and created a four-state button component set. The Light mode and component behavior still require visual and implementation review.
+
+### UX acceptance gate
+
+Before calling a replacement experience complete, test a pinned source scenario and its Plaesy counterpart with a person performing the task. Confirm the result, permissions, local/remote scope, recovery, keyboard and assistive-technology route, 320 CSS px reflow, and file or state fidelity where applicable. Record the outcome in the [measurement framework](feature-measurement-framework.md). No FigCraft screen is implementation or feature-parity evidence.
