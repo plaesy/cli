@@ -82,7 +82,7 @@ For each primary workflow, inspect desktop and narrow layouts, keyboard route an
 
 ## Design assessment, 2026-11-23
 
-The FigCraft file has 48 frames. Its replacement audit map links each named source to a representative workflow. These screens evaluate the experience architecture and important decisions; they are illustrative and do not prove that the underlying feature exists. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants.
+The FigCraft file has 49 frames. Home links to the 11-target replacement map and a prototype guide; every frame is reachable from Home through those routes. The replacement map links each named source to a representative workflow, while the guide indexes supporting screens and failure states. These screens evaluate the experience architecture and important decisions; they are illustrative and do not prove that the underlying feature exists. A semantic color collection supplies Dark and Light modes, and a real button component set has Default, Hover, Focus and Disabled variants.
 
 | Source | Representative FigCraft workflow | Design work still required before UX acceptance |
 |---|---|---|
@@ -107,6 +107,7 @@ The prototype also shows mobile task creation → review → receipt, an offline
 - Checked text contrast against the nearest containing solid background and corrected five low-contrast cases; the static heuristic then found none. This does not inspect gradients, transparency, focus rendering, real platform fonts or browser output, and is not a WCAG conformance test.
 - Expanded isolated text-only prototype hit areas to at least 32 px on desktop and 44 px on mobile. A clickable design layer does not supply a semantic button, keyboard behavior or screen-reader name.
 - Bound shared semantic colors across the existing screens and created a four-state button component set. The Light mode and component behavior still require visual and implementation review.
+- Inspected the prototype navigation graph after adding the guide: all 49 frames are reachable from Home. This checks discoverability in the design artifact, not task success with users.
 
 ### UX acceptance gate
 
