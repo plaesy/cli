@@ -135,6 +135,8 @@ pub enum Command {
     Validate(validate::Args),
     /// Local, opt-in telemetry summary (stored in .plaesy/telemetry.jsonl, never sent)
     Telemetry(telemetry::Args),
+    /// Voice commands: parse transcribed text into a task command without running it
+    Voice(voice::Args),
 }
 
 impl Command {
@@ -179,11 +181,11 @@ impl Command {
             Self::Onboard(_) => "onboard",
             Self::Export(_) => "export",
             // Reading the telemetry summary is not itself recorded.
+            Self::Voice(_) => "voice",
+            Self::Remote(_) => "remote",
             Self::Telemetry(_) => return None,
         })
     }
-    /// Voice commands: parse transcribed text into a task command without running it
-    Voice(voice::Args),
 }
 
 /// Prints the help of one command group, for a group run with no subcommand.
