@@ -283,7 +283,6 @@ pub fn run(args: &Args) -> CliResult {
         }
         TasksCommand::Children(children) => super::tasks_issue::children(children, &tasks_dir()?),
         TasksCommand::Issues(issues) => super::tasks_issue::run(issues, &tasks_dir()?),
-        TasksCommand::UpdateIssue(update) => super::tasks_issue::update(update, &tasks_dir()?),
         TasksCommand::Comment { task, text } => {
             super::tasks_comment::add(task, text, &tasks_dir()?)
         }
