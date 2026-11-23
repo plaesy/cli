@@ -6,6 +6,7 @@ pub mod evidence;
 pub mod exclude;
 pub mod expected;
 pub mod export;
+pub mod sse;
 pub mod files;
 pub mod imagegen;
 pub mod installer;
