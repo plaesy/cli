@@ -26,7 +26,7 @@ Windows notes:
 ## Conventions the code enforces
 
 - Library code returns typed errors. No `unwrap()` or `expect()` outside tests, except static regex patterns and provable invariants, each with a message that names the invariant (see CONTRIBUTING.md).
-- The runtime stays offline. Network access belongs only in install or model-download commands. Exception, approved by the owner on 2026-11-22: the `openai` delegate and loop provider call the network when a step runs them. Keep every other runtime path offline.
+- The runtime may use the network when a feature needs it (mobile or remote access, chat integrations, collaboration, providers). Approved by the owner on 2026-11-23, replacing the earlier offline-only rule. Each networked path must be explicit, opt-in by configuration, and documented in `docs/platform/decisions.md`. Local-only features (memory, tasks, boards, exports) stay local by default.
 - Stdout is a protocol in JSON and MCP modes. Send diagnostics to stderr.
 - Schema changes migrate on open, with coverage for opening an older database.
 - Tests live beside their module in `<name>_test.rs`, wired with `#[cfg(test)] #[path = "<name>_test.rs"] mod <name>_test;`. Integration tests live in `crates/plaesy/plaesy/tests/`, and architecture checks run from `architecture_test.rs` (ADR 0003). Tests that need the ONNX model must skip with a clear message when it is missing.

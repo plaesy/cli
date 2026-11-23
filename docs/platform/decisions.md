@@ -196,3 +196,7 @@ Target pengganti yang berlaku, dengan inventaris fitur di `docs/platform/feature
 - OpenBot: https://github.com/nightly-labs/openbot
 - OpenProject: https://github.com/opf/openproject
 - Paperclip, Nimbalyst, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald OS: sesuai ADR 0003 dan inventarisnya.
+
+## Aturan runtime jaringan (disetujui pemilik, 2026-11-23)
+
+Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline di CLAUDE.md digantikan. Setiap jalur jaringan harus eksplisit, aktif hanya lewat konfigurasi, dan tercatat di dokumen ini. Fitur lokal (memori, task, board, ekspor) tetap lokal secara default.
