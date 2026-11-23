@@ -7,7 +7,7 @@ description = "Permukaan klien (ADR 0011): adapter HTTP/WS, router shell, dan gu
 
 [features]
 default = []
-web = ["dep:dioxus", "dep:dioxus-signals"]
+web = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
 desktop = []
 mobile = []
 
@@ -17,6 +17,8 @@ serde_json = { workspace = true }
 dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "logger", "macro", "html", "hooks"] }
 # Dipakai langsung oleh makro rsx! yang dihasilkan Dioxus.
 dioxus-signals = { version = "0.7", optional = true }
+# shadcn/ui-style components for Dioxus (diaktifkan dengan fitur `web`).
+dioxus-shadcn = { workspace = true, optional = true }
 
 [[example]]
 name = "web"

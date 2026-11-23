@@ -67,6 +67,7 @@ clap = { version = "4.5", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"] }
 dioxus-ssr = { version = "=0.7.10" }
+dioxus-shadcn = { version = "0.2", default-features = false, features = ["button", "card", "input", "label", "dialog", "sidebar", "tabs", "badge", "separator", "scroll-area"] }
 dirs = "5"
 filetime = "0.2.29"
 futures = "0.3"
