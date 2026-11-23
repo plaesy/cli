@@ -28,7 +28,7 @@ pub fn render_flow(name: &str, modules: &[ModuleView]) -> String {
     let mut body = String::new();
     body.push_str(&format!("<h1>{}</h1>\n", escape(name)));
 
-    body.push_str("<section><h2>Modul</h2>\n<ul>\n");
+    body.push_str("<section><h2>Modul</h2>\n<ul role=\"list\" aria-label=\"Daftar modul\">\n");
     for module in modules {
         body.push_str(&format!(
             "<li><strong>{}</strong> <code>{}</code>",
@@ -50,7 +50,7 @@ pub fn render_flow(name: &str, modules: &[ModuleView]) -> String {
     }
     body.push_str("</ul></section>\n");
 
-    body.push_str("<section><h2>Alur data</h2>\n<ul>\n");
+    body.push_str("<section><h2>Alur data</h2>\n<ul role=\"list\" aria-label=\"Daftar alur data\">\n");
     for edge in edges(modules) {
         body.push_str(&format!(
             "<li>{} &rarr; {}</li>\n",
@@ -61,7 +61,7 @@ pub fn render_flow(name: &str, modules: &[ModuleView]) -> String {
     body.push_str("</ul></section>\n");
 
     let issues = validate(modules);
-    body.push_str("<section><h2>Masalah</h2>\n");
+    body.push_str("<section aria-label=\"Masalah validasi\"><h2>Masalah</h2>\n");
     if issues.is_empty() {
         body.push_str("<p>Tidak ada masalah lokal.</p>\n");
     } else {
