@@ -67,9 +67,9 @@ fn parse_ask_needs_a_question_and_at_least_two_options() {
             vec!["ya".to_owned(), "tidak".to_owned()]
         ))
     );
-    assert_eq!(parse_ask("Q? | satu"), Err(ASK_USAGE.to_owned()));
-    assert_eq!(parse_ask("Q? |  | b"), Err(ASK_USAGE.to_owned()));
-    assert_eq!(parse_ask(" | a | b"), Err(ASK_USAGE.to_owned()));
+    assert_eq!(parse_ask("Q? | satu"), Err(Usage::Ask));
+    assert_eq!(parse_ask("Q? |  | b"), Err(Usage::Ask));
+    assert_eq!(parse_ask(" | a | b"), Err(Usage::Ask));
 }
 
 #[test]
@@ -79,10 +79,10 @@ fn parse_pick_reads_an_id_and_a_positive_option_number() {
         parse_pick("  decision-1   2 "),
         Ok(("decision-1".to_owned(), 2))
     );
-    assert_eq!(parse_pick("decision-1"), Err(PICK_USAGE.to_owned()));
-    assert_eq!(parse_pick("decision-1 0"), Err(PICK_USAGE.to_owned()));
-    assert_eq!(parse_pick("decision-1 x"), Err(PICK_USAGE.to_owned()));
-    assert_eq!(parse_pick("decision-1 2 3"), Err(PICK_USAGE.to_owned()));
+    assert_eq!(parse_pick("decision-1"), Err(Usage::Pick));
+    assert_eq!(parse_pick("decision-1 0"), Err(Usage::Pick));
+    assert_eq!(parse_pick("decision-1 x"), Err(Usage::Pick));
+    assert_eq!(parse_pick("decision-1 2 3"), Err(Usage::Pick));
 }
 
 #[test]

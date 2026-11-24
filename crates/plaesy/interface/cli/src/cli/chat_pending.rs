@@ -16,9 +16,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Deserialize;
 
 use super::chat::decision_id;
-
-pub const ASK_USAGE: &str = "usage: /ask <pertanyaan> | <opsi 1> | <opsi 2> [| ...]";
-pub const PICK_USAGE: &str = "usage: /pick <id> <nomor opsi>";
+use super::chat_text::{self, Lang, Usage};
 
 /// The operations `/ask`, `/pending` and `/pick` need. [`MemoryPending`] is the real one; tests
 /// use an in-memory store.
@@ -97,7 +95,7 @@ pub fn answered_text(content: &str, chosen: &str) -> Option<String> {
 }
 
 /// `<question> | <option> | <option>`: a question and at least two options.
-pub fn parse_ask(rest: &str) -> Result<(String, Vec<String>), String> {
+pub fn parse_ask(rest: &str) -> Result<(String, Vec<String>), Usage> {
     let parts: Vec<&str> = rest.split(" | ").map(str::trim).collect();
     match parts.split_first() {
         Some((question, options))
@@ -110,19 +108,19 @@ pub fn parse_ask(rest: &str) -> Result<(String, Vec<String>), String> {
                 options.iter().map(|o| (*o).to_owned()).collect(),
             ))
         }
-        _ => Err(ASK_USAGE.to_owned()),
+        _ => Err(Usage::Ask),
     }
 }
 
 /// `<id> <number>`, both positive integers. The id is the decision id from `/pending`.
-pub fn parse_pick(rest: &str) -> Result<(String, usize), String> {
+pub fn parse_pick(rest: &str) -> Result<(String, usize), Usage> {
     let mut words = rest.split_whitespace();
     match (words.next(), words.next(), words.next()) {
         (Some(id), Some(choice), None) => match choice.parse::<usize>() {
             Ok(choice) if choice >= 1 => Ok((id.to_owned(), choice)),
-            _ => Err(PICK_USAGE.to_owned()),
+            _ => Err(Usage::Pick),
         },
-        _ => Err(PICK_USAGE.to_owned()),
+        _ => Err(Usage::Pick),
     }
 }
 
@@ -293,13 +291,15 @@ pub struct MemoryPending {
     pub project: Option<String>,
     /// True when stdin is a terminal, so `/pending` may open the keyboard menu.
     pub interactive: bool,
+    /// Language of the text shown to the user and of the messages it returns.
+    pub lang: Lang,
 }
 
 impl MemoryPending {
     fn vault_root(&self) -> Result<&Path, String> {
         self.vault
             .as_deref()
-            .ok_or_else(|| "pass --vault: option text is read from the vault".to_owned())
+            .ok_or_else(|| chat_text::pass_vault(self.lang).to_owned())
     }
 
     fn find(&self, id: &str) -> Result<Listed, String> {
@@ -310,7 +310,7 @@ impl MemoryPending {
         parse_listing(&raw)?
             .into_iter()
             .find(|item| item.id == id)
-            .ok_or_else(|| format!("no pending question {id}"))
+            .ok_or_else(|| chat_text::not_found(self.lang, id))
     }
 }
 
@@ -328,23 +328,27 @@ impl PendingStore for MemoryPending {
         .filter(|item| root.join(&item.path).is_file())
         .collect();
         if items.is_empty() {
-            return Ok("no decisions".to_owned());
+            return Ok(chat_text::no_decisions(self.lang).to_owned());
         }
         let labels: Vec<String> = items
             .iter()
             .map(|item| format!("[{}] {}", item.status, item.title))
             .collect();
         let Some(index) = dialoguer::Select::new()
-            .with_prompt(format!("{} keputusan", items.len()))
+            .with_prompt(chat_text::decisions_count(self.lang, items.len()))
             .items(&labels)
             .default(0)
             .interact_opt()
             .map_err(|err| err.to_string())?
         else {
-            return Ok("cancelled".to_owned());
+            return Ok(chat_text::cancelled(self.lang).to_owned());
         };
         let item = &items[index];
-        let actions = ["Ubah teks", "Arsipkan", "Batal"];
+        let actions = [
+            chat_text::action_edit(self.lang),
+            chat_text::action_archive(self.lang),
+            chat_text::action_cancel(self.lang),
+        ];
         let Some(action) = dialoguer::Select::new()
             .with_prompt(item.title.as_str())
             .items(&actions)
@@ -352,7 +356,7 @@ impl PendingStore for MemoryPending {
             .interact_opt()
             .map_err(|err| err.to_string())?
         else {
-            return Ok("cancelled".to_owned());
+            return Ok(chat_text::cancelled(self.lang).to_owned());
         };
         match action {
             0 => {
@@ -364,7 +368,7 @@ impl PendingStore for MemoryPending {
                 self.update(&item.id, text.trim())
             }
             1 => self.archive(&item.id),
-            _ => Ok("cancelled".to_owned()),
+            _ => Ok(chat_text::cancelled(self.lang).to_owned()),
         }
     }
 
@@ -376,7 +380,7 @@ impl PendingStore for MemoryPending {
         )?)?
         .into_iter()
         .find(|item| item.id == id)
-        .ok_or_else(|| format!("no decision {id}"))?;
+        .ok_or_else(|| chat_text::not_found(self.lang, id))?;
         let content = std::fs::read_to_string(root.join(&item.path))
             .map_err(|err| format!("{}: {err}", item.path))?;
         let updated = rewrite_decision(&content, text);
@@ -392,12 +396,12 @@ impl PendingStore for MemoryPending {
             .split_whitespace()
             .next()
             .filter(|token| token.len() == 64)
-            .ok_or_else(|| format!("no fingerprint for {}", item.path))?;
+            .ok_or_else(|| chat_text::no_fingerprint(self.lang, &item.path))?;
         run_memory(
             &update_args(sha, &item.path, self.vault.as_deref()),
             Some(&updated),
         )?;
-        Ok(format!("{id} updated"))
+        Ok(chat_text::updated(self.lang, id))
     }
 
     fn list_decisions(&self) -> Result<String, String> {
@@ -410,7 +414,7 @@ impl PendingStore for MemoryPending {
         .filter(|item| root.join(&item.path).is_file())
         .collect();
         if items.is_empty() {
-            return Ok("no decisions".to_owned());
+            return Ok(chat_text::no_decisions(self.lang).to_owned());
         }
         Ok(items
             .iter()
@@ -429,7 +433,7 @@ impl PendingStore for MemoryPending {
         )?)?
         .into_iter()
         .find(|item| item.id == id)
-        .ok_or_else(|| format!("no decision {id}"))?;
+        .ok_or_else(|| chat_text::not_found(self.lang, id))?;
         let fingerprint = run_memory(
             &[
                 memory_prefix(self.vault.as_deref()),
@@ -442,9 +446,9 @@ impl PendingStore for MemoryPending {
             .split_whitespace()
             .next()
             .filter(|token| token.len() == 64)
-            .ok_or_else(|| format!("no fingerprint for {}", item.path))?;
+            .ok_or_else(|| chat_text::no_fingerprint(self.lang, &item.path))?;
         run_memory(&archive_args(sha, &item.path, self.vault.as_deref()), None)?;
-        Ok(format!("{id} archived"))
+        Ok(chat_text::archived(self.lang, id))
     }
 
     fn menu(&self) -> Result<String, String> {
@@ -462,13 +466,13 @@ impl PendingStore for MemoryPending {
             .filter(|item| root.join(&item.path).is_file())
             .collect();
         if items.is_empty() {
-            return Ok("no pending questions".to_owned());
+            return Ok(chat_text::no_pending(self.lang).to_owned());
         }
         let item = if items.len() == 1 {
             &items[0]
         } else {
             let titles: Vec<&str> = items.iter().map(|item| item.title.as_str()).collect();
-            let prompt = format!("{} pertanyaan terbuka", items.len());
+            let prompt = chat_text::open_questions_count(self.lang, items.len());
             let Some(question) = dialoguer::Select::new()
                 .with_prompt(prompt)
                 .items(&titles)
@@ -476,7 +480,7 @@ impl PendingStore for MemoryPending {
                 .interact_opt()
                 .map_err(|err| err.to_string())?
             else {
-                return Ok("cancelled".to_owned());
+                return Ok(chat_text::cancelled(self.lang).to_owned());
             };
             &items[question]
         };
@@ -490,7 +494,7 @@ impl PendingStore for MemoryPending {
             .interact_opt()
             .map_err(|err| err.to_string())?
         else {
-            return Ok("cancelled".to_owned());
+            return Ok(chat_text::cancelled(self.lang).to_owned());
         };
         self.answer(&item.id, choice + 1)
     }
@@ -520,7 +524,7 @@ impl PendingStore for MemoryPending {
             .filter(|item| root.join(&item.path).is_file())
             .collect();
         if items.is_empty() {
-            return Ok("no pending questions".to_owned());
+            return Ok(chat_text::no_pending(self.lang).to_owned());
         }
         let mut out = String::new();
         for item in items {
@@ -544,14 +548,9 @@ impl PendingStore for MemoryPending {
         let chosen = choice
             .checked_sub(1)
             .and_then(|index| options.get(index))
-            .ok_or_else(|| {
-                format!(
-                    "option {choice} does not exist for {id} (1..={})",
-                    options.len()
-                )
-            })?;
+            .ok_or_else(|| chat_text::option_missing(self.lang, choice, id, options.len()))?;
         let updated = answered_text(&content, chosen)
-            .ok_or_else(|| format!("{id} is not a proposed decision"))?;
+            .ok_or_else(|| chat_text::not_proposed(self.lang, id))?;
         let fingerprint = run_memory(
             &[
                 memory_prefix(self.vault.as_deref()),
@@ -564,12 +563,12 @@ impl PendingStore for MemoryPending {
             .split_whitespace()
             .next()
             .filter(|token| token.len() == 64)
-            .ok_or_else(|| format!("no fingerprint for {}", item.path))?;
+            .ok_or_else(|| chat_text::no_fingerprint(self.lang, &item.path))?;
         run_memory(
             &update_args(sha, &item.path, self.vault.as_deref()),
             Some(&updated),
         )?;
-        Ok(format!("{id} answered: {chosen}"))
+        Ok(chat_text::answered(self.lang, id, chosen))
     }
 }
 

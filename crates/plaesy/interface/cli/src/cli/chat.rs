@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::chat_pending;
+use super::chat_text::{self, Lang, Usage};
 use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
@@ -36,6 +37,9 @@ pub struct Args {
     /// Vault where `/decision` notes are saved; default is the configured memory vault
     #[arg(long)]
     pub vault: Option<PathBuf>,
+    /// Language for chat text: en or id. Default: "language" in ~/.plaesy/settings.json, then en
+    #[arg(long)]
+    pub lang: Option<String>,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -49,10 +53,8 @@ pub struct Decision {
     pub why: String,
 }
 
-const DECISION_USAGE: &str = "usage: /decision <judul> | <pilihan> | <alasan>";
-
 /// Splits `<title> | <chosen> | <why>`. All three parts are required.
-pub fn parse_decision(rest: &str) -> Result<Decision, String> {
+pub fn parse_decision(rest: &str) -> Result<Decision, Usage> {
     let parts: Vec<&str> = rest.split(" | ").map(str::trim).collect();
     match parts.as_slice() {
         [title, chosen, why] if ![title, chosen, why].iter().any(|p| p.is_empty()) => {
@@ -62,7 +64,7 @@ pub fn parse_decision(rest: &str) -> Result<Decision, String> {
                 why: (*why).to_owned(),
             })
         }
-        _ => Err(DECISION_USAGE.to_owned()),
+        _ => Err(Usage::Decision),
     }
 }
 
@@ -183,9 +185,10 @@ pub type ProviderOpener<'a> = dyn Fn(&str) -> Result<Box<dyn Provider>, String> 
 
 /// Per-call limits for the provider.
 #[derive(Debug, Clone, Copy)]
-pub struct CallLimits {
+pub struct ChatSettings {
     pub timeout: Duration,
     pub max_tokens: u32,
+    pub lang: Lang,
 }
 
 /// One line typed at the prompt.
@@ -289,10 +292,11 @@ pub fn converse(
     open: &ProviderOpener<'_>,
     record: &DecisionRecorder<'_>,
     pending: &dyn chat_pending::PendingStore,
-    limits: CallLimits,
+    settings: ChatSettings,
     input: impl BufRead,
     out: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
+    let lang = settings.lang;
     let mut transcript = Transcript::default();
     for line in input.lines() {
         let line = line?;
@@ -301,56 +305,62 @@ pub fn converse(
             Input::Exit => break,
             Input::Clear => {
                 transcript.clear();
-                writeln!(out, "history cleared")?;
+                writeln!(out, "{}", chat_text::history_cleared(lang))?;
             }
-            Input::ProviderMissing => writeln!(out, "usage: /provider <name>")?,
+            Input::ProviderMissing => writeln!(out, "{}", chat_text::usage(lang, Usage::Provider))?,
             Input::Provider(name) => match open(&name) {
                 Ok(next) => {
                     provider = next;
-                    writeln!(out, "provider: {name}")?;
+                    writeln!(out, "{}", chat_text::provider_switched(lang, &name))?;
                 }
-                Err(err) => writeln!(out, "error: {err}")?,
+                Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
             },
             Input::Ask(rest) => match chat_pending::parse_ask(&rest) {
                 Ok((question, options)) => match pending.ask(&question, &options) {
-                    Ok(id) => writeln!(out, "proposed {id}: {question}")?,
-                    Err(err) => writeln!(out, "error: {err}")?,
+                    Ok(id) => writeln!(
+                        out,
+                        "{}",
+                        chat_text::question_proposed(lang, &id, &question)
+                    )?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 },
-                Err(usage) => writeln!(out, "{usage}")?,
+                Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
             Input::Pending => match pending.menu() {
                 Ok(text) => writeln!(out, "{text}")?,
-                Err(err) => writeln!(out, "error: {err}")?,
+                Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
             },
             Input::Pick(rest) => match chat_pending::parse_pick(&rest) {
                 Ok((id, choice)) => match pending.answer(&id, choice) {
                     Ok(text) => writeln!(out, "{text}")?,
-                    Err(err) => writeln!(out, "error: {err}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 },
-                Err(usage) => writeln!(out, "{usage}")?,
+                Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
             Input::Decisions(text) => {
                 if text.is_empty() {
                     match pending.decisions_menu() {
                         Ok(list) => writeln!(out, "{list}")?,
-                        Err(err) => writeln!(out, "error: {err}")?,
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                     }
                 } else if let Some(rest) = text.strip_prefix("update ") {
                     match rest.trim().split_once(' ') {
                         Some((id, new_text)) if !new_text.trim().is_empty() => {
                             match pending.update(id, new_text.trim()) {
                                 Ok(done) => writeln!(out, "{done}")?,
-                                Err(err) => writeln!(out, "error: {err}")?,
+                                Err(err) => {
+                                    writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?
+                                }
                             }
                         }
-                        _ => writeln!(out, "usage: /decisions update <id> <teks baru>")?,
+                        _ => writeln!(out, "{}", chat_text::usage(lang, Usage::DecisionsUpdate))?,
                     }
                 } else if text == "delete" {
-                    writeln!(out, "usage: /decisions delete <id>")?;
+                    writeln!(out, "{}", chat_text::usage(lang, Usage::DecisionsDelete))?;
                 } else if let Some(id) = text.strip_prefix("delete ") {
                     match pending.archive(id.trim()) {
                         Ok(done) => writeln!(out, "{done}")?,
-                        Err(err) => writeln!(out, "error: {err}")?,
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                     }
                 } else {
                     let decision = Decision {
@@ -359,23 +369,27 @@ pub fn converse(
                         why: String::new(),
                     };
                     match record(&decision) {
-                        Ok(saved) => writeln!(out, "decision {}", saved.trim())?,
-                        Err(err) => writeln!(out, "error: {err}")?,
+                        Ok(saved) => {
+                            writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?
+                        }
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                     }
                 }
             }
             Input::Decision(rest) => match parse_decision(&rest) {
                 Ok(decision) => match record(&decision) {
-                    Ok(saved) => writeln!(out, "decision {}", saved.trim())?,
-                    Err(err) => writeln!(out, "error: {err}")?,
+                    Ok(saved) => {
+                        writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?
+                    }
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 },
-                Err(usage) => writeln!(out, "{usage}")?,
+                Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
             Input::Message(text) => {
                 let request = Request {
                     prompt: String::new(),
-                    max_output_tokens: limits.max_tokens,
-                    timeout: limits.timeout,
+                    max_output_tokens: settings.max_tokens,
+                    timeout: settings.timeout,
                     dir: String::new(),
                 };
                 let messages = transcript.messages(&text);
@@ -385,7 +399,7 @@ pub fn converse(
                         transcript.push(Role::User, text);
                         transcript.push(Role::Assistant, response.text);
                     }
-                    Err(err) => writeln!(out, "error: {err}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 }
             }
         }
@@ -395,6 +409,11 @@ pub fn converse(
 }
 
 pub fn run(args: &Args) -> CliResult {
+    let settings_path = dirs::home_dir()
+        .ok_or("home directory is not available")?
+        .join(".plaesy")
+        .join("settings.json");
+    let lang = chat_text::resolve(args.lang.as_deref(), &settings_path)?;
     let cfg = super::delegate::load_delegate_config(&args.path)?;
     let timeout = crate::reach::duration::parse(&args.timeout)
         .ok_or_else(|| format!("invalid --timeout {:?}", args.timeout))?;
@@ -410,9 +429,7 @@ pub fn run(args: &Args) -> CliResult {
     let vault = args.vault.clone();
     let record = move |decision: &Decision| record_decision(decision, vault.as_deref());
 
-    println!(
-        "chat with {name}. /provider <name> switches, /decision <judul> | <pilihan> | <alasan> saves a decision, /clear resets, /exit quits."
-    );
+    println!("{}", chat_text::banner(lang, &name));
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     converse(
@@ -423,10 +440,12 @@ pub fn run(args: &Args) -> CliResult {
             vault: args.vault.clone(),
             project: args.project.clone(),
             interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
+            lang,
         },
-        CallLimits {
+        ChatSettings {
             timeout,
             max_tokens: args.max_tokens,
+            lang,
         },
         stdin.lock(),
         &mut stdout,

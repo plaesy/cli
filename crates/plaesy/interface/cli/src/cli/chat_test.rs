@@ -153,9 +153,10 @@ fn run_with_store(
         open,
         record,
         store,
-        CallLimits {
+        ChatSettings {
             timeout: Duration::from_secs(5),
             max_tokens: 0,
+            lang: Lang::En,
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -244,7 +245,10 @@ fn pick_with_bad_arguments_prints_usage() {
         &store,
         "/pick x\n/exit\n",
     );
-    assert!(out.contains(chat_pending::PICK_USAGE), "output was: {out}");
+    assert!(
+        out.contains(chat_text::usage(Lang::En, Usage::Pick)),
+        "output was: {out}"
+    );
 }
 
 #[test]
@@ -267,15 +271,9 @@ fn parse_decision_requires_three_non_empty_parts() {
             why: "karena cepat".to_owned(),
         })
     );
-    assert_eq!(
-        parse_decision("judul | pilih A"),
-        Err(DECISION_USAGE.to_owned())
-    );
-    assert_eq!(
-        parse_decision("judul |  | alasan"),
-        Err(DECISION_USAGE.to_owned())
-    );
-    assert_eq!(parse_decision(""), Err(DECISION_USAGE.to_owned()));
+    assert_eq!(parse_decision("judul | pilih A"), Err(Usage::Decision));
+    assert_eq!(parse_decision("judul |  | alasan"), Err(Usage::Decision));
+    assert_eq!(parse_decision(""), Err(Usage::Decision));
 }
 
 #[test]
@@ -337,7 +335,7 @@ fn bad_decision_prints_usage_and_saves_nothing() {
     };
     let out = run_with_recorder(provider, &no_open, &record, "/decision rusak\n/exit\n");
 
-    assert!(out.contains(DECISION_USAGE));
+    assert!(out.contains(chat_text::usage(Lang::En, Usage::Decision)));
     assert_eq!(*calls.lock().expect("calls"), 0);
 }
 
