@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use chrono::DateTime;
 use serde_json::{json, Value};
 
-use super::{Class, DelegateError, Provider, ProviderReply, Request};
+use super::{Class, DelegateError, Message, Provider, ProviderReply, Request};
 use crate::config::delegate::DelegateProviderConfig;
 
 /// Output-token allowance when a request sets none.
@@ -404,6 +404,14 @@ impl Provider for AnthropicProvider {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        self.complete_messages(&[Message::user(req.prompt.clone())], req)
+    }
+
+    fn complete_messages(
+        &self,
+        messages: &[Message],
+        req: &Request,
+    ) -> Result<ProviderReply, DelegateError> {
         let key = (self.getenv)(&self.key_env)
             .filter(|k| !k.is_empty())
             .ok_or_else(|| {
@@ -413,11 +421,7 @@ impl Provider for AnthropicProvider {
                     self.name, self.key_env
                 ))
             })?;
-        let body = json!({
-            "model": self.model,
-            "max_tokens": max_tokens(req),
-            "messages": [{ "role": "user", "content": req.prompt }],
-        });
+        let body = anthropic_body(&self.model, max_tokens(req), messages);
         let url = format!("{}/v1/messages", self.endpoint.trim_end_matches('/'));
         let headers = [
             ("content-type", "application/json".to_owned()),
@@ -425,22 +429,47 @@ impl Provider for AnthropicProvider {
             ("x-api-key", key),
         ];
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
-        let text: String = reply["content"]
-            .as_array()
-            .map(|parts| {
-                parts
-                    .iter()
-                    .filter(|p| p["type"] == "text")
-                    .filter_map(|p| p["text"].as_str())
-                    .collect()
-            })
-            .unwrap_or_default();
-        Ok(ProviderReply {
-            text,
-            input_tokens: reply["usage"]["input_tokens"].as_u64(),
-            output_tokens: reply["usage"]["output_tokens"].as_u64(),
-        })
+        Ok(anthropic_reply(&reply))
     }
+}
+
+/// Request body for the Messages API. Roles are `user` and `assistant`.
+#[must_use]
+pub fn anthropic_body(model: &str, max_tokens: u32, messages: &[Message]) -> Value {
+    json!({
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": message_values(messages),
+    })
+}
+
+/// Text blocks of a Messages API reply, with token counts when reported.
+#[must_use]
+pub fn anthropic_reply(reply: &Value) -> ProviderReply {
+    let text: String = reply["content"]
+        .as_array()
+        .map(|parts| {
+            parts
+                .iter()
+                .filter(|p| p["type"] == "text")
+                .filter_map(|p| p["text"].as_str())
+                .collect()
+        })
+        .unwrap_or_default();
+    ProviderReply {
+        text,
+        input_tokens: reply["usage"]["input_tokens"].as_u64(),
+        output_tokens: reply["usage"]["output_tokens"].as_u64(),
+    }
+}
+
+fn message_values(messages: &[Message]) -> Value {
+    Value::Array(
+        messages
+            .iter()
+            .map(|m| json!({ "role": m.role, "content": m.content }))
+            .collect(),
+    )
 }
 
 /// Calls a local Ollama server. Not billable: the model runs on the user's machine.
@@ -457,20 +486,44 @@ impl Provider for OllamaProvider {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
-        let body = json!({
-            "model": self.model,
-            "prompt": req.prompt,
-            "stream": false,
-            "options": { "num_predict": max_tokens(req) },
-        });
-        let url = format!("{}/api/generate", self.endpoint.trim_end_matches('/'));
+        self.complete_messages(&[Message::user(req.prompt.clone())], req)
+    }
+
+    fn complete_messages(
+        &self,
+        messages: &[Message],
+        req: &Request,
+    ) -> Result<ProviderReply, DelegateError> {
+        let body = ollama_body(&self.model, max_tokens(req), messages);
+        let url = format!("{}/api/chat", self.endpoint.trim_end_matches('/'));
         let headers = [("content-type", "application/json".to_owned())];
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
-        Ok(ProviderReply {
-            text: reply["response"].as_str().unwrap_or("").trim().to_owned(),
-            input_tokens: reply["prompt_eval_count"].as_u64(),
-            output_tokens: reply["eval_count"].as_u64(),
-        })
+        Ok(ollama_reply(&reply))
+    }
+}
+
+/// Request body for Ollama's `/api/chat`, one non-streaming reply.
+#[must_use]
+pub fn ollama_body(model: &str, max_tokens: u32, messages: &[Message]) -> Value {
+    json!({
+        "model": model,
+        "messages": message_values(messages),
+        "stream": false,
+        "options": { "num_predict": max_tokens },
+    })
+}
+
+/// Reply text and token counts from `/api/chat`.
+#[must_use]
+pub fn ollama_reply(reply: &Value) -> ProviderReply {
+    ProviderReply {
+        text: reply["message"]["content"]
+            .as_str()
+            .unwrap_or("")
+            .trim()
+            .to_owned(),
+        input_tokens: reply["prompt_eval_count"].as_u64(),
+        output_tokens: reply["eval_count"].as_u64(),
     }
 }
 
@@ -502,6 +555,14 @@ impl Provider for OpenAiProvider {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        self.complete_messages(&[Message::user(req.prompt.clone())], req)
+    }
+
+    fn complete_messages(
+        &self,
+        messages: &[Message],
+        req: &Request,
+    ) -> Result<ProviderReply, DelegateError> {
         let mut headers = vec![("content-type", "application/json".to_owned())];
         if !self.key_env.is_empty() {
             let key = (self.getenv)(&self.key_env)
@@ -514,28 +575,40 @@ impl Provider for OpenAiProvider {
                 })?;
             headers.push(("authorization", format!("Bearer {key}")));
         }
-        let body = json!({
-            "model": self.model,
-            "messages": [{ "role": "user", "content": req.prompt }],
-            "max_tokens": req.max_output_tokens,
-        });
+        let body = openai_body(&self.model, req.max_output_tokens, messages);
         let url = format!("{}/chat/completions", self.endpoint.trim_end_matches('/'));
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
-        let text = reply["choices"]
-            .get(0)
-            .and_then(|c| c["message"]["content"].as_str())
-            .ok_or_else(|| {
-                DelegateError::terminal(format!(
-                    "provider {:?}: response has no choices",
-                    self.name
-                ))
-            })?;
-        Ok(ProviderReply {
-            text: text.trim().to_owned(),
-            input_tokens: reply["usage"]["prompt_tokens"].as_u64(),
-            output_tokens: reply["usage"]["completion_tokens"].as_u64(),
-        })
+        openai_reply(&self.name, &reply)
     }
+}
+
+/// Request body for an OpenAI-compatible chat completions call. Zero `max_tokens` is sent as is.
+#[must_use]
+pub fn openai_body(model: &str, max_output_tokens: u32, messages: &[Message]) -> Value {
+    json!({
+        "model": model,
+        "messages": message_values(messages),
+        "max_tokens": max_output_tokens,
+    })
+}
+
+/// First choice's text and usage. A reply with no choice is a terminal error.
+///
+/// # Errors
+///
+/// Terminal when the reply has no `choices[0].message.content`.
+pub fn openai_reply(provider: &str, reply: &Value) -> Result<ProviderReply, DelegateError> {
+    let text = reply["choices"]
+        .get(0)
+        .and_then(|c| c["message"]["content"].as_str())
+        .ok_or_else(|| {
+            DelegateError::terminal(format!("provider {provider:?}: response has no choices"))
+        })?;
+    Ok(ProviderReply {
+        text: text.trim().to_owned(),
+        input_tokens: reply["usage"]["prompt_tokens"].as_u64(),
+        output_tokens: reply["usage"]["completion_tokens"].as_u64(),
+    })
 }
 
 fn max_tokens(req: &Request) -> u32 {

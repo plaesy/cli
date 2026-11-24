@@ -147,3 +147,52 @@ fn check_refusal_sends_no_request() {
         "the refusal is terminal and nothing is sent"
     );
 }
+
+#[test]
+fn flatten_matches_completion_style_and_leaves_label_open_after_user() {
+    assert_eq!(flatten(&[Message::user("hai")]), "User: hai\n\nAssistant:");
+    assert_eq!(
+        flatten(&[Message::user("a"), Message::assistant("b")]),
+        "User: a\n\nAssistant: b\n\n"
+    );
+    assert_eq!(flatten(&[]), "Assistant:");
+}
+
+/// Provider that only implements `complete`, to exercise the flattening default.
+struct PromptOnly {
+    seen: std::sync::Mutex<Vec<String>>,
+}
+
+impl Provider for PromptOnly {
+    fn name(&self) -> &str {
+        "prompt-only"
+    }
+
+    fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        self.seen.lock().expect("lock").push(req.prompt.clone());
+        Ok(ProviderReply {
+            text: "ok".into(),
+            input_tokens: None,
+            output_tokens: None,
+        })
+    }
+}
+
+#[test]
+fn default_complete_messages_flattens_for_single_prompt_providers() {
+    let provider = PromptOnly {
+        seen: std::sync::Mutex::new(Vec::new()),
+    };
+    let messages = vec![
+        Message::user("satu"),
+        Message::assistant("dua"),
+        Message::user("tiga"),
+    ];
+    let req = Request::default();
+    let out = run_messages(&provider, &messages, &req).expect("run");
+    assert_eq!(out.text, "ok");
+    assert_eq!(
+        provider.seen.lock().expect("lock")[0],
+        "User: satu\n\nAssistant: dua\n\nUser: tiga\n\nAssistant:"
+    );
+}

@@ -90,7 +90,10 @@ fn truncate_collapses_whitespace_so_a_title_stays_on_one_line() {
 #[test]
 fn truncate_does_not_leave_a_space_before_the_ellipsis() {
     // Character 17 is a space; the cut must not print "gamma …".
-    assert_eq!(truncate_title("alpha beta gamma delta", 18), "alpha beta gamma…");
+    assert_eq!(
+        truncate_title("alpha beta gamma delta", 18),
+        "alpha beta gamma…"
+    );
 }
 
 #[test]

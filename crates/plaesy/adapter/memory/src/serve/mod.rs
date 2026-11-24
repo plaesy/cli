@@ -71,10 +71,7 @@ pub async fn run(
 
     // Read-only tidak mengambil lock daemon, sehingga vault yang sudah dimiliki daemon lain tetap bisa dibaca.
     let daemon_lock = if config.watch_dir.is_dir() && !read_only {
-        Some(WriteLock::acquire_named(
-            &config.watch_dir,
-            ".plaesy-memory-daemon.lock",
-        )?)
+        Some(WriteLock::acquire_daemon(&config.watch_dir)?)
     } else {
         None
     };

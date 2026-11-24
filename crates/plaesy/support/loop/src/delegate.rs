@@ -116,6 +116,71 @@ pub trait Provider: Send + Sync {
     ///
     /// A [`DelegateError`] classified for the chain.
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError>;
+    /// Makes one call with a conversation, oldest message first. Providers that accept a message
+    /// list override this. The default flattens the messages into one prompt, so single-prompt
+    /// providers (CLI) keep working unchanged.
+    ///
+    /// # Errors
+    ///
+    /// A [`DelegateError`] classified for the chain.
+    fn complete_messages(
+        &self,
+        messages: &[Message],
+        req: &Request,
+    ) -> Result<ProviderReply, DelegateError> {
+        let flat = Request {
+            prompt: flatten(messages),
+            ..req.clone()
+        };
+        self.complete(&flat)
+    }
+}
+
+/// One turn of a conversation. `role` is `user` or `assistant`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Message {
+    pub role: &'static str,
+    pub content: String,
+}
+
+impl Message {
+    #[must_use]
+    pub fn user(content: impl Into<String>) -> Self {
+        Self {
+            role: "user",
+            content: content.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Self {
+            role: "assistant",
+            content: content.into(),
+        }
+    }
+}
+
+/// Renders messages as one completion-style prompt: `User: ...`, `Assistant: ...` blocks, then an
+/// open `Assistant:` label when the last message is from the user.
+#[must_use]
+pub fn flatten(messages: &[Message]) -> String {
+    let mut out = String::new();
+    for message in messages {
+        let label = if message.role == "assistant" {
+            "Assistant"
+        } else {
+            "User"
+        };
+        out.push_str(label);
+        out.push_str(": ");
+        out.push_str(&message.content);
+        out.push_str("\n\n");
+    }
+    if messages.last().is_none_or(|m| m.role != "assistant") {
+        out.push_str("Assistant:");
+    }
+    out
 }
 
 /// What a provider returns before the name and timing are added.
@@ -389,13 +454,32 @@ pub fn sleep_for(d: Duration) -> Result<(), String> {
 pub fn run(provider: &dyn Provider, req: &Request) -> Result<Response, DelegateError> {
     let started = Instant::now();
     let reply = provider.complete(req)?;
-    Ok(Response {
+    Ok(response_from(provider, reply, started))
+}
+
+/// Like [`run`], for a conversation. `messages` is the full history with the new user turn last.
+///
+/// # Errors
+///
+/// The provider's error, unchanged.
+pub fn run_messages(
+    provider: &dyn Provider,
+    messages: &[Message],
+    req: &Request,
+) -> Result<Response, DelegateError> {
+    let started = Instant::now();
+    let reply = provider.complete_messages(messages, req)?;
+    Ok(response_from(provider, reply, started))
+}
+
+fn response_from(provider: &dyn Provider, reply: ProviderReply, started: Instant) -> Response {
+    Response {
         provider: provider.name().to_owned(),
         text: reply.text,
         input_tokens: reply.input_tokens,
         output_tokens: reply.output_tokens,
         wall_ms: started.elapsed().as_millis() as u64,
-    })
+    }
 }
 
 #[cfg(test)]

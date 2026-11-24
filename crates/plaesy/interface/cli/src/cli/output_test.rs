@@ -63,5 +63,5 @@ fn plain_style_output_contains_no_escape_bytes() {
     let style = Style::resolve(true, None);
     let line = style.paint("\x1b[1;33m", "WARNING");
     assert!(!line.contains('\x1b'));
-    assert!(!style.glyph("⚠", "!").chars().any(|c| !c.is_ascii()));
+    assert!(style.glyph("⚠", "!").is_ascii());
 }
