@@ -661,10 +661,29 @@ pub fn converse(
                 let result = if settings.interactive {
                     chat_tasks::menu(&settings.repo, lang)
                 } else {
-                    Ok(chat_tasks::render(lang, &chat_tasks::scan(&settings.repo)))
+                    Ok((
+                        chat_tasks::render(lang, &chat_tasks::scan(&settings.repo)),
+                        None,
+                    ))
                 };
                 match result {
-                    Ok(text) => writeln!(out, "{text}")?,
+                    Ok((text, change)) => {
+                        writeln!(out, "{text}")?;
+                        if let Some(change) = change {
+                            // A task change is already on disk, so a hook can only warn here.
+                            fire_and_print(
+                                out,
+                                &settings,
+                                lang,
+                                "task.changed",
+                                &[
+                                    ("id", change.id.as_str()),
+                                    ("from", change.from.as_str()),
+                                    ("to", change.to.as_str()),
+                                ],
+                            )?;
+                        }
+                    }
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
                 }
             }

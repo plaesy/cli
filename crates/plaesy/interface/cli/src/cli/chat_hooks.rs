@@ -20,6 +20,7 @@ pub const EVENTS: &[&str] = &[
     "message.before_send",
     "message.after_reply",
     "decision.saved",
+    "task.changed",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -7,6 +7,16 @@ fn write_task(root: &Path, status: &str, id: &str, body: &str) {
 }
 
 #[test]
+fn every_moving_action_names_its_target_status_and_show_moves_nothing() {
+    assert_eq!(target_status(Action::Next), Some("todo"));
+    assert_eq!(target_status(Action::Start), Some("doing"));
+    assert_eq!(target_status(Action::Block), Some("blocked"));
+    assert_eq!(target_status(Action::Unblock), Some("todo"));
+    assert_eq!(target_status(Action::Complete), Some("done"));
+    assert_eq!(target_status(Action::Show), None);
+}
+
+#[test]
 fn actions_follow_the_status_and_show_is_always_offered() {
     assert_eq!(actions_for("backlog"), vec![Action::Next, Action::Show]);
     assert_eq!(actions_for("todo"), vec![Action::Start, Action::Show]);

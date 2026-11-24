@@ -49,6 +49,17 @@ pub fn actions_for(status: &str) -> Vec<Action> {
     out
 }
 
+/// The status a task moves to, or `None` for an action that only shows it.
+pub fn target_status(action: Action) -> Option<&'static str> {
+    match action {
+        Action::Next | Action::Unblock => Some("todo"),
+        Action::Start => Some("doing"),
+        Action::Block => Some("blocked"),
+        Action::Complete => Some("done"),
+        Action::Show => None,
+    }
+}
+
 /// The `plaesy tasks` arguments for an action. `reason` is used only by `Block`.
 pub fn command_args(action: Action, id: &str, reason: &str) -> Vec<String> {
     let mut args = vec!["tasks".to_owned()];
@@ -140,12 +151,21 @@ pub fn run_command(repo: &Path, args: &[String]) -> Result<String, String> {
     }
 }
 
+/// A status change made from the menu: the task, where it was, and where it went.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Change {
+    pub id: String,
+    pub from: String,
+    pub to: String,
+}
+
 /// `/tasks` in a terminal: pick a task, then the actions its status allows. Outside a terminal
-/// the caller uses [`render`] instead.
-pub fn menu(repo: &Path, lang: Lang) -> Result<String, String> {
+/// the caller uses [`render`] instead. The change is returned only when the action moved the
+/// task, so the caller can fire `task.changed`.
+pub fn menu(repo: &Path, lang: Lang) -> Result<(String, Option<Change>), String> {
     let items = scan(repo);
     if items.is_empty() {
-        return Ok(chat_text::no_tasks(lang).to_owned());
+        return Ok((chat_text::no_tasks(lang).to_owned(), None));
     }
     let labels: Vec<String> = items
         .iter()
@@ -158,7 +178,7 @@ pub fn menu(repo: &Path, lang: Lang) -> Result<String, String> {
         .interact_opt()
         .map_err(|err| err.to_string())?
     else {
-        return Ok(chat_text::cancelled(lang).to_owned());
+        return Ok((chat_text::cancelled(lang).to_owned(), None));
     };
     let item = &items[index];
     let actions = actions_for(&item.status);
@@ -170,7 +190,7 @@ pub fn menu(repo: &Path, lang: Lang) -> Result<String, String> {
         .interact_opt()
         .map_err(|err| err.to_string())?
     else {
-        return Ok(chat_text::cancelled(lang).to_owned());
+        return Ok((chat_text::cancelled(lang).to_owned(), None));
     };
     let action = actions[choice];
     let reason = if action == Action::Block {
@@ -182,11 +202,17 @@ pub fn menu(repo: &Path, lang: Lang) -> Result<String, String> {
         String::new()
     };
     let output = run_command(repo, &command_args(action, &item.id, &reason))?;
-    if output.is_empty() {
-        Ok(chat_text::task_done(lang, &item.id))
+    let text = if output.is_empty() {
+        chat_text::task_done(lang, &item.id)
     } else {
-        Ok(output)
-    }
+        output
+    };
+    let change = target_status(action).map(|to| Change {
+        id: item.id.clone(),
+        from: item.status.clone(),
+        to: to.to_owned(),
+    });
+    Ok((text, change))
 }
 
 /// The repository's task root, for callers that need the path.
