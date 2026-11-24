@@ -17,6 +17,30 @@ leaves the installed binary in place.
 
 **No flags.** Detects the running executable and copies it into the managed install directory.
 
+## `version`
+
+```bash
+plaesy version
+```
+
+Prints the running version, the path of the running binary, and the path of the installed binary
+(or that nothing is installed). It does not use the network.
+
+## `update --check`
+
+```bash
+plaesy update --check --manifest <PATH>
+```
+
+Compares the installed version with the `version` field of a local JSON manifest, for example
+`{"version": "0.0.2"}`. The installed version comes from running the installed binary with
+`--version`. The command prints whether the install is up to date, behind the manifest, or ahead
+of it. It exits 0 in each case and exits 1 only on errors such as a missing or invalid manifest.
+
+The command never contacts a release server. Downloading a new build is not implemented, so
+`plaesy update` without `--check` fails with a message. To apply a newer build, build or fetch it
+and run its `plaesy upgrade`.
+
 ## Clean-install validation
 
 The CI workflow starts with a clean OS account on Linux, macOS, and Windows and uses each runner's

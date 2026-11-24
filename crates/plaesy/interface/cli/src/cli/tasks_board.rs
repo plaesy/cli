@@ -15,7 +15,11 @@ pub fn group_by_status(refs: &[TaskRef]) -> Vec<(Status, Vec<&TaskRef>)> {
         .into_iter()
         .map(|status| {
             let mut column: Vec<&TaskRef> = refs.iter().filter(|r| r.status == status).collect();
-            column.sort_by_key(|r| tasks::priority_rank(&r.name));
+            column.sort_by(|a, b| {
+                tasks::priority_rank(&a.name)
+                    .cmp(&tasks::priority_rank(&b.name))
+                    .then_with(|| a.name.cmp(&b.name))
+            });
             (status, column)
         })
         .collect()
@@ -46,7 +50,10 @@ fn card_title(task: &TaskRef) -> &str {
 
 /// The board as lines of text: a header, then one section per status column.
 pub fn render_board(refs: &[TaskRef]) -> Vec<String> {
-    let mut lines = vec![format!("📋 Task Board ({} tasks)", refs.len()), String::new()];
+    let mut lines = vec![
+        format!("📋 Task Board ({} tasks)", refs.len()),
+        String::new(),
+    ];
     for (status, column) in group_by_status(refs) {
         lines.push(format!("{status} ({})", column.len()));
         if column.is_empty() {

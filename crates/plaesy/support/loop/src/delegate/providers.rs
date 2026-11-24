@@ -25,12 +25,84 @@ const MAX_ERROR_BODY: usize = 300;
 /// Environment lookup, injected so tests never read the real environment.
 pub type Getenv = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
-/// Builds a provider from its config entry.
+/// Builds a provider from its config entry. With `fallback_models`, the result tries
+/// `model` first and then each fallback model on the same endpoint.
 ///
 /// # Errors
 ///
-/// A terminal error for a missing field or an unknown type.
+/// A terminal error for a missing field, an unknown type, or `fallback_models` on a
+/// `cli` entry, which has no model to choose.
 pub fn build(
+    entry: &DelegateProviderConfig,
+    getenv: Getenv,
+) -> Result<Box<dyn Provider>, DelegateError> {
+    if entry.fallback_models.is_empty() {
+        return build_one(entry, getenv);
+    }
+    if entry.kind == "cli" {
+        return Err(DelegateError::terminal(format!(
+            "provider {:?}: cli type does not take fallback_models",
+            entry.name
+        )));
+    }
+    let mut models = Vec::with_capacity(1 + entry.fallback_models.len());
+    for model in std::iter::once(&entry.model).chain(entry.fallback_models.iter()) {
+        let mut single = entry.clone();
+        single.model = model.clone();
+        single.fallback_models = Vec::new();
+        models.push(build_one(&single, Arc::clone(&getenv))?);
+    }
+    Ok(Box::new(ModelFallback {
+        name: entry.name.clone(),
+        models,
+    }))
+}
+
+/// Tries each model of one configured provider in order. A retryable error moves on to
+/// the next model. A terminal error stops at once, because another model on the same
+/// endpoint would fail the same way.
+pub struct ModelFallback {
+    name: String,
+    models: Vec<Box<dyn Provider>>,
+}
+
+impl Provider for ModelFallback {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        let mut earlier: Vec<String> = Vec::new();
+        let mut last: Option<DelegateError> = None;
+        for provider in &self.models {
+            match provider.complete(req) {
+                Ok(reply) => return Ok(reply),
+                Err(e) if e.class == Class::Terminal => return Err(e),
+                Err(e) => {
+                    if let Some(prev) = last.replace(e) {
+                        earlier.push(prev.message);
+                    }
+                }
+            }
+        }
+        match last {
+            Some(mut e) => {
+                if !earlier.is_empty() {
+                    earlier.push(e.message.clone());
+                    e.message = earlier.join("; then ");
+                }
+                Err(e)
+            }
+            None => Err(DelegateError::terminal(format!(
+                "provider {:?}: no model configured",
+                self.name
+            ))),
+        }
+    }
+}
+
+/// Builds the provider for exactly one model of `entry`.
+fn build_one(
     entry: &DelegateProviderConfig,
     getenv: Getenv,
 ) -> Result<Box<dyn Provider>, DelegateError> {

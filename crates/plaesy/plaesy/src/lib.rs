@@ -10,11 +10,11 @@ pub use plaesy_adapter_runtime::{adapter, runtime};
 pub use plaesy_analysis::{analyze, graph, reach, validate};
 pub use plaesy_common::{
     common, config, evidence, exclude, expected, files, imagegen, installer, mcpserver, projects,
-    sessions, trimmer,
+    sessions, telemetry, trimmer,
 };
 pub use plaesy_common::{version, VERSION};
 pub use plaesy_designlint::{designlint, evals};
-pub use plaesy_domain_identity::{authz, identity, secrets};
+pub use plaesy_domain_identity::{authz, identity, secrets, users};
 pub use plaesy_domain_workflow::{policy, runstore, task_run};
 pub use plaesy_interface_cli::cli;
 pub use plaesy_loop::{delegate, loop_run};

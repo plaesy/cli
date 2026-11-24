@@ -4,7 +4,7 @@
 //! [`DrainingLog::shutdown`] it accepts nothing new. [`RetryQueue`] retries failed
 //! writes without reordering: a failing item blocks the items behind it.
 
-use super::{RunLog, RunLogError};
+use super::{RunLogError, RunSink};
 use std::collections::VecDeque;
 
 /// Refusal from a draining log.
@@ -16,16 +16,16 @@ pub enum DrainError {
 
 /// Run log with an ordered pending queue and a shutdown drain.
 #[derive(Debug)]
-pub struct DrainingLog {
-    log: RunLog,
+pub struct DrainingLog<L: RunSink> {
+    log: L,
     pending: VecDeque<String>,
     closed: bool,
 }
 
-impl DrainingLog {
+impl<L: RunSink> DrainingLog<L> {
     /// Wraps a log. Nothing is written until [`DrainingLog::flush`].
     #[must_use]
-    pub fn new(log: RunLog) -> Self {
+    pub fn new(log: L) -> Self {
         Self {
             log,
             pending: VecDeque::new(),
