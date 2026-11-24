@@ -291,7 +291,7 @@ fn decision_args_target_the_decisions_folder_with_optional_vault() {
     assert!(plain.windows(2).any(|w| w == ["--folder", "decisions"]));
     assert!(plain.windows(2).any(|w| w == ["--type", "decision"]));
     assert!(plain.windows(2).any(|w| w == ["--id", "decision-abc"]));
-    assert!(plain.iter().any(|a| a.contains("Pilihan: Ollama lokal")));
+    assert!(plain.iter().any(|a| a.contains("chosen: Ollama lokal")));
 
     let with_vault = decision_args(&decision, Some(Path::new("C:/vault")), "decision-abc");
     assert_eq!(&with_vault[..3], ["memory", "--vault", "C:/vault"]);
@@ -614,7 +614,7 @@ fn single_statement_decision_body_says_keputusan_not_an_empty_alasan() {
         why: String::new(),
     };
     let args = decision_args(&statement, None, "decision-x");
-    let body = args.iter().find(|a| a.starts_with("Keputusan:")).cloned();
-    assert_eq!(body.as_deref(), Some("Keputusan: Uji\n"), "args: {args:?}");
-    assert!(!args.iter().any(|a| a.contains("Alasan:")));
+    let body = args.iter().find(|a| a.starts_with("statement:")).cloned();
+    assert_eq!(body.as_deref(), Some("statement: Uji\n"), "args: {args:?}");
+    assert!(!args.iter().any(|a| a.contains("why:")));
 }

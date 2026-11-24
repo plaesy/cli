@@ -6,13 +6,13 @@ use super::*;
 fn body_round_trips_through_parse_options() {
     let options = vec!["ya".to_owned(), "tidak".to_owned()];
     let body = body_with_options(&options);
-    assert!(body.starts_with("Opsi:\n"));
+    assert!(body.starts_with("options:\n"));
     assert_eq!(parse_options(&body), options);
 }
 
 #[test]
 fn parse_options_ignores_lines_that_are_not_numbered() {
-    let body = "Opsi:\n1. satu\nbukan opsi\n2. dua\n";
+    let body = "options:\n1. satu\nbukan opsi\n2. dua\n";
     assert_eq!(
         parse_options(body),
         vec!["satu".to_owned(), "dua".to_owned()]
@@ -21,11 +21,11 @@ fn parse_options_ignores_lines_that_are_not_numbered() {
 
 #[test]
 fn answered_text_flips_status_and_records_the_choice() {
-    let note = "---\nid: \"d1\"\nstatus: \"proposed\"\n---\n\n# Q?\n\nOpsi:\n1. ya\n2. tidak\n";
+    let note = "---\nid: \"d1\"\nstatus: \"proposed\"\n---\n\n# Q?\n\noptions:\n1. ya\n2. tidak\n";
     let answered = answered_text(note, "tidak").expect("proposed note");
     assert!(answered.contains("status: \"active\""));
     assert!(!answered.contains("status: \"proposed\""));
-    assert!(answered.ends_with("\nPilihan: tidak\n"));
+    assert!(answered.ends_with("\nchosen: tidak\n"));
 }
 
 #[test]
@@ -154,14 +154,14 @@ fn route_takes_only_reversible_and_confident_choices() {
 
 #[test]
 fn rewrite_decision_changes_title_heading_and_statement_only() {
-    let note = "---\ntitle: \"Lama\"\nstatus: \"active\"\nid: \"decision-1\"\n---\n\n# Lama\n\nKeputusan: Lama\n";
+    let note = "---\ntitle: \"Lama\"\nstatus: \"active\"\nid: \"decision-1\"\n---\n\n# Lama\n\nstatement: Lama\n";
     let out = rewrite_decision(note, "Baru \"quoted\"");
     assert!(
         out.contains("title: \"Baru \\\"quoted\\\"\""),
         "output was: {out}"
     );
     assert!(out.contains("# Baru \"quoted\""));
-    assert!(out.contains("Keputusan: Baru \"quoted\""));
+    assert!(out.contains("statement: Baru \"quoted\""));
     assert!(out.contains("status: \"active\""), "status must survive");
     assert!(out.contains("id: \"decision-1\""), "id must survive");
 }

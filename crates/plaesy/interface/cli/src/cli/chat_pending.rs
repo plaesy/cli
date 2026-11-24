@@ -75,7 +75,7 @@ pub fn parse_options(body: &str) -> Vec<String> {
 
 /// Body for a new proposed note: the numbered options, one per line.
 pub fn body_with_options(options: &[String]) -> String {
-    let mut body = String::from("Opsi:\n");
+    let mut body = String::from("options:\n");
     for (index, option) in options.iter().enumerate() {
         body.push_str(&format!("{}. {option}\n", index + 1));
     }
@@ -92,7 +92,7 @@ pub fn answered_text(content: &str, chosen: &str) -> Option<String> {
     if !out.ends_with('\n') {
         out.push('\n');
     }
-    out.push_str(&format!("\nPilihan: {chosen}\n"));
+    out.push_str(&format!("\nchosen: {chosen}\n"));
     Some(out)
 }
 
@@ -203,6 +203,10 @@ pub fn rewrite_decision(content: &str, text: &str) -> String {
             format!("Keputusan: {text}")
         } else if line.starts_with("Pilihan: ") {
             format!("Pilihan: {text}")
+        } else if line.starts_with("statement: ") {
+            format!("statement: {text}")
+        } else if line.starts_with("chosen: ") {
+            format!("chosen: {text}")
         } else {
             line.to_owned()
         };
