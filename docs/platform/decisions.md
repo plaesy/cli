@@ -212,4 +212,4 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 
 - Skill Plaesy disimpan di `~/.plaesy/skills` secara default. Override, prioritas tertinggi dulu: flag `--dir` pada `plaesy skills list|sync`, lalu env `PLAESY_SKILLS_DIR`, lalu `skills.dir` di `~/.plaesy/settings.json`, lalu default.
 - `plaesy skills sync` tidak menimpa skill yang sudah ada di target. Tanpa `--apply` hanya menampilkan rencana. Symlink tidak disalin.
-- Status: kode ditulis di `crates/plaesy/interface/cli/src/cli/skills.rs`. Belum dibuktikan lewat `cargo check -p plaesy-interface-cli --locked`.
+- Status: kode di `crates/plaesy/interface/cli/src/cli/skills.rs`, commit `0686f60` di `main` (belum di-push). `cargo check` dan `clippy -p plaesy-interface-cli --locked` lulus. Tes unit untuk `skills` belum ada.
