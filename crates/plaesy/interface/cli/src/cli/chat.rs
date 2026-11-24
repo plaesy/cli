@@ -5,7 +5,7 @@
 
 use std::error::Error;
 use std::io::{self, BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,6 +13,7 @@ use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
 use crate::delegate::{self, flatten, Message, Provider, Request};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, clap::Args)]
 pub struct Args {
@@ -31,7 +32,94 @@ pub struct Args {
     /// Repository whose .plaesy/config.json is read
     #[arg(long, default_value = ".")]
     pub path: PathBuf,
+    /// Vault where `/decision` notes are saved; default is the configured memory vault
+    #[arg(long)]
+    pub vault: Option<PathBuf>,
 }
+
+/// A decision typed as `/decision <title> | <chosen> | <why>`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Decision {
+    pub title: String,
+    pub chosen: String,
+    pub why: String,
+}
+
+const DECISION_USAGE: &str = "usage: /decision <judul> | <pilihan> | <alasan>";
+
+/// Splits `<title> | <chosen> | <why>`. All three parts are required.
+pub fn parse_decision(rest: &str) -> Result<Decision, String> {
+    let parts: Vec<&str> = rest.split(" | ").map(str::trim).collect();
+    match parts.as_slice() {
+        [title, chosen, why] if ![title, chosen, why].iter().any(|p| p.is_empty()) => {
+            Ok(Decision {
+                title: (*title).to_owned(),
+                chosen: (*chosen).to_owned(),
+                why: (*why).to_owned(),
+            })
+        }
+        _ => Err(DECISION_USAGE.to_owned()),
+    }
+}
+
+/// Stable graph id for a decision. Built from the title and a time, so two decisions with the same
+/// title get different ids. `--type decision` requires a non-empty id.
+pub fn decision_id(title: &str, nanos: u128) -> String {
+    let digest = Sha256::digest(format!("{title}\n{nanos}").as_bytes());
+    let hex: String = digest
+        .iter()
+        .take(8)
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    format!("decision-{hex}")
+}
+
+/// Arguments for `plaesy memory [--vault V] remember`. The note is a graph `decision` in the
+/// `decisions` folder, so existing decision queries find it.
+pub fn decision_args(decision: &Decision, vault: Option<&Path>, id: &str) -> Vec<String> {
+    let mut args = vec!["memory".to_owned()];
+    if let Some(vault) = vault {
+        args.push("--vault".to_owned());
+        args.push(vault.display().to_string());
+    }
+    let body = format!("Pilihan: {}\n\nAlasan: {}\n", decision.chosen, decision.why);
+    args.extend([
+        "remember".to_owned(),
+        decision.title.clone(),
+        body,
+        "--folder".to_owned(),
+        "decisions".to_owned(),
+        "--type".to_owned(),
+        "decision".to_owned(),
+        "--status".to_owned(),
+        "active".to_owned(),
+        "--id".to_owned(),
+        id.to_owned(),
+    ]);
+    args
+}
+
+/// Saves a decision by running this same binary's `memory remember`. Returns the command's
+/// stdout on success, or its stderr on failure.
+pub fn record_decision(decision: &Decision, vault: Option<&Path>) -> Result<String, String> {
+    let exe = std::env::current_exe().map_err(|err| err.to_string())?;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_nanos());
+    let id = decision_id(&decision.title, nanos);
+    let output = std::process::Command::new(exe)
+        .args(decision_args(decision, vault, &id))
+        .output()
+        .map_err(|err| err.to_string())?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_owned())
+    }
+}
+
+/// Saves a parsed decision and returns a short confirmation.
+pub type DecisionRecorder<'a> = dyn Fn(&Decision) -> Result<String, String> + 'a;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Role {
@@ -95,6 +183,8 @@ pub enum Input {
     Provider(String),
     /// `/provider` with no name
     ProviderMissing,
+    /// `/decision` followed by the raw `<title> | <chosen> | <why>` text
+    Decision(String),
     Message(String),
 }
 
@@ -118,6 +208,12 @@ pub fn parse_input(line: &str) -> Input {
         } else {
             Input::Provider(name.to_owned())
         };
+    }
+    if let Some(rest) = text
+        .strip_prefix("/decision")
+        .filter(|rest| rest.is_empty() || rest.starts_with(' '))
+    {
+        return Input::Decision(rest.trim().to_owned());
     }
     Input::Message(text.to_owned())
 }
@@ -150,6 +246,7 @@ pub fn default_provider(cfg: &DelegateConfig) -> Result<String, String> {
 pub fn converse(
     mut provider: Box<dyn Provider>,
     open: &ProviderOpener<'_>,
+    record: &DecisionRecorder<'_>,
     timeout: Duration,
     max_tokens: u32,
     input: impl BufRead,
@@ -172,6 +269,13 @@ pub fn converse(
                     writeln!(out, "provider: {name}")?;
                 }
                 Err(err) => writeln!(out, "error: {err}")?,
+            },
+            Input::Decision(rest) => match parse_decision(&rest) {
+                Ok(decision) => match record(&decision) {
+                    Ok(saved) => writeln!(out, "decision {}", saved.trim())?,
+                    Err(err) => writeln!(out, "error: {err}")?,
+                },
+                Err(usage) => writeln!(out, "{usage}")?,
             },
             Input::Message(text) => {
                 let request = Request {
@@ -209,12 +313,18 @@ pub fn run(args: &Args) -> CliResult {
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
     let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 
-    println!("chat with {name}. /provider <name> switches, /clear resets, /exit quits.");
+    let vault = args.vault.clone();
+    let record = move |decision: &Decision| record_decision(decision, vault.as_deref());
+
+    println!(
+        "chat with {name}. /provider <name> switches, /decision <judul> | <pilihan> | <alasan> saves a decision, /clear resets, /exit quits."
+    );
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     converse(
         provider,
         &open,
+        &record,
         timeout,
         args.max_tokens,
         stdin.lock(),

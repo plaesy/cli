@@ -44,10 +44,20 @@ fn fake(name: &str, reply: &str) -> (Box<dyn Provider>, Arc<Mutex<Vec<String>>>)
 }
 
 fn run_session(first: Box<dyn Provider>, open: &ProviderOpener<'_>, script: &str) -> String {
+    run_with_recorder(first, open, &|_| Ok("saved".to_owned()), script)
+}
+
+fn run_with_recorder(
+    first: Box<dyn Provider>,
+    open: &ProviderOpener<'_>,
+    record: &DecisionRecorder<'_>,
+    script: &str,
+) -> String {
     let mut out = Vec::new();
     converse(
         first,
         open,
+        record,
         Duration::from_secs(5),
         0,
         Cursor::new(script.to_owned()),
@@ -55,6 +65,122 @@ fn run_session(first: Box<dyn Provider>, open: &ProviderOpener<'_>, script: &str
     )
     .expect("converse");
     String::from_utf8(out).expect("utf8 output")
+}
+
+#[test]
+fn parse_input_recognises_decision_with_raw_rest() {
+    assert_eq!(
+        parse_input("/decision a | b | c"),
+        Input::Decision("a | b | c".to_owned())
+    );
+    assert_eq!(parse_input("/decision"), Input::Decision(String::new()));
+    assert_eq!(
+        parse_input("/decisions"),
+        Input::Message("/decisions".to_owned())
+    );
+}
+
+#[test]
+fn parse_decision_requires_three_non_empty_parts() {
+    assert_eq!(
+        parse_decision("judul | pilih A | karena cepat"),
+        Ok(Decision {
+            title: "judul".to_owned(),
+            chosen: "pilih A".to_owned(),
+            why: "karena cepat".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse_decision("judul | pilih A"),
+        Err(DECISION_USAGE.to_owned())
+    );
+    assert_eq!(
+        parse_decision("judul |  | alasan"),
+        Err(DECISION_USAGE.to_owned())
+    );
+    assert_eq!(parse_decision(""), Err(DECISION_USAGE.to_owned()));
+}
+
+#[test]
+fn decision_args_target_the_decisions_folder_with_optional_vault() {
+    let decision = Decision {
+        title: "Pakai Ollama".to_owned(),
+        chosen: "Ollama lokal".to_owned(),
+        why: "gratis".to_owned(),
+    };
+    let plain = decision_args(&decision, None, "decision-abc");
+    assert_eq!(plain[0], "memory");
+    assert!(!plain.contains(&"--vault".to_owned()));
+    assert!(plain.windows(2).any(|w| w == ["--folder", "decisions"]));
+    assert!(plain.windows(2).any(|w| w == ["--type", "decision"]));
+    assert!(plain.windows(2).any(|w| w == ["--id", "decision-abc"]));
+    assert!(plain.iter().any(|a| a.contains("Pilihan: Ollama lokal")));
+
+    let with_vault = decision_args(&decision, Some(Path::new("C:/vault")), "decision-abc");
+    assert_eq!(&with_vault[..3], ["memory", "--vault", "C:/vault"]);
+}
+
+#[test]
+fn decision_id_is_stable_for_the_same_input_and_differs_by_time() {
+    let first = decision_id("Pakai Ollama", 1);
+    assert_eq!(first, decision_id("Pakai Ollama", 1));
+    assert_ne!(first, decision_id("Pakai Ollama", 2));
+    assert_ne!(first, decision_id("Lainnya", 1));
+    assert!(first.starts_with("decision-") && first.len() == "decision-".len() + 16);
+}
+
+#[test]
+fn decision_command_saves_through_the_recorder_and_reports_it() {
+    let (provider, _) = fake("a", "x");
+    let saved = Mutex::new(Vec::new());
+    let record = |d: &Decision| -> Result<String, String> {
+        saved.lock().expect("saved").push(d.clone());
+        Ok("note saved".to_owned())
+    };
+    let out = run_with_recorder(
+        provider,
+        &no_open,
+        &record,
+        "/decision judul | pilih A | alasan\n/exit\n",
+    );
+
+    assert!(out.contains("decision note saved"), "output was: {out}");
+    let saved = saved.lock().expect("saved").clone();
+    assert_eq!(saved.len(), 1);
+    assert_eq!(saved[0].chosen, "pilih A");
+}
+
+#[test]
+fn bad_decision_prints_usage_and_saves_nothing() {
+    let (provider, _) = fake("a", "x");
+    let calls = Mutex::new(0usize);
+    let record = |_: &Decision| -> Result<String, String> {
+        *calls.lock().expect("calls") += 1;
+        Ok(String::new())
+    };
+    let out = run_with_recorder(provider, &no_open, &record, "/decision rusak\n/exit\n");
+
+    assert!(out.contains(DECISION_USAGE));
+    assert_eq!(*calls.lock().expect("calls"), 0);
+}
+
+#[test]
+fn recorder_failure_is_reported_not_fatal() {
+    let (provider, seen) = fake("a", "tetap");
+    let record = |_: &Decision| -> Result<String, String> { Err("vault tidak ada".to_owned()) };
+    let out = run_with_recorder(
+        provider,
+        &no_open,
+        &record,
+        "/decision a | b | c\nhai\n/exit\n",
+    );
+
+    assert!(out.contains("error: vault tidak ada"));
+    assert!(
+        out.contains("tetap"),
+        "the session continues after a failed save"
+    );
+    assert_eq!(seen.lock().expect("seen").len(), 1);
 }
 
 fn no_open(name: &str) -> Result<Box<dyn Provider>, String> {
