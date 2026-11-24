@@ -7,6 +7,7 @@
 //! Port of `scripts/internal/delegate` (Go).
 
 pub mod providers;
+pub mod ratelimit;
 pub mod usage;
 
 use std::fmt;
