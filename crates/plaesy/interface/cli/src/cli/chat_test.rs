@@ -739,3 +739,57 @@ fn bare_at_opens_the_peer_menu() {
     assert_eq!(parse_input("@"), Input::MentionMenu);
     assert_eq!(parse_input("@ "), Input::MentionMenu);
 }
+
+#[test]
+fn goal_and_compact_parse_as_their_own_commands() {
+    assert_eq!(parse_input("/goal"), Input::Goal(String::new()));
+    assert_eq!(
+        parse_input("/goal tes unit per fitur"),
+        Input::Goal("tes unit per fitur".to_owned())
+    );
+    assert_eq!(parse_input("/goal clear"), Input::Goal("clear".to_owned()));
+    assert_eq!(parse_input("/compact"), Input::Compact);
+}
+
+#[test]
+fn goal_is_shown_in_every_prompt_until_cleared() {
+    let (provider, seen) = fake("a", "ok");
+    let out = run_session(
+        provider,
+        &no_open,
+        "/goal\n/goal tes unit\nsatu\n/goal clear\ndua\n/exit\n",
+    );
+
+    assert!(out.contains("no goal set"));
+    assert!(out.contains("goal: tes unit"));
+    assert!(out.contains("goal cleared"));
+    let prompts = seen.lock().expect("seen").clone();
+    assert_eq!(prompts.len(), 2);
+    assert!(prompts[0].contains("Goal sesi ini: tes unit"));
+    assert!(!prompts[1].contains("Goal sesi ini"));
+}
+
+#[test]
+fn compact_replaces_history_with_the_summary() {
+    let (provider, seen) = fake("a", "ringkasan singkat");
+    let out = run_session(provider, &no_open, "pertama\n/compact\nkedua\n/exit\n");
+
+    assert!(out.contains("compacted 2 turns into one summary"));
+    let prompts = seen.lock().expect("seen").clone();
+    assert_eq!(prompts.len(), 3, "message, compact, then the next message");
+    assert!(prompts[1].contains("pertama"), "compact sends the history");
+    assert!(
+        prompts[2].contains("ringkasan singkat") && !prompts[2].contains("pertama"),
+        "after compact only the summary remains: {}",
+        prompts[2]
+    );
+}
+
+#[test]
+fn compact_with_no_history_says_so_and_calls_nothing() {
+    let (provider, seen) = fake("a", "tidak dipanggil");
+    let out = run_session(provider, &no_open, "/compact\n/exit\n");
+
+    assert!(out.contains("nothing to compact"));
+    assert!(seen.lock().expect("seen").is_empty());
+}

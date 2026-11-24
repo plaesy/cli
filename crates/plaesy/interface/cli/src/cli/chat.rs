@@ -173,6 +173,17 @@ impl Transcript {
         self.turns.is_empty()
     }
 
+    /// Every earlier turn as messages, oldest first, without a new user message.
+    pub fn history(&self) -> Vec<Message> {
+        self.turns
+            .iter()
+            .map(|(role, text)| match role {
+                Role::User => Message::user(text.clone()),
+                Role::Assistant => Message::assistant(text.clone()),
+            })
+            .collect()
+    }
+
     /// Every earlier turn, then the new user message, oldest first.
     pub fn messages(&self, next_user: &str) -> Vec<Message> {
         let mut out: Vec<Message> = self
@@ -262,6 +273,10 @@ pub enum Input {
     Plugin(String),
     /// `/pick` followed by the raw `<id> <number>` text
     Pick(String),
+    /// `/goal` shows the session goal; `/goal <text>` sets it; `/goal clear` removes it
+    Goal(String),
+    /// `/compact` replaces the transcript with one summary written by the provider
+    Compact,
     Message(String),
 }
 
@@ -276,7 +291,12 @@ pub fn parse_input(line: &str) -> Input {
         "/pending" => return Input::Pending,
         "/tasks" => return Input::Tasks,
         "/plugins" => return Input::Plugins,
+        "/compact" => return Input::Compact,
+        "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/goal ") {
+        return Input::Goal(rest.trim().to_owned());
     }
     for (command, make) in [
         ("/ask", Input::Ask as fn(String) -> Input),
@@ -457,6 +477,8 @@ pub fn converse(
     }
     fire_and_print(out, &settings, lang, "session.start", &[])?;
     let mut transcript = Transcript::default();
+    // The session goal is kept for this run only; it is never written to disk.
+    let mut goal: Option<String> = None;
     for line in input.lines() {
         let line = line?;
         match parse_input(&line) {
@@ -687,6 +709,51 @@ pub fn converse(
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
                 }
             }
+            Input::Goal(rest) => {
+                if rest.is_empty() {
+                    let text = match &goal {
+                        Some(current) => chat_text::goal_set(lang, current),
+                        None => chat_text::goal_none(lang).to_owned(),
+                    };
+                    writeln!(out, "{text}")?;
+                } else if rest == "clear" {
+                    goal = None;
+                    writeln!(out, "{}", chat_text::goal_cleared(lang))?;
+                } else {
+                    writeln!(out, "{}", chat_text::goal_set(lang, &rest))?;
+                    goal = Some(rest);
+                }
+            }
+            Input::Compact => {
+                if transcript.is_empty() {
+                    writeln!(out, "{}", chat_text::nothing_to_compact(lang))?;
+                    continue;
+                }
+                let request = Request {
+                    prompt: String::new(),
+                    max_output_tokens: settings.max_tokens,
+                    timeout: settings.timeout,
+                    dir: String::new(),
+                };
+                let mut messages = vec![Message::system(
+                    "Ringkas percakapan berikut menjadi catatan singkat. Pertahankan fakta, \
+                     keputusan, dan langkah berikutnya. Jawab dalam bahasa percakapan."
+                        .to_owned(),
+                )];
+                messages.extend(transcript.history());
+                messages.push(Message::user("Ringkas percakapan di atas.".to_owned()));
+                match delegate::run_messages(provider.as_ref(), &messages, &request) {
+                    Ok(response) => {
+                        let turns = transcript.len();
+                        transcript.clear();
+                        transcript.push(Role::User, "Ringkasan percakapan sebelumnya:");
+                        transcript.push(Role::Assistant, response.text.clone());
+                        writeln!(out, "{}", chat_text::compacted(lang, turns))?;
+                        writeln!(out, "{}", response.text)?;
+                    }
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                }
+            }
             Input::Pending => match pending.menu() {
                 Ok(text) => writeln!(out, "{text}")?,
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
@@ -779,6 +846,9 @@ pub fn converse(
                 }
                 let (system, _) = chat_roles::system_text(&active, &settings.skills_dir);
                 let mut messages: Vec<Message> = system.into_iter().map(Message::system).collect();
+                if let Some(goal) = &goal {
+                    messages.push(Message::system(format!("Goal sesi ini: {goal}")));
+                }
                 messages.extend(transcript.messages(&text));
                 match delegate::run_messages(provider.as_ref(), &messages, &request) {
                     Ok(response) => {

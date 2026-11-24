@@ -147,6 +147,29 @@ pub fn no_decisions(lang: Lang) -> &'static str {
     pick(lang, "no decisions", "belum ada keputusan")
 }
 
+pub fn goal_none(lang: Lang) -> &'static str {
+    pick(lang, "no goal set", "belum ada goal")
+}
+
+pub fn goal_set(lang: Lang, goal: &str) -> String {
+    format!("{}: {goal}", pick(lang, "goal", "goal"))
+}
+
+pub fn goal_cleared(lang: Lang) -> &'static str {
+    pick(lang, "goal cleared", "goal dihapus")
+}
+
+pub fn nothing_to_compact(lang: Lang) -> &'static str {
+    pick(lang, "nothing to compact", "tidak ada yang diringkas")
+}
+
+pub fn compacted(lang: Lang, turns: usize) -> String {
+    match lang {
+        Lang::En => format!("compacted {turns} turns into one summary"),
+        Lang::Id => format!("{turns} giliran diringkas menjadi satu catatan"),
+    }
+}
+
 pub fn no_pending(lang: Lang) -> &'static str {
     pick(lang, "no pending questions", "tidak ada pertanyaan terbuka")
 }
