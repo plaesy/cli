@@ -219,6 +219,8 @@ pub struct ChatSettings {
     pub plugins: Vec<chat_plugins::Plugin>,
     /// This chat's name on the relay (`agent.name` in settings.json; default "chat").
     pub agent_name: String,
+    /// Peer agents and sessions offered by `@` (`agent.peers` in settings.json).
+    pub peers: Vec<String>,
 }
 
 /// One line typed at the prompt.
@@ -251,6 +253,8 @@ pub enum Input {
     Agent(String),
     /// `@name <text>`: send a message to another agent or chat session, through the relay
     Mention(String, String),
+    /// A bare `@`: pick a peer from the list, then type the message
+    MentionMenu,
     /// `/plugin run <plugin> <command> [args...]`
     Plugin(String),
     /// `/pick` followed by the raw `<id> <number>` text
@@ -308,6 +312,9 @@ pub fn parse_input(line: &str) -> Input {
         .filter(|rest| rest.is_empty() || rest.starts_with(' '))
     {
         return Input::Decisions(rest.trim().to_owned());
+    }
+    if text == "@" {
+        return Input::MentionMenu;
     }
     if let Some(rest) = text.strip_prefix('@') {
         let (name, body) = match rest.split_once(' ') {
@@ -575,6 +582,52 @@ pub fn converse(
                 Ok(text) => writeln!(out, "{text}")?,
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
             },
+            Input::MentionMenu => {
+                if settings.peers.is_empty() {
+                    writeln!(
+                        out,
+                        "{}",
+                        chat_text::error(lang, "no peers; add agent.peers to settings.json")
+                    )?;
+                } else if !settings.interactive {
+                    let listing: Vec<String> =
+                        settings.peers.iter().map(|p| format!("@{p}")).collect();
+                    writeln!(out, "{}", listing.join(", "))?;
+                } else {
+                    let labels: Vec<String> =
+                        settings.peers.iter().map(|p| format!("@{p}")).collect();
+                    match dialoguer::Select::new()
+                        .with_prompt("@")
+                        .items(&labels)
+                        .default(0)
+                        .interact_opt()
+                    {
+                        Ok(Some(index)) => {
+                            let name = settings.peers[index].clone();
+                            let prompt = format!("@{name}");
+                            match dialoguer::Input::<String>::new()
+                                .with_prompt(prompt)
+                                .interact_text()
+                            {
+                                Ok(body) if !body.trim().is_empty() => {
+                                    match agent_command(
+                                        &settings.repo,
+                                        &settings.agent_name,
+                                        &format!("send {name} {}", body.trim()),
+                                    ) {
+                                        Ok(text) => writeln!(out, "{text}")?,
+                                        Err(err) => {
+                                            writeln!(out, "{}", chat_text::error(lang, &err))?
+                                        }
+                                    }
+                                }
+                                _ => writeln!(out, "{}", chat_text::cancelled(lang))?,
+                            }
+                        }
+                        _ => writeln!(out, "{}", chat_text::cancelled(lang))?,
+                    }
+                }
+            }
             Input::Plugins => writeln!(
                 out,
                 "{}",
@@ -757,6 +810,17 @@ pub fn run(args: &Args) -> CliResult {
         chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     let skills_dir = super::skills::store_dir(&home);
+    let peers: Vec<String> = chat_hooks::read_settings(&settings_path)
+        .get("agent")
+        .and_then(|agent| agent.get("peers"))
+        .and_then(serde_json::Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|v| v.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
     let agent_name = chat_hooks::read_settings(&settings_path)
         .get("agent")
         .and_then(|agent| agent.get("name"))
@@ -828,6 +892,7 @@ pub fn run(args: &Args) -> CliResult {
             skills_dir: skills_dir.clone(),
             plugins: plugins.clone(),
             agent_name: agent_name.clone(),
+            peers: peers.clone(),
         },
         stdin.lock(),
         &mut stdout,

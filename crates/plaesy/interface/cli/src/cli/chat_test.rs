@@ -167,6 +167,7 @@ fn run_with_store(
             skills_dir: PathBuf::from("."),
             plugins: Vec::new(),
             agent_name: "chat".to_owned(),
+            peers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -649,6 +650,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         skills_dir: PathBuf::from("."),
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
+        peers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -692,6 +694,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         skills_dir: PathBuf::from("."),
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
+        peers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -729,4 +732,10 @@ fn at_mentions_address_another_agent_and_bare_at_is_text() {
         parse_input("email a@b.com"),
         Input::Message("email a@b.com".to_owned())
     );
+}
+
+#[test]
+fn bare_at_opens_the_peer_menu() {
+    assert_eq!(parse_input("@"), Input::MentionMenu);
+    assert_eq!(parse_input("@ "), Input::MentionMenu);
 }
