@@ -1,0 +1,18 @@
+[package]
+name = "plaesy-adapter-codegen-sql"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Codegen data-ir/1 ke DDL dan query SQLite berparameter (ADR 0004: codegen-sql)."
+
+[dependencies]
+plaesy-domain-data = { path = "../../domain/data" }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+rusqlite = { workspace = true }
+
+[lints]
+workspace = true

@@ -171,13 +171,13 @@ pub fn chain_names(
     }
 }
 
-fn print_totals(label: &str, totals: &BTreeMap<String, Totals>) {
+fn print_totals(label: &str, empty: &str, totals: &BTreeMap<String, Totals>) {
     let rows: Vec<Vec<String>> = totals
         .iter()
         .map(|(k, t)| {
             vec![
                 if k.is_empty() {
-                    "(direct)".to_owned()
+                    empty.to_owned()
                 } else {
                     k.clone()
                 },
@@ -185,6 +185,8 @@ fn print_totals(label: &str, totals: &BTreeMap<String, Totals>) {
                 t.input_tokens.to_string(),
                 t.output_tokens.to_string(),
                 t.unknown_tokens.to_string(),
+                format_micro_usd(t.cost_micro_usd),
+                t.uncosted_calls.to_string(),
                 t.wall_ms.to_string(),
             ]
         })
@@ -198,6 +200,8 @@ fn print_totals(label: &str, totals: &BTreeMap<String, Totals>) {
                 "INPUT_TOKENS",
                 "OUTPUT_TOKENS",
                 "NO_TOKEN_COUNT",
+                "COST_USD",
+                "NO_COST",
                 "WALL_MS"
             ],
             &rows
@@ -246,17 +250,13 @@ pub fn run(args: &Args) -> CliResult {
     let (resp, attempts) =
         delegate::run_chain(&cfg, &names, &request, &opts).map_err(|e| e.to_string())?;
 
-    let billable = cfg
-        .providers
-        .iter()
-        .find(|p| p.name == resp.provider)
-        .is_some_and(|p| p.billable);
+    let entry = usage::entry_named(&cfg, &resp.provider);
     usage::append(
         &usage_path,
         &usage::record_for(
-            &resp.provider,
+            &entry,
             &args.chain,
-            billable,
+            "",
             resp.input_tokens,
             resp.output_tokens,
             resp.wall_ms,
@@ -282,8 +282,17 @@ fn report(path: &Path) -> CliResult {
         return Ok(());
     }
     let (by_provider, by_chain) = usage::summarize(&records);
-    print_totals("PROVIDER", &by_provider);
+    let by_task = usage::summarize_by_task(&records);
+    print_totals("PROVIDER", "(direct)", &by_provider);
     println!();
-    print_totals("CHAIN", &by_chain);
+    print_totals("CHAIN", "(direct)", &by_chain);
+    println!();
+    print_totals("TASK", "(no task)", &by_task);
     Ok(())
+}
+
+/// Formats micro-USD as dollars with six decimals, without going through floating point.
+fn format_micro_usd(micro: i64) -> String {
+    let micro = micro.max(0);
+    format!("{}.{:06}", micro / 1_000_000, micro % 1_000_000)
 }

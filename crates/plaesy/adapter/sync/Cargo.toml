@@ -1,0 +1,20 @@
+[package]
+name = "plaesy-adapter-sync"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Sinkronisasi dokumen: log perubahan bernomor versi dan replikasi last-writer-wins (ADR 0003: adapter/sync)."
+
+[dependencies]
+plaesy-service = { path = "../../service" }
+rusqlite = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+plaesy-adapter-sqlite = { path = "../sqlite" }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

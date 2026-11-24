@@ -25,10 +25,13 @@ pub struct UnifiedConfig {
     pub graph: Option<GraphConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delegate: Option<DelegateConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<TelemetryConfig>,
 }
 
 impl UnifiedConfig {
-    /// The shipped configuration: every section at its default.
+    /// The shipped configuration: every section at its default. Telemetry has no
+    /// section, so it stays off until a user opts in.
     #[must_use]
     pub fn defaults() -> Self {
         Self {
@@ -38,8 +41,17 @@ impl UnifiedConfig {
             analyze: Some(AnalyzeConfig::defaults()),
             graph: Some(GraphConfig::defaults()),
             delegate: Some(DelegateConfig::defaults()),
+            telemetry: None,
         }
     }
+}
+
+/// Local telemetry settings. Events stay in `.plaesy/telemetry.jsonl` and are never sent
+/// over the network. Telemetry is off unless `enabled` is true.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TelemetryConfig {
+    pub enabled: bool,
 }
 
 /// Reach (external data sources) settings.
