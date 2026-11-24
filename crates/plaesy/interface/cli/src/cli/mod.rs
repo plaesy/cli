@@ -14,6 +14,7 @@ pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
+pub mod output;
 pub mod projects;
 pub mod reach;
 pub mod relay;
@@ -36,6 +37,9 @@ pub type CliResult = Result<(), Box<dyn std::error::Error>>;
 #[derive(Debug, Parser)]
 #[command(name = "plaesy", version = crate::version(), about = "Plaesy CLI for memory and agent workflows", arg_required_else_help = true)]
 pub struct Cli {
+    /// No color and no decorative glyphs (NO_COLOR is also honored). Place it before the subcommand.
+    #[arg(long, global = true)]
+    pub plain: bool,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -112,6 +116,9 @@ pub fn print_group_help(name: &str) -> CliResult {
 ///
 /// The command fails. The caller prints the error and exits with status 1.
 pub fn run(cli: Cli) -> CliResult {
+    let no_color = std::env::var_os("NO_COLOR");
+    let style = output::Style::resolve(cli.plain, no_color.as_deref());
+    crate::common::log::set_color_enabled(style.color);
     match cli.command {
         Command::Advisor(args) => advisor::run(&args),
         Command::Decisions(args) => decisions::run(&args),

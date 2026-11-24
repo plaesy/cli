@@ -12,6 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
+- Add a global `--plain` flag (place it before the subcommand) and honor `NO_COLOR`: log lines then
+  carry no ANSI color. `--plain` also turns off decorative glyphs for the call sites that use them.
 
 ### Fixed
 
