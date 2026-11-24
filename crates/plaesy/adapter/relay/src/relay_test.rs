@@ -225,3 +225,186 @@ fn invalid_recipient_and_oversized_body_are_rejected() {
         Err(MessageError::Invalid(_))
     ));
 }
+
+/// Moves a message's lease into the past so the next claim sees it as expired.
+fn expire_lease(store: &MessageStore, id: &str) {
+    store
+        .connection
+        .execute(
+            "UPDATE relay_messages SET lease_expiry_epoch_ms=?1 WHERE id=?2",
+            params![chrono::Utc::now().timestamp_millis() - 1, id],
+        )
+        .unwrap();
+}
+
+#[test]
+fn status_follows_claim_and_acknowledgment() {
+    let mut store = MessageStore::in_memory().unwrap();
+    store.send("st-1", "a", "b", "payload").unwrap();
+    assert_eq!(
+        store.find("st-1").unwrap().unwrap().status,
+        MessageStatus::Pending
+    );
+    let claimed = store.claim_next("b", 60).unwrap().unwrap();
+    assert_eq!(claimed.status, MessageStatus::Claimed);
+    assert_eq!(claimed.attempts, 1);
+    let token = claimed.lease_owner.unwrap();
+    assert!(store.acknowledge_claim("st-1", "b", &token).unwrap());
+    let done = store.find("st-1").unwrap().unwrap();
+    assert_eq!(done.status, MessageStatus::Done);
+    assert_eq!(done.attempts, 1);
+    assert!(done.acknowledged_at.is_some());
+}
+
+#[test]
+fn released_claims_retry_until_attempt_limit_then_fail() {
+    let mut store = MessageStore::in_memory().unwrap();
+    store.send("retry-1", "a", "b", "payload").unwrap();
+    for attempt in 1..MAX_ATTEMPTS {
+        let claimed = store.claim_next("b", 60).unwrap().unwrap();
+        assert_eq!(claimed.attempts, attempt);
+        let token = claimed.lease_owner.unwrap();
+        assert_eq!(
+            store.release_claim("retry-1", "b", &token, "boom").unwrap(),
+            Some(MessageStatus::Pending)
+        );
+        assert_eq!(
+            store.find("retry-1").unwrap().unwrap().status,
+            MessageStatus::Pending
+        );
+    }
+    let last = store.claim_next("b", 60).unwrap().unwrap();
+    assert_eq!(last.attempts, MAX_ATTEMPTS);
+    let token = last.lease_owner.unwrap();
+    assert_eq!(
+        store
+            .release_claim("retry-1", "b", &token, "boom again")
+            .unwrap(),
+        Some(MessageStatus::Failed)
+    );
+    let failed = store.find("retry-1").unwrap().unwrap();
+    assert_eq!(failed.status, MessageStatus::Failed);
+    assert_eq!(failed.last_error.as_deref(), Some("boom again"));
+    assert!(store.claim_next("b", 60).unwrap().is_none());
+    assert!(store.inbox("b", 10).unwrap().is_empty());
+}
+
+#[test]
+fn stale_release_token_is_ignored_and_oversized_error_is_rejected() {
+    let mut store = MessageStore::in_memory().unwrap();
+    store.send("stale-1", "a", "b", "payload").unwrap();
+    let claimed = store.claim_next("b", 60).unwrap().unwrap();
+    let token = claimed.lease_owner.unwrap();
+    assert_eq!(
+        store.release_claim("stale-1", "b", "other-token", "x").unwrap(),
+        None
+    );
+    assert!(matches!(
+        store.release_claim("stale-1", "b", &token, &"e".repeat(MAX_ERROR_BYTES + 1)),
+        Err(MessageError::Invalid(_))
+    ));
+    assert_eq!(
+        store.find("stale-1").unwrap().unwrap().status,
+        MessageStatus::Claimed
+    );
+}
+
+#[test]
+fn expired_final_attempt_becomes_failed_without_release() {
+    let mut store = MessageStore::in_memory().unwrap();
+    store.send("expire-1", "a", "b", "payload").unwrap();
+    for attempt in 1..=MAX_ATTEMPTS {
+        let claimed = store.claim_next("b", 60).unwrap().unwrap();
+        assert_eq!(claimed.attempts, attempt);
+        expire_lease(&store, "expire-1");
+        let expected = if attempt < MAX_ATTEMPTS {
+            MessageStatus::Pending
+        } else {
+            MessageStatus::Failed
+        };
+        assert_eq!(store.find("expire-1").unwrap().unwrap().status, expected);
+    }
+    assert!(store.claim_next("b", 60).unwrap().is_none());
+    assert!(store.inbox("b", 10).unwrap().is_empty());
+}
+
+#[test]
+fn purge_removes_only_done_messages_older_than_limit() {
+    let mut store = MessageStore::in_memory().unwrap();
+    store.send("old-done", "a", "b", "x").unwrap();
+    store.send("new-done", "a", "b", "y").unwrap();
+    store.send("pending", "a", "b", "z").unwrap();
+    assert!(store.acknowledge("old-done", "b").unwrap());
+    assert!(store.acknowledge("new-done", "b").unwrap());
+    let three_days_ms = 3 * 86_400_000_i64;
+    store
+        .connection
+        .execute(
+            "UPDATE relay_messages SET acked_at_epoch_ms=?1 WHERE id='old-done'",
+            params![chrono::Utc::now().timestamp_millis() - three_days_ms],
+        )
+        .unwrap();
+    assert_eq!(
+        store
+            .purge_completed(std::time::Duration::from_secs(86_400))
+            .unwrap(),
+        1
+    );
+    assert!(store.find("old-done").unwrap().is_none());
+    assert_eq!(
+        store.find("new-done").unwrap().unwrap().status,
+        MessageStatus::Done
+    );
+    assert_eq!(
+        store.find("pending").unwrap().unwrap().status,
+        MessageStatus::Pending
+    );
+}
+
+#[test]
+fn opening_database_with_lease_schema_migrates_attempts_and_ack_times() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("lease-era.sqlite");
+    let future_ms = chrono::Utc::now().timestamp_millis() + 60_000;
+    let connection = Connection::open(&path).unwrap();
+    connection
+        .execute_batch(&format!(
+            "CREATE TABLE relay_messages (
+               id TEXT PRIMARY KEY, sender TEXT NOT NULL, recipient TEXT NOT NULL,
+               body TEXT NOT NULL, created_at TEXT NOT NULL, acknowledged_at TEXT,
+               lease_owner TEXT, lease_expiry_epoch_ms INTEGER, UNIQUE(sender, id)
+             );
+             INSERT INTO relay_messages(id,sender,recipient,body,created_at,acknowledged_at)
+             VALUES ('old-acked','a','b','x','2000-01-01T00:00:00Z','2000-01-02T00:00:00Z');
+             INSERT INTO relay_messages(id,sender,recipient,body,created_at,lease_owner,lease_expiry_epoch_ms)
+             VALUES ('old-leased','a','b','y','2000-01-01T00:00:01Z','old-token',{future_ms});"
+        ))
+        .unwrap();
+    drop(connection);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+
+    let mut store = MessageStore::open(&path).unwrap();
+    assert_eq!(
+        store.find("old-acked").unwrap().unwrap().status,
+        MessageStatus::Done
+    );
+    let leased = store.find("old-leased").unwrap().unwrap();
+    assert_eq!(leased.status, MessageStatus::Claimed);
+    assert_eq!(leased.attempts, 1);
+    assert!(store
+        .acknowledge_claim("old-leased", "b", "old-token")
+        .unwrap());
+    // The legacy RFC 3339 acknowledgment time was converted, so only the old row is purged.
+    assert_eq!(
+        store
+            .purge_completed(std::time::Duration::from_secs(3600))
+            .unwrap(),
+        1
+    );
+    assert!(store.find("old-acked").unwrap().is_none());
+    assert!(store.find("old-leased").unwrap().is_some());
+}
