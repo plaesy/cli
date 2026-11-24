@@ -16,6 +16,7 @@ pub mod chat_plugins;
 pub mod chat_roles;
 pub mod chat_tasks;
 pub mod chat_text;
+pub mod chat_tui;
 pub mod codegen_cmd;
 pub mod common;
 pub mod dashboard;

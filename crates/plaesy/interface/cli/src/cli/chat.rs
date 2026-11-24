@@ -20,6 +20,7 @@ use super::chat_plugins;
 use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
+use super::chat_tui;
 use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
@@ -44,6 +45,9 @@ pub struct Args {
     /// This session's name on the relay. Overrides agent.name in settings.json, so two sessions can differ
     #[arg(long)]
     pub agent: Option<String>,
+    /// Full-screen terminal view instead of the line prompt
+    #[arg(long)]
+    pub tui: bool,
     /// Role to start with: a name from `roles` in settings.json. Default: "default"
     #[arg(long)]
     pub role: Option<String>,
@@ -1203,6 +1207,60 @@ pub fn run(args: &Args) -> CliResult {
     let record_vault = vault.clone();
     let record = move |decision: &Decision| record_decision(decision, record_vault.as_deref());
 
+    // The menus need a terminal and the line prompt; the full-screen view draws its own screen.
+    let interactive = std::io::IsTerminal::is_terminal(&io::stdin()) && !args.tui;
+    let project = args.project.clone();
+    let settings = ChatSettings {
+        timeout,
+        max_tokens: args.max_tokens,
+        lang,
+        repo: args.path.clone(),
+        interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
+        hooks: hooks.clone(),
+        approved: approved.clone(),
+        mcp_servers: mcp_servers.clone(),
+        roles: roles.clone(),
+        role: active_role.name.clone(),
+        skills_dir: skills_dir.clone(),
+        plugins: plugins.clone(),
+        agent_name: agent_name.clone(),
+        peers: peers.clone(),
+        advisor: advisor.clone(),
+        council: cfg
+            .providers
+            .iter()
+            .filter(|p| p.enabled)
+            .map(|p| p.name.clone())
+            .collect(),
+        lsp_servers: lsp_servers.clone(),
+        providers: cfg
+            .providers
+            .iter()
+            .map(|p| ProviderEntry {
+                name: p.name.clone(),
+                enabled: p.enabled,
+                billable: p.billable,
+            })
+            .collect(),
+    };
+    if args.tui {
+        let confirm = args.confirm;
+        let repo = args.path.display().to_string();
+        chat_tui::run(lang, &repo, |input, out| {
+            let open = |next: &str| open_provider(&cfg, next, confirm, &getenv);
+            let record_vault = vault.clone();
+            let record =
+                move |decision: &Decision| record_decision(decision, record_vault.as_deref());
+            let pending = chat_pending::MemoryPending {
+                vault: vault.clone(),
+                project: project.clone(),
+                interactive,
+                lang,
+            };
+            let _ = converse(provider, &open, &record, &pending, settings, input, out);
+        })?;
+        return Ok(());
+    }
     println!("{}", chat_text::banner(lang, &name));
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -1212,43 +1270,11 @@ pub fn run(args: &Args) -> CliResult {
         &record,
         &chat_pending::MemoryPending {
             vault,
-            project: args.project.clone(),
-            interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
+            project,
+            interactive,
             lang,
         },
-        ChatSettings {
-            timeout,
-            max_tokens: args.max_tokens,
-            lang,
-            repo: args.path.clone(),
-            interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
-            hooks: hooks.clone(),
-            approved: approved.clone(),
-            mcp_servers: mcp_servers.clone(),
-            roles: roles.clone(),
-            role: active_role.name.clone(),
-            skills_dir: skills_dir.clone(),
-            plugins: plugins.clone(),
-            agent_name: agent_name.clone(),
-            peers: peers.clone(),
-            advisor: advisor.clone(),
-            council: cfg
-                .providers
-                .iter()
-                .filter(|p| p.enabled)
-                .map(|p| p.name.clone())
-                .collect(),
-            lsp_servers: lsp_servers.clone(),
-            providers: cfg
-                .providers
-                .iter()
-                .map(|p| ProviderEntry {
-                    name: p.name.clone(),
-                    enabled: p.enabled,
-                    billable: p.billable,
-                })
-                .collect(),
-        },
+        settings,
         io::BufReader::new(stdin),
         &mut stdout,
     )

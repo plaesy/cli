@@ -1,0 +1,369 @@
+//! Full-screen terminal interface for `plaesy chat --tui`. The chat itself is unchanged: the same
+//! `converse` loop runs on a worker thread and reads lines from a channel, and its output goes to a
+//! channel the screen draws from. So every command, hook, and provider works the same in both modes.
+//!
+//! Layout: the conversation on top, the input line below, and a status line at the bottom. Enter
+//! sends, PageUp and PageDown scroll the conversation, and Esc or Ctrl-C ends the session after the
+//! current reply. The session also ends when the chat itself exits (`/exit`).
+
+use std::io::{self, BufReader, Read, Write};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread;
+use std::time::Duration;
+
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::text::{Line, Text};
+use ratatui::widgets::{Block, Paragraph, Wrap};
+use ratatui::Frame;
+
+use super::chat_text::Lang;
+
+/// Most lines kept in the conversation view. Older lines are dropped.
+pub const MAX_LINES: usize = 2000;
+/// How far one PageUp or PageDown moves.
+const PAGE: usize = 10;
+
+/// Lines typed by the person, read by the chat as if they came from stdin. Reading blocks until a
+/// line arrives, and reports end of input once the sender is gone.
+pub struct LineSource {
+    rx: Receiver<String>,
+    pending: Vec<u8>,
+    pos: usize,
+}
+
+impl LineSource {
+    pub fn new(rx: Receiver<String>) -> Self {
+        Self {
+            rx,
+            pending: Vec::new(),
+            pos: 0,
+        }
+    }
+}
+
+impl Read for LineSource {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.pos >= self.pending.len() {
+            match self.rx.recv() {
+                Ok(line) => {
+                    self.pending = format!("{line}\n").into_bytes();
+                    self.pos = 0;
+                }
+                Err(_) => return Ok(0),
+            }
+        }
+        let n = buf.len().min(self.pending.len() - self.pos);
+        buf[..n].copy_from_slice(&self.pending[self.pos..self.pos + n]);
+        self.pos += n;
+        Ok(n)
+    }
+}
+
+/// Output of the chat, sent to the screen as text chunks.
+pub struct OutputSink {
+    tx: Sender<String>,
+}
+
+impl Write for OutputSink {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        // A closed screen channel only means nobody is drawing any more, so output is dropped.
+        let _ = self.tx.send(String::from_utf8_lossy(buf).into_owned());
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// The conversation as lines. Text without a newline waits in `partial` until its line ends.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Transcript {
+    lines: Vec<String>,
+    partial: String,
+}
+
+impl Transcript {
+    pub fn push_text(&mut self, text: &str) {
+        self.partial.push_str(text);
+        while let Some(index) = self.partial.find('\n') {
+            let line = self.partial[..index].trim_end_matches('\r').to_owned();
+            self.lines.push(line);
+            self.partial.drain(..=index);
+        }
+        if self.lines.len() > MAX_LINES {
+            let extra = self.lines.len() - MAX_LINES;
+            self.lines.drain(..extra);
+        }
+    }
+
+    pub fn push_user(&mut self, text: &str) {
+        self.push_text(&format!("\n› {text}\n"));
+    }
+
+    /// The lines that fit in `height`, ending `scroll` lines above the newest.
+    pub fn visible(&self, height: usize, scroll: usize) -> Vec<String> {
+        let mut all: Vec<String> = self.lines.clone();
+        if !self.partial.is_empty() {
+            all.push(self.partial.clone());
+        }
+        let end = all.len().saturating_sub(scroll);
+        let start = end.saturating_sub(height);
+        all[start..end].to_vec()
+    }
+
+    pub fn len(&self) -> usize {
+        self.lines.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty() && self.partial.is_empty()
+    }
+}
+
+/// The line being typed, with a cursor counted in characters.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Input {
+    chars: Vec<char>,
+    cursor: usize,
+}
+
+impl Input {
+    pub fn insert(&mut self, c: char) {
+        self.chars.insert(self.cursor, c);
+        self.cursor += 1;
+    }
+
+    pub fn backspace(&mut self) {
+        if self.cursor > 0 {
+            self.cursor -= 1;
+            self.chars.remove(self.cursor);
+        }
+    }
+
+    pub fn left(&mut self) {
+        self.cursor = self.cursor.saturating_sub(1);
+    }
+
+    pub fn right(&mut self) {
+        self.cursor = (self.cursor + 1).min(self.chars.len());
+    }
+
+    pub fn home(&mut self) {
+        self.cursor = 0;
+    }
+
+    pub fn end(&mut self) {
+        self.cursor = self.chars.len();
+    }
+
+    /// Returns the line and clears the input.
+    pub fn take(&mut self) -> String {
+        self.cursor = 0;
+        self.chars.drain(..).collect()
+    }
+
+    pub fn text(&self) -> String {
+        self.chars.iter().collect()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Action {
+    Insert(char),
+    Backspace,
+    Left,
+    Right,
+    Home,
+    End,
+    Submit,
+    ScrollUp,
+    ScrollDown,
+    Quit,
+    Ignore,
+}
+
+/// Maps a key press to what the screen does with it.
+pub fn action(key: &KeyEvent) -> Action {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Char('c') if ctrl => Action::Quit,
+        KeyCode::Esc => Action::Quit,
+        KeyCode::Enter => Action::Submit,
+        KeyCode::Backspace => Action::Backspace,
+        KeyCode::Left => Action::Left,
+        KeyCode::Right => Action::Right,
+        KeyCode::Home => Action::Home,
+        KeyCode::End => Action::End,
+        KeyCode::PageUp => Action::ScrollUp,
+        KeyCode::PageDown => Action::ScrollDown,
+        KeyCode::Char(c) if !ctrl => Action::Insert(c),
+        _ => Action::Ignore,
+    }
+}
+
+/// Everything the screen shows and remembers between key presses.
+struct Screen {
+    lang: Lang,
+    repo: String,
+    transcript: Transcript,
+    input: Input,
+    scroll: usize,
+    quitting: bool,
+    finished: bool,
+}
+
+impl Screen {
+    fn draw(&self, frame: &mut Frame<'_>) {
+        let [log, entry, status] = Layout::vertical([
+            Constraint::Min(1),
+            Constraint::Length(3),
+            Constraint::Length(1),
+        ])
+        .areas(frame.area());
+        self.draw_log(frame, log);
+        self.draw_input(frame, entry);
+        frame.render_widget(Paragraph::new(self.status_text()), status);
+    }
+
+    fn draw_log(&self, frame: &mut Frame<'_>, area: Rect) {
+        let height = area.height.saturating_sub(2) as usize;
+        let lines: Vec<Line<'_>> = self
+            .transcript
+            .visible(height, self.scroll)
+            .into_iter()
+            .map(Line::from)
+            .collect();
+        let title = format!(" plaesy chat · {} ", self.repo);
+        let log = Paragraph::new(Text::from(lines))
+            .wrap(Wrap { trim: false })
+            .block(Block::bordered().title(title));
+        frame.render_widget(log, area);
+    }
+
+    fn draw_input(&self, frame: &mut Frame<'_>, area: Rect) {
+        let prompt = match self.lang {
+            Lang::En => " message ",
+            Lang::Id => " pesan ",
+        };
+        let entry = Paragraph::new(self.input.text()).block(Block::bordered().title(prompt));
+        frame.render_widget(entry, area);
+        // Place the cursor inside the box, after the typed characters.
+        let max_x = area.x + area.width.saturating_sub(2);
+        let x = (area.x + 1 + self.input.cursor as u16).min(max_x);
+        frame.set_cursor_position((x, area.y + 1));
+    }
+
+    fn status_text(&self) -> String {
+        match (self.lang, self.finished, self.quitting) {
+            (Lang::En, true, _) => "session ended".to_owned(),
+            (Lang::Id, true, _) => "sesi selesai".to_owned(),
+            (Lang::En, false, true) => "closing after the current reply…".to_owned(),
+            (Lang::Id, false, true) => "menutup setelah balasan selesai…".to_owned(),
+            (Lang::En, false, false) => {
+                "Enter send · PgUp/PgDn scroll · Esc quit · /exit ends the chat".to_owned()
+            }
+            (Lang::Id, false, false) => {
+                "Enter kirim · PgUp/PgDn gulir · Esc keluar · /exit mengakhiri chat".to_owned()
+            }
+        }
+    }
+}
+
+/// Runs `session` on a worker thread and shows it in the terminal until it ends. `session` reads
+/// the typed lines and writes the chat's output, exactly as `converse` does with stdin and stdout.
+pub fn run<F>(lang: Lang, repo: &str, session: F) -> io::Result<()>
+where
+    F: FnOnce(BufReader<LineSource>, &mut OutputSink) + Send,
+{
+    let (line_tx, line_rx) = mpsc::channel::<String>();
+    let (out_tx, out_rx) = mpsc::channel::<String>();
+    let mut terminal = ratatui::init();
+    let mut screen = Screen {
+        lang,
+        repo: repo.to_owned(),
+        transcript: Transcript::default(),
+        input: Input::default(),
+        scroll: 0,
+        quitting: false,
+        finished: false,
+    };
+    let mut line_tx = Some(line_tx);
+    let outcome = thread::scope(|scope| {
+        scope.spawn(move || {
+            let mut sink = OutputSink { tx: out_tx };
+            session(BufReader::new(LineSource::new(line_rx)), &mut sink);
+        });
+        let outcome = loop {
+            // Drain everything the chat printed since the last frame.
+            loop {
+                match out_rx.try_recv() {
+                    Ok(text) => screen.transcript.push_text(&text),
+                    Err(mpsc::TryRecvError::Empty) => break,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        screen.finished = true;
+                        break;
+                    }
+                }
+            }
+            if screen.finished {
+                let _ = terminal.draw(|frame| screen.draw(frame));
+                break Ok(());
+            }
+            if let Err(err) = terminal.draw(|frame| screen.draw(frame)) {
+                break Err(err);
+            }
+            if let Err(err) = poll_key(&mut screen, &mut line_tx) {
+                break Err(err);
+            }
+        };
+        // Closing the line channel lets a waiting session see end of input, so the scope can end.
+        line_tx = None;
+        outcome
+    });
+    ratatui::restore();
+    outcome
+}
+
+/// Waits briefly for one key press and applies it.
+fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Result<()> {
+    if !event::poll(Duration::from_millis(100))? {
+        return Ok(());
+    }
+    let Event::Key(key) = event::read()? else {
+        return Ok(());
+    };
+    if key.kind != KeyEventKind::Press {
+        return Ok(());
+    }
+    match action(&key) {
+        Action::Insert(c) => screen.input.insert(c),
+        Action::Backspace => screen.input.backspace(),
+        Action::Left => screen.input.left(),
+        Action::Right => screen.input.right(),
+        Action::Home => screen.input.home(),
+        Action::End => screen.input.end(),
+        Action::ScrollUp => screen.scroll = screen.scroll.saturating_add(PAGE),
+        Action::ScrollDown => screen.scroll = screen.scroll.saturating_sub(PAGE),
+        Action::Submit => {
+            let line = screen.input.take();
+            screen.scroll = 0;
+            if let Some(tx) = line_tx.as_ref() {
+                screen.transcript.push_user(&line);
+                // A send fails only when the session has already ended; the frame loop notices that.
+                let _ = tx.send(line);
+            }
+        }
+        Action::Quit => {
+            screen.quitting = true;
+            *line_tx = None;
+        }
+        Action::Ignore => {}
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "chat_tui_test.rs"]
+mod chat_tui_test;
