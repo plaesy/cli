@@ -109,10 +109,9 @@ impl fmt::Display for RowErrorKind {
                 f,
                 "label {label:?} kosong atau mengandung ',', ';', atau karakter kontrol"
             ),
-            Self::FieldCount { expected, found } => write!(
-                f,
-                "jumlah field {found}, header punya {expected} kolom"
-            ),
+            Self::FieldCount { expected, found } => {
+                write!(f, "jumlah field {found}, header punya {expected} kolom")
+            }
         }
     }
 }

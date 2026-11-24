@@ -93,8 +93,8 @@ fn json_broken_rows_are_reported_by_position_and_valid_rows_still_import() {
 
 #[test]
 fn json_missing_title_is_a_row_error_not_a_file_error() {
-    let report = import_json(r#"[{"status": "todo"}, {"title": "Ada"}]"#)
-        .expect("array json is accepted");
+    let report =
+        import_json(r#"[{"status": "todo"}, {"title": "Ada"}]"#).expect("array json is accepted");
 
     assert_eq!(report.tasks, vec![task("Ada", TaskStatus::Backlog, &[])]);
     assert_eq!(

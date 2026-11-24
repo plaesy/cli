@@ -6,3 +6,6 @@ publish = false
 description = "Plaesy DTO: bentuk data untuk API, editor, dan event. Tanpa logika bisnis (ADR 0003)."
 
 [dependencies]
+
+[lints]
+workspace = true
