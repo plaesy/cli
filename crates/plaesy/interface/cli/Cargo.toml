@@ -8,6 +8,19 @@ publish = false
 description = "Antarmuka baris perintah (ADR 0003: interface/cli)."
 
 [dependencies]
+plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
+plaesy-adapter-runstore = { path = "../../adapter/runstore" }
+plaesy-domain-workflow = { path = "../../domain/workflow" }
+plaesy-adapter-codegen-js = { path = "../../adapter/codegen-js" }
+plaesy-adapter-codegen-go = { path = "../../adapter/codegen-go" }
+plaesy-adapter-import-sql = { path = "../../adapter/import-sql" }
+plaesy-adapter-import-code-rust = { path = "../../adapter/import-code-rust" }
+plaesy-adapter-import-code-python = { path = "../../adapter/import-code-python" }
+plaesy-domain-api = { path = "../../domain/api" }
+rusqlite = { workspace = true }
+plaesy-interface-acp = { path = "../acp" }
+plaesy-adapter-model-ollama = { path = "../../adapter/model-ollama" }
+plaesy-adapter-model-openai-tools = { path = "../../adapter/model-openai-tools" }
 plaesy-adapter-memory = { path = "../../adapter/memory" }
 plaesy-adapter-relay = { path = "../../adapter/relay" }
 plaesy-analysis = { path = "../../support/analysis" }
@@ -28,4 +41,8 @@ toml = { workspace = true }
 ureq = { workspace = true }
 
 [dev-dependencies]
+plaesy-tasks = { path = "../../support/tasks", features = ["test-support"] }
 tempfile = { workspace = true }
+
+[lints]
+workspace = true

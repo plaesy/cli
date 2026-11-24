@@ -115,9 +115,21 @@ fn check_value(
     queries: &HashSet<&str>,
     value: &Value,
 ) {
+    // Referensi bisa tersarang di array atau objek, jadi telusuri semuanya.
+    if let Some(items) = value.as_array() {
+        for item in items {
+            check_value(errors, here, declared, queries, item);
+        }
+        return;
+    }
     let Some(object) = value.as_object() else {
         return;
     };
+    for nested in object.values() {
+        if nested.is_array() || nested.is_object() {
+            check_value(errors, here, declared, queries, nested);
+        }
+    }
     if let Some(name) = object.get("param").and_then(Value::as_str) {
         if !declared.contains(name) {
             errors.push(format!("{here}: param {name} tidak ada di layar"));

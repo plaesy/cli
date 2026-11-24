@@ -4,7 +4,10 @@ use crate::secrets::SecretStore;
 #[test]
 fn redact_url_password_keeps_host_and_masks_password() {
     let out = redact_text("postgres://app:s3cret-pass@db.local:5432/x");
-    assert_eq!(out, "postgres://app:[REDACTED:url_password]@db.local:5432/x");
+    assert_eq!(
+        out,
+        "postgres://app:[REDACTED:url_password]@db.local:5432/x"
+    );
 }
 
 #[test]

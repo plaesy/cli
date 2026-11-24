@@ -197,8 +197,15 @@ fn is_placeholder(value: &str) -> bool {
     }
     matches!(
         value.to_ascii_lowercase().as_str(),
-        "redacted" | "placeholder" | "example" | "none" | "null" | "changeme" | "change_me"
-            | "todo" | "dummy"
+        "redacted"
+            | "placeholder"
+            | "example"
+            | "none"
+            | "null"
+            | "changeme"
+            | "change_me"
+            | "todo"
+            | "dummy"
     )
 }
 
@@ -239,7 +246,10 @@ fn scan_value(line: &str, start: usize) -> Option<Range<usize>> {
         None => rest
             .find(|c: char| {
                 c.is_whitespace()
-                    || matches!(c, '&' | ';' | ',' | '"' | '\'' | '`' | ')' | '}' | ']' | '<' | '>')
+                    || matches!(
+                        c,
+                        '&' | ';' | ',' | '"' | '\'' | '`' | ')' | '}' | ']' | '<' | '>'
+                    )
             })
             .unwrap_or(rest.len()),
     };
@@ -362,7 +372,8 @@ impl RedactionRule for BearerTokenRule {
                 .unwrap_or(&[])
                 .iter()
                 .take_while(|&&b| {
-                    b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~' | b'+' | b'/' | b'=')
+                    b.is_ascii_alphanumeric()
+                        || matches!(b, b'-' | b'.' | b'_' | b'~' | b'+' | b'/' | b'=')
                 })
                 .count();
             if len >= MIN_LEN {
@@ -389,7 +400,8 @@ impl RedactionRule for UrlPasswordRule {
                 .get(authority_start..)
                 .and_then(|rest| {
                     rest.find(|c: char| {
-                        c.is_whitespace() || matches!(c, '/' | '?' | '#' | '"' | '\'' | '`' | '<' | '>')
+                        c.is_whitespace()
+                            || matches!(c, '/' | '?' | '#' | '"' | '\'' | '`' | '<' | '>')
                     })
                 })
                 .map_or(line.len(), |offset| authority_start + offset);
@@ -405,8 +417,7 @@ impl RedactionRule for UrlPasswordRule {
             };
             let password_start = authority_start + colon + 1;
             let password_end = authority_start + at;
-            if password_end > password_start
-                && !is_placeholder(&line[password_start..password_end])
+            if password_end > password_start && !is_placeholder(&line[password_start..password_end])
             {
                 spans.push(RedactionSpan {
                     range: password_start..password_end,

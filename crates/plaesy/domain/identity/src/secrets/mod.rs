@@ -7,9 +7,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 pub mod redact;
-pub use redact::{
-    redact_text, KeyValueRule, RedactionRule, RedactionSpan, Redactor, TokenPattern,
-};
+pub use redact::{redact_text, KeyValueRule, RedactionRule, RedactionSpan, Redactor, TokenPattern};
 
 /// Holds secret values by name. Values are never printed by `Debug`.
 #[derive(Clone, Default)]

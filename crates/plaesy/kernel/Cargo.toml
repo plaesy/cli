@@ -7,3 +7,6 @@ description = "Plaesy kernel: primitif bersama tanpa I/O (ADR 0003)."
 
 [dependencies]
 serde_json = "1"
+
+[lints]
+workspace = true

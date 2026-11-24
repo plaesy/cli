@@ -40,6 +40,35 @@ pub struct Args {
     pub milestone: Option<String>,
 }
 
+/// `plaesy tasks create-subtask`: creates a backlog task of type `subtask` under `parent`.
+#[derive(Debug, clap::Args)]
+pub struct SubtaskArgs {
+    /// Existing parent task identifier
+    pub parent: String,
+    /// critical, high, medium, or low
+    pub priority: String,
+    /// Category, for example feature, bug, or chore
+    pub category: String,
+    /// Subtask title
+    pub title: String,
+}
+
+/// Creates a subtask through the same validated path as `create`, with `kind` fixed to `subtask`.
+pub fn run_subtask(args: &SubtaskArgs, tasks_dir: &Path, spec: &str) -> CliResult {
+    let create = Args {
+        priority: args.priority.clone(),
+        category: args.category.clone(),
+        title: args.title.clone(),
+        kind: "subtask".into(),
+        parent: Some(args.parent.clone()),
+        depends_on: Vec::new(),
+        labels: Vec::new(),
+        assignee: None,
+        milestone: None,
+    };
+    run(&create, tasks_dir, spec)
+}
+
 pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
     if spec.is_empty() {
         return Err("no spec: the current git branch is unknown; pass --spec <folder>".into());
@@ -50,15 +79,14 @@ pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
     for (field, value) in [
         ("assignee", args.assignee.as_deref()),
         ("milestone", args.milestone.as_deref()),
+        ("parent", args.parent.as_deref()),
     ] {
         if value.is_some_and(|value| value.trim().is_empty()) {
             return Err(format!("{field} cannot be empty").into());
         }
     }
     for label in &args.labels {
-        if label.trim().is_empty() {
-            return Err("labels cannot be empty".into());
-        }
+        crate::tasks::issue::validate_label(label)?;
     }
     let unique_labels: std::collections::BTreeSet<_> = args.labels.iter().collect();
     if unique_labels.len() != args.labels.len() {
@@ -67,6 +95,12 @@ pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
     let graph_lock = issue::IssueGraphLock::acquire(tasks_dir)?;
     let preexisting_problems: std::collections::BTreeSet<_> =
         Issue::validate_collection(tasks_dir)?.into_iter().collect();
+    if let Some(parent) = &args.parent {
+        // Checked under the graph lock so a concurrent removal cannot leave a dangling parent.
+        if !Issue::load_collection(tasks_dir)?.contains_key(parent) {
+            return Err(format!("parent task not found: {parent}").into());
+        }
+    }
     let topic = tasks::topic_slug(&args.category, &args.title)?;
     let expected_name = format!("{}_{}", args.priority, topic);
     if tasks::find_task(tasks_dir, &expected_name).is_some() {
