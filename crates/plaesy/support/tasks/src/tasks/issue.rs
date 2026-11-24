@@ -212,7 +212,11 @@ impl Issue {
     /// Adds a validated label, keeping insertion order. Returns `false` if it was already present.
     pub fn add_label(&mut self, label: &str) -> Result<bool, LabelError> {
         validate_label(label)?;
-        if self.labels.iter().any(|existing| existing.as_str() == label) {
+        if self
+            .labels
+            .iter()
+            .any(|existing| existing.as_str() == label)
+        {
             return Ok(false);
         }
         self.labels.push(label.to_owned());
@@ -447,9 +451,8 @@ impl IssueGraphLock {
     }
 }
 
-/// Raw metadata writer used by test fixtures in sibling crates. It takes no lock: do not use it
-/// in product code.
-#[doc(hidden)]
+/// Raw metadata writer for test fixtures. It takes no lock: do not use it in product code.
+#[cfg(any(test, feature = "test-support"))]
 pub fn write_metadata_unlocked(task_dir: &Path, issue: &Issue) -> Result<(), String> {
     write_metadata_unlocked_inner(task_dir, issue)
 }

@@ -1,0 +1,19 @@
+[package]
+name = "plaesy-adapter-import-code-python"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Impor kode Python (kelas dataclass dan enum) menjadi api-ir/1 dengan laporan kehilangan (ADR 0008)."
+
+[dependencies]
+rustpython-parser = "0.4"
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+plaesy-domain-api = { path = "../../domain/api" }
+
+[lints]
+workspace = true

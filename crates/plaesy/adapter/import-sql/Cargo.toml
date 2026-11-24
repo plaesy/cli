@@ -1,0 +1,19 @@
+[package]
+name = "plaesy-adapter-import-sql"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Impor skema SQLite menjadi data-ir/1 (ADR 0004, kode ke visual). Dialek pertama: SQLite."
+
+[dependencies]
+rusqlite = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+plaesy-domain-data = { path = "../../domain/data" }
+
+[lints]
+workspace = true

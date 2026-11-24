@@ -1,10 +1,53 @@
 //! Read-only issue tracker view, including derived dependency blocking.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use super::CliResult;
 use crate::tasks::{self, issue::Issue, Status};
+
+/// Arguments for `plaesy tasks children`.
+#[derive(Debug, clap::Args)]
+pub struct ChildrenArgs {
+    /// Parent issue ID whose direct children to list
+    pub parent: String,
+}
+
+/// Direct children of `parent`, in ID order. Grandchildren are not included.
+fn direct_children<'a>(issues: &'a BTreeMap<String, Issue>, parent: &str) -> Vec<&'a Issue> {
+    issues
+        .values()
+        .filter(|issue| issue.parent.as_deref() == Some(parent))
+        .collect()
+}
+
+/// Lists the direct child issues of one parent with their type, lifecycle status, and title.
+pub fn children(args: &ChildrenArgs, tasks_dir: &Path) -> CliResult {
+    let issues = Issue::load_collection(tasks_dir)?;
+    let problems = Issue::validate_collection(tasks_dir)?;
+    if !problems.is_empty() {
+        return Err(format!("invalid issue collection: {}", problems.join("; ")).into());
+    }
+    if !issues.contains_key(&args.parent) {
+        return Err(format!("issue not found: {}", args.parent).into());
+    }
+    let refs = tasks::list_all_tasks(tasks_dir)?;
+    let found = direct_children(&issues, &args.parent);
+    println!("TYPE     STATUS     ID                                       TITLE");
+    for child in &found {
+        let title = refs
+            .iter()
+            .find(|task| task.name == child.id)
+            .map_or("", |task| task.title.as_str());
+        println!(
+            "{:<8} {:<10} {:<40} {}",
+            child.kind, child.status, child.id, title
+        );
+    }
+    println!("{} child issue(s) of {}", found.len(), args.parent);
+    Ok(())
+}
 
 #[derive(Debug, clap::Args)]
 pub struct Args {

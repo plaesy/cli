@@ -34,7 +34,11 @@ fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
 }
 
 fn labels_of(tasks: &Path, id: &str) -> Vec<String> {
-    Issue::load_collection(tasks).unwrap().remove(id).unwrap().labels
+    Issue::load_collection(tasks)
+        .unwrap()
+        .remove(id)
+        .unwrap()
+        .labels
 }
 
 fn strings(values: &[&str]) -> Vec<String> {

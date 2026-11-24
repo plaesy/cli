@@ -89,7 +89,15 @@ fn validate_label_rejects_empty_long_spaced_and_uppercase_labels() {
         Err(LabelError::TooLong(too_long.clone()))
     );
 
-    for label in ["Bug", "needs review", " bug", "bug ", "tab\tx", "ui/polish", "héllo"] {
+    for label in [
+        "Bug",
+        "needs review",
+        " bug",
+        "bug ",
+        "tab\tx",
+        "ui/polish",
+        "héllo",
+    ] {
         assert_eq!(
             validate_label(label),
             Err(LabelError::InvalidCharacter(label.to_owned())),
@@ -152,7 +160,10 @@ fn collection_validation_reports_labels_that_break_the_rule() {
     let problems = Issue::validate_collection(&tasks).unwrap();
     assert_eq!(
         problems,
-        vec![format!("item: invalid label: {}", LabelError::InvalidCharacter("Bad".into()))]
+        vec![format!(
+            "item: invalid label: {}",
+            LabelError::InvalidCharacter("Bad".into())
+        )]
     );
 }
 

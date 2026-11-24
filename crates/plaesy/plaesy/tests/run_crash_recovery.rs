@@ -2,8 +2,9 @@
 //! Release checklist gates 2 and 5. Synthetic data only.
 
 use plaesy::evidence::EvidenceStore;
-use plaesy::runstore::RunLog;
 use plaesy::task_run::{recover, Event, Run, RunState};
+use plaesy_adapter_runstore::RunLog;
+use plaesy_domain_workflow::runstore::RunSink;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
