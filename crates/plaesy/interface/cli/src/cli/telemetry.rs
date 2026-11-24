@@ -36,7 +36,10 @@ fn show_summary() -> CliResult {
     if summary.commands.is_empty() {
         println!("No telemetry events recorded.");
     } else {
-        println!("{:<16} {:>6} {:>7} {:>10}", "COMMAND", "RUNS", "ERRORS", "AVG_MS");
+        println!(
+            "{:<16} {:>6} {:>7} {:>10}",
+            "COMMAND", "RUNS", "ERRORS", "AVG_MS"
+        );
         for (name, stats) in &summary.commands {
             let avg = stats.total_ms.checked_div(stats.runs).unwrap_or(0);
             println!(

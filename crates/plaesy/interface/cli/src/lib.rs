@@ -22,6 +22,8 @@ pub(crate) use plaesy_common::sessions;
 pub(crate) use plaesy_common::telemetry;
 pub(crate) use plaesy_common::trimmer;
 pub(crate) use plaesy_common::version;
+pub(crate) use plaesy_common::voice;
+pub(crate) use plaesy_common::workspaces;
 pub(crate) use plaesy_designlint::designlint;
 pub(crate) use plaesy_designlint::evals;
 pub(crate) use plaesy_loop::delegate;

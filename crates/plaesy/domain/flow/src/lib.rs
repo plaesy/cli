@@ -8,7 +8,9 @@
 //! Crate ini tidak boleh bergantung pada tokio, axum, rusqlite, atau crate I/O lain.
 
 pub mod error;
+pub mod eval;
 pub mod ir;
+pub mod port;
 pub mod semantic;
 
 pub use error::SemanticError;

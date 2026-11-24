@@ -363,7 +363,7 @@ Setiap modul lama dipindah ke crate berikut tanpa mengubah isi logika. Di tiap `
 | `plaesy-interface-client` | (dari `crates/editor/flow`) | interface/client (ADR 0011) |
 | `plaesy` (facade) | `lib.rs`, `main.rs`, `tests/`, `benches/`, `examples/`, `build.rs` | plaesy (facade) |
 
-Yang belum ada dan tidak dibuat sekarang (agar rencana tidak tampak selesai): `interface/http`, `ws`, `mcp`, `acp`, `plugin/sdk`, `adapter/sqlite` sebagai crate terpisah, `adapter/http-client`, `adapter/sync`, `adapter/codegen-*`, `adapter/import-*`, dan konteks `app`/`api`/`data` di service. Semuanya tetap rencana di `docs/adr/implementation-plan.md`.
+Yang belum ada: tidak ada. Semua item di rencana sudah dibangun atau diberi keputusan default (lihat daftar berikut dan bagian "Keputusan default").
 
 Bukti kriteria penerimaan:
 
@@ -378,13 +378,45 @@ Celah yang ditemukan dan ditutup pada migrasi ini:
 - `src/bin/cli.rs` tidak pernah dibangun (`autobins = false`) dan memanggil API yang ada. Berkas dihapus; isi terakhirnya ada di commit `551afd3`.
 - Tes `designir`, `irvalidate`, dan `domain/*` memakai `CARGO_MANIFEST_DIR/docs/adr`; path sudah disesuaikan ke kedalaman crate baru.
 
-Keterbatasan yang masih terbuka (dicatat, bukan disembunyikan):
+Keterbatasan dan keputusannya:
 
 - Validator semantik flow, data, api, dan app sekarang hanya ada di `plaesy-domain-*`. `irvalidate` (di `plaesy-adapter-design-ir`) hanya memetakan galatnya ke pesan, dan uji paritas Rust-Node (`irvalidate_test.rs`) tetap lulus. Sebelumnya empat modul di `irvalidate` adalah salinan; sudah dihapus.
-- `plaesy-domain-identity` dan `plaesy-domain-workflow` masih memakai `std::fs` dan `sha2`. Lolos kriteria `cargo tree`, tetapi I/O belum dipindah ke port `service`.
-- `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang `pub` dengan `#[doc(hidden)]`, karena dipakai tes lintas crate. Sebaiknya dipindah ke modul uji bersama.
-- Pembagian `support/*` bukan konteks ADR. Pemetaan itu perlu keputusan lanjutan (usulan: konteks `tooling`, atau masuk konteks yang ada).
-- Delegasi: pemetaan di atas dan penghapusan `src/bin/cli.rs` didelegasikan dan dapat dicabut.
+- I/O run log dipisah dari domain. `plaesy-domain-workflow` sekarang hanya berisi port `RunSink`, galat, `Recovered`, `MemoryLog` (untuk tes dan dry run), serta `DrainingLog`, `ApprovalStore`, dan `task_run` yang generik terhadap port. Implementasi berkas dan checksum SHA-256 ada di `plaesy-adapter-runstore`. `plaesy-domain-workflow` tidak lagi memakai `std::fs` atau `sha2`.
+- `plaesy-domain-identity` sudah tanpa I/O sejak awal (hanya `serde` dan `serde_json`); tidak perlu perubahan.
+- `write_metadata_unlocked` (tanpa kunci, hanya untuk fixture) sekarang di balik fitur `test-support` di `plaesy-tasks`. Fitur ini hanya diaktifkan sebagai dev-dependency oleh `plaesy-interface-cli`. Produk tidak memakainya.
+- Pengelompokan `support/*` (common, mdlint, tasks, analysis, designlint, loop) adalah keputusan sementara yang didelegasikan. Modul-modul itu belum punya konteks di ADR ini. Jika owner ingin konteks baru (mis. `tooling`), itu dipindah dengan perubahan path saja, tanpa mengubah kode.
+- Lints: `[workspace.lints]` berisi `unsafe_op_in_unsafe_fn = "warn"`. Semua member mewarisinya lewat `[lints] workspace = true`. Lint tambahan belum ditambahkan karena banyak modul memakai `libc` dan `unsafe`.
+- Crate dari rencana, dibangun atas perintah owner ("selesaikan semuanya"), dengan keputusan default yang didelegasikan dan bisa dicabut:
+  - `adapter/sqlite` (`plaesy-adapter-sqlite`): port `DocumentStore` di `plaesy-service`, implementasi SQLite, migrasi lewat `user_version`.
+  - `interface/http` (`plaesy-interface-http`): REST `/v1/documents/{kind}/{id}` di atas port. `kind` dengan `/` di-encode sebagai `%2F`.
+  - `interface/mcp` (`plaesy-interface-mcp`): server JSON-RPC 2.0 stdio dengan `initialize`, `tools/list`, `tools/call`. Ditulis tanpa `rmcp`, agar kontrak stdout eksplisit.
+  - `interface/ws` (`plaesy-interface-ws`): inti protokol realtime (envelope bernomor, replay, `Gap`) dan server WebSocket memakai `tokio-tungstenite`. Pilihan library ini keputusan default yang didelegasikan.
+  - `adapter/sync` (`plaesy-adapter-sync`): log perubahan bernomor versi dengan replikasi last-writer-wins per `(kind, id)`. Log bertahan di SQLite (`SqliteChangeLog`), dan `MemoryChangeLog` dipakai untuk tes.
+  - `interface/acp` (`plaesy-interface-acp`): agen ACP v1 lewat stdio, sumber https://agentclientprotocol.com/protocol/v1/overview. Mencakup `initialize`, `session/new`, `session/load` (riwayat dari penyimpanan, dikirim ulang sebagai `session/update`), `session/prompt`, `session/cancel`, dan panggilan ke klien `fs/read_text_file`, `fs/write_text_file`, `terminal/*`, serta `session/request_permission`. Panggilan ke klien hanya dibuat bila klien menyatakan kapabilitasnya. Model dipasang lewat `ModelBackend`; `plaesy acp --provider <nama>` membaca penyedia dari `delegate.providers`. Operasi dokumen ada sebagai `_plaesy/document/*`, aturan penamaan ekstensinya belum diverifikasi.
+- ACP: metode v1 sudah diimplementasikan di sisi agen. Panggilan ke klien (`fs/*`, `terminal/*`, izin) sudah tersedia lewat `ToolHost`, tetapi penyedia model yang ada hanya teks sehingga belum ada yang memanggilnya di produksi.
+
+## Keputusan default (didelegasikan, bisa dicabut)
+
+Crate berikut dibangun atas perintah owner untuk menyelesaikan semuanya. Setiap keputusan dicatat di sini dan bisa dicabut.
+
+- `plaesy-adapter-sqlite` (ADR 0005/0002 penyimpanan): port `DocumentStore` di `service`, SQLite dengan migrasi `user_version`.
+- `plaesy-interface-http`, `plaesy-interface-mcp`, `plaesy-interface-ws`, `plaesy-interface-acp`: interface atas port yang sama. ACP mengikuti spesifikasi v1 resmi, dengan sisi klien (`fs/*`, `terminal/*`, `session/request_permission`) lewat transport dua arah.
+- `plaesy-adapter-sync`: log perubahan bernomor versi, LWW per `(kind, id)`, log bertahan di SQLite.
+- `plaesy-adapter-http-client`: port `HttpClient` dengan ureq.
+- `plaesy-adapter-import-sql`: SQLite ke data-ir/1. Galat untuk tipe tanpa padanan (`REAL`).
+- `plaesy-adapter-import-code-rust`: struct dan enum Rust (syn) ke api-ir/1, dengan laporan kehilangan.
+- `plaesy-adapter-import-code-python`: kelas dan enum Python (rustpython-parser) ke api-ir/1, dengan laporan kehilangan. Dipilih karena parser-nya tersedia.
+- `plaesy-plugin-sdk`: plugin mendeklarasikan kapabilitas; host memberi izin per plugin; plugin hanya boleh memakai kapabilitas yang dideklarasikan DAN diizinkan.
+- `plaesy-service` (documents): save/load/list/remove untuk dokumen flow, data, api, dan app, dengan validasi.
+- `plaesy-adapter-codegen-js` dan `plaesy-adapter-codegen-go`: flow-ir ke JavaScript dan Go. Cakupan: modul action dan pass. Modul lain menjadi kehilangan dan membuat kode melempar galat di titik itu. Sintaks dicek dengan node dan gofmt.
+- `plaesy-adapter-model-ollama`: loop pemanggilan alat lewat Ollama lokal (`/api/chat`). Penyedia anthropic dan openai tetap teks saja, karena keduanya API cloud dan melanggar aturan offline di CLAUDE.md.
+- OpenAPI 3.1 dari api-ir ada di `plaesy-domain-api` (`openapi`).
+
+Batasan yang diketahui:
+
+- Tool-calling terhadap model Ollama sungguhan belum diuji. Ollama tidak terpasang di mesin pengembangan ini, dan tes memakai server palsu.
+- Cakupan codegen dan impor sempit seperti dijelaskan di atas. Kehilangan dicatat, tidak ditebak.
+- Blok buram ADR 0008 belum punya node di IR; kehilangan disimpan di laporan.
 
 ## Open items
 

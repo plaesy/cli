@@ -32,7 +32,10 @@ fn config_without_telemetry_section_stays_off() {
 #[test]
 fn explicit_false_stays_off() {
     let root = tempfile::tempdir().unwrap();
-    write_config(root.path(), r#"{"version": 1, "telemetry": {"enabled": false}}"#);
+    write_config(
+        root.path(),
+        r#"{"version": 1, "telemetry": {"enabled": false}}"#,
+    );
 
     assert!(!is_enabled(root.path()).unwrap());
     record(root.path(), "tasks", true, Duration::from_millis(10)).unwrap();
@@ -42,7 +45,10 @@ fn explicit_false_stays_off() {
 #[test]
 fn opt_in_records_and_summary_totals_are_correct() {
     let root = tempfile::tempdir().unwrap();
-    write_config(root.path(), r#"{"version": 1, "telemetry": {"enabled": true}}"#);
+    write_config(
+        root.path(),
+        r#"{"version": 1, "telemetry": {"enabled": true}}"#,
+    );
     assert!(is_enabled(root.path()).unwrap());
 
     record(root.path(), "tasks", true, Duration::from_millis(10)).unwrap();
