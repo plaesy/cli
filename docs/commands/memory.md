@@ -10,9 +10,9 @@ plaesy memory --project search "query"
 
 Vault selection precedence is `--vault` / `--project`, `MEMORY_WATCH_DIR`,
 `PLAESY_MEMORY_VAULT`, configured vault, then the shared `~/_` vault and repository `.plaesy/`
-fallbacks. Standard configuration combines onboarding settings, `~/.hermes/memory.toml`, and
-`.plaesy/memory.toml` in that order. When `--config <PATH>` is supplied, its `watch_dir` controls
-the vault unless a CLI or environment selector overrides it; it replaces the standard TOML lookup.
+fallbacks. Standard configuration combines the user settings file from `plaesy onboard`, and
+`.plaesy/settings.json` in that order. When `--config <PATH>` is supplied, its `watch_dir` controls
+the vault unless a CLI or environment selector overrides it; it replaces the standard settings lookup.
 
 An explicit `--db`, `MEMORY_DB_PATH`, or configured `database.db_path` is honored. Otherwise the
 CLI stores the index under local application data using a vault-specific filename, outside the

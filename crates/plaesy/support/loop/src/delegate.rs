@@ -6,8 +6,10 @@
 //! that another provider may not repeat.
 //! Port of `scripts/internal/delegate` (Go).
 
+pub mod plan;
 pub mod providers;
 pub mod ratelimit;
+pub mod retry;
 pub mod usage;
 
 use std::fmt;

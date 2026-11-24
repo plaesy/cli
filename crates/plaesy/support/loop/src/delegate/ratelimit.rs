@@ -50,10 +50,14 @@ impl RateLimiter {
     /// [`RateLimitError::InvalidConfig`] when `max_requests` or `window` is zero.
     pub fn new(max_requests: u32, window: Duration) -> Result<Self, RateLimitError> {
         if max_requests == 0 {
-            return Err(RateLimitError::InvalidConfig("max requests must be at least 1"));
+            return Err(RateLimitError::InvalidConfig(
+                "max requests must be at least 1",
+            ));
         }
         if window.is_zero() {
-            return Err(RateLimitError::InvalidConfig("window must be longer than zero"));
+            return Err(RateLimitError::InvalidConfig(
+                "window must be longer than zero",
+            ));
         }
         Ok(Self {
             max: usize::try_from(max_requests).unwrap_or(usize::MAX),

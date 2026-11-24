@@ -1,0 +1,15 @@
+[package]
+name = "plaesy-adapter-codegen-rust"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Codegen flow-ir/1 ke modul Rust dengan laporan kehilangan (ADR 0002, 0003: target pertama flow-ir)."
+
+[dependencies]
+plaesy-domain-flow = { path = "../../domain/flow" }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
