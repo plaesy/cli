@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy doctor` now checks the binary version, the memory vault, an orphaned daemon lock (not refreshed for over 15 seconds), and free disk space before the reach checks. The checks run offline.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,
