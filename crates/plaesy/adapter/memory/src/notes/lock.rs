@@ -6,6 +6,9 @@ use super::*;
 /// a writer that exited without releasing it (killed process, crash), so it is reclaimable.
 const LOCK_STALE_AFTER: Duration = Duration::from_secs(15);
 
+/// Directory the memory daemon holds for its whole `serve` lifetime.
+const DAEMON_LOCK_NAME: &str = ".plaesy-memory-daemon.lock";
+
 /// A best-effort cross-process lock for the remember write path.
 ///
 /// The graph preflight and file admission must be serialized: separate processes have separate
@@ -39,7 +42,22 @@ impl WriteLock {
     }
 
     pub(crate) fn acquire(root: &Path) -> Result<Self> {
-        let daemon = root.join(".plaesy-memory-daemon.lock");
+        Self::reject_live_daemon(root, LOCK_STALE_AFTER)?;
+        Self::acquire_named(root, ".plaesy-memory-writer.lock")
+    }
+
+    /// Acquire the memory daemon's own ownership lock for `serve`.
+    ///
+    /// A lock left by a daemon that was killed (so `Drop` never ran) is reclaimed here, so a
+    /// restarted service does not wait for it. A fresh lock still means another live daemon.
+    pub(crate) fn acquire_daemon(root: &Path) -> Result<Self> {
+        Self::reject_live_daemon(root, LOCK_STALE_AFTER)?;
+        Self::acquire_named(root, DAEMON_LOCK_NAME)
+    }
+
+    /// Fail when a live daemon holds the vault; remove its directory when it is stale.
+    fn reject_live_daemon(root: &Path, stale_after: Duration) -> Result<()> {
+        let daemon = root.join(DAEMON_LOCK_NAME);
         if let Ok(meta) = std::fs::symlink_metadata(&daemon) {
             if !meta.file_type().is_dir() {
                 return Err(MemoryError::ConfigError(format!(
@@ -51,19 +69,20 @@ impl WriteLock {
                 .modified()
                 .ok()
                 .and_then(|time| time.elapsed().ok())
-                .map(|age| age > LOCK_STALE_AFTER)
+                .map(|age| age > stale_after)
                 .unwrap_or(false);
             if stale {
                 // The daemon heartbeat stopped, so permit recovery after a crash. An active
                 // daemon refreshes this directory every second and cannot be reclaimed here.
-                let _ = std::fs::remove_dir(&daemon);
+                // A killed daemon leaves its `heartbeat` file inside, so `remove_dir` alone fails.
+                let _ = std::fs::remove_dir_all(&daemon);
             } else {
                 return Err(MemoryError::ConfigError(
                     "memory daemon owns this vault; use its service API for writes".into(),
                 ));
             }
         }
-        Self::acquire_named(root, ".plaesy-memory-writer.lock")
+        Ok(())
     }
 
     /// Acquire a cross-process lock with a role-specific path.
@@ -163,3 +182,7 @@ impl Drop for WriteLock {
         let _ = std::fs::remove_dir(&self.path);
     }
 }
+
+#[cfg(test)]
+#[path = "lock_test.rs"]
+mod lock_test;
