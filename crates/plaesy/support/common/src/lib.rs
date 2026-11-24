@@ -12,6 +12,7 @@ pub mod mcpserver;
 pub mod projects;
 pub mod sessions;
 pub mod trimmer;
+pub mod workspaces;
 
 /// Release version, read from the repository-root `VERSION` file at build time.
 pub const VERSION: &str = include_str!("../../../../../VERSION");

@@ -26,6 +26,7 @@ pub mod tasks_run;
 pub mod tasks_validate;
 pub mod trim;
 pub mod validate;
+pub mod workspace;
 
 use clap::{Parser, Subcommand};
 
@@ -80,6 +81,8 @@ pub enum Command {
     Files(files::Args),
     /// Register and discover local Plaesy projects
     Projects(projects::Args),
+    /// Group registered projects into named workspaces
+    Workspace(workspace::Args),
     /// Report and inspect self-declared agent session state
     Sessions(sessions::Args),
     /// Manage the local Markdown memory index and notes
@@ -132,6 +135,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Relay(args) => relay::run(&args),
         Command::Files(args) => files::run(&args),
         Command::Projects(args) => projects::run(&args),
+        Command::Workspace(args) => workspace::run(&args),
         Command::Sessions(args) => sessions::run(&args),
         Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),
