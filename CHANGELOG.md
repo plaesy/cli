@@ -31,9 +31,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add `plaesy workspace` to group registered projects into named workspaces (create, delete, add, remove, list). Missing project roots are reported as `missing` and kept in their group.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
-- Add `plaesy export tasks|runs --format md|csv [--out <file>]` to write the task list or the delegate run summary per provider as local Markdown or CSV. CSV fields that start with a formula character are prefixed with `'`.
 - Add opt-in local telemetry: set `"telemetry": {"enabled": true}` in `.plaesy/config.json` to count command runs, errors,
   and durations in `.plaesy/telemetry.jsonl`; `plaesy telemetry summary` prints the totals. Nothing is sent over the network.
+- Add `plaesy tasks board`, a text board with one section per status, a count per status, and task titles cut to 60 characters.
+- Add `plaesy export tasks|runs --format md|csv [--out <file>]` to write the task list or the delegate run summary per provider as local Markdown or CSV. CSV fields that start with a formula character are prefixed with `'`.
 - Save a local version of a task's `task.md` and `issue.json` under `.plaesy/history/<task>/` before `plaesy tasks`
   start, complete, block, unblock, move, next, and update-issue change it; list them with `plaesy tasks history <task>`
   and restore one with `plaesy tasks restore <task> <version>`, which saves the current state first.
