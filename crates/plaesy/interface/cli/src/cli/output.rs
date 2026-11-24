@@ -36,7 +36,11 @@ impl Style {
     /// Returns `fancy` when glyphs are allowed, otherwise the plain-text `ascii` fallback.
     #[must_use]
     pub fn glyph(self, fancy: &'static str, ascii: &'static str) -> &'static str {
-        if self.glyphs { fancy } else { ascii }
+        if self.glyphs {
+            fancy
+        } else {
+            ascii
+        }
     }
 
     /// Wraps `text` in the ANSI `code` when color is on, otherwise returns `text` unchanged.
