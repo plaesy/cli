@@ -1,7 +1,8 @@
 //! A stdio MCP server that exposes a project's `.plaesy/` folder.
 //!
 //! The server lists and reads files under `.plaesy/`, and writes text files
-//! there. It never deletes, and it never writes outside `.plaesy/`. Returned
+//! there. The same files are offered as MCP resources under `plaesy:///`.
+//! It never deletes, and it never writes outside `.plaesy/`. Returned
 //! content is project data, not instructions.
 //! Port of `scripts/internal/mcpserver` (Go).
 
@@ -12,11 +13,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Value};
 
-/// MCP revisions this server speaks, newest first. Only the tools capability is
-/// used, and it is the same in each revision.
+/// MCP revisions this server speaks, newest first. The server offers the tools and
+/// resources capabilities, which work the same in each revision.
 const SUPPORTED_VERSIONS: [&str; 4] = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 
 const SERVER_NAME: &str = "plaesy";
+/// Prefix of every resource URI. The rest is a path relative to `.plaesy/`.
+const RESOURCE_SCHEME: &str = "plaesy:///";
 const MAX_READ_BYTES: usize = 512 * 1024;
 const MAX_WRITE_BYTES: usize = 512 * 1024;
 const MAX_LIST_ENTRIES: usize = 2000;
@@ -32,11 +35,36 @@ pub struct RpcError {
 }
 
 impl RpcError {
-    fn invalid_params(message: impl Into<String>) -> Self {
+    fn new(code: i64, message: impl Into<String>) -> Self {
         Self {
-            code: -32602,
+            code,
             message: message.into(),
         }
+    }
+
+    fn parse_error() -> Self {
+        Self::new(-32700, "parse error")
+    }
+
+    fn invalid_request(message: impl Into<String>) -> Self {
+        Self::new(-32600, message)
+    }
+
+    fn method_not_found(method: &str) -> Self {
+        Self::new(-32601, format!("method not found: {method}"))
+    }
+
+    fn invalid_params(message: impl Into<String>) -> Self {
+        Self::new(-32602, message)
+    }
+
+    fn internal(message: impl Into<String>) -> Self {
+        Self::new(-32603, message)
+    }
+
+    /// Resource errors use the MCP code for a resource that cannot be found.
+    fn resource_not_found(uri: &str) -> Self {
+        Self::new(-32002, format!("resource not found: {uri}"))
     }
 }
 
@@ -79,13 +107,7 @@ impl Server {
                 continue;
             }
             let Ok(request) = serde_json::from_str::<Value>(line) else {
-                let reply = error_reply(
-                    Value::Null,
-                    &RpcError {
-                        code: -32700,
-                        message: "parse error".into(),
-                    },
-                );
+                let reply = error_reply(Value::Null, &RpcError::parse_error());
                 writeln!(output, "{reply}")?;
                 continue;
             };
@@ -96,12 +118,35 @@ impl Server {
         Ok(())
     }
 
-    /// Handles one request. Returns `None` for notifications, which have no `id`.
+    /// Handles one message. Returns `None` for notifications (no `id`) and for
+    /// client replies (`result` or `error` without `method`). A malformed message
+    /// gets an invalid-request error.
     #[must_use]
     pub fn handle(&self, request: &Value) -> Option<Value> {
-        let id = request.get("id")?.clone();
-        let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-        let params = request.get("params").cloned().unwrap_or(Value::Null);
+        let Some(object) = request.as_object() else {
+            return Some(error_reply(
+                Value::Null,
+                &RpcError::invalid_request("request must be a JSON object"),
+            ));
+        };
+        let id = object.get("id").cloned();
+        let Some(method) = object.get("method") else {
+            if object.contains_key("result") || object.contains_key("error") {
+                return None;
+            }
+            return Some(error_reply(
+                id.unwrap_or(Value::Null),
+                &RpcError::invalid_request("method is required"),
+            ));
+        };
+        let Some(method) = method.as_str() else {
+            return Some(error_reply(
+                id.unwrap_or(Value::Null),
+                &RpcError::invalid_request("method must be a string"),
+            ));
+        };
+        let id = id?;
+        let params = object.get("params").cloned().unwrap_or(Value::Null);
         Some(match self.dispatch(method, &params) {
             Ok(result) => json!({ "jsonrpc": "2.0", "id": id, "result": result }),
             Err(err) => error_reply(id, &err),
@@ -117,17 +162,17 @@ impl Server {
                     .unwrap_or(SUPPORTED_VERSIONS[0]);
                 Ok(json!({
                     "protocolVersion": version,
-                    "capabilities": { "tools": {} },
+                    "capabilities": { "tools": {}, "resources": {} },
                     "serverInfo": { "name": SERVER_NAME, "version": self.version },
                 }))
             }
             "ping" => Ok(json!({})),
             "tools/list" => Ok(json!({ "tools": tool_definitions() })),
             "tools/call" => self.call_tool(params),
-            other => Err(RpcError {
-                code: -32601,
-                message: format!("method not found: {other}"),
-            }),
+            "resources/list" => self.list_resources(),
+            "resources/templates/list" => Ok(json!({ "resourceTemplates": [] })),
+            "resources/read" => self.read_resource(params),
+            other => Err(RpcError::method_not_found(other)),
         }
     }
 
@@ -170,6 +215,19 @@ impl Server {
     ///
     /// Path refused, folder missing, or not a folder.
     pub fn list(&self, rel: &str) -> Result<String, String> {
+        let entries = self.entries(rel)?;
+        if entries.is_empty() {
+            return Ok("(empty)".into());
+        }
+        let lines: Vec<String> = entries
+            .into_iter()
+            .map(|(shown, size)| format!("{shown}\t{size}"))
+            .collect();
+        Ok(lines.join("\n"))
+    }
+
+    /// Files under a folder of `.plaesy/` as `(path, bytes)`, with paths relative to `.plaesy/`.
+    fn entries(&self, rel: &str) -> Result<Vec<(String, u64)>, String> {
         let clean = clean_rel(rel)?;
         let root = self.open_root()?;
         let folder = self.resolve(&root, &clean)?;
@@ -178,7 +236,7 @@ impl Server {
         }
         let mut files = Vec::new();
         collect_files(&folder, &mut files);
-        let lines: Vec<String> = files
+        Ok(files
             .into_iter()
             .take(MAX_LIST_ENTRIES)
             .filter_map(|file| {
@@ -188,14 +246,50 @@ impl Server {
                     .ok()?
                     .to_string_lossy()
                     .replace('\\', "/");
-                Some(format!("{shown}\t{size}"))
+                Some((shown, size))
+            })
+            .collect())
+    }
+
+    /// `resources/list`: the readable text files under `.plaesy/`. A missing folder
+    /// lists nothing, so clients can call this right after connecting.
+    fn list_resources(&self) -> Result<Value, RpcError> {
+        if !self.base.is_dir() {
+            return Ok(json!({ "resources": [] }));
+        }
+        let entries = self.entries("").map_err(RpcError::internal)?;
+        let resources: Vec<Value> = entries
+            .into_iter()
+            .filter(|(shown, _)| check_extension(shown).is_ok())
+            .map(|(shown, size)| {
+                let mime = mime_type(&shown);
+                json!({
+                    "uri": format!("{RESOURCE_SCHEME}{shown}"),
+                    "name": shown,
+                    "mimeType": mime,
+                    "size": size,
+                })
             })
             .collect();
-        if lines.is_empty() {
-            Ok("(empty)".into())
-        } else {
-            Ok(lines.join("\n"))
-        }
+        Ok(json!({ "resources": resources }))
+    }
+
+    /// `resources/read`: one text file, addressed by its `plaesy:///` URI. Every
+    /// refusal, including a path that escapes `.plaesy/`, is reported as not found.
+    fn read_resource(&self, params: &Value) -> Result<Value, RpcError> {
+        let uri = params
+            .get("uri")
+            .and_then(Value::as_str)
+            .ok_or_else(|| RpcError::invalid_params("uri is required"))?;
+        let rel = uri
+            .strip_prefix(RESOURCE_SCHEME)
+            .ok_or_else(|| RpcError::resource_not_found(uri))?;
+        let text = self
+            .read(rel)
+            .map_err(|_| RpcError::resource_not_found(uri))?;
+        Ok(json!({
+            "contents": [{ "uri": uri, "mimeType": mime_type(rel), "text": text }]
+        }))
     }
 
     /// Reads one text file under `.plaesy/`. Content past 512 KB is cut with a note.
@@ -339,6 +433,21 @@ fn check_extension(rel: &str) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("unsupported file type: {rel}"))
+    }
+}
+
+fn mime_type(rel: &str) -> &'static str {
+    match Path::new(rel)
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .as_deref()
+    {
+        Some("md") => "text/markdown",
+        Some("json") => "application/json",
+        Some("yaml" | "yml") => "application/yaml",
+        Some("csv") => "text/csv",
+        Some("toml") => "application/toml",
+        _ => "text/plain",
     }
 }
 

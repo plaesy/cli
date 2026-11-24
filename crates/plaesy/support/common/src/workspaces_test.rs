@@ -119,15 +119,16 @@ fn members_report_roots_that_no_longer_exist_without_removing_them() {
         .map(|m| (m.project.id.as_str(), m.available))
         .collect();
     assert_eq!(report, [("p-live", true), ("p-gone", false)]);
-    assert_eq!(groups[0].members.len(), 2, "missing member must stay listed");
+    assert_eq!(
+        groups[0].members.len(),
+        2,
+        "missing member must stay listed"
+    );
 }
 
 #[test]
 fn members_of_unknown_group_is_reported() {
-    assert!(matches!(
-        members_in(&[], "nope"),
-        Err(Error::NotFound(_))
-    ));
+    assert!(matches!(members_in(&[], "nope"), Err(Error::NotFound(_))));
 }
 
 #[test]

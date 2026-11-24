@@ -1,9 +1,9 @@
 use super::*;
+use crate::runstore::MemoryLog;
 
 #[test]
 fn task_run_happy_path_succeeds_only_with_evidence() {
-    let dir = tempfile::tempdir().unwrap();
-    let log = RunLog::open(dir.path().join("run.log"));
+    let log = MemoryLog::default();
     let mut run = Run::new("task-1", "run-1", 3);
     run.apply_logged(&log, &Event::Start).unwrap();
     assert_eq!(
@@ -45,8 +45,7 @@ fn task_run_terminal_state_refuses_further_events() {
 
 #[test]
 fn task_run_restart_while_running_is_requeued_within_policy() {
-    let dir = tempfile::tempdir().unwrap();
-    let log = RunLog::open(dir.path().join("run.log"));
+    let log = MemoryLog::default();
     let mut run = Run::new("task-1", "run-1", 3);
     run.apply_logged(&log, &Event::Start).unwrap();
     // Simulated crash: the controller never reaches a terminal event.
@@ -60,8 +59,7 @@ fn task_run_restart_while_running_is_requeued_within_policy() {
 
 #[test]
 fn task_run_retry_budget_exhausted_fails_after_restart() {
-    let dir = tempfile::tempdir().unwrap();
-    let log = RunLog::open(dir.path().join("run.log"));
+    let log = MemoryLog::default();
     let mut run = Run::new("task-1", "run-1", 1);
     run.apply_logged(&log, &Event::Start).unwrap();
     let recovered = recover(&log, "task-1", "run-1", 1).unwrap();
@@ -75,8 +73,7 @@ fn task_run_retry_budget_exhausted_fails_after_restart() {
 
 #[test]
 fn task_run_replay_of_completed_run_matches_live_state() {
-    let dir = tempfile::tempdir().unwrap();
-    let log = RunLog::open(dir.path().join("run.log"));
+    let log = MemoryLog::default();
     let mut run = Run::new("task-1", "run-1", 3);
     run.apply_logged(&log, &Event::Start).unwrap();
     run.apply_logged(

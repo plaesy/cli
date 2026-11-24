@@ -1,0 +1,19 @@
+[package]
+name = "plaesy-interface-mcp"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Server MCP (JSON-RPC 2.0 lewat stdio) untuk dokumen (ADR 0003: interface/mcp)."
+
+[dependencies]
+plaesy-service = { path = "../../service" }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
