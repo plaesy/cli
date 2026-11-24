@@ -14,7 +14,7 @@ pub use plaesy_common::{
 };
 pub use plaesy_common::{version, VERSION};
 pub use plaesy_designlint::{designlint, evals};
-pub use plaesy_domain_identity::{authz, identity, secrets};
+pub use plaesy_domain_identity::{authz, identity, secrets, users};
 pub use plaesy_domain_workflow::{policy, runstore, task_run};
 pub use plaesy_interface_cli::cli;
 pub use plaesy_loop::{delegate, loop_run};

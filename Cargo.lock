@@ -3259,6 +3259,7 @@ version = "0.0.1"
 dependencies = [
  "chrono",
  "keyring",
+ "plaesy-domain-identity",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3376,6 +3377,7 @@ version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]

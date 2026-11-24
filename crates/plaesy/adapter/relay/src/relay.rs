@@ -9,6 +9,7 @@ pub mod auth;
 pub mod keys;
 pub mod shared;
 pub mod transport;
+pub mod users;
 
 const MAX_BODY_BYTES: usize = 64 * 1024;
 
