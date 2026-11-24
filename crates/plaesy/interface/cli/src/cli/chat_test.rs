@@ -53,18 +53,163 @@ fn run_with_recorder(
     record: &DecisionRecorder<'_>,
     script: &str,
 ) -> String {
+    run_with_store(first, open, record, &MemoryStore::default(), script)
+}
+
+/// In-memory `PendingStore`, so the chat loop is tested without a vault.
+#[derive(Default)]
+struct MemoryStore {
+    items: Mutex<Vec<(String, String, Vec<String>)>>,
+    fail_answer: bool,
+}
+
+impl chat_pending::PendingStore for MemoryStore {
+    fn ask(&self, question: &str, options: &[String]) -> Result<String, String> {
+        let mut items = self.items.lock().expect("items");
+        let id = format!("decision-{}", items.len() + 1);
+        items.push((id.clone(), question.to_owned(), options.to_vec()));
+        Ok(id)
+    }
+
+    fn list(&self) -> Result<String, String> {
+        let items = self.items.lock().expect("items");
+        if items.is_empty() {
+            return Ok("no pending questions".to_owned());
+        }
+        let mut out = String::new();
+        for (id, question, options) in items.iter() {
+            out.push_str(&format!("{id} {question}\n"));
+            for (index, option) in options.iter().enumerate() {
+                out.push_str(&format!("   {}. {option}\n", index + 1));
+            }
+        }
+        Ok(out.trim_end().to_owned())
+    }
+
+    fn answer(&self, id: &str, choice: usize) -> Result<String, String> {
+        if self.fail_answer {
+            return Err("vault tidak ada".to_owned());
+        }
+        let mut items = self.items.lock().expect("items");
+        let index = items
+            .iter()
+            .position(|(item_id, _, _)| item_id == id)
+            .ok_or_else(|| format!("no pending question {id}"))?;
+        let chosen = choice
+            .checked_sub(1)
+            .and_then(|i| items[index].2.get(i))
+            .cloned()
+            .ok_or_else(|| format!("option {choice} does not exist for {id}"))?;
+        items.remove(index);
+        Ok(format!("{id} answered: {chosen}"))
+    }
+}
+
+fn run_with_store(
+    first: Box<dyn Provider>,
+    open: &ProviderOpener<'_>,
+    record: &DecisionRecorder<'_>,
+    store: &dyn chat_pending::PendingStore,
+    script: &str,
+) -> String {
     let mut out = Vec::new();
     converse(
         first,
         open,
         record,
-        Duration::from_secs(5),
-        0,
+        store,
+        CallLimits {
+            timeout: Duration::from_secs(5),
+            max_tokens: 0,
+        },
         Cursor::new(script.to_owned()),
         &mut out,
     )
     .expect("converse");
     String::from_utf8(out).expect("utf8 output")
+}
+
+#[test]
+fn parse_input_recognises_queue_commands() {
+    assert_eq!(parse_input("/pending"), Input::Pending);
+    assert_eq!(
+        parse_input("/ask Q? | a | b"),
+        Input::Ask("Q? | a | b".to_owned())
+    );
+    assert_eq!(parse_input("/pick 1 2"), Input::Pick("1 2".to_owned()));
+    assert_eq!(
+        parse_input("/pending now"),
+        Input::Message("/pending now".to_owned())
+    );
+}
+
+#[test]
+fn ask_then_pending_lists_the_question_with_numbered_options() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/ask Pakai SQLite? | ya | tidak\n/pending\n/exit\n",
+    );
+    assert!(
+        out.contains("proposed decision-1: Pakai SQLite?"),
+        "output was: {out}"
+    );
+    assert!(out.contains("decision-1 Pakai SQLite?"));
+    assert!(out.contains("   2. tidak"));
+}
+
+#[test]
+fn pick_answers_the_question_and_removes_it_from_pending() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/ask Q? | a | b\n/pick decision-1 2\n/pending\n/exit\n",
+    );
+    assert!(out.contains("decision-1 answered: b"), "output was: {out}");
+    assert!(out.contains("no pending questions"), "output was: {out}");
+}
+
+#[test]
+fn failed_answer_keeps_the_question_pending() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore {
+        fail_answer: true,
+        ..MemoryStore::default()
+    };
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/ask Q? | a | b\n/pick decision-1 1\n/pending\n/exit\n",
+    );
+    assert!(out.contains("error: vault tidak ada"), "output was: {out}");
+    assert!(
+        out.contains("decision-1 Q?"),
+        "the question must stay pending: {out}"
+    );
+}
+
+#[test]
+fn pick_with_bad_arguments_prints_usage() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok(String::new()),
+        &store,
+        "/pick x\n/exit\n",
+    );
+    assert!(out.contains(chat_pending::PICK_USAGE), "output was: {out}");
 }
 
 #[test]
@@ -76,7 +221,7 @@ fn parse_input_recognises_decision_with_raw_rest() {
     assert_eq!(parse_input("/decision"), Input::Decision(String::new()));
     assert_eq!(
         parse_input("/decisions"),
-        Input::Message("/decisions".to_owned())
+        Input::Decisions(String::new())
     );
 }
 

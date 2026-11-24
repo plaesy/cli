@@ -7,6 +7,7 @@ pub mod analyze;
 pub mod approvals;
 pub mod audit;
 pub mod chat;
+pub mod chat_pending;
 pub mod codegen_cmd;
 pub mod common;
 pub mod dashboard;

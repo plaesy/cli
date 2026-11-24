@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::chat_pending;
 use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
@@ -35,6 +36,9 @@ pub struct Args {
     /// Vault where `/decision` notes are saved; default is the configured memory vault
     #[arg(long)]
     pub vault: Option<PathBuf>,
+    /// Project id that scopes `/pending` and is set on `/ask` notes
+    #[arg(long)]
+    pub project: Option<String>,
 }
 
 /// A decision typed as `/decision <title> | <chosen> | <why>`.
@@ -173,6 +177,13 @@ impl Transcript {
 /// Opens a provider by its configured name.
 pub type ProviderOpener<'a> = dyn Fn(&str) -> Result<Box<dyn Provider>, String> + 'a;
 
+/// Per-call limits for the provider.
+#[derive(Debug, Clone, Copy)]
+pub struct CallLimits {
+    pub timeout: Duration,
+    pub max_tokens: u32,
+}
+
 /// One line typed at the prompt.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Input {
@@ -185,6 +196,14 @@ pub enum Input {
     ProviderMissing,
     /// `/decision` followed by the raw `<title> | <chosen> | <why>` text
     Decision(String),
+    /// `/decisions <teks>`: saves one statement as a decision, with no separate reason
+    Decisions(String),
+    /// `/ask` followed by the raw `<question> | <option> | ...` text
+    Ask(String),
+    /// `/pending`: list open questions
+    Pending,
+    /// `/pick` followed by the raw `<id> <number>` text
+    Pick(String),
     Message(String),
 }
 
@@ -196,7 +215,19 @@ pub fn parse_input(line: &str) -> Input {
     match text {
         "/exit" | "/quit" => return Input::Exit,
         "/clear" => return Input::Clear,
+        "/pending" => return Input::Pending,
         _ => {}
+    }
+    for (command, make) in [
+        ("/ask", Input::Ask as fn(String) -> Input),
+        ("/pick", Input::Pick as fn(String) -> Input),
+    ] {
+        if let Some(rest) = text
+            .strip_prefix(command)
+            .filter(|rest| rest.is_empty() || rest.starts_with(' '))
+        {
+            return make(rest.trim().to_owned());
+        }
     }
     if let Some(rest) = text
         .strip_prefix("/provider")
@@ -214,6 +245,12 @@ pub fn parse_input(line: &str) -> Input {
         .filter(|rest| rest.is_empty() || rest.starts_with(' '))
     {
         return Input::Decision(rest.trim().to_owned());
+    }
+    if let Some(rest) = text
+        .strip_prefix("/decisions")
+        .filter(|rest| rest.is_empty() || rest.starts_with(' '))
+    {
+        return Input::Decisions(rest.trim().to_owned());
     }
     Input::Message(text.to_owned())
 }
@@ -247,8 +284,8 @@ pub fn converse(
     mut provider: Box<dyn Provider>,
     open: &ProviderOpener<'_>,
     record: &DecisionRecorder<'_>,
-    timeout: Duration,
-    max_tokens: u32,
+    pending: &dyn chat_pending::PendingStore,
+    limits: CallLimits,
     input: impl BufRead,
     out: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
@@ -270,6 +307,39 @@ pub fn converse(
                 }
                 Err(err) => writeln!(out, "error: {err}")?,
             },
+            Input::Ask(rest) => match chat_pending::parse_ask(&rest) {
+                Ok((question, options)) => match pending.ask(&question, &options) {
+                    Ok(id) => writeln!(out, "proposed {id}: {question}")?,
+                    Err(err) => writeln!(out, "error: {err}")?,
+                },
+                Err(usage) => writeln!(out, "{usage}")?,
+            },
+            Input::Pending => match pending.menu() {
+                Ok(text) => writeln!(out, "{text}")?,
+                Err(err) => writeln!(out, "error: {err}")?,
+            },
+            Input::Pick(rest) => match chat_pending::parse_pick(&rest) {
+                Ok((id, choice)) => match pending.answer(&id, choice) {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "error: {err}")?,
+                },
+                Err(usage) => writeln!(out, "{usage}")?,
+            },
+            Input::Decisions(text) => {
+                if text.is_empty() {
+                    writeln!(out, "usage: /decisions <teks keputusan>")?;
+                } else {
+                    let decision = Decision {
+                        title: text.clone(),
+                        chosen: text,
+                        why: String::new(),
+                    };
+                    match record(&decision) {
+                        Ok(saved) => writeln!(out, "decision {}", saved.trim())?,
+                        Err(err) => writeln!(out, "error: {err}")?,
+                    }
+                }
+            }
             Input::Decision(rest) => match parse_decision(&rest) {
                 Ok(decision) => match record(&decision) {
                     Ok(saved) => writeln!(out, "decision {}", saved.trim())?,
@@ -280,8 +350,8 @@ pub fn converse(
             Input::Message(text) => {
                 let request = Request {
                     prompt: String::new(),
-                    max_output_tokens: max_tokens,
-                    timeout,
+                    max_output_tokens: limits.max_tokens,
+                    timeout: limits.timeout,
                     dir: String::new(),
                 };
                 let messages = transcript.messages(&text);
@@ -325,8 +395,15 @@ pub fn run(args: &Args) -> CliResult {
         provider,
         &open,
         &record,
-        timeout,
-        args.max_tokens,
+        &chat_pending::MemoryPending {
+            vault: args.vault.clone(),
+            project: args.project.clone(),
+            interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
+        },
+        CallLimits {
+            timeout,
+            max_tokens: args.max_tokens,
+        },
         stdin.lock(),
         &mut stdout,
     )
