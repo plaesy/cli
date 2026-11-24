@@ -196,3 +196,11 @@ fn default_complete_messages_flattens_for_single_prompt_providers() {
         "User: satu\n\nAssistant: dua\n\nUser: tiga\n\nAssistant:"
     );
 }
+
+#[test]
+fn flatten_labels_system_messages() {
+    assert_eq!(
+        flatten(&[Message::system("aturan"), Message::user("hai")]),
+        "System: aturan\n\nUser: hai\n\nAssistant:"
+    );
+}

@@ -9,6 +9,7 @@ pub mod audit;
 pub mod chat;
 pub mod chat_hooks;
 pub mod chat_mcp;
+pub mod chat_roles;
 pub mod chat_pending;
 pub mod chat_tasks;
 pub mod chat_text;

@@ -434,13 +434,32 @@ impl Provider for AnthropicProvider {
 }
 
 /// Request body for the Messages API. Roles are `user` and `assistant`.
-#[must_use]
+/// The Messages API takes system text in a top-level `system` field, not as a message, so
+/// system messages are moved there and the rest are sent as turns.
 pub fn anthropic_body(model: &str, max_tokens: u32, messages: &[Message]) -> Value {
-    json!({
+    let system: Vec<&str> = messages
+        .iter()
+        .filter(|m| m.role == "system")
+        .map(|m| m.content.as_str())
+        .collect();
+    let turns: Vec<Message> = messages
+        .iter()
+        .filter(|m| m.role != "system")
+        .cloned()
+        .collect();
+    let mut body = json!({
         "model": model,
         "max_tokens": max_tokens,
-        "messages": message_values(messages),
-    })
+        "messages": message_values(&turns),
+    });
+    if !system.is_empty() {
+        body["system"] = json!(system.join(
+            "
+
+"
+        ));
+    }
+    body
 }
 
 /// Text blocks of a Messages API reply, with token counts when reported.

@@ -68,6 +68,11 @@ pub fn run(args: &Args) -> CliResult {
 
 /// Plaesy's store, first match wins: `--dir`, `PLAESY_SKILLS_DIR`, `skills.dir` in
 /// `~/.plaesy/settings.json`, then `~/.plaesy/skills`.
+/// The skill store directory, for other commands that load skills (such as chat roles).
+pub fn store_dir(home: &Path) -> PathBuf {
+    plaesy_dir(home, None)
+}
+
 fn plaesy_dir(home: &Path, flag: Option<&Path>) -> PathBuf {
     resolve_plaesy_dir(home, flag, std::env::var_os("PLAESY_SKILLS_DIR"))
 }

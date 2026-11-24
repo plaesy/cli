@@ -301,3 +301,20 @@ fn openai_reply_without_choices_is_terminal() {
     let err = openai_reply("p", &json!({ "choices": [] })).expect_err("no choice");
     assert_eq!(err.class, Class::Terminal);
 }
+
+#[test]
+fn anthropic_body_moves_system_messages_to_the_system_field() {
+    let messages = vec![Message::system("Anda reviewer."), Message::user("halo")];
+    let body = anthropic_body("claude-x", 64, &messages);
+    assert_eq!(body["system"], "Anda reviewer.");
+    assert_eq!(
+        body["messages"],
+        json!([{ "role": "user", "content": "halo" }])
+    );
+}
+
+#[test]
+fn anthropic_body_without_system_has_no_system_field() {
+    let body = anthropic_body("claude-x", 64, &[Message::user("halo")]);
+    assert!(body.get("system").is_none());
+}

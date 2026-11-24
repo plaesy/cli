@@ -162,6 +162,9 @@ fn run_with_store(
             hooks: Vec::new(),
             approved: Vec::new(),
             mcp_servers: Vec::new(),
+            roles: Vec::new(),
+            role: "default".to_owned(),
+            skills_dir: PathBuf::from("."),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -620,4 +623,87 @@ fn single_statement_decision_body_says_keputusan_not_an_empty_alasan() {
     let body = args.iter().find(|a| a.starts_with("statement:")).cloned();
     assert_eq!(body.as_deref(), Some("statement: Uji\n"), "args: {args:?}");
     assert!(!args.iter().any(|a| a.contains("why:")));
+}
+
+#[test]
+fn role_system_prompt_is_sent_before_the_conversation() {
+    let (provider, seen) = fake("a", "ok");
+    let roles = vec![chat_roles::Role {
+        name: "reviewer".to_owned(),
+        system: Some("Tinjau dengan teliti.".to_owned()),
+        ..chat_roles::Role::default()
+    }];
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles,
+        role: "reviewer".to_owned(),
+        skills_dir: PathBuf::from("."),
+    };
+    let store = MemoryStore::default();
+    let mut out = Vec::new();
+    converse(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        settings,
+        Cursor::new("halo\n/exit\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let prompts = seen.lock().expect("seen").clone();
+    assert!(
+        prompts[0].starts_with("System: Tinjau dengan teliti.\n\nUser: halo"),
+        "prompt was: {}",
+        prompts[0]
+    );
+}
+
+#[test]
+fn role_command_switches_and_refuses_unknown_names() {
+    let (provider, seen) = fake("a", "ok");
+    let roles = vec![chat_roles::Role {
+        name: "penulis".to_owned(),
+        system: Some("Tulis singkat.".to_owned()),
+        ..chat_roles::Role::default()
+    }];
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles,
+        role: "default".to_owned(),
+        skills_dir: PathBuf::from("."),
+    };
+    let store = MemoryStore::default();
+    let mut out = Vec::new();
+    converse(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        settings,
+        Cursor::new("/role penulis\n/role tidak-ada\nhalo\n/exit\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let text = String::from_utf8(out).expect("utf8");
+    assert!(text.contains("role: penulis"), "output was: {text}");
+    assert!(
+        text.contains("unknown role tidak-ada"),
+        "output was: {text}"
+    );
+    assert!(seen.lock().expect("seen")[0].starts_with("System: Tulis singkat."));
 }

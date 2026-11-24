@@ -12,6 +12,7 @@ use std::time::Duration;
 use super::chat_hooks;
 use super::chat_mcp;
 use super::chat_pending;
+use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::CliResult;
@@ -35,6 +36,9 @@ pub struct Args {
     /// Maximum output tokens per reply; 0 means the provider default
     #[arg(long, default_value_t = 0)]
     pub max_tokens: u32,
+    /// Role to start with: a name from `roles` in settings.json. Default: "default"
+    #[arg(long)]
+    pub role: Option<String>,
     /// Repository whose .plaesy/settings.json is read
     #[arg(long, default_value = ".")]
     pub path: PathBuf,
@@ -203,6 +207,12 @@ pub struct ChatSettings {
     pub approved: Vec<String>,
     /// MCP servers from the repository and the user.
     pub mcp_servers: Vec<chat_mcp::McpServer>,
+    /// Roles from the repository and the user.
+    pub roles: Vec<chat_roles::Role>,
+    /// The role to start with.
+    pub role: String,
+    /// Skill store, where roles find their skills.
+    pub skills_dir: PathBuf,
 }
 
 /// One line typed at the prompt.
@@ -227,6 +237,8 @@ pub enum Input {
     Tasks,
     /// `/mcp` lists servers; `/mcp call <server> <tool> <json>` calls an allowed tool
     Mcp(String),
+    /// `/role` lists roles; `/role <name>` switches to one
+    Role(String),
     /// `/pick` followed by the raw `<id> <number>` text
     Pick(String),
     Message(String),
@@ -248,6 +260,7 @@ pub fn parse_input(line: &str) -> Input {
         ("/ask", Input::Ask as fn(String) -> Input),
         ("/pick", Input::Pick as fn(String) -> Input),
         ("/mcp", Input::Mcp as fn(String) -> Input),
+        ("/role", Input::Role as fn(String) -> Input),
     ] {
         if let Some(rest) = text
             .strip_prefix(command)
@@ -336,6 +349,14 @@ pub fn converse(
     out: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
     let lang = settings.lang;
+    let mut active =
+        chat_roles::find(&settings.roles, &settings.role).unwrap_or_else(|| chat_roles::Role {
+            name: chat_roles::DEFAULT_ROLE.to_owned(),
+            ..chat_roles::Role::default()
+        });
+    for warning in chat_roles::system_text(&active, &settings.skills_dir).1 {
+        writeln!(out, "{}", chat_text::warning(lang, &warning))?;
+    }
     fire_and_print(out, &settings, lang, "session.start", &[])?;
     let mut transcript = Transcript::default();
     for line in input.lines() {
@@ -378,6 +399,9 @@ pub fn converse(
                         (Some(server), Some(tool)) if !server.is_empty() && !tool.is_empty() => {
                             let json = parts.next().unwrap_or("{}");
                             match serde_json::from_str::<serde_json::Value>(json) {
+                                Ok(_) if !chat_roles::tool_allowed(&active, tool) => {
+                                    Err(format!("role {} does not allow tool {tool}", active.name))
+                                }
                                 Ok(arguments) => chat_mcp::call(
                                     &settings.mcp_servers,
                                     &settings.approved,
@@ -396,6 +420,57 @@ pub fn converse(
                 match result {
                     Ok(text) => writeln!(out, "{text}")?,
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
+            Input::Role(name) => {
+                if name.is_empty() {
+                    let mut names: Vec<String> =
+                        settings.roles.iter().map(|r| r.name.clone()).collect();
+                    if !names.iter().any(|n| n == chat_roles::DEFAULT_ROLE) {
+                        names.insert(0, chat_roles::DEFAULT_ROLE.to_owned());
+                    }
+                    let listing: Vec<String> = names
+                        .iter()
+                        .map(|n| {
+                            if *n == active.name {
+                                format!("* {n}")
+                            } else {
+                                format!("  {n}")
+                            }
+                        })
+                        .collect();
+                    writeln!(
+                        out,
+                        "{}",
+                        listing.join(
+                            "
+"
+                        )
+                    )?;
+                } else {
+                    match chat_roles::find(&settings.roles, &name) {
+                        None => writeln!(
+                            out,
+                            "{}",
+                            chat_text::error(lang, &format!("unknown role {name}"))
+                        )?,
+                        Some(next) => {
+                            if let Some(provider_name) = next.provider.clone() {
+                                match open(&provider_name) {
+                                    Ok(new_provider) => provider = new_provider,
+                                    Err(err) => {
+                                        writeln!(out, "{}", chat_text::error(lang, &err))?;
+                                        continue;
+                                    }
+                                }
+                            }
+                            for warning in chat_roles::system_text(&next, &settings.skills_dir).1 {
+                                writeln!(out, "{}", chat_text::warning(lang, &warning))?;
+                            }
+                            writeln!(out, "role: {}", next.name)?;
+                            active = next;
+                        }
+                    }
                 }
             }
             Input::Tasks => {
@@ -499,7 +574,9 @@ pub fn converse(
                     writeln!(out, "{}", chat_text::error(lang, &reason))?;
                     continue;
                 }
-                let messages = transcript.messages(&text);
+                let (system, _) = chat_roles::system_text(&active, &settings.skills_dir);
+                let mut messages: Vec<Message> = system.into_iter().map(Message::system).collect();
+                messages.extend(transcript.messages(&text));
                 match delegate::run_messages(provider.as_ref(), &messages, &request) {
                     Ok(response) => {
                         writeln!(out, "{}", response.text)?;
@@ -538,6 +615,20 @@ pub fn run(args: &Args) -> CliResult {
         chat_hooks::Scope::User,
     )?);
     let approved = chat_hooks::load_approved(&settings_path.with_file_name("approved-hooks.json"));
+    let roles = chat_roles::merge(
+        chat_roles::parse_roles(&chat_hooks::read_settings(&settings_path))?,
+        chat_roles::parse_roles(&chat_hooks::read_settings(
+            &args.path.join(".plaesy").join("settings.json"),
+        ))?,
+    );
+    let role_name = args
+        .role
+        .clone()
+        .unwrap_or_else(|| chat_roles::DEFAULT_ROLE.to_owned());
+    let active_role =
+        chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
+    let home = dirs::home_dir().ok_or("home directory is not available")?;
+    let skills_dir = super::skills::store_dir(&home);
     let mut mcp_servers = chat_mcp::parse_servers(
         &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
         chat_hooks::Scope::Repo,
@@ -550,10 +641,12 @@ pub fn run(args: &Args) -> CliResult {
     let timeout = crate::reach::duration::parse(&args.timeout)
         .ok_or_else(|| format!("invalid --timeout {:?}", args.timeout))?;
     let getenv: Getenv = Arc::new(|name: &str| std::env::var(name).ok());
-    let name = if args.provider.is_empty() {
-        default_provider(&cfg)?
-    } else {
+    let name = if !args.provider.is_empty() {
         args.provider.clone()
+    } else if let Some(provider_name) = &active_role.provider {
+        provider_name.clone()
+    } else {
+        default_provider(&cfg)?
     };
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
     let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
@@ -583,6 +676,9 @@ pub fn run(args: &Args) -> CliResult {
             hooks: hooks.clone(),
             approved: approved.clone(),
             mcp_servers: mcp_servers.clone(),
+            roles: roles.clone(),
+            role: active_role.name.clone(),
+            skills_dir: skills_dir.clone(),
         },
         stdin.lock(),
         &mut stdout,

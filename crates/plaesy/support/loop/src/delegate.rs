@@ -159,6 +159,15 @@ impl Message {
             content: content.into(),
         }
     }
+
+    /// Instructions for the model, such as a role's system prompt. Sent first, never as a turn.
+    #[must_use]
+    pub fn system(content: impl Into<String>) -> Self {
+        Self {
+            role: "system",
+            content: content.into(),
+        }
+    }
 }
 
 /// Renders messages as one completion-style prompt: `User: ...`, `Assistant: ...` blocks, then an
@@ -167,10 +176,10 @@ impl Message {
 pub fn flatten(messages: &[Message]) -> String {
     let mut out = String::new();
     for message in messages {
-        let label = if message.role == "assistant" {
-            "Assistant"
-        } else {
-            "User"
+        let label = match message.role {
+            "assistant" => "Assistant",
+            "system" => "System",
+            _ => "User",
         };
         out.push_str(label);
         out.push_str(": ");
