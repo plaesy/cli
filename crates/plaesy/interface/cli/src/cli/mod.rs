@@ -4,6 +4,7 @@
 pub mod advisor;
 pub mod analyze;
 pub mod common;
+pub mod dashboard;
 pub mod decisions;
 pub mod delegate;
 pub mod doctor;
@@ -48,6 +49,8 @@ pub enum Command {
     Decisions(decisions::Args),
     /// Show Plaesy CLI version and environment status
     Status,
+    /// Write a static offline HTML dashboard of task counts and delegate usage
+    Dashboard(dashboard::Args),
     /// Initialize project-local Plaesy metadata safely
     Init(init::Args),
     /// Serve scoped list, read, and write tools for this project's .plaesy/ folder over MCP
@@ -116,6 +119,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Advisor(args) => advisor::run(&args),
         Command::Decisions(args) => decisions::run(&args),
         Command::Status => status::run(),
+        Command::Dashboard(args) => dashboard::run(&args),
         Command::Init(args) => init::run(&args),
         Command::Mcp(args) => mcp::run(&args),
         Command::Install => install::install(),
