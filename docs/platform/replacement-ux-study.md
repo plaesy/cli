@@ -144,4 +144,6 @@ The Tasks board now uses the same Work topbar, breadcrumb, user-facing page titl
 
 ### UX acceptance gate
 
+On 2026-11-24, `docs/Plaesy.figcraft` was restored from commit `43b31e5` after the later `wip design` commit had replaced the 96-frame artifact with an 85-frame version. The restored archive contains 96 frames and 1,147 prototype interactions. A direct document graph check found no navigation destination pointing to a missing frame. From either declared flow start, 92 frames are reachable. The replacement audit map and prototype guide are separate review references; two duplicate task review and receipt frames (IDs 5708 and 5768) are also unreachable. This is a structural file check, not a GUI, visual, or task-completion test. The ConfirmDialog component is present in the restored artifact.
+
 Before calling a replacement experience complete, test a pinned source scenario and its Plaesy counterpart with a person performing the task. Confirm the result, permissions, local/remote scope, recovery, keyboard and assistive-technology route, 320 CSS px reflow, and file or state fidelity where applicable. Record the outcome in the [measurement framework](feature-measurement-framework.md). No FigCraft screen is implementation or feature-parity evidence.
