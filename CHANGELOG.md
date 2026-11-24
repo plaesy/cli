@@ -50,6 +50,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Fixed
 
+- `plaesy memory serve` now reclaims a daemon lock left behind by a killed process. Before, it waited 30 seconds on that lock and then failed, so MCP clients timed out.
 - `plaesy mcp memory start|stop|status|uninstall` now fail with a clear message instead of a build error; the background memory service is not available in this build, so use `plaesy mcp memory serve` in the foreground.
 
 - `plaesy tasks complete` now prints that a manual completion has no checklist verification when the task has no checklist items.
