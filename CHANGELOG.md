@@ -12,6 +12,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
+- Let a delegate provider list `fallback_models`, tried in order on the same endpoint after a transient or rate-limit error; a terminal error stops at once.
 
 ### Fixed
 

@@ -11,6 +11,9 @@ plaesy delegate --chain local --prompt "..."    # named fallback chain
 plaesy delegate report                          # token usage per provider and chain
 ```
 
+A provider may list `fallback_models` (anthropic, ollama, openai). They are tried in order
+after `model` on the same endpoint, and only a transient or rate-limit error moves on.
+
 Usage is logged to `.plaesy/analysis/delegate-usage.jsonl`. A provider with a
 `daily_token_budget` is refused once the day's estimate would exceed it.
 

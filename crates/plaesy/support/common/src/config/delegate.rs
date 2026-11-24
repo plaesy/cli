@@ -39,6 +39,10 @@ pub struct DelegateProviderConfig {
     /// anthropic, ollama, openai: model id.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub model: String,
+    /// anthropic, ollama, openai: models tried in order after `model` when a call
+    /// fails with a retryable error. They reuse the same endpoint and key.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fallback_models: Vec<String>,
     /// ollama, openai: base URL.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub endpoint: String,
