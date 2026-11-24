@@ -5,6 +5,7 @@
 //! Port of `scripts/internal/installer` (Go).
 
 mod path_cleanup;
+pub mod update;
 
 use std::env;
 use std::fs;
@@ -348,7 +349,11 @@ fn sync_install() -> Result<Report, InstallerError> {
 }
 
 /// The running executable, with symlinks resolved so a copy and its original compare equal.
-fn running_binary() -> Result<PathBuf, InstallerError> {
+///
+/// # Errors
+///
+/// The executable path cannot be located or resolved.
+pub fn running_binary() -> Result<PathBuf, InstallerError> {
     let exe = env::current_exe().map_err(|e| InstallerError::io("locate running binary", e))?;
     exe.canonicalize()
         .map_err(|e| InstallerError::io("resolve running binary path", e))

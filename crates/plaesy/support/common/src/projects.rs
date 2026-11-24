@@ -23,14 +23,18 @@ pub enum Error {
     Json(#[from] serde_json::Error),
 }
 
-fn registry_file() -> Result<PathBuf, Error> {
+/// Per-user data directory shared by the project registry and the workspace groups.
+pub(crate) fn data_dir() -> Result<PathBuf, Error> {
     let root = dirs::data_local_dir().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::NotFound,
             "platform data directory unavailable",
         )
     })?;
-    Ok(root.join("plaesy").join("projects.json"))
+    Ok(root.join("plaesy"))
+}
+fn registry_file() -> Result<PathBuf, Error> {
+    Ok(data_dir()?.join("projects.json"))
 }
 fn normalized(path: &Path) -> Result<PathBuf, Error> {
     let p = fs::canonicalize(path)?;
@@ -39,25 +43,27 @@ fn normalized(path: &Path) -> Result<PathBuf, Error> {
     }
     Ok(p)
 }
-fn with_registry<T>(f: impl FnOnce(&Path) -> Result<T, Error>) -> Result<T, Error> {
-    let file = registry_file()?;
-    let parent = file.parent().ok_or_else(|| {
-        Error::Io(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "registry file has no parent directory",
-        ))
-    })?;
-    fs::create_dir_all(parent)?;
+/// Runs `f` while holding the lock that guards every per-user registry file in `dir`.
+pub(crate) fn with_lock<T, E: From<Error>>(
+    dir: &Path,
+    f: impl FnOnce() -> Result<T, E>,
+) -> Result<T, E> {
+    fs::create_dir_all(dir).map_err(Error::from)?;
     let lock = fs::OpenOptions::new()
         .create(true)
         .truncate(false)
         .read(true)
         .write(true)
-        .open(parent.join(".projects.lock"))?;
-    lock.lock()?;
-    let result = f(&file);
+        .open(dir.join(".projects.lock"))
+        .map_err(Error::from)?;
+    lock.lock().map_err(Error::from)?;
+    let result = f();
     let _ = lock.unlock();
     result
+}
+fn with_registry<T>(f: impl FnOnce(&Path) -> Result<T, Error>) -> Result<T, Error> {
+    let file = registry_file()?;
+    with_lock(&data_dir()?, || f(&file))
 }
 fn read(file: &Path) -> Result<Vec<Project>, Error> {
     if !file.exists() {
@@ -114,6 +120,11 @@ pub fn list() -> Result<Vec<Project>, Error> {
         }
         Ok(valid)
     })
+}
+/// Whether `path` is currently a Plaesy project root. Unlike `list`, this never edits the registry.
+#[must_use]
+pub fn is_project_root(path: &Path) -> bool {
+    normalized(path).is_ok()
 }
 /// Resolve a registered project by stable ID or canonical path.
 pub fn resolve(selector: &str) -> Result<Project, Error> {

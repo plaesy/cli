@@ -3,7 +3,7 @@
 //! Every transition is written to the run log before it is applied, so a restart
 //! can rebuild the same state from the log alone.
 
-use crate::runstore::{RunLog, RunLogError};
+use crate::runstore::{RunLogError, RunSink};
 
 pub mod status;
 
@@ -191,7 +191,11 @@ impl Run {
     /// # Errors
     ///
     /// Returns [`TransitionError::Log`] when the write fails, or the transition error.
-    pub fn apply_logged(&mut self, log: &RunLog, event: &Event) -> Result<(), TransitionError> {
+    pub fn apply_logged(
+        &mut self,
+        log: &impl RunSink,
+        event: &Event,
+    ) -> Result<(), TransitionError> {
         transition(&self.state, event)?;
         log.append(&self.record(event))?;
         self.apply(event)
@@ -218,7 +222,7 @@ impl Run {
 ///
 /// Returns a [`TransitionError`] when the log cannot be read or contains an impossible sequence.
 pub fn recover(
-    log: &RunLog,
+    log: &impl RunSink,
     task_id: &str,
     run_id: &str,
     max_attempts: u32,

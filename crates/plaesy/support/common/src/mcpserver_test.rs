@@ -219,9 +219,7 @@ fn malformed_messages_get_invalid_request_errors() {
     let not_object = server.handle(&json!([1, 2])).unwrap();
     assert_eq!(not_object["error"]["code"], -32600);
     assert_eq!(not_object["id"], Value::Null);
-    let no_method = server
-        .handle(&json!({"jsonrpc":"2.0","id":11}))
-        .unwrap();
+    let no_method = server.handle(&json!({"jsonrpc":"2.0","id":11})).unwrap();
     assert_eq!(no_method["error"]["code"], -32600);
     assert_eq!(no_method["id"], 11);
     let bad_method = server
