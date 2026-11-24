@@ -1,6 +1,7 @@
 //! CLI for the audit trail: list the newest recorded authorization decisions.
 
 use clap::{Parser, Subcommand};
+use plaesy_adapter_runstore::RunLog;
 use plaesy_domain_workflow::runstore::audit::{AuditQuery, AuditTrail};
 use std::path::PathBuf;
 
@@ -55,7 +56,7 @@ pub fn run(args: &Args) -> CliResult {
                 until: until.as_deref().map(parse_instant).transpose()?,
                 limit: Some(*limit),
             };
-            let listing = AuditTrail::open(log.clone()).list(&query)?;
+            let listing = AuditTrail::new(RunLog::open(log.clone())).list(&query)?;
             if listing.torn_tail {
                 eprintln!("warning: audit log ends in an incomplete line; it was ignored");
             }
@@ -77,6 +78,5 @@ pub fn run(args: &Args) -> CliResult {
 
 fn parse_instant(text: &str) -> Result<u64, Box<dyn std::error::Error>> {
     let seconds = chrono::DateTime::parse_from_rfc3339(text)?.timestamp();
-    u64::try_from(seconds)
-        .map_err(|_| format!("time before 1970 is not supported: {text}").into())
+    u64::try_from(seconds).map_err(|_| format!("time before 1970 is not supported: {text}").into())
 }

@@ -3,3 +3,4 @@
 pub mod authz;
 pub mod identity;
 pub mod secrets;
+pub mod users;

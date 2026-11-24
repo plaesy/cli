@@ -8,9 +8,8 @@
 //! This layout is a default of this module. It is not the in-memory `AuditEvent` in
 //! `plaesy-domain-identity`, and the existing run-log formats are unchanged.
 
-use super::{RunLog, RunLogError};
+use super::{RunLogError, RunSink};
 use std::fmt;
-use std::path::PathBuf;
 
 /// One audit entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,19 +95,18 @@ pub struct AuditListing {
     pub torn_tail: bool,
 }
 
-/// Append-only audit trail stored in one run log file.
+/// Append-only audit trail on top of any run log sink. The file-backed sink lives in the
+/// adapter crate, so this domain type performs no I/O of its own.
 #[derive(Debug, Clone)]
-pub struct AuditTrail {
-    log: RunLog,
+pub struct AuditTrail<L: RunSink> {
+    log: L,
 }
 
-impl AuditTrail {
-    /// Opens the trail at `path`. The file is created on first append.
+impl<L: RunSink> AuditTrail<L> {
+    /// Creates the trail on top of `log`.
     #[must_use]
-    pub fn open(path: impl Into<PathBuf>) -> Self {
-        Self {
-            log: RunLog::open(path),
-        }
+    pub fn new(log: L) -> Self {
+        Self { log }
     }
 
     /// Appends one entry and syncs it to disk before returning.
@@ -186,7 +184,3 @@ fn parse(payload: &str) -> Option<AuditRecord> {
         reason,
     })
 }
-
-#[cfg(test)]
-#[path = "audit_test.rs"]
-mod audit_test;

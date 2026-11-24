@@ -41,7 +41,7 @@ plaesy-memory uses embeddings for semantic search: text with similar meaning to 
 | Strengths | Strong cross-lingual and Indonesian retrieval |
 | Weaknesses | Larger/slower than MiniLM |
 
-**Setup** (automatic via `plaesy memory onboard`):
+**Setup** (automatic via `plaesy onboard`):
 
 ```bash
 MEMORY_MODEL_NAME=multilingual-e5-small
@@ -67,7 +67,7 @@ Model downloaded to `%LOCALAPPDATA%/plaesy/models/` (Windows), `~/.cache/plaesy/
 
 ```bash
 export MEMORY_MODEL_NAME=multilingual-e5-small
-plaesy memory onboard --vault C:/_
+plaesy onboard --vault C:/_
 ```
 
 Or in config:
@@ -235,7 +235,7 @@ HNSW k-NN search latency (usearch, cosine distance) on random 384-dimensional ve
 ### Automatic (Recommended)
 
 ```bash
-plaesy memory onboard --vault C:/_
+plaesy onboard --vault C:/_
 ```
 
 Prompts for:
