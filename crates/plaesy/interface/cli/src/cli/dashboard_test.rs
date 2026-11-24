@@ -21,6 +21,8 @@ fn record(provider: &str, input: Option<i64>, output: Option<i64>, wall_ms: i64)
         input_tokens: input,
         output_tokens: output,
         wall_ms,
+        task: String::new(),
+        cost_micro_usd: None,
     }
 }
 

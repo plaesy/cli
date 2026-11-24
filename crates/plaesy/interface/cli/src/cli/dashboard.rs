@@ -102,8 +102,10 @@ pub fn run(args: &Args) -> CliResult {
 }
 
 fn folder_name(root: &Path) -> String {
-    root.file_name()
-        .map_or_else(|| root.display().to_string(), |n| n.to_string_lossy().into_owned())
+    root.file_name().map_or_else(
+        || root.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    )
 }
 
 /// Number of tasks in each status, in lifecycle order. Statuses with no tasks report zero.

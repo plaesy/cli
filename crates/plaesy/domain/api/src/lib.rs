@@ -2,6 +2,7 @@
 //! Port dari validator Rust di `src/irvalidate`; pemeriksaan bentuk dilakukan JSON Schema.
 //! Crate ini tidak boleh bergantung pada tokio, axum, rusqlite, atau crate I/O lain.
 
+pub mod openapi;
 pub mod rules;
 
 use plaesy_domain_flow::SemanticError;
