@@ -24,6 +24,10 @@ pub struct Args {
 pub enum TasksCommand {
     /// Create a task in the backlog
     Create(super::tasks_create::Args),
+    /// Create a subtask (type `subtask`) under an existing parent task
+    CreateSubtask(super::tasks_create::SubtaskArgs),
+    /// List the direct child issues of a parent task
+    Children(super::tasks_issue::ChildrenArgs),
     /// List and filter issues by type, label, assignee, milestone, and status
     Issues(super::tasks_issue::Args),
     /// Update an issue's metadata without changing its stable task ID
@@ -37,6 +41,8 @@ pub enum TasksCommand {
         #[arg(long)]
         delete: Option<u64>,
     },
+    /// Add or remove labels on one issue (lowercase, no spaces, at most 32 characters)
+    Label(super::tasks_label::Args),
     /// List tasks across every status (or --all for the board, --sync-context for context.md)
     List {
         /// Show every spec's tasks as one board, with title and phase, and report integrity problems
@@ -46,6 +52,8 @@ pub enum TasksCommand {
         #[arg(long = "sync-context")]
         sync_context: bool,
     },
+    /// Show every spec's tasks as text columns, one per status, with counts and short titles
+    Board,
     /// List tasks in one status
     ListStatus { status: String },
     /// Pop the next task from backlog into todo
@@ -78,6 +86,10 @@ pub enum TasksCommand {
     Run(super::tasks_run::Args),
     /// Run each task's checklist and record the results; passing tasks move to review
     Validate(super::tasks_validate::Args),
+    /// List the saved versions of a task's task.md and issue.json
+    History { task: String },
+    /// Restore one saved version of a task; the state before the restore is saved first
+    Restore { task: String, version: u32 },
 }
 
 /// The `.plaesy/tasks` folder of the project above the working directory.
@@ -95,6 +107,29 @@ pub fn current_spec(spec_flag: &str) -> String {
 
 fn parse_status(text: &str) -> Result<Status, Box<dyn std::error::Error>> {
     Status::from_str(text).map_err(|_| format!("unknown status {text:?}").into())
+}
+
+/// Saves a task's current files before a command changes them. Fails when the
+/// snapshot cannot be written, so the change never happens unrecorded.
+fn snapshot_before(tasks_dir: &Path, task: &str, verb: &str) -> CliResult {
+    tasks::history::snapshot_task(&tasks::project_root_of(tasks_dir), task, verb)?;
+    Ok(())
+}
+
+fn print_history(tasks_dir: &Path, task: &str) -> CliResult {
+    let versions = tasks::history::list_versions(&tasks::project_root_of(tasks_dir), task)?;
+    if versions.is_empty() {
+        println!("[!] No saved versions of {task}");
+        return Ok(());
+    }
+    println!("History of {task} ({} version(s))", versions.len());
+    for version in versions {
+        println!(
+            "  v{:<4} {:<8} {:<12} {}",
+            version.version, version.status, version.created_unix, version.label
+        );
+    }
+    Ok(())
 }
 
 fn print_task_list(tasks_dir: &Path, status: Status) -> CliResult {
@@ -243,8 +278,11 @@ pub fn run(args: &Args) -> CliResult {
     let stdout = io::stdout();
     match command {
         TasksCommand::Create(create) => super::tasks_create::run(create, &tasks_dir()?, &spec),
+        TasksCommand::CreateSubtask(subtask) => {
+            super::tasks_create::run_subtask(subtask, &tasks_dir()?, &spec)
+        }
+        TasksCommand::Children(children) => super::tasks_issue::children(children, &tasks_dir()?),
         TasksCommand::Issues(issues) => super::tasks_issue::run(issues, &tasks_dir()?),
-        TasksCommand::UpdateIssue(update) => super::tasks_issue::update(update, &tasks_dir()?),
         TasksCommand::Comment { task, text } => {
             super::tasks_comment::add(task, text, &tasks_dir()?)
         }
@@ -252,6 +290,12 @@ pub fn run(args: &Args) -> CliResult {
             Some(id) => super::tasks_comment::delete(task, *id, &tasks_dir()?),
             None => super::tasks_comment::list(task, &tasks_dir()?),
         },
+        TasksCommand::UpdateIssue(update) => {
+            let dir = tasks_dir()?;
+            snapshot_before(&dir, &update.issue, "update-issue")?;
+            super::tasks_issue::update(update, &dir)
+        }
+        TasksCommand::Label(label) => super::tasks_label::run(label, &tasks_dir()?),
         TasksCommand::List { all, sync_context } => {
             if *sync_context {
                 return sync_in_flight();
@@ -267,11 +311,15 @@ pub fn run(args: &Args) -> CliResult {
             }
             Ok(())
         }
+        TasksCommand::Board => super::tasks_board::run(&tasks_dir()?),
         TasksCommand::ListStatus { status } => {
             print_task_list(&tasks_dir()?, parse_status(status)?)
         }
         TasksCommand::Next => {
             let dir = tasks_dir()?;
+            if let Some(task) = tasks::next_backlog_task(&dir, &spec)? {
+                snapshot_before(&dir, &task, "next")?;
+            }
             match tasks::pop_next_task(&dir, &spec)? {
                 Some(file) => println!("[✓] Moved: {file} (backlog → todo)"),
                 None => println!("[!] No tasks in backlog"),
@@ -279,12 +327,15 @@ pub fn run(args: &Args) -> CliResult {
             Ok(())
         }
         TasksCommand::Start { task } => {
-            tasks::start_task(&tasks_dir()?, task)?;
+            let dir = tasks_dir()?;
+            snapshot_before(&dir, task, "start")?;
+            tasks::start_task(&dir, task)?;
             println!("[✓] Moved: {task} (todo → doing)");
             Ok(())
         }
         TasksCommand::Complete { task } => {
             let dir = tasks_dir()?;
+            snapshot_before(&dir, task, "complete")?;
             // A task with no checklist items has nothing `validate` could verify.
             let unverified = match tasks::find_task(&dir, task) {
                 Some((_, path)) => match crate::checklist::load(&path.join(tasks::CONTRACT_FILE)) {
@@ -304,12 +355,16 @@ pub fn run(args: &Args) -> CliResult {
             Ok(())
         }
         TasksCommand::Block { task, reason } => {
-            tasks::block_task(&tasks_dir()?, task, reason.as_deref().unwrap_or(""))?;
+            let dir = tasks_dir()?;
+            snapshot_before(&dir, task, "block")?;
+            tasks::block_task(&dir, task, reason.as_deref().unwrap_or(""))?;
             println!("[✓] Moved: {task} (doing → blocked)");
             Ok(())
         }
         TasksCommand::Unblock { task } => {
-            tasks::unblock_task(&tasks_dir()?, task)?;
+            let dir = tasks_dir()?;
+            snapshot_before(&dir, task, "unblock")?;
+            tasks::unblock_task(&dir, task)?;
             println!("[✓] Moved: {task} (blocked → todo)");
             println!("[✓] Task unblocked: {task}");
             Ok(())
@@ -320,7 +375,9 @@ pub fn run(args: &Args) -> CliResult {
             to_status,
         } => {
             let (from, to) = (parse_status(from_status)?, parse_status(to_status)?);
-            tasks::move_task(&tasks_dir()?, task, from, to)?;
+            let dir = tasks_dir()?;
+            snapshot_before(&dir, task, "move")?;
+            tasks::move_task(&dir, task, from, to)?;
             println!("[✓] Moved: {task} ({from_status} → {to_status})");
             Ok(())
         }
@@ -345,6 +402,16 @@ pub fn run(args: &Args) -> CliResult {
         TasksCommand::Run(run_args) => super::tasks_run::run(run_args, &spec),
         TasksCommand::Validate(validate_args) => {
             super::tasks_validate::run(validate_args, &args.spec)
+        }
+        TasksCommand::History { task } => print_history(&tasks_dir()?, task),
+        TasksCommand::Restore { task, version } => {
+            let root = tasks::project_root_of(&tasks_dir()?);
+            let restored = tasks::history::restore_version(&root, task, *version)?;
+            println!(
+                "[✓] Restored: {task} to v{} (state before restore saved as v{})",
+                restored.version, restored.preserved_as
+            );
+            Ok(())
         }
     }
 }

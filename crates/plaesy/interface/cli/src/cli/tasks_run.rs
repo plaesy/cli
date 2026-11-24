@@ -236,17 +236,13 @@ fn run_claimed_task(
     let Some(resp) = resp else {
         return Err("a run that answered has no response".to_owned());
     };
-    let billable = cfg
-        .providers
-        .iter()
-        .find(|p| p.name == resp.provider)
-        .is_some_and(|p| p.billable);
+    let entry = usage::entry_named(cfg, &resp.provider);
     usage::append(
         &usage_path,
         &usage::record_for(
-            &resp.provider,
+            &entry,
             &args.chain,
-            billable,
+            file,
             resp.input_tokens,
             resp.output_tokens,
             resp.wall_ms,

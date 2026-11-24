@@ -1,0 +1,16 @@
+[package]
+name = "plaesy-adapter-http-client"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Klien HTTP untuk langkah flow, di atas ureq (adapter untuk port HttpClient)."
+
+[dependencies]
+plaesy-service = { path = "../../service" }
+ureq = { workspace = true }
+
+
+[lints]
+workspace = true

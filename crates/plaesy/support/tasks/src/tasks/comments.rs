@@ -141,8 +141,7 @@ pub fn remove_comment(tasks_dir: &Path, task: &str, id: u64) -> Result<(), Tasks
     let tmp = path.with_file_name(format!("{COMMENTS_FILE}.tmp"));
     fs::write(&tmp, kept.as_bytes())
         .map_err(|e| TasksError::io(format!("writing {}", tmp.display()), e))?;
-    fs::rename(&tmp, &path)
-        .map_err(|e| TasksError::io(format!("replacing {}", path.display()), e))
+    fs::rename(&tmp, &path).map_err(|e| TasksError::io(format!("replacing {}", path.display()), e))
 }
 
 /// Exclusive guard over the issue graph, shared with issue updates. It is taken on the

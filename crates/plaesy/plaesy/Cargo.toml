@@ -25,6 +25,7 @@ plaesy-domain-identity = { path = "../domain/identity" }
 plaesy-domain-workflow = { path = "../domain/workflow" }
 plaesy-adapter-memory = { path = "../adapter/memory" }
 plaesy-adapter-relay = { path = "../adapter/relay" }
+plaesy-adapter-runstore = { path = "../adapter/runstore" }
 plaesy-adapter-runtime = { path = "../adapter/runtime" }
 plaesy-adapter-design-ir = { path = "../adapter/design-ir" }
 plaesy-common = { path = "../support/common" }
@@ -60,3 +61,5 @@ harness = false
 name = "end_to_end"
 harness = false
 
+[lints]
+workspace = true

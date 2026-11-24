@@ -20,6 +20,7 @@ pub mod check;
 pub mod claim;
 pub mod comments;
 pub mod contracts;
+pub mod history;
 pub mod inflight;
 pub mod issue;
 

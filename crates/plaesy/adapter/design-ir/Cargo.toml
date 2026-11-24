@@ -20,3 +20,6 @@ dioxus = { workspace = true, optional = true }
 dioxus-ssr = { workspace = true, optional = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+
+[lints]
+workspace = true

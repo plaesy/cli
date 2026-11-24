@@ -10,6 +10,7 @@ description = "Antrean relay antar-agent (ADR 0003: adapter/relay)."
 [dependencies]
 chrono = { workspace = true }
 keyring = { workspace = true }
+plaesy-domain-identity = { path = "../../domain/identity" }
 rusqlite = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -19,3 +20,6 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+
+[lints]
+workspace = true
