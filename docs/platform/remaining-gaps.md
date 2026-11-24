@@ -34,3 +34,20 @@ Status per 2026-11-23. Dokumen ini mencatat apa yang belum dikerjakan, penyebabn
 - **Kolaborasi:** `yrs` (port Rust dari Yjs) untuk teks bersama. Automerge dipertimbangkan jika riwayat versi menjadi fitur utama. Performa antar sumber tidak konsisten, jadi perlu uji dengan beban kerja sendiri. Sumber: https://hld.handbook.academy/curriculum/architecture-patterns/crdt-applications/ , https://www.pkgpulse.com/guides/yjs-vs-automerge-vs-loro-crdt-libraries-2026
 
 Catatan: dengan aturan jaringan baru (CLAUDE.md), kolaborasi dan akses remote boleh memakai jaringan, tapi harus opt-in lewat konfigurasi.
+
+## Status e2e binary (2026-11-24)
+
+Binary `plaesy` dari `target/debug` berhasil dibangun (BIN_EXIT=0) setelah dua perbaikan penggabungan: alias crate yang hilang di `lib.rs` dan variant `Voice` yang masuk ke luar enum (commit `2739b49`).
+
+Yang terverifikasi di vault scratch: tugas dibuat dan muncul di daftar dan papan; komentar dengan mention; label dengan validasi huruf kecil dan filter; ekspor tugas ke Markdown; approval approve, check, dan revoke; dashboard HTML tertulis.
+
+Yang belum berfungsi:
+- `tasks history` kosong setelah pembuatan tugas (snapshot hanya di perintah ubah tertentu).
+- `audit list` kosong (belum ada penulis catatan audit).
+- `--plain` belum menghapus glyph dekoratif (migrasi glyph belum dikerjakan).
+- Test `interface-cli` dan test penuh workspace belum dijalankan.
+
+Pelajaran proses:
+- Patch dari worktree agen yang memakai path lama (`src/memory/...`) diterapkan tanpa error, tetapi berkas tidak masuk. Verifikasi path tiap patch setelah penggabungan.
+- Penggabungan otomatis (keep both sides) bisa menghapus baris alias dan menaruh variant di luar enum tanpa error git. Build crate yang terdampak sebelum menyebut penggabungan selesai.
+- Build paralel di disk tipis gagal dengan `os error 112`, dan proses cargo yang dimatikan di tengah build meninggalkan artefak rusak. Bersihkan `target/debug` sebelum build ulang.
