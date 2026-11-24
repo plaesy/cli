@@ -401,3 +401,28 @@ pub fn debug_report(lang: Lang, facts: &DebugFacts<'_>) -> String {
     ));
     lines.join("\n")
 }
+
+pub fn no_providers(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "no providers configured",
+        "belum ada provider terdaftar",
+    )
+}
+
+/// One line of `/providers`: whether it may run, and whether it is the one in use.
+pub fn provider_line(
+    lang: Lang,
+    name: &str,
+    enabled: bool,
+    billable: bool,
+    active: bool,
+) -> String {
+    let status = match (enabled, billable) {
+        (false, _) => pick(lang, "disabled", "nonaktif"),
+        (true, true) => pick(lang, "enabled, billable", "aktif, berbayar"),
+        (true, false) => pick(lang, "enabled, free", "aktif, gratis"),
+    };
+    let marker = if active { "* " } else { "  " };
+    format!("{marker}{name}: {status}")
+}

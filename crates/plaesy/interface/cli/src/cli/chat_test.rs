@@ -171,6 +171,7 @@ fn run_with_store(
             advisor: None,
             council: Vec::new(),
             lsp_servers: Vec::new(),
+            providers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -657,6 +658,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         advisor: None,
         council: Vec::new(),
         lsp_servers: Vec::new(),
+        providers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -704,6 +706,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         advisor: None,
         council: Vec::new(),
         lsp_servers: Vec::new(),
+        providers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -834,6 +837,7 @@ fn run_with_members(
             advisor: advisor.map(str::to_owned),
             council: council.iter().map(|name| (*name).to_owned()).collect(),
             lsp_servers: Vec::new(),
+            providers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -955,4 +959,61 @@ fn debug_reports_the_session_without_transcript_text() {
     assert!(out.contains("advisor: reviewer"), "{out}");
     assert!(out.contains("council members: 1"), "{out}");
     assert!(out.contains("turns: 2"), "{out}");
+}
+
+#[test]
+fn providers_lists_every_registered_one_and_marks_the_active() {
+    assert_eq!(parse_input("/providers"), Input::Providers);
+    let (provider, _) = fake("alpha", "ok");
+    let mut out = Vec::new();
+    converse(
+        provider,
+        &no_open,
+        &|_| Ok(String::new()),
+        &MemoryStore::default(),
+        ChatSettings {
+            timeout: Duration::from_secs(5),
+            max_tokens: 0,
+            lang: Lang::En,
+            repo: PathBuf::from("."),
+            interactive: false,
+            hooks: Vec::new(),
+            approved: Vec::new(),
+            mcp_servers: Vec::new(),
+            roles: Vec::new(),
+            role: "default".to_owned(),
+            skills_dir: PathBuf::from("."),
+            plugins: Vec::new(),
+            agent_name: "chat".to_owned(),
+            peers: Vec::new(),
+            advisor: None,
+            council: Vec::new(),
+            lsp_servers: Vec::new(),
+            providers: vec![
+                ProviderEntry {
+                    name: "alpha".to_owned(),
+                    enabled: true,
+                    billable: false,
+                },
+                ProviderEntry {
+                    name: "beta".to_owned(),
+                    enabled: true,
+                    billable: true,
+                },
+                ProviderEntry {
+                    name: "gamma".to_owned(),
+                    enabled: false,
+                    billable: false,
+                },
+            ],
+        },
+        Cursor::new("/providers\n/exit\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let text = String::from_utf8(out).expect("utf8");
+
+    assert!(text.contains("* alpha: enabled, free"), "{text}");
+    assert!(text.contains("  beta: enabled, billable"), "{text}");
+    assert!(text.contains("  gamma: disabled"), "{text}");
 }

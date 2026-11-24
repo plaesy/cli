@@ -244,6 +244,16 @@ pub struct ChatSettings {
     pub council: Vec<String>,
     /// Language servers for `/lsp` (`lsp.servers` in settings.json).
     pub lsp_servers: Vec<chat_lsp::Server>,
+    /// Every provider registered in settings, in configuration order (`/providers`).
+    pub providers: Vec<ProviderEntry>,
+}
+
+/// One registered provider, as listed by `/providers`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderEntry {
+    pub name: String,
+    pub enabled: bool,
+    pub billable: bool,
 }
 
 /// One line typed at the prompt.
@@ -286,6 +296,8 @@ pub enum Input {
     Goal(String),
     /// `/compact` replaces the transcript with one summary written by the provider
     Compact,
+    /// `/providers`: every registered provider, with the one in use marked
+    Providers,
     /// `/debug`: what this session is running with, without secrets or transcript text
     Debug,
     /// `/lsp <definition|references|hover> <file>:<line>:<col>`, read-only
@@ -309,6 +321,7 @@ pub fn parse_input(line: &str) -> Input {
         "/tasks" => return Input::Tasks,
         "/plugins" => return Input::Plugins,
         "/compact" => return Input::Compact,
+        "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
         "/goal" => return Input::Goal(String::new()),
         _ => {}
@@ -828,6 +841,24 @@ pub fn converse(
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 }
             }
+            Input::Providers => {
+                if settings.providers.is_empty() {
+                    writeln!(out, "{}", chat_text::no_providers(lang))?;
+                }
+                for entry in &settings.providers {
+                    writeln!(
+                        out,
+                        "{}",
+                        chat_text::provider_line(
+                            lang,
+                            &entry.name,
+                            entry.enabled,
+                            entry.billable,
+                            entry.name == provider.name(),
+                        )
+                    )?;
+                }
+            }
             Input::Lsp(rest) => {
                 let (action, target) = rest.split_once(' ').unwrap_or((rest.as_str(), ""));
                 let result = chat_lsp::run(
@@ -1201,6 +1232,15 @@ pub fn run(args: &Args) -> CliResult {
                 .map(|p| p.name.clone())
                 .collect(),
             lsp_servers: lsp_servers.clone(),
+            providers: cfg
+                .providers
+                .iter()
+                .map(|p| ProviderEntry {
+                    name: p.name.clone(),
+                    enabled: p.enabled,
+                    billable: p.billable,
+                })
+                .collect(),
         },
         io::BufReader::new(stdin),
         &mut stdout,
