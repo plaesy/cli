@@ -1,4 +1,4 @@
-//! Unified `.plaesy/config.json` schema.
+//! Unified `.plaesy/settings.json` schema.
 //!
 //! Every struct derives `Default` with zero values, matching Go's
 //! `json.Unmarshal` into a zero value. The `defaults()` constructors give the

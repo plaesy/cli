@@ -16,10 +16,10 @@ use serde::Serialize;
 
 use super::ConfigError;
 
-/// Path used when none is given: `.plaesy/config.json`, relative to the working directory.
+/// Path used when none is given: `.plaesy/settings.json`, relative to the working directory.
 #[must_use]
 pub fn unified_config_path() -> PathBuf {
-    PathBuf::from(".plaesy").join("config.json")
+    PathBuf::from(".plaesy").join("settings.json")
 }
 
 /// Quiet period after a change before the file is reloaded.

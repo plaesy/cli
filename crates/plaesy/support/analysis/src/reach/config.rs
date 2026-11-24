@@ -1,4 +1,4 @@
-//! Reach configuration: the unified `.plaesy/config.json` section, converted to and from the
+//! Reach configuration: the unified `.plaesy/settings.json` section, converted to and from the
 //! legacy shape, with credentials kept in the OS keyring when it is enabled.
 
 use std::collections::BTreeMap;

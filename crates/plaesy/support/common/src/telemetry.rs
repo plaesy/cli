@@ -1,6 +1,6 @@
 //! Local, opt-in telemetry: counts command runs, errors and durations in
 //! `.plaesy/telemetry.jsonl`. Nothing is sent over the network. Recording is off unless
-//! `.plaesy/config.json` sets `telemetry.enabled` to `true`.
+//! `.plaesy/settings.json` sets `telemetry.enabled` to `true`.
 
 use crate::config::{manager::ConfigManager, schema::UnifiedConfig, ConfigError};
 use serde::{Deserialize, Serialize};
@@ -70,10 +70,10 @@ impl Summary {
     }
 }
 
-/// `<root>/.plaesy/config.json`, the unified configuration that holds the telemetry switch.
+/// `<root>/.plaesy/settings.json`, the unified configuration that holds the telemetry switch.
 #[must_use]
 pub fn config_path(root: &Path) -> PathBuf {
-    root.join(".plaesy").join("config.json")
+    root.join(".plaesy").join("settings.json")
 }
 
 /// `<root>/.plaesy/telemetry.jsonl`, the event log.

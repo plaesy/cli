@@ -23,7 +23,7 @@ use crate::delegate::{self, Attempt, ChainOptions, Request, Response};
 pub struct Args {
     #[command(subcommand)]
     pub command: Option<DelegateCommand>,
-    /// Project directory whose .plaesy/config.json is read
+    /// Project directory whose .plaesy/settings.json is read
     #[arg(long, default_value = ".")]
     pub path: PathBuf,
     /// Provider name from delegate.providers
@@ -74,10 +74,10 @@ fn analysis_dir(repo: &Path) -> PathBuf {
     repo.join(".plaesy").join("analysis")
 }
 
-/// The delegate section of `.plaesy/config.json` under `repo`. A missing file or section gives the
+/// The delegate section of `.plaesy/settings.json` under `repo`. A missing file or section gives the
 /// defaults.
 pub fn load_delegate_config(repo: &Path) -> Result<DelegateConfig, Box<dyn std::error::Error>> {
-    let path = repo.join(".plaesy").join("config.json");
+    let path = repo.join(".plaesy").join("settings.json");
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(DelegateConfig::defaults()),

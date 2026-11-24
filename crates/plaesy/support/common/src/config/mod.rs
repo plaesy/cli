@@ -1,5 +1,5 @@
 //! Configuration: the platform registry (`configs/platform.json`), the unified
-//! `.plaesy/config.json` schema, and delegate provider settings.
+//! `.plaesy/settings.json` schema, and delegate provider settings.
 //!
 //! Port of `scripts/internal/config` (Go).
 

@@ -29,7 +29,7 @@ fn show_summary() -> CliResult {
     let summary = crate::telemetry::summarize(&root)?;
 
     println!(
-        "Telemetry: {} (opt in with \"telemetry\": {{\"enabled\": true}} in .plaesy/config.json)",
+        "Telemetry: {} (opt in with \"telemetry\": {{\"enabled\": true}} in .plaesy/settings.json)",
         if enabled { "enabled" } else { "disabled" }
     );
     println!("Log: {}", crate::telemetry::log_path(&root).display());

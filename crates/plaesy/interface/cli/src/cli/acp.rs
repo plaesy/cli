@@ -1,5 +1,5 @@
 //! `plaesy acp`: melayani agen ACP v1 lewat stdio. Setiap `session/prompt` dijawab oleh satu
-//! penyedia dari `delegate.providers` di `.plaesy/config.json`. Penyedia dipilih dengan
+//! penyedia dari `delegate.providers` di `.plaesy/settings.json`. Penyedia dipilih dengan
 //! `--provider`, sehingga model bisa diganti lewat konfigurasi tanpa mengubah kode.
 
 use std::io;
@@ -16,7 +16,7 @@ use plaesy_interface_acp::{serve, Agent, ModelBackend, ToolHost};
 /// Melayani ACP lewat stdio. Stdout hanya berisi JSON-RPC.
 #[derive(Debug, clap::Args)]
 pub struct Args {
-    /// Proyek yang `.plaesy/config.json`-nya dibaca, dan tempat `documents.sqlite` dibuat
+    /// Proyek yang `.plaesy/settings.json`-nya dibaca, dan tempat `documents.sqlite` dibuat
     #[arg(long, default_value = ".")]
     pub path: PathBuf,
     /// Nama penyedia dari delegate.providers yang menjawab prompt

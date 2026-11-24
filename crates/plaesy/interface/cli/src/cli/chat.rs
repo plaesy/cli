@@ -31,7 +31,7 @@ pub struct Args {
     /// Maximum output tokens per reply; 0 means the provider default
     #[arg(long, default_value_t = 0)]
     pub max_tokens: u32,
-    /// Repository whose .plaesy/config.json is read
+    /// Repository whose .plaesy/settings.json is read
     #[arg(long, default_value = ".")]
     pub path: PathBuf,
     /// Vault where `/decision` notes are saved; default is the configured memory vault
@@ -280,7 +280,7 @@ pub fn default_provider(cfg: &DelegateConfig) -> Result<String, String> {
         .find(|p| p.enabled && !p.billable)
         .map(|p| p.name.clone())
         .ok_or_else(|| {
-            "no enabled, non-billable provider; pass --provider (see delegate.providers in .plaesy/config.json)"
+            "no enabled, non-billable provider; pass --provider (see delegate.providers in .plaesy/settings.json)"
                 .to_owned()
         })
 }
