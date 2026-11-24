@@ -907,3 +907,30 @@ fn council_with_no_members_says_so() {
 
     assert!(out.contains("no enabled providers for the council"));
 }
+
+#[test]
+fn steered_line_runs_before_older_queued_lines() {
+    let mut queue: VecDeque<String> = ["satu", "!dua", "tiga"]
+        .iter()
+        .map(|line| (*line).to_owned())
+        .collect();
+    assert_eq!(
+        take_next(&mut queue),
+        "dua",
+        "the steered line goes first, without its !"
+    );
+    assert_eq!(take_next(&mut queue), "satu");
+    assert_eq!(take_next(&mut queue), "tiga");
+    assert!(queue.is_empty());
+}
+
+#[test]
+fn queued_lines_run_in_order_when_none_is_steered() {
+    let (provider, seen) = fake("a", "ok");
+    let out = run_session(provider, &no_open, "pertama\nkedua\n/exit\n");
+
+    assert!(out.contains("ok"), "both lines get a reply: {out}");
+    let prompts = seen.lock().expect("seen").clone();
+    assert_eq!(prompts.len(), 2);
+    assert!(prompts[1].contains("pertama") && prompts[1].contains("kedua"));
+}

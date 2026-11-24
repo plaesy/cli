@@ -3,10 +3,12 @@
 //! Provider calls are single-shot, so the transcript is rendered into each prompt. Switching
 //! provider with `/provider <name>` keeps the transcript. Billable providers need `--confirm`.
 
+use std::collections::VecDeque;
 use std::error::Error;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
+use std::thread;
 use std::time::Duration;
 
 use super::chat_agents;
@@ -475,6 +477,23 @@ fn fire_and_print(
     Ok(outcome.blocked)
 }
 
+/// Takes the next line to run. A steered line (one starting with `!`) goes first, and its `!` is
+/// removed; otherwise the oldest line runs. The caller checks that the queue is not empty.
+pub fn take_next(queue: &mut VecDeque<String>) -> String {
+    match queue
+        .iter()
+        .position(|line| line.trim_start().starts_with('!'))
+    {
+        Some(index) => queue
+            .remove(index)
+            .unwrap_or_default()
+            .trim_start()
+            .trim_start_matches('!')
+            .to_owned(),
+        None => queue.pop_front().unwrap_or_default(),
+    }
+}
+
 /// Runs the read-eval loop over `input`, writing replies and notices to `out`. A failed call is
 /// reported and does not end the session or enter the transcript.
 pub fn converse(
@@ -483,7 +502,7 @@ pub fn converse(
     record: &DecisionRecorder<'_>,
     pending: &dyn chat_pending::PendingStore,
     settings: ChatSettings,
-    input: impl BufRead,
+    input: impl BufRead + Send + 'static,
     out: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
     let lang = settings.lang;
@@ -499,8 +518,32 @@ pub fn converse(
     let mut transcript = Transcript::default();
     // The session goal is kept for this run only; it is never written to disk.
     let mut goal: Option<String> = None;
-    for line in input.lines() {
-        let line = line?;
+    // A reader thread forwards lines as they arrive, so lines typed while a reply is running wait
+    // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
+    let (sender, receiver) = mpsc::channel::<io::Result<String>>();
+    thread::spawn(move || {
+        for line in input.lines() {
+            if sender.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    let mut queue: VecDeque<String> = VecDeque::new();
+    loop {
+        if queue.is_empty() {
+            match receiver.recv() {
+                Ok(line) => queue.push_back(line?),
+                Err(_) => break,
+            }
+        }
+        while let Ok(line) = receiver.try_recv() {
+            queue.push_back(line?);
+        }
+        let waiting = queue.len() - 1;
+        let line = take_next(&mut queue);
+        if waiting > 0 {
+            writeln!(out, "{}", chat_text::queued(lang, waiting))?;
+        }
         match parse_input(&line) {
             Input::Empty => {}
             Input::Exit => break,
@@ -1102,7 +1145,7 @@ pub fn run(args: &Args) -> CliResult {
                 .map(|p| p.name.clone())
                 .collect(),
         },
-        stdin.lock(),
+        io::BufReader::new(stdin),
         &mut stdout,
     )
 }

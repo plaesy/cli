@@ -319,3 +319,10 @@ pub fn council_empty(lang: Lang) -> &'static str {
         "tidak ada provider aktif untuk council",
     )
 }
+
+pub fn queued(lang: Lang, waiting: usize) -> String {
+    match lang {
+        Lang::En => format!("queued: {waiting} waiting"),
+        Lang::Id => format!("antre: {waiting} menunggu"),
+    }
+}
