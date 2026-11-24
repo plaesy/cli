@@ -48,29 +48,20 @@ fn memory_command(bin: &Path, config: &Path) -> Command {
 }
 
 fn write_minimal_config(dir: &Path, watch_dir: &Path, db: &Path) -> PathBuf {
-    let cfg = dir.join("memory.toml");
-    std::fs::write(
-        &cfg,
-        format!(
-            r#"
-watch_dir = {watch_dir:?}
-
-[database]
-db_path = {db:?}
-
-[search]
-default_limit = 10
-max_limit = 100
-timeout_secs = 5
-enable_vector_search = false
-enable_keyword_search = true
-
-[logging]
-level = "error"
-"#,
-        ),
-    )
-    .expect("write config");
+    let cfg = dir.join("settings.json");
+    let settings = serde_json::json!({
+        "watch_dir": watch_dir,
+        "database": { "db_path": db },
+        "search": {
+            "default_limit": 10,
+            "max_limit": 100,
+            "timeout_secs": 5,
+            "enable_vector_search": false,
+            "enable_keyword_search": true
+        },
+        "logging": { "level": "error" }
+    });
+    std::fs::write(&cfg, settings.to_string()).expect("write config");
     cfg
 }
 

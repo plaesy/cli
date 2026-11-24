@@ -38,7 +38,11 @@ fn order_puts_dependencies_before_dependents() {
 
 #[test]
 fn order_breaks_ties_by_declaration_not_by_name() {
-    let p = plan(vec![step("zeta", &[]), step("alpha", &[]), step("mid", &[])]);
+    let p = plan(vec![
+        step("zeta", &[]),
+        step("alpha", &[]),
+        step("mid", &[]),
+    ]);
     let order = p.order().unwrap();
     assert_eq!(ids(&order), vec!["zeta", "alpha", "mid"]);
 }
@@ -112,7 +116,10 @@ fn longer_cycle_is_found_through_a_chain_of_dependencies() {
             assert_eq!(loop_ids.first(), loop_ids.last());
             assert_eq!(loop_ids.len(), 4);
             for id in ["a", "b", "c"] {
-                assert!(loop_ids.iter().any(|x| x == id), "missing {id} in {loop_ids:?}");
+                assert!(
+                    loop_ids.iter().any(|x| x == id),
+                    "missing {id} in {loop_ids:?}"
+                );
             }
             assert!(!loop_ids.iter().any(|x| x == "root"));
         }
@@ -146,11 +153,7 @@ fn blank_id_is_an_error() {
 
 #[test]
 fn run_passes_only_direct_dependency_outputs_to_each_step() {
-    let p = plan(vec![
-        step("a", &[]),
-        step("b", &[]),
-        step("c", &["a"]),
-    ]);
+    let p = plan(vec![step("a", &[]), step("b", &[]), step("c", &["a"])]);
     let mut seen: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
     let runs = run(&p, |s: &Step, inputs: &BTreeMap<String, String>| {
         seen.insert(s.id.clone(), inputs.clone());
@@ -183,11 +186,7 @@ fn run_passes_only_direct_dependency_outputs_to_each_step() {
 
 #[test]
 fn run_stops_at_the_first_failing_step_and_skips_the_rest() {
-    let p = plan(vec![
-        step("a", &[]),
-        step("b", &["a"]),
-        step("c", &["b"]),
-    ]);
+    let p = plan(vec![step("a", &[]), step("b", &["a"]), step("c", &["b"])]);
     let mut calls: Vec<String> = Vec::new();
     let result = run(&p, |s: &Step, _inputs: &BTreeMap<String, String>| {
         calls.push(s.id.clone());

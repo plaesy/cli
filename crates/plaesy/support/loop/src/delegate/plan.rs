@@ -94,10 +94,8 @@ impl Plan {
 
         // Kahn's algorithm. The heap yields the smallest declaration index first,
         // which keeps the order stable for the same input.
-        let mut ready: BinaryHeap<Reverse<usize>> = (0..n)
-            .filter(|&i| indegree[i] == 0)
-            .map(Reverse)
-            .collect();
+        let mut ready: BinaryHeap<Reverse<usize>> =
+            (0..n).filter(|&i| indegree[i] == 0).map(Reverse).collect();
         let mut order: Vec<&Step> = Vec::with_capacity(n);
         while let Some(Reverse(i)) = ready.pop() {
             order.push(&self.steps[i]);

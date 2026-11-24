@@ -6,8 +6,31 @@ resolver = "2"
 members = [
     "crates/plaesy/interface/client",
     "crates/plaesy/adapter/design-ir",
+    "crates/plaesy/adapter/import-tasks",
     "crates/plaesy/adapter/memory",
+    "crates/plaesy/adapter/pty",
     "crates/plaesy/adapter/relay",
+    "crates/plaesy/adapter/runstore",
+    "crates/plaesy/adapter/sqlite",
+    "crates/plaesy/interface/http",
+    "crates/plaesy/interface/mcp",
+    "crates/plaesy/interface/ws",
+    "crates/plaesy/adapter/sync",
+    "crates/plaesy/adapter/http-client",
+    "crates/plaesy/adapter/import-sql",
+    "crates/plaesy/adapter/import-code-rust",
+    "crates/plaesy/plugin/sdk",
+    "crates/plaesy/adapter/codegen-js",
+    "crates/plaesy/adapter/codegen-go",
+    "crates/plaesy/adapter/codegen-rust",
+    "crates/plaesy/adapter/codegen-sql",
+    "crates/plaesy/adapter/model-ollama",
+    "crates/plaesy/adapter/model-openai-tools",
+    "crates/plaesy/adapter/model-anthropic-tools",
+    "crates/plaesy/adapter/import-code-python",
+    "crates/plaesy/adapter/import-code-go",
+    "crates/plaesy/adapter/import-code-javascript",
+    "crates/plaesy/interface/acp",
     "crates/plaesy/adapter/runtime",
     "crates/plaesy/domain/api",
     "crates/plaesy/domain/app",
@@ -22,22 +45,29 @@ members = [
     "crates/plaesy/plaesy",
     "crates/plaesy/service",
     "crates/plaesy/support/analysis",
+    "crates/plaesy/support/collab",
     "crates/plaesy/support/common",
     "crates/plaesy/support/designlint",
     "crates/plaesy/support/loop",
     "crates/plaesy/support/mdlint",
+    "crates/plaesy/support/plugins",
     "crates/plaesy/support/tasks",
 ]
 default-members = ["crates/plaesy/plaesy"]
 
 [workspace.dependencies]
 axum = { version = "0.8", features = ["json"] }
+tower = { version = "0.5", features = ["util"] }
+tokio-tungstenite = "0.26"
+syn = { version = "2", features = ["full", "extra-traits", "parsing"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"] }
 dioxus-ssr = { version = "=0.7.10" }
+dioxus-shadcn = { version = "0.2", default-features = false, features = ["button", "card", "input", "label", "dialog", "sidebar", "tabs", "badge", "separator", "scroll-area"] }
 dirs = "5"
 filetime = "0.2.29"
 futures = "0.3"
@@ -50,6 +80,7 @@ lru = "0.12"
 notify = { version = "8", features = ["macos_fsevent"] }
 ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
 parking_lot = "0.12"
+portable-pty = "0.9"
 proptest = "1.4"
 pulldown-cmark = "0.12"
 quick-xml = "0.37"
@@ -87,6 +118,10 @@ inherits = "release"
 
 [profile.dev]
 opt-level = 1
+
+[workspace.lints.rust]
+# Shared lints for every member (inherit with `[lints] workspace = true`).
+unsafe_op_in_unsafe_fn = "warn"
 
 # esaxx-rs hard-codes a static MSVC CRT (/MT), which conflicts with the /MD objects of ort/cxx on Windows.
 [patch.crates-io]
