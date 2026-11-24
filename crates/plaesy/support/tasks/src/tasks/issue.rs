@@ -165,6 +165,41 @@ pub struct Issue {
     pub milestone: Option<String>,
 }
 
+/// Longest accepted label, counted in characters.
+pub const MAX_LABEL_CHARS: usize = 32;
+
+/// Reasons a label is rejected. Labels are lowercase, space-free tokens.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum LabelError {
+    /// The label is the empty string.
+    #[error("label cannot be empty")]
+    Empty,
+    /// The label has more than 32 characters.
+    #[error("label {0:?} is longer than 32 characters")]
+    TooLong(String),
+    /// The label contains a character outside lowercase ASCII letters, digits, `-` and `_`.
+    #[error("label {0:?} may contain only lowercase letters, digits, '-' and '_' (no spaces)")]
+    InvalidCharacter(String),
+}
+
+/// Checks one label: non-empty, at most [`MAX_LABEL_CHARS`] characters, and only
+/// `a-z`, `0-9`, `-` or `_`. Labels are never normalized; a rejected label must be fixed by the caller.
+pub fn validate_label(label: &str) -> Result<(), LabelError> {
+    if label.is_empty() {
+        return Err(LabelError::Empty);
+    }
+    if label.chars().count() > MAX_LABEL_CHARS {
+        return Err(LabelError::TooLong(label.to_owned()));
+    }
+    let allowed = label
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_');
+    if !allowed {
+        return Err(LabelError::InvalidCharacter(label.to_owned()));
+    }
+    Ok(())
+}
+
 fn default_type() -> String {
     "task".into()
 }
@@ -174,6 +209,29 @@ fn default_status() -> Status {
 }
 
 impl Issue {
+    /// Adds a validated label, keeping insertion order. Returns `false` if it was already present.
+    pub fn add_label(&mut self, label: &str) -> Result<bool, LabelError> {
+        validate_label(label)?;
+        if self.labels.iter().any(|existing| existing.as_str() == label) {
+            return Ok(false);
+        }
+        self.labels.push(label.to_owned());
+        Ok(true)
+    }
+
+    /// Removes a validated label. Returns `false` if the issue did not carry it.
+    pub fn remove_label(&mut self, label: &str) -> Result<bool, LabelError> {
+        validate_label(label)?;
+        let before = self.labels.len();
+        self.labels.retain(|existing| existing.as_str() != label);
+        Ok(self.labels.len() != before)
+    }
+
+    /// True when the issue carries every label in `labels`. An empty filter matches everything.
+    pub fn has_labels(&self, labels: &[String]) -> bool {
+        labels.iter().all(|label| self.labels.contains(label))
+    }
+
     /// Read metadata from a task's optional `issue.json`; legacy folders become basic issues.
     pub fn read(tasks_dir: &Path, status: Status, name: &str) -> Result<Self, String> {
         validate_task_name(name).map_err(|error| error.to_string())?;
@@ -242,6 +300,11 @@ impl Issue {
             let unique_labels: BTreeSet<_> = issue.labels.iter().collect();
             if unique_labels.len() != issue.labels.len() {
                 problems.push(format!("{id}: duplicate labels"));
+            }
+            for label in &issue.labels {
+                if let Err(error) = validate_label(label) {
+                    problems.push(format!("{id}: invalid label: {error}"));
+                }
             }
             let unique_dependencies: BTreeSet<_> = issue.depends_on.iter().collect();
             if unique_dependencies.len() != issue.depends_on.len() {

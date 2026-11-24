@@ -24,6 +24,8 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 | `list-status` | `<status>` | List tasks in one status |
 | `issues` | `[--spec NAME]`, `[--type TYPE]`, repeatable `[--label LABEL]`, `[--assignee NAME]`, `[--milestone NAME]`, `[--status STATUS]`, `[--dependencies]` | Filter issue metadata and optionally display dependency readiness (derived; does not rewrite lifecycle status) |
 | `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, and cycles |
+| `label add` | `<task-id> <LABEL>...` | Add labels to one issue; labels it already has are skipped |
+| `label remove` | `<task-id> <LABEL>...` | Remove labels from one issue; labels it lacks are skipped |
 | `next` | — | Move the next backlog task into `todo` and report it |
 | `start` | `<task>` | Move task to `doing` |
 | `complete` | `<task>` | Move a task from `review` to `done`. A reviewer runs this after checking the evidence. Refuses any other status. |

@@ -77,9 +77,7 @@ pub fn update(args: &UpdateArgs, tasks_dir: &Path) -> CliResult {
         }
     }
     for label in &args.labels {
-        if label.trim().is_empty() {
-            return Err("labels cannot be empty".into());
-        }
+        tasks::issue::validate_label(label)?;
     }
     let unique_labels: std::collections::BTreeSet<_> = args.labels.iter().collect();
     if unique_labels.len() != args.labels.len() {
@@ -119,23 +117,34 @@ pub fn update(args: &UpdateArgs, tasks_dir: &Path) -> CliResult {
     } else if let Some(value) = &args.milestone {
         issue.milestone = Some(value.clone());
     }
-    let location = tasks::find_task(tasks_dir, &args.issue)
-        .ok_or_else(|| format!("issue not found: {}", args.issue))?;
+    save_validated(&graph_lock, tasks_dir, &issue)?;
+    println!("[✓] Updated issue {}", issue.id);
+    Ok(())
+}
+
+/// Writes one issue's metadata under the held graph lock, then validates the whole collection.
+/// On any problem the previous `issue.json` bytes are restored before the error is returned.
+pub(super) fn save_validated(
+    graph_lock: &tasks::issue::IssueGraphLock,
+    tasks_dir: &Path,
+    issue: &Issue,
+) -> CliResult {
+    let location = tasks::find_task(tasks_dir, &issue.id)
+        .ok_or_else(|| format!("issue not found: {}", issue.id))?;
     let task_dir = tasks_dir.join(location.0.as_str()).join(&location.1);
     let old = tasks::issue::read_metadata_bytes(&task_dir)?;
-    graph_lock.write_metadata(&task_dir, &issue)?;
+    graph_lock.write_metadata(&task_dir, issue)?;
     let problems = match Issue::validate_collection(tasks_dir) {
         Ok(problems) => problems,
         Err(error) => {
-            rollback_metadata(&graph_lock, &task_dir, old.as_deref())?;
+            rollback_metadata(graph_lock, &task_dir, old.as_deref())?;
             return Err(error.into());
         }
     };
     if !problems.is_empty() {
-        rollback_metadata(&graph_lock, &task_dir, old.as_deref())?;
+        rollback_metadata(graph_lock, &task_dir, old.as_deref())?;
         return Err(format!("issue update rejected: {}", problems.join("; ")).into());
     }
-    println!("[✓] Updated issue {}", issue.id);
     Ok(())
 }
 
@@ -167,6 +176,9 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
     if let Some(status) = &args.status {
         status.parse::<Status>()?;
     }
+    for label in &args.labels {
+        tasks::issue::validate_label(label)?;
+    }
     let issues = Issue::load_collection(tasks_dir)?;
     let problems = Issue::validate_collection(tasks_dir)?;
     if !problems.is_empty() {
@@ -196,7 +208,7 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
             .as_ref()
             .is_some_and(|spec| frontmatter.get("spec") != Some(spec))
             || args.kind.as_ref().is_some_and(|kind| &issue.kind != kind)
-            || !args.labels.iter().all(|label| issue.labels.contains(label))
+            || !issue.has_labels(&args.labels)
             || args
                 .assignee
                 .as_ref()

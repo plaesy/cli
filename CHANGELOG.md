@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add `plaesy tasks label add|remove` to change issue labels, and validate labels everywhere they are written or filtered: lowercase letters, digits, `-` or `_`, no spaces, at most 32 characters.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,

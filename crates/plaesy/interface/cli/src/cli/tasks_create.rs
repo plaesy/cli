@@ -56,9 +56,7 @@ pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
         }
     }
     for label in &args.labels {
-        if label.trim().is_empty() {
-            return Err("labels cannot be empty".into());
-        }
+        crate::tasks::issue::validate_label(label)?;
     }
     let unique_labels: std::collections::BTreeSet<_> = args.labels.iter().collect();
     if unique_labels.len() != args.labels.len() {

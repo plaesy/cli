@@ -28,6 +28,8 @@ pub enum TasksCommand {
     Issues(super::tasks_issue::Args),
     /// Update an issue's metadata without changing its stable task ID
     UpdateIssue(super::tasks_issue::UpdateArgs),
+    /// Add or remove labels on one issue (lowercase, no spaces, at most 32 characters)
+    Label(super::tasks_label::Args),
     /// List tasks across every status (or --all for the board, --sync-context for context.md)
     List {
         /// Show every spec's tasks as one board, with title and phase, and report integrity problems
@@ -236,6 +238,7 @@ pub fn run(args: &Args) -> CliResult {
         TasksCommand::Create(create) => super::tasks_create::run(create, &tasks_dir()?, &spec),
         TasksCommand::Issues(issues) => super::tasks_issue::run(issues, &tasks_dir()?),
         TasksCommand::UpdateIssue(update) => super::tasks_issue::update(update, &tasks_dir()?),
+        TasksCommand::Label(label) => super::tasks_label::run(label, &tasks_dir()?),
         TasksCommand::List { all, sync_context } => {
             if *sync_context {
                 return sync_in_flight();
