@@ -24,6 +24,7 @@ pub mod tasks_create;
 pub mod tasks_issue;
 pub mod tasks_run;
 pub mod tasks_validate;
+pub mod telemetry;
 pub mod trim;
 pub mod validate;
 
@@ -88,6 +89,43 @@ pub enum Command {
     Tasks(tasks::Args),
     /// Validate a constitution, memory, Markdown, local links, or an OOXML document
     Validate(validate::Args),
+    /// Local, opt-in telemetry summary (stored in .plaesy/telemetry.jsonl, never sent)
+    Telemetry(telemetry::Args),
+}
+
+impl Command {
+    /// The name a run is recorded under in local telemetry, or `None` when the run is not
+    /// recorded. The name is the command group only, never its arguments.
+    #[must_use]
+    pub fn telemetry_name(&self) -> Option<&'static str> {
+        Some(match self {
+            Self::Advisor(_) => "advisor",
+            Self::Decisions(_) => "decisions",
+            Self::Status => "status",
+            Self::Init(_) => "init",
+            Self::Mcp(_) => "mcp",
+            Self::Install => "install",
+            Self::Uninstall => "uninstall",
+            Self::Repair => "repair",
+            Self::Upgrade => "upgrade",
+            Self::Analyze(_) => "analyze",
+            Self::Loop(_) => "loop",
+            Self::Reach(_) => "reach",
+            Self::Delegate(_) => "delegate",
+            Self::Doctor(_) => "doctor",
+            Self::Trim(_) => "trim",
+            Self::Images(_) => "images",
+            Self::Relay(_) => "relay",
+            Self::Files(_) => "files",
+            Self::Projects(_) => "projects",
+            Self::Sessions(_) => "sessions",
+            Self::Memory(_) => "memory",
+            Self::Tasks(_) => "tasks",
+            Self::Validate(_) => "validate",
+            // Reading the telemetry summary is not itself recorded.
+            Self::Telemetry(_) => return None,
+        })
+    }
 }
 
 /// Prints the help of one command group, for a group run with no subcommand.
@@ -112,7 +150,28 @@ pub fn print_group_help(name: &str) -> CliResult {
 ///
 /// The command fails. The caller prints the error and exits with status 1.
 pub fn run(cli: Cli) -> CliResult {
-    match cli.command {
+    let name = cli.command.telemetry_name();
+    let started = std::time::Instant::now();
+    let result = dispatch(cli.command);
+    if let Some(name) = name {
+        record_telemetry(name, result.is_ok(), started.elapsed());
+    }
+    result
+}
+
+/// Records one run when telemetry is opted in. Telemetry is best effort: a failure is
+/// reported on stderr and never changes the command's result or its stdout.
+fn record_telemetry(name: &str, ok: bool, elapsed: std::time::Duration) {
+    let Ok(root) = common::find_root() else {
+        return;
+    };
+    if let Err(e) = crate::telemetry::record(&root, name, ok, elapsed) {
+        eprintln!("Warning: telemetry not recorded: {e}");
+    }
+}
+
+fn dispatch(command: Command) -> CliResult {
+    match command {
         Command::Advisor(args) => advisor::run(&args),
         Command::Decisions(args) => decisions::run(&args),
         Command::Status => status::run(),
@@ -136,5 +195,6 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),
+        Command::Telemetry(args) => telemetry::run(&args),
     }
 }

@@ -11,6 +11,7 @@ pub mod installer;
 pub mod mcpserver;
 pub mod projects;
 pub mod sessions;
+pub mod telemetry;
 pub mod trimmer;
 
 /// Release version, read from the repository-root `VERSION` file at build time.

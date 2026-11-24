@@ -12,6 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
+- Add opt-in local telemetry: set `"telemetry": {"enabled": true}` in `.plaesy/config.json` to count command runs, errors,
+  and durations in `.plaesy/telemetry.jsonl`; `plaesy telemetry summary` prints the totals. Nothing is sent over the network.
 
 ### Fixed
 
