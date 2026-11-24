@@ -38,6 +38,7 @@ pub mod tasks_label;
 pub mod tasks_run;
 pub mod tasks_validate;
 pub mod telemetry;
+pub mod skills;
 pub mod trim;
 pub mod validate;
 pub mod voice;
@@ -109,6 +110,8 @@ pub enum Command {
     Doctor(doctor::Args),
     /// Token/context compression for command output, memory and instruction files
     Trim(trim::Args),
+    /// List and copy skills between agent providers (claude, codex, agents, hermes)
+    Skills(skills::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
     /// Durable, acknowledged direct messaging between agents
@@ -160,6 +163,7 @@ impl Command {
             Self::Delegate(_) => "delegate",
             Self::Doctor(_) => "doctor",
             Self::Trim(_) => "trim",
+            Self::Skills(_) => "skills",
             Self::Images(_) => "images",
             Self::Relay(_) => "relay",
             Self::Files(_) => "files",
@@ -258,6 +262,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Acp(args) => acp::run(&args),
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
+        Command::Skills(args) => skills::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Relay(args) => relay::run(&args),
         Command::Audit(args) => audit::run(&args),

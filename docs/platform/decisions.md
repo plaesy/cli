@@ -200,3 +200,16 @@ Target pengganti yang berlaku, dengan inventaris fitur di `docs/platform/feature
 ## Aturan runtime jaringan (disetujui pemilik, 2026-11-23)
 
 Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline di CLAUDE.md digantikan. Setiap jalur jaringan harus eksplisit, aktif hanya lewat konfigurasi, dan tercatat di dokumen ini. Fitur lokal (memori, task, board, ekspor) tetap lokal secara default.
+
+## Workflow pertama: pengganti Orca (disetujui pemilik, 2026-11-24)
+
+- Pemilik memilih Orca sebagai incumbent pertama yang diganti. Alasannya: pemilik perlu memindahkan skill dan konfigurasi per provider tanpa menunggu keputusan tambahan.
+- Langkah pertama: inventaris skill dan konfigurasi per provider. Hasilnya: Orca tidak menyimpan skill sendiri (`~/.orca` hanya berisi `agent-hooks/` dan `keybindings.json`). Skill ada di `~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`, dan `~/.hermes/skills`. Plaesy belum punya fitur sinkron skill antar provider.
+- Langkah berikutnya: task `plaesy skills` (inventaris dan sinkron skill antar provider). Implementasi ada di crate baru dengan `cargo check -p`.
+- Batas: penggantian Orca penuh tetap bertahap. Inventaris `docs/platform/feature-inventory/orca.md` mencatat 437 dari 451 perilaku belum ada di Plaesy. Incumbent tetap berjalan sampai gerbang cutover lulus.
+
+## Lokasi skill Plaesy (disetujui pemilik, 2026-11-24)
+
+- Skill Plaesy disimpan di `~/.plaesy/skills` secara default. Override, prioritas tertinggi dulu: flag `--dir` pada `plaesy skills list|sync`, lalu env `PLAESY_SKILLS_DIR`, lalu `skills.dir` di `~/.plaesy/settings.json`, lalu default.
+- `plaesy skills sync` tidak menimpa skill yang sudah ada di target. Tanpa `--apply` hanya menampilkan rencana. Symlink tidak disalin.
+- Status: kode ditulis di `crates/plaesy/interface/cli/src/cli/skills.rs`. Belum dibuktikan lewat `cargo check -p plaesy-interface-cli --locked`.
