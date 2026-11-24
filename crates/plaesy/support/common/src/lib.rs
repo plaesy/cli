@@ -1,5 +1,6 @@
 //! Utilitas bersama, konfigurasi, dan VERSION.
 
+pub mod chat_webhook;
 pub mod common;
 pub mod config;
 pub mod evidence;
