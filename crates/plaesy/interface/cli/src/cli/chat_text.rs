@@ -109,6 +109,10 @@ pub fn error(lang: Lang, detail: &str) -> String {
     format!("{}: {detail}", pick(lang, "error", "galat"))
 }
 
+pub fn warning(lang: Lang, detail: &str) -> String {
+    format!("{}: {detail}", pick(lang, "warning", "peringatan"))
+}
+
 pub fn decision_saved(lang: Lang, saved: &str) -> String {
     format!("{} {saved}", pick(lang, "decision", "keputusan"))
 }

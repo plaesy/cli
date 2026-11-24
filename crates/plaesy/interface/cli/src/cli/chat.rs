@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::chat_hooks;
 use super::chat_pending;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
@@ -17,6 +18,7 @@ use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
 use crate::delegate::{self, flatten, Message, Provider, Request};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 
 #[derive(Debug, clap::Args)]
 pub struct Args {
@@ -194,6 +196,10 @@ pub struct ChatSettings {
     pub repo: PathBuf,
     /// True when stdin is a terminal, so `/tasks` and `/pending` may open a menu.
     pub interactive: bool,
+    /// Hooks from the repository and the user, in configuration order.
+    pub hooks: Vec<chat_hooks::HookSpec>,
+    /// Fingerprints of repository hooks the owner approved.
+    pub approved: Vec<String>,
 }
 
 /// One line typed at the prompt.
@@ -293,6 +299,25 @@ pub fn default_provider(cfg: &DelegateConfig) -> Result<String, String> {
         })
 }
 
+/// Runs the hooks of one event, prints their warnings, and returns the reason when a hook blocked.
+fn fire_and_print(
+    out: &mut impl Write,
+    settings: &ChatSettings,
+    lang: Lang,
+    event: &str,
+    pairs: &[(&str, &str)],
+) -> io::Result<Option<String>> {
+    let data: BTreeMap<String, String> = pairs
+        .iter()
+        .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+        .collect();
+    let outcome = chat_hooks::fire(&settings.hooks, &settings.approved, event, &data);
+    for warning in &outcome.warnings {
+        writeln!(out, "{}", chat_text::warning(lang, warning))?;
+    }
+    Ok(outcome.blocked)
+}
+
 /// Runs the read-eval loop over `input`, writing replies and notices to `out`. A failed call is
 /// reported and does not end the session or enter the transcript.
 pub fn converse(
@@ -305,6 +330,7 @@ pub fn converse(
     out: &mut impl Write,
 ) -> Result<(), Box<dyn Error>> {
     let lang = settings.lang;
+    fire_and_print(out, &settings, lang, "session.start", &[])?;
     let mut transcript = Transcript::default();
     for line in input.lines() {
         let line = line?;
@@ -389,7 +415,14 @@ pub fn converse(
                     };
                     match record(&decision) {
                         Ok(saved) => {
-                            writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?
+                            writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?;
+                            fire_and_print(
+                                out,
+                                &settings,
+                                lang,
+                                "decision.saved",
+                                &[("saved", saved.trim())],
+                            )?;
                         }
                         Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                     }
@@ -398,7 +431,14 @@ pub fn converse(
             Input::Decision(rest) => match parse_decision(&rest) {
                 Ok(decision) => match record(&decision) {
                     Ok(saved) => {
-                        writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?
+                        writeln!(out, "{}", chat_text::decision_saved(lang, saved.trim()))?;
+                        fire_and_print(
+                            out,
+                            &settings,
+                            lang,
+                            "decision.saved",
+                            &[("saved", saved.trim())],
+                        )?;
                     }
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 },
@@ -411,10 +451,27 @@ pub fn converse(
                     timeout: settings.timeout,
                     dir: String::new(),
                 };
+                if let Some(reason) = fire_and_print(
+                    out,
+                    &settings,
+                    lang,
+                    "message.before_send",
+                    &[("text", &text)],
+                )? {
+                    writeln!(out, "{}", chat_text::error(lang, &reason))?;
+                    continue;
+                }
                 let messages = transcript.messages(&text);
                 match delegate::run_messages(provider.as_ref(), &messages, &request) {
                     Ok(response) => {
                         writeln!(out, "{}", response.text)?;
+                        fire_and_print(
+                            out,
+                            &settings,
+                            lang,
+                            "message.after_reply",
+                            &[("text", &text), ("reply", &response.text)],
+                        )?;
                         transcript.push(Role::User, text);
                         transcript.push(Role::Assistant, response.text);
                     }
@@ -424,6 +481,7 @@ pub fn converse(
         }
         out.flush()?;
     }
+    fire_and_print(out, &settings, lang, "session.end", &[])?;
     Ok(())
 }
 
@@ -433,6 +491,15 @@ pub fn run(args: &Args) -> CliResult {
         .join(".plaesy")
         .join("settings.json");
     let lang = chat_text::resolve(args.lang.as_deref(), &settings_path)?;
+    let mut hooks = chat_hooks::parse_hooks(
+        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        chat_hooks::Scope::Repo,
+    )?;
+    hooks.extend(chat_hooks::parse_hooks(
+        &chat_hooks::read_settings(&settings_path),
+        chat_hooks::Scope::User,
+    )?);
+    let approved = chat_hooks::load_approved(&settings_path.with_file_name("approved-hooks.json"));
     let cfg = super::delegate::load_delegate_config(&args.path)?;
     let timeout = crate::reach::duration::parse(&args.timeout)
         .ok_or_else(|| format!("invalid --timeout {:?}", args.timeout))?;
@@ -467,6 +534,8 @@ pub fn run(args: &Args) -> CliResult {
             lang,
             repo: args.path.clone(),
             interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
+            hooks: hooks.clone(),
+            approved: approved.clone(),
         },
         stdin.lock(),
         &mut stdout,

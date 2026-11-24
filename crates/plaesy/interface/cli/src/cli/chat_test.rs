@@ -159,6 +159,8 @@ fn run_with_store(
             lang: Lang::En,
             repo: PathBuf::from("."),
             interactive: false,
+            hooks: Vec::new(),
+            approved: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
