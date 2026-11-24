@@ -168,3 +168,35 @@ The owner delegated all remaining decisions to the assistant: "semuanya otomatis
 7. **Support model:** business hours for the first slice, one named owner. Sev 1 gets a response within 4 hours on working days. Sev 2 gets the next business day.
 
 Not decided here: legal or compliance retention, which needs counsel input, and any product or pricing choice not listed above.
+
+## Keputusan teknis default (2026-11-22, dapat diubah pemilik)
+
+Keputusan ini diambil tanpa persetujuan pemilik, sebagai default teknis. Pemilik dapat mengubahnya kapan saja.
+
+- **Web (interface/client):** Dioxus 0.7.10, dijalankan dengan `dx serve --platform web --package plaesy-interface-client --example web --features web` dari root workspace. Titik masuk web adalah `main` contoh yang memanggil `platform::web::run()`. Verifikasi render dilakukan di browser (DOM berisi judul, modul, alur data, dan masalah lokal).
+- **Model embedding vault:** `multilingual-e5-small` (`model.onnx` dan `tokenizer.json` dari `intfloat/multilingual-e5-small` di Hugging Face, sumber yang sama dengan `onboard/mod.rs`), disimpan di `<cache>/plaesy/models/multilingual-e5-small`. Semantic search aktif setelah indeks vektor dibangun dengan `plaesy memory index`.
+- **Mode tulis vault:** `plaesy-vault` didaftarkan tanpa `--read-only` agar daemon memegang lock tulis. Penulisan diverifikasi pada vault scratch, bukan vault pemilik.
+- **OpenAI:** diaktifkan atas persetujuan pemilik (2026-11-22). Ini melanggar aturan CLAUDE.md "runtime offline": penyedia `openai` sekarang memanggil jaringan saat dijalankan. Aturan CLAUDE.md perlu direvisi agar konsisten.
+
+## Target pengganti tambahan (disetujui pemilik, 2026-11-22)
+
+- **Orchestrator.inc (Agent Orchestrator):** https://github.com/OrchestratorInc/agent-orchestrator, lisensi Apache-2.0. Target pengganti.
+- **Orca (Stably AI):** https://github.com/stablyai/orca. Target pengganti, sudah tercatat sebagai incumbent.
+
+Ejaan "orcharstrator.inc" dari pemilik dipetakan ke Agent Orchestrator. Kepemilikan dan entitas hukumnya belum diverifikasi (lihat `docs/platform/feature-inventory/orchestrator-candidates.md`).
+
+## Daftar target pengganti (diperbarui pemilik, 2026-11-22)
+
+Target pengganti yang berlaku, dengan inventaris fitur di `docs/platform/feature-inventory/`:
+
+- Hermes Agent: https://github.com/NousResearch/hermes-agent
+- DeepSeek Harness: https://github.com/deepseek-ai/deepseek-harness
+- Orca: https://github.com/stablyai/orca
+- Agent Orchestrator (Orchestrator.inc): https://github.com/OrchestratorInc/agent-orchestrator
+- OpenBot: https://github.com/nightly-labs/openbot
+- OpenProject: https://github.com/opf/openproject
+- Paperclip, Nimbalyst, Craft Anything, FigCraft, DeckCraft, WordCraft, Herald OS: sesuai ADR 0003 dan inventarisnya.
+
+## Aturan runtime jaringan (disetujui pemilik, 2026-11-23)
+
+Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline di CLAUDE.md digantikan. Setiap jalur jaringan harus eksplisit, aktif hanya lewat konfigurasi, dan tercatat di dokumen ini. Fitur lokal (memori, task, board, ekspor) tetap lokal secara default.

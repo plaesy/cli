@@ -54,7 +54,15 @@ fn backoff_doubles_per_retry_and_is_capped() {
     let waits: Vec<Duration> = (1..=7).map(|r| backoff_delay(&p, r)).collect();
     assert_eq!(
         waits,
-        [secs(1), secs(2), secs(4), secs(8), secs(16), secs(30), secs(30)]
+        [
+            secs(1),
+            secs(2),
+            secs(4),
+            secs(8),
+            secs(16),
+            secs(30),
+            secs(30)
+        ]
     );
 }
 
@@ -132,7 +140,14 @@ fn rate_limit_waits_at_least_retry_after() {
     // With four attempts allowed, attempt 3 backs off 4s, which beats a 1s Retry-After.
     let p4 = RetryPolicy::new(4, secs(1), secs(30)).unwrap();
     assert_eq!(
-        next_step(&p4, &b, Class::RateLimited, 3, Some(secs(1)), Duration::ZERO),
+        next_step(
+            &p4,
+            &b,
+            Class::RateLimited,
+            3,
+            Some(secs(1)),
+            Duration::ZERO
+        ),
         Next::Retry {
             wait: secs(4),
             timeout: secs(10)

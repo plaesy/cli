@@ -13,7 +13,7 @@
 - **No network at runtime**: All models downloaded once; no API calls, no cloud dependencies
 - **Watch mode**: Debounced file-system monitoring for incremental index updates
 - **Multiple protocols**: Rust library, Hermes-compatible line-delimited JSON service, and MCP server (Claude Code, Cursor, Kilo Code)
-- **Cross-agent memory graph**: opt-in `type: project/decision/context` frontmatter lets every agent sharing this vault read and write the same projects, decisions, and contexts — see [`docs/graph.md`](./graph.md)
+- **Cross-agent memory graph**: opt-in `type: project/decision/context` frontmatter lets agents using the same vault retrieve shared notes. Optional global Codex and Claude hooks prompt agents to retrieve and preserve durable work automatically. See the [graph workflow](graph.md#recording-work-today).
 
 **Main technologies**:
 

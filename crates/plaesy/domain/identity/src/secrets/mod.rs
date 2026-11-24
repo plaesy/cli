@@ -6,6 +6,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+pub mod redact;
+pub use redact::{redact_text, KeyValueRule, RedactionRule, RedactionSpan, Redactor, TokenPattern};
+
 /// Holds secret values by name. Values are never printed by `Debug`.
 #[derive(Clone, Default)]
 pub struct SecretStore {
@@ -52,6 +55,12 @@ impl SecretStore {
             }
         }
         out
+    }
+
+    /// Redaksi lengkap: nilai tersimpan dahulu, lalu pola umum (lihat [`redact::redact_text`]).
+    #[must_use]
+    pub fn redact_all(&self, text: &str) -> String {
+        redact::redact_text(&self.redact(text))
     }
 }
 

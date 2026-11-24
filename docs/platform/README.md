@@ -23,6 +23,7 @@ Plaesy means **Platform Enterprise System**. It is one product with `plaesy` as 
 15. [Replacement measurement framework](feature-measurement-framework.md) — feature/scenario-level evidence and replacement gates.
 16. [Hermes API server acceptance candidates](hermes-api-acceptance.md) — source-derived draft scenarios for the pinned API server docs; not rerun and not parity evidence.
 17. [Replacement specification](replacement-spec.md), [plan](replacement-plan.md), and [backlog](replacement-backlog.md) — program-level artifacts, not proof of complete feature inventory.
+18. [Replacement UX study](replacement-ux-study.md) — experience architecture, workflow coverage, accessibility floor, and design gaps; target design only.
 
 ## Authority and terminology
 

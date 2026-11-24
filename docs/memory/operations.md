@@ -74,11 +74,29 @@ Do not mix models in one database. To compare, use a separate `MEMORY_DB_PATH` p
 claude mcp add plaesy-memory -e MEMORY_WATCH_DIR=<vault> -- plaesy memory serve --mcp
 ```
 
-The server exposes eight tools: six read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`, `memory_stats`) and two bounded write tools (`memory_remember`, `memory_resolve_gap`). `memory_curate` is a bounded review report; it does not edit notes. The write tools create a new note or close a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
+The server exposes nine tools: six read-only (`memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`, `memory_stats`) and three bounded write tools (`memory_remember`, `memory_remember_session`, `memory_resolve_gap`). `memory_curate` is a bounded review report; it does not edit notes. The write tools create a new note or close a query gap; neither replaces or deletes a note. Details: [MCP](mcp.md).
 
 **Hermes:** connect through its MCP client support using the generated configuration from `plaesy memory --vault "<vault>" config mcp --app hermes`. The same `plaesy memory serve` command is used; there is no separate `memory` executable or plugin binary.
 
-## 6. Routine maintenance
+## 6. Automatic agent closeout
+
+Install the shared `learning-loop` skill and lifecycle hooks for the current
+user's Codex and Claude installations:
+
+```powershell
+python scripts/install_memory_agent_hooks.py
+```
+
+The installer merges `SessionStart` and `Stop` command hooks into the global
+user settings and keeps existing hooks. On start, the hook asks the agent to
+retrieve relevant Plaesy memory and verify project sources. Before the first
+stop, it asks the agent to preserve durable status, context, lessons, knowledge,
+and decisions using the skill; routine work needs no note. The agent writes to
+the configured vault, so no per-project command is needed. This requires a
+working Plaesy CLI or MCP connection and an agent that honors hooks. Restart an
+already open session to load the new hooks. Codex may ask to trust a new hook.
+
+## 7. Routine maintenance
 
 | When | Command | What to look at |
 |---|---|---|
@@ -169,7 +187,7 @@ Create the log directory, then load in the signed-in user's GUI domain with `lau
 
 Run `plaesy memory schedule once` manually before enabling the task and inspect its log. Scheduled execution inherits the selected user's vault configuration and file access.
 
-## 7. Updating a Linux server from CI
+## 8. Updating a Linux server from CI
 
 Deploy the Linux artifact from a successful CI run instead of rebuilding on the server. This keeps
 the server binary tied to a tested commit and avoids compiling alongside memory-intensive services.
@@ -227,13 +245,13 @@ backup beside the active binary and rename it over the active path using the sam
 server also has a source checkout, fast-forward it separately with `git pull --ff-only`; inspect and
 preserve untracked datasets and benchmark output, and do not use `git clean`.
 
-## 8. Backup and recovery
+## 9. Backup and recovery
 
 - The notes are the backup. Keep the vault in git or in a sync folder with history.
 - The index is rebuildable. Back it up only if re-indexing a large vault is slow for you.
 - Models are a cache. `scripts/install-model.sh` downloads them again.
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -243,7 +261,7 @@ preserve untracked datasets and benchmark output, and do not use `git clean`.
 | Hermes uses an unexpected database | process was started before the path change | restart the MCP client and check `plaesy memory --vault "<vault>" stats` |
 | Search is slow on first run | model load and first embedding pass | normal; later runs use the embedding cache |
 
-## 10. Checklist for a new machine
+## 11. Checklist for a new machine
 
 1. Install: use the Windows PowerShell or macOS/Linux release installer in the README.
 2. Models: run `bash scripts/install-model.sh` on macOS/Linux (add `--rerank` for optional reranking).
