@@ -3,6 +3,7 @@
 
 pub mod advisor;
 pub mod analyze;
+pub mod audit;
 pub mod common;
 pub mod decisions;
 pub mod delegate;
@@ -76,6 +77,8 @@ pub enum Command {
     Images(images::Args),
     /// Durable, acknowledged direct messaging between agents
     Relay(relay::Args),
+    /// Read the audit trail of authorization decisions
+    Audit(audit::Args),
     /// Manage local advisory claims on project files
     Files(files::Args),
     /// Register and discover local Plaesy projects
@@ -130,6 +133,7 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Trim(args) => trim::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Relay(args) => relay::run(&args),
+        Command::Audit(args) => audit::run(&args),
         Command::Files(args) => files::run(&args),
         Command::Projects(args) => projects::run(&args),
         Command::Sessions(args) => sessions::run(&args),

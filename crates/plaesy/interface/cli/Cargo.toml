@@ -11,6 +11,7 @@ description = "Antarmuka baris perintah (ADR 0003: interface/cli)."
 plaesy-adapter-memory = { path = "../../adapter/memory" }
 plaesy-adapter-relay = { path = "../../adapter/relay" }
 plaesy-analysis = { path = "../../support/analysis" }
+plaesy-domain-workflow = { path = "../../domain/workflow" }
 plaesy-common = { path = "../../support/common" }
 plaesy-designlint = { path = "../../support/designlint" }
 plaesy-loop = { path = "../../support/loop" }
