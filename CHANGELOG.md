@@ -6,6 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add `plaesy voice parse "<text>"`, which turns a transcribed Indonesian or English sentence into a create,
+  complete, or list task command and prints it as JSON without running it. Audio capture and speech
+  recognition are not included.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,

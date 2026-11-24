@@ -26,6 +26,7 @@ pub mod tasks_run;
 pub mod tasks_validate;
 pub mod trim;
 pub mod validate;
+pub mod voice;
 
 use clap::{Parser, Subcommand};
 
@@ -88,6 +89,8 @@ pub enum Command {
     Tasks(tasks::Args),
     /// Validate a constitution, memory, Markdown, local links, or an OOXML document
     Validate(validate::Args),
+    /// Voice commands: parse transcribed text into a task command without running it
+    Voice(voice::Args),
 }
 
 /// Prints the help of one command group, for a group run with no subcommand.
@@ -136,5 +139,6 @@ pub fn run(cli: Cli) -> CliResult {
         Command::Memory(args) => memory::run(&args),
         Command::Tasks(args) => tasks::run(&args),
         Command::Validate(args) => validate::run(&args),
+        Command::Voice(args) => voice::run(&args),
     }
 }
