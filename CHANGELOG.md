@@ -12,6 +12,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
+- Add `plaesy tasks board`, a text board with one section per status, a count per status, and task titles cut to 60 characters.
 
 ### Fixed
 

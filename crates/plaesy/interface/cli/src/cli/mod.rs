@@ -20,6 +20,7 @@ pub mod relay;
 pub mod sessions;
 pub mod status;
 pub mod tasks;
+pub mod tasks_board;
 pub mod tasks_create;
 pub mod tasks_issue;
 pub mod tasks_run;

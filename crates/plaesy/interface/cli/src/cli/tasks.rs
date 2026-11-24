@@ -37,6 +37,8 @@ pub enum TasksCommand {
         #[arg(long = "sync-context")]
         sync_context: bool,
     },
+    /// Show every spec's tasks as text columns, one per status, with counts and short titles
+    Board,
     /// List tasks in one status
     ListStatus { status: String },
     /// Pop the next task from backlog into todo
@@ -251,6 +253,7 @@ pub fn run(args: &Args) -> CliResult {
             }
             Ok(())
         }
+        TasksCommand::Board => super::tasks_board::run(&tasks_dir()?),
         TasksCommand::ListStatus { status } => {
             print_task_list(&tasks_dir()?, parse_status(status)?)
         }
