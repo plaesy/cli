@@ -40,8 +40,8 @@ pub mod tasks_validate;
 pub mod telemetry;
 pub mod trim;
 pub mod validate;
-pub mod workspace;
 pub mod voice;
+pub mod workspace;
 
 use clap::{Parser, Subcommand};
 

@@ -6,8 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
-- Add optional global Codex and Claude lifecycle hooks and a shared `learning-loop` skill to retrieve Plaesy memory at session start and preserve durable project outcomes at closeout. MCP `memory_remember` now accepts typed graph metadata; read-only mode also rejects session-summary writes.
 - Add `plaesy tasks board`, a text view of every spec's tasks as one column per status folder with a count per column and titles cut to 60 characters.
+- Add optional global Codex and Claude lifecycle hooks and a shared `learning-loop` skill to retrieve Plaesy memory at session start and preserve durable project outcomes at closeout. MCP `memory_remember` now accepts typed graph metadata; read-only mode also rejects session-summary writes.
 - Add `plaesy dashboard`: a static offline HTML page of task counts and delegate usage totals.
 - Relay messages report a status (`menunggu`, `diambil`, `selesai`, `gagal`) and attempt count; a released or expired claim retries up to five attempts before it becomes `gagal`, and done messages can be purged after a retention period. The CLI does not yet expose release or purge.
 - Add task comments: `plaesy tasks comment <id> <text>` appends a comment, `plaesy tasks comments <id>`
@@ -48,6 +48,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   carry no ANSI color. `--plain` also turns off decorative glyphs for the call sites that use them.
 
 ### Fixed
+
+- `plaesy mcp memory start|stop|status|uninstall` now fail with a clear message instead of a build error; the background memory service is not available in this build, so use `plaesy mcp memory serve` in the foreground.
 
 - `plaesy tasks complete` now prints that a manual completion has no checklist verification when the task has no checklist items.
 
