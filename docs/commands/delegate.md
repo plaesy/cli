@@ -28,7 +28,7 @@ Enable both local CLI providers and an ordered fallback chain in `.plaesy/config
 ```
 
 CLI providers use each program's own login and model configuration. A chain tries
-the next provider only for a retryable failure. Hermes uses the [MCP connection](../memory/mcp.md)
+the next provider only for a retryable failure. A provider may also list `fallback_models` (anthropic, ollama, openai). They are tried in order after `model` on the same endpoint, and only a transient or rate-limit error moves on. Hermes uses the [MCP connection](../memory/mcp.md)
 to access Plaesy tools; Hermes one-shot mode takes the prompt as a command-line
 argument and bypasses approvals, so it is not a built-in `delegate` provider.
 
