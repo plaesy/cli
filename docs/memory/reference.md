@@ -449,7 +449,7 @@ or `--root` changes the home folder).
 
 ## MCP Server
 
-**Tools** (six read-only; two bounded write tools):
+**Tools** (six read-only; three bounded write tools):
 
 ### memory_search
 
@@ -515,10 +515,21 @@ note candidates, and knowledge folders that may need an index. No vault notes ar
 ### memory_remember
 
 ```json
-{"method": "memory_remember", "params": {"title": "str", "body": "str", "folder": "relative/path", "tier": "semantic", "confidence": "medium"}}
+{"method": "memory_remember", "params": {"title": "str", "body": "str", "folder": "relative/path", "tier": "semantic", "confidence": "medium", "note_type": "context", "id": "project-checkpoint", "project": "project-id", "scope": ["project-id"], "status": "active", "supersedes": []}}
 ```
 
 Creates a new note inside the vault; it never overwrites an existing note.
+Graph fields are optional, but `note_type` and `id` are required together.
+
+---
+
+### memory_remember_session
+
+```json
+{"method": "memory_remember_session", "params": {"title": "str", "date": "YYYY-MM-DD", "summary": "str", "links": [{"label": "str", "url": "https://..."}]}}
+```
+
+Saves a summary of one working session as a note in the `sessions` folder (tier `episodic`, confidence `medium`). The note lists the session date in its body and the links under `Tautan`. Only `http` and `https` links are accepted; labels must not contain brackets. The note is indexed at once, so `memory_search` finds it. It never overwrites an existing note: the same title on the same date is refused.
 
 ---
 

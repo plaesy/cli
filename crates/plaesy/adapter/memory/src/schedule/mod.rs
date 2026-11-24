@@ -9,7 +9,11 @@
 //! Overlap: a job's `last_run` is written before it starts. A second `once` that begins meanwhile
 //! sees the job as not due, so Task Scheduler firing during a long index does not run it twice.
 //! If the process dies mid-run the job waits one full interval, then runs again.
+//!
+//! Cron expressions (`cron::CronSpec`) are parsed and evaluated in UTC by the pure `cron`
+//! submodule. They are not yet a job trigger: `JobSpec` still takes only an interval.
 
+pub mod cron;
 pub mod registration;
 
 use crate::memory::config::ScheduleConfig;
@@ -220,6 +224,9 @@ async fn run_action(engine: &SearchEngine, root: &Path, action: Action) -> Resul
     }
     match action {
         Action::Index => {
+            if WriteLock::daemon_is_active(root) {
+                return Ok("index maintained by active memory daemon".into());
+            }
             let s = engine.index_directory(root).await?;
             Ok(format!(
                 "indexed={} unchanged={} removed={} failed={}",

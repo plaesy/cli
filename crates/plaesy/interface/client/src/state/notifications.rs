@@ -112,7 +112,8 @@ impl Queue {
     /// yang dibuang.
     pub fn prune_older_than(&mut self, now: u64, max_age: u64) -> usize {
         let before = self.items.len();
-        self.items.retain(|n| now.saturating_sub(n.created_at) <= max_age);
+        self.items
+            .retain(|n| now.saturating_sub(n.created_at) <= max_age);
         before - self.items.len()
     }
 

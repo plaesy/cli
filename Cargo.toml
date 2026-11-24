@@ -6,7 +6,9 @@ resolver = "2"
 members = [
     "crates/plaesy/interface/client",
     "crates/plaesy/adapter/design-ir",
+    "crates/plaesy/adapter/import-tasks",
     "crates/plaesy/adapter/memory",
+    "crates/plaesy/adapter/pty",
     "crates/plaesy/adapter/relay",
     "crates/plaesy/adapter/runstore",
     "crates/plaesy/adapter/sqlite",
@@ -43,10 +45,12 @@ members = [
     "crates/plaesy/plaesy",
     "crates/plaesy/service",
     "crates/plaesy/support/analysis",
+    "crates/plaesy/support/collab",
     "crates/plaesy/support/common",
     "crates/plaesy/support/designlint",
     "crates/plaesy/support/loop",
     "crates/plaesy/support/mdlint",
+    "crates/plaesy/support/plugins",
     "crates/plaesy/support/tasks",
 ]
 default-members = ["crates/plaesy/plaesy"]
@@ -63,6 +67,7 @@ clap = { version = "4.5", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 dioxus = { version = "=0.7.10", default-features = false, features = ["macro", "html", "signals"] }
 dioxus-ssr = { version = "=0.7.10" }
+dioxus-shadcn = { version = "0.2", default-features = false, features = ["button", "card", "input", "label", "dialog", "sidebar", "tabs", "badge", "separator", "scroll-area"] }
 dirs = "5"
 filetime = "0.2.29"
 futures = "0.3"
@@ -75,6 +80,7 @@ lru = "0.12"
 notify = { version = "8", features = ["macos_fsevent"] }
 ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries", "tls-rustls", "copy-dylibs", "api-31"] }
 parking_lot = "0.12"
+portable-pty = "0.9"
 proptest = "1.4"
 pulldown-cmark = "0.12"
 quick-xml = "0.37"

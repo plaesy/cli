@@ -5,6 +5,7 @@
 
 use std::sync::{Arc, Mutex};
 
+pub mod audit;
 pub mod drain;
 
 /// Errors from the run log.

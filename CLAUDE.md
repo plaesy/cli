@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Toolchain: `rust-toolchain.toml` pins Rust 1.99.1 (rustfmt and clippy included). Always pass `--locked`; `Cargo.lock` is tracked.
 
-- Build: `cargo build --workspace --locked` (debug) or `make release`. The root is a virtual manifest; `default-members` is the `plaesy` package, so bare `cargo test` covers only that package.
+- Build (scoped): `cargo build -p <crate> --locked`. Workspace or release builds are owner only. The root is a virtual manifest; `default-members` is the `plaesy` package, so bare `cargo test` covers only that package.
 - Run from source: `cargo run --locked -- <args>`.
-- All tests: `cargo test --workspace --locked` (or `make test`).
+- All tests (owner only, not during work): `cargo test --workspace --locked`.
 - One test or filter: `cargo test --workspace --locked <name-substring>`, or `make test-one TEST=<name>`. Use `-- --exact` with the full path for a single test. Example: `cargo test --locked identity_policy` runs every test whose path contains that string.
 - Single integration test file: `cargo test --locked -p plaesy --test <file_stem>`, for example `--test run_crash_recovery`.
-- Lint: `cargo clippy --workspace --all-targets --locked -- -D warnings`.
+- Lint (scoped): `cargo clippy -p <crate> --all-targets --locked -- -D warnings`. Workspace-wide lint is owner only.
 - Format: `cargo fmt --all` to write, `cargo fmt --all -- --check` to verify.
-- Full gate before a change is done: `make verify` (build, test, lint, fmt-check). Without make, run the Cargo commands above.
+- Never run a full-workspace test or compile (`cargo test --workspace`, `cargo build --workspace`, `cargo clippy --workspace`, `make verify`, `make test`). They are too slow to use during work. During work, check only the crates you changed with `-p <crate>`, and run one test with `make test-one TEST=<name>` or `cargo test -p <crate> <name>`. The owner runs the full gate when they decide to.
 - Markdown lint: `plaesy validate markdown <paths> --no-baseline`. The lint must pass for any Markdown you change.
 - Benchmarks: `cargo bench --locked`. Relevance evaluation: `make eval`.
 
@@ -26,7 +26,7 @@ Windows notes:
 ## Conventions the code enforces
 
 - Library code returns typed errors. No `unwrap()` or `expect()` outside tests, except static regex patterns and provable invariants, each with a message that names the invariant (see CONTRIBUTING.md).
-- The runtime stays offline. Network access belongs only in install or model-download commands. Exception, approved by the owner on 2026-11-22: the `openai` delegate and loop provider call the network when a step runs them. Keep every other runtime path offline.
+- The runtime may use the network when a feature needs it (mobile or remote access, chat integrations, collaboration, providers). Approved by the owner on 2026-11-23, replacing the earlier offline-only rule. Each networked path must be explicit, opt-in by configuration, and documented in `docs/platform/decisions.md`. Local-only features (memory, tasks, boards, exports) stay local by default.
 - Stdout is a protocol in JSON and MCP modes. Send diagnostics to stderr.
 - Schema changes migrate on open, with coverage for opening an older database.
 - Tests live beside their module in `<name>_test.rs`, wired with `#[cfg(test)] #[path = "<name>_test.rs"] mod <name>_test;`. Integration tests live in `crates/plaesy/plaesy/tests/`, and architecture checks run from `architecture_test.rs` (ADR 0003). Tests that need the ONNX model must skip with a clear message when it is missing.
@@ -50,7 +50,9 @@ The repository is a Cargo workspace (virtual root manifest). Every package lives
 
 ## Repository state
 
-- Git branch is `main`. The program branch `chore/plaesy-program-refactor` also exists on origin.
-- Commit policy: `CLAUDE.md` is tracked. After a change passes `make verify` (or the equivalent Cargo commands) and the Markdown lint, commit it without asking. Use the commit proposal flow and report the commit hash.
+- The default branch is `main`. Check the active branch with `git branch --show-current` before committing; integration work for agent features lives on `integrate/agent-features`.
+- `.claude/worktrees/agent-*` holds worktrees from agent sessions. Committed work there is merged or lives on its branch, but a worktree can also hold uncommitted changes that exist nowhere else. Before removing one, run `git -C <worktree> status --porcelain`; remove it only when that prints nothing, or after the owner decides to discard or commit its changes. Read `main` or the active branch for source of truth.
+- Disk: a full workspace build needs many GB under `target/`. `cargo clean` can fail while MCP servers hold `plaesy.exe`; stop those processes first.
+- Commit policy: `CLAUDE.md` is tracked. After a change passes the scoped checks for the crates it touches and the Markdown lint, commit it without asking. Use the commit proposal flow and report the commit hash.
 - CONTRIBUTING.md says the project runs no CI, but `.github/workflows/ci.yml` exists. It runs fmt, clippy, tests, and an installer end-to-end test on three OSes. Check the workflow before assuming it is inactive.
 - `docs/platform/` describes target designs. Do not present a planned capability as implemented; check the code and tests first.
