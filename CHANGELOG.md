@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add `plaesy tasks board`, a text view of every spec's tasks as one column per status folder with a count per column and titles cut to 60 characters.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,
