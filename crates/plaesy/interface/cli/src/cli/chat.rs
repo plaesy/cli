@@ -341,6 +341,8 @@ pub fn converse(
                         }
                         _ => writeln!(out, "usage: /decisions update <id> <teks baru>")?,
                     }
+                } else if text == "delete" {
+                    writeln!(out, "usage: /decisions delete <id>")?;
                 } else if let Some(id) = text.strip_prefix("delete ") {
                     match pending.archive(id.trim()) {
                         Ok(done) => writeln!(out, "{done}")?,

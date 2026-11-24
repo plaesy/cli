@@ -582,3 +582,26 @@ fn decisions_update_without_text_prints_usage() {
         "output was: {out}"
     );
 }
+
+#[test]
+fn decisions_delete_without_id_prints_usage_and_saves_nothing() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/decisions delete
+/exit
+",
+    );
+    assert!(
+        out.contains("usage: /decisions delete <id>"),
+        "output was: {out}"
+    );
+    assert!(
+        !out.contains("decision note saved"),
+        "must not save as a decision: {out}"
+    );
+}
