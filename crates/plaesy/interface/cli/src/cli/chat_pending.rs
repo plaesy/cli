@@ -31,6 +31,8 @@ pub trait PendingStore {
     fn answer(&self, id: &str, choice: usize) -> Result<String, String>;
     /// `/decisions`: every visible decision with its status.
     fn list_decisions(&self) -> Result<String, String>;
+    /// `/decisions update <id> <teks>`: rewrites the note in place with the new text.
+    fn update(&self, id: &str, text: &str) -> Result<String, String>;
     /// `/decisions delete <id>`: archives the note. It stays in the vault and leaves the default list.
     fn archive(&self, id: &str) -> Result<String, String>;
     /// `/pending` in a terminal: pick a question and an option with the keyboard. Stores that
@@ -182,6 +184,27 @@ pub fn update_args(sha: &str, path: &str, vault: Option<&Path>) -> Vec<String> {
     args
 }
 
+/// The note text after an in-place edit: the title line, the heading, and the statement line
+/// change; everything else (id, status, supersedes, dates) is kept.
+pub fn rewrite_decision(content: &str, text: &str) -> String {
+    let quoted = serde_json::to_string(text).unwrap_or_else(|_| format!("\"{text}\""));
+    let mut out = String::new();
+    for line in content.lines() {
+        let next = if line.starts_with("title: ") {
+            format!("title: {quoted}")
+        } else if line.starts_with("# ") {
+            format!("# {text}")
+        } else if line.starts_with("Keputusan: ") {
+            format!("Keputusan: {text}")
+        } else {
+            line.to_owned()
+        };
+        out.push_str(&next);
+        out.push('\n');
+    }
+    out
+}
+
 /// `plaesy memory [--vault V] decisions --format json [--project P]`: every decision the index
 /// shows by default (proposed and active).
 pub fn list_all_args(vault: Option<&Path>, project: Option<&str>) -> Vec<String> {
@@ -281,6 +304,38 @@ impl MemoryPending {
 }
 
 impl PendingStore for MemoryPending {
+    fn update(&self, id: &str, text: &str) -> Result<String, String> {
+        let root = self.vault_root()?;
+        let item = parse_listing(&run_memory(
+            &list_all_args(self.vault.as_deref(), self.project.as_deref()),
+            None,
+        )?)?
+        .into_iter()
+        .find(|item| item.id == id)
+        .ok_or_else(|| format!("no decision {id}"))?;
+        let content = std::fs::read_to_string(root.join(&item.path))
+            .map_err(|err| format!("{}: {err}", item.path))?;
+        let updated = rewrite_decision(&content, text);
+        let fingerprint = run_memory(
+            &[
+                memory_prefix(self.vault.as_deref()),
+                vec!["fingerprint".to_owned(), item.path.clone()],
+            ]
+            .concat(),
+            None,
+        )?;
+        let sha = fingerprint
+            .split_whitespace()
+            .next()
+            .filter(|token| token.len() == 64)
+            .ok_or_else(|| format!("no fingerprint for {}", item.path))?;
+        run_memory(
+            &update_args(sha, &item.path, self.vault.as_deref()),
+            Some(&updated),
+        )?;
+        Ok(format!("{id} updated"))
+    }
+
     fn list_decisions(&self) -> Result<String, String> {
         let root = self.vault_root()?;
         let items: Vec<Listed> = parse_listing(&run_memory(

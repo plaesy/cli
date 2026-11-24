@@ -331,6 +331,16 @@ pub fn converse(
                         Ok(list) => writeln!(out, "{list}")?,
                         Err(err) => writeln!(out, "error: {err}")?,
                     }
+                } else if let Some(rest) = text.strip_prefix("update ") {
+                    match rest.trim().split_once(' ') {
+                        Some((id, new_text)) if !new_text.trim().is_empty() => {
+                            match pending.update(id, new_text.trim()) {
+                                Ok(done) => writeln!(out, "{done}")?,
+                                Err(err) => writeln!(out, "error: {err}")?,
+                            }
+                        }
+                        _ => writeln!(out, "usage: /decisions update <id> <teks baru>")?,
+                    }
                 } else if let Some(id) = text.strip_prefix("delete ") {
                     match pending.archive(id.trim()) {
                         Ok(done) => writeln!(out, "{done}")?,

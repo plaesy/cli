@@ -151,3 +151,17 @@ fn route_takes_only_reversible_and_confident_choices() {
         "NaN never takes a choice"
     );
 }
+
+#[test]
+fn rewrite_decision_changes_title_heading_and_statement_only() {
+    let note = "---\ntitle: \"Lama\"\nstatus: \"active\"\nid: \"decision-1\"\n---\n\n# Lama\n\nKeputusan: Lama\n";
+    let out = rewrite_decision(note, "Baru \"quoted\"");
+    assert!(
+        out.contains("title: \"Baru \\\"quoted\\\"\""),
+        "output was: {out}"
+    );
+    assert!(out.contains("# Baru \"quoted\""));
+    assert!(out.contains("Keputusan: Baru \"quoted\""));
+    assert!(out.contains("status: \"active\""), "status must survive");
+    assert!(out.contains("id: \"decision-1\""), "id must survive");
+}

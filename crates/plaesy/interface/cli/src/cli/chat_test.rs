@@ -64,6 +64,16 @@ struct MemoryStore {
 }
 
 impl chat_pending::PendingStore for MemoryStore {
+    fn update(&self, id: &str, text: &str) -> Result<String, String> {
+        let mut items = self.items.lock().expect("items");
+        let item = items
+            .iter_mut()
+            .find(|(item_id, _, _)| item_id == id)
+            .ok_or_else(|| format!("no decision {id}"))?;
+        item.1 = text.to_owned();
+        Ok(format!("{id} updated"))
+    }
+
     fn list_decisions(&self) -> Result<String, String> {
         let items = self.items.lock().expect("items");
         if items.is_empty() {
@@ -536,4 +546,39 @@ fn decisions_with_text_still_saves_a_decision() {
         "/decisions jangan full test workspace\n/exit\n",
     );
     assert!(out.contains("decision note saved"), "output was: {out}");
+}
+
+#[test]
+fn decisions_update_rewrites_the_text_in_place() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/ask Lama? | a | b\n/decisions update decision-1 Baru\n/decisions\n/exit\n",
+    );
+    assert!(out.contains("decision-1 updated"), "output was: {out}");
+    assert!(
+        out.contains("decision-1 [proposed] Baru"),
+        "output was: {out}"
+    );
+}
+
+#[test]
+fn decisions_update_without_text_prints_usage() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/decisions update decision-1\n/exit\n",
+    );
+    assert!(
+        out.contains("usage: /decisions update"),
+        "output was: {out}"
+    );
 }
