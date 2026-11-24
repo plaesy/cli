@@ -12,6 +12,7 @@ use std::time::Duration;
 use super::chat_hooks;
 use super::chat_mcp;
 use super::chat_pending;
+use super::chat_plugins;
 use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
@@ -213,6 +214,8 @@ pub struct ChatSettings {
     pub role: String,
     /// Skill store, where roles find their skills.
     pub skills_dir: PathBuf,
+    /// Plugins from the user folder and the repository.
+    pub plugins: Vec<chat_plugins::Plugin>,
 }
 
 /// One line typed at the prompt.
@@ -239,6 +242,10 @@ pub enum Input {
     Mcp(String),
     /// `/role` lists roles; `/role <name>` switches to one
     Role(String),
+    /// `/plugins` lists plugins and their commands
+    Plugins,
+    /// `/plugin run <plugin> <command> [args...]`
+    Plugin(String),
     /// `/pick` followed by the raw `<id> <number>` text
     Pick(String),
     Message(String),
@@ -254,6 +261,7 @@ pub fn parse_input(line: &str) -> Input {
         "/clear" => return Input::Clear,
         "/pending" => return Input::Pending,
         "/tasks" => return Input::Tasks,
+        "/plugins" => return Input::Plugins,
         _ => {}
     }
     for (command, make) in [
@@ -261,6 +269,7 @@ pub fn parse_input(line: &str) -> Input {
         ("/pick", Input::Pick as fn(String) -> Input),
         ("/mcp", Input::Mcp as fn(String) -> Input),
         ("/role", Input::Role as fn(String) -> Input),
+        ("/plugin", Input::Plugin as fn(String) -> Input),
     ] {
         if let Some(rest) = text
             .strip_prefix(command)
@@ -473,6 +482,32 @@ pub fn converse(
                     }
                 }
             }
+            Input::Plugins => writeln!(
+                out,
+                "{}",
+                chat_plugins::list(&settings.plugins, &settings.approved)
+            )?,
+            Input::Plugin(rest) => {
+                let words: Vec<&str> = rest.split_whitespace().collect();
+                let result = match words.as_slice() {
+                    ["run", plugin, command, args @ ..] => {
+                        let args: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
+                        chat_plugins::run(
+                            &settings.plugins,
+                            &settings.approved,
+                            plugin,
+                            command,
+                            &args,
+                            settings.timeout,
+                        )
+                    }
+                    _ => Err(chat_text::usage(lang, Usage::Plugin).to_owned()),
+                };
+                match result {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
             Input::Tasks => {
                 let result = if settings.interactive {
                     chat_tasks::menu(&settings.repo, lang)
@@ -629,6 +664,19 @@ pub fn run(args: &Args) -> CliResult {
         chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     let skills_dir = super::skills::store_dir(&home);
+    let (mut plugins, mut problems) = chat_plugins::discover(
+        &home.join(".plaesy").join("plugins"),
+        chat_hooks::Scope::User,
+    );
+    let (repo_plugins, repo_problems) = chat_plugins::discover(
+        &args.path.join(".plaesy").join("plugins"),
+        chat_hooks::Scope::Repo,
+    );
+    plugins.extend(repo_plugins);
+    problems.extend(repo_problems);
+    for problem in &problems {
+        eprintln!("plugin skipped: {problem}");
+    }
     let mut mcp_servers = chat_mcp::parse_servers(
         &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
         chat_hooks::Scope::Repo,
@@ -679,6 +727,7 @@ pub fn run(args: &Args) -> CliResult {
             roles: roles.clone(),
             role: active_role.name.clone(),
             skills_dir: skills_dir.clone(),
+            plugins: plugins.clone(),
         },
         stdin.lock(),
         &mut stdout,

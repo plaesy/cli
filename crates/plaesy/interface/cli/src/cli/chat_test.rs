@@ -165,6 +165,7 @@ fn run_with_store(
             roles: Vec::new(),
             role: "default".to_owned(),
             skills_dir: PathBuf::from("."),
+            plugins: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -645,6 +646,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         roles,
         role: "reviewer".to_owned(),
         skills_dir: PathBuf::from("."),
+        plugins: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -686,6 +688,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         roles,
         role: "default".to_owned(),
         skills_dir: PathBuf::from("."),
+        plugins: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();

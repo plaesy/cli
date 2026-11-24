@@ -57,6 +57,7 @@ pub enum Usage {
     DecisionsUpdate,
     DecisionsDelete,
     Mcp,
+    Plugin,
     Provider,
 }
 
@@ -88,6 +89,7 @@ pub fn usage(lang: Lang, kind: Usage) -> &'static str {
             "usage: /mcp | /mcp call <server> <tool> <json>",
             "usage: /mcp | /mcp call <server> <tool> <json>",
         ),
+        Usage::Plugin => "usage: /plugins | /plugin run <plugin> <command> [args...]",
         Usage::Provider => "usage: /provider <name>",
     }
 }
