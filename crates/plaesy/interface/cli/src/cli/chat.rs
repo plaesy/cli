@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::chat_pending;
+use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::CliResult;
 use crate::config::delegate::DelegateConfig;
@@ -184,11 +185,15 @@ impl Transcript {
 pub type ProviderOpener<'a> = dyn Fn(&str) -> Result<Box<dyn Provider>, String> + 'a;
 
 /// Per-call limits for the provider.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ChatSettings {
     pub timeout: Duration,
     pub max_tokens: u32,
     pub lang: Lang,
+    /// Repository whose `.plaesy/tasks` folder `/tasks` shows.
+    pub repo: PathBuf,
+    /// True when stdin is a terminal, so `/tasks` and `/pending` may open a menu.
+    pub interactive: bool,
 }
 
 /// One line typed at the prompt.
@@ -209,6 +214,8 @@ pub enum Input {
     Ask(String),
     /// `/pending`: list open questions
     Pending,
+    /// `/tasks`: the task folders, as a menu in a terminal
+    Tasks,
     /// `/pick` followed by the raw `<id> <number>` text
     Pick(String),
     Message(String),
@@ -223,6 +230,7 @@ pub fn parse_input(line: &str) -> Input {
         "/exit" | "/quit" => return Input::Exit,
         "/clear" => return Input::Clear,
         "/pending" => return Input::Pending,
+        "/tasks" => return Input::Tasks,
         _ => {}
     }
     for (command, make) in [
@@ -326,6 +334,17 @@ pub fn converse(
                 },
                 Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
+            Input::Tasks => {
+                let result = if settings.interactive {
+                    chat_tasks::menu(&settings.repo, lang)
+                } else {
+                    Ok(chat_tasks::render(lang, &chat_tasks::scan(&settings.repo)))
+                };
+                match result {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
             Input::Pending => match pending.menu() {
                 Ok(text) => writeln!(out, "{text}")?,
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
@@ -446,6 +465,8 @@ pub fn run(args: &Args) -> CliResult {
             timeout,
             max_tokens: args.max_tokens,
             lang,
+            repo: args.path.clone(),
+            interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
         },
         stdin.lock(),
         &mut stdout,

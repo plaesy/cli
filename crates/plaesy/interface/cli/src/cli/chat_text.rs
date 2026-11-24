@@ -204,6 +204,49 @@ pub fn pass_vault(lang: Lang) -> &'static str {
     )
 }
 
+pub fn no_tasks(lang: Lang) -> &'static str {
+    pick(lang, "no tasks", "belum ada tugas")
+}
+
+pub fn tasks_count(lang: Lang, count: usize) -> String {
+    match lang {
+        Lang::En => format!("{count} tasks"),
+        Lang::Id => format!("{count} tugas"),
+    }
+}
+
+pub fn action_next(lang: Lang) -> &'static str {
+    pick(lang, "Move to todo", "Pindah ke todo")
+}
+
+pub fn action_start(lang: Lang) -> &'static str {
+    pick(lang, "Start", "Mulai")
+}
+
+pub fn action_block(lang: Lang) -> &'static str {
+    pick(lang, "Block", "Blokir")
+}
+
+pub fn action_unblock(lang: Lang) -> &'static str {
+    pick(lang, "Unblock", "Buka blokir")
+}
+
+pub fn action_complete(lang: Lang) -> &'static str {
+    pick(lang, "Complete", "Selesaikan")
+}
+
+pub fn action_show(lang: Lang) -> &'static str {
+    pick(lang, "Show", "Lihat")
+}
+
+pub fn block_reason_prompt(lang: Lang) -> &'static str {
+    pick(lang, "Reason for blocking", "Alasan diblokir")
+}
+
+pub fn task_done(lang: Lang, id: &str) -> String {
+    format!("{id} {}", pick(lang, "updated", "diperbarui"))
+}
+
 #[cfg(test)]
 #[path = "chat_text_test.rs"]
 mod chat_text_test;

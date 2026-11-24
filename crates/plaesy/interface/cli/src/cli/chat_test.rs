@@ -157,6 +157,8 @@ fn run_with_store(
             timeout: Duration::from_secs(5),
             max_tokens: 0,
             lang: Lang::En,
+            repo: PathBuf::from("."),
+            interactive: false,
         },
         Cursor::new(script.to_owned()),
         &mut out,
