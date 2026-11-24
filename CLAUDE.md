@@ -51,7 +51,7 @@ The repository is a Cargo workspace (virtual root manifest). Every package lives
 ## Repository state
 
 - The default branch is `main`. Check the active branch with `git branch --show-current` before committing; integration work for agent features lives on `integrate/agent-features`.
-- `.claude/worktrees/agent-*` holds worktrees from agent sessions. Committed work there is merged or lives on its branch, but a worktree can also hold uncommitted changes that exist nowhere else. Before removing one, run `git -C <worktree> status --porcelain`; remove it only when that prints nothing, or after the owner decides to discard or commit its changes. Read `main` or the active branch for source of truth.
+- Agent worktrees live under `~/.plaesy/worktrees/agent-*`, outside the repo; older sessions may still have them in `.claude/worktrees/agent-*`. Committed work there is merged or lives on its branch, but a worktree can also hold uncommitted changes that exist nowhere else. Before removing one, run `git -C <worktree> status --porcelain`; remove it only when that prints nothing, or after the owner decides to discard or commit its changes. Read `main` or the active branch for source of truth.
 - Disk: a full workspace build needs many GB under `target/`. `cargo clean` can fail while MCP servers hold `plaesy.exe`; stop those processes first.
 - Commit policy: `CLAUDE.md` is tracked. After a change passes the scoped checks for the crates it touches and the Markdown lint, commit it without asking. Use the commit proposal flow and report the commit hash.
 - CONTRIBUTING.md says the project runs no CI, but `.github/workflows/ci.yml` exists. It runs fmt, clippy, tests, and an installer end-to-end test on three OSes. Check the workflow before assuming it is inactive.
