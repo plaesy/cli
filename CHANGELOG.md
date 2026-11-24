@@ -31,7 +31,6 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add `plaesy workspace` to group registered projects into named workspaces (create, delete, add, remove, list). Missing project roots are reported as `missing` and kept in their group.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
-- Add `memory_remember_session` to the memory MCP server: saves a session summary (title, date, summary, http(s) links) as an indexed note in the `sessions` folder, found by the existing search.
 - Add `plaesy tasks board`, a text board with one section per status, a count per status, and task titles cut to 60 characters.
 - Add `plaesy export tasks|runs --format md|csv [--out <file>]` to write the task list or the delegate run summary per provider as local Markdown or CSV. CSV fields that start with a formula character are prefixed with `'`.
 - Add opt-in local telemetry: set `"telemetry": {"enabled": true}` in `.plaesy/config.json` to count command runs, errors,
@@ -43,6 +42,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Add `plaesy version`, which prints the version and the running and installed binary paths.
 - Add `plaesy update --check --manifest <PATH>`, which compares the installed version with a local
   JSON manifest without network access. Downloading releases is not implemented.
+- Add `memory_remember_session` to the memory MCP server: saves a session summary (title, date, summary, http(s) links) as an indexed note in the `sessions` folder, found by the existing search.
 - Add `plaesy remote serve --port <n>`, a read-only HTTP API for the project's task board: `GET /health`, `GET /tasks` (JSON summary), and `GET /events` (Server-Sent Events). It binds to loopback by default; a non-loopback `--bind` requires a bearer token (`--auth-token` or `PLAESY_REMOTE_TOKEN`, at least 32 bytes).
 - Add a global `--plain` flag (place it before the subcommand) and honor `NO_COLOR`: log lines then
   carry no ANSI color. `--plain` also turns off decorative glyphs for the call sites that use them.
