@@ -329,7 +329,7 @@ pub fn sse_event(event: &str, data: &str) -> String {
 /// stays on one line.
 #[must_use]
 pub fn sse_comment(text: &str) -> String {
-    let flat = text.replace(|c: char| c == '\r' || c == '\n', " ");
+    let flat = text.replace(['\r', '\n'], " ");
     format!(": {flat}\n\n")
 }
 

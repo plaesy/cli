@@ -220,7 +220,7 @@ fn check_url(raw: &str) -> Result<(), &'static str> {
         return Err("skema harus https, atau http untuk loopback");
     };
     let authority = rest
-        .split(|c: char| c == '/' || c == '?' || c == '#')
+        .split(['/', '?', '#'])
         .next()
         .unwrap_or("");
     if authority.is_empty() || authority.contains('@') {

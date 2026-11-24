@@ -5,6 +5,7 @@
 //! or `skills.dir` in `~/.plaesy/settings.json`. Copying never overwrites: a skill is copied
 //! only when the target does not have it. `sync` is a dry run unless `--apply` is passed.
 
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -56,19 +57,28 @@ pub fn run(args: &Args) -> CliResult {
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     match command {
         SkillsCommand::List { dir } => list(&home, &plaesy_dir(&home, dir.as_deref())),
-        SkillsCommand::Sync { from, to, apply, dir } => {
-            sync(&home, &plaesy_dir(&home, dir.as_deref()), from, to, *apply)
-        }
+        SkillsCommand::Sync {
+            from,
+            to,
+            apply,
+            dir,
+        } => sync(&home, &plaesy_dir(&home, dir.as_deref()), from, to, *apply),
     }
 }
 
 /// Plaesy's store, first match wins: `--dir`, `PLAESY_SKILLS_DIR`, `skills.dir` in
 /// `~/.plaesy/settings.json`, then `~/.plaesy/skills`.
 fn plaesy_dir(home: &Path, flag: Option<&Path>) -> PathBuf {
+    resolve_plaesy_dir(home, flag, std::env::var_os("PLAESY_SKILLS_DIR"))
+}
+
+/// Pure form of [`plaesy_dir`]: the environment value is passed in so the order can be tested
+/// without touching process-wide state.
+fn resolve_plaesy_dir(home: &Path, flag: Option<&Path>, env: Option<OsString>) -> PathBuf {
     if let Some(dir) = flag {
         return dir.to_path_buf();
     }
-    if let Some(dir) = std::env::var_os("PLAESY_SKILLS_DIR").filter(|d| !d.is_empty()) {
+    if let Some(dir) = env.filter(|d| !d.is_empty()) {
         return PathBuf::from(dir);
     }
     if let Some(dir) = settings_skills_dir(&home.join(".plaesy").join("settings.json")) {
@@ -86,14 +96,20 @@ fn settings_skills_dir(path: &Path) -> Option<PathBuf> {
     (!dir.is_empty()).then(|| PathBuf::from(dir))
 }
 
-fn provider_dir(home: &Path, plaesy: &Path, name: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn provider_dir(
+    home: &Path,
+    plaesy: &Path,
+    name: &str,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     if name == "plaesy" {
         return Ok(plaesy.to_path_buf());
     }
     let (_, rel) = PROVIDERS
         .iter()
         .find(|(provider, _)| *provider == name)
-        .ok_or_else(|| format!("unknown provider `{name}`; use one of: plaesy, claude, codex, agents, hermes"))?;
+        .ok_or_else(|| {
+            format!("unknown provider `{name}`; use one of: plaesy, claude, codex, agents, hermes")
+        })?;
     Ok(home.join(rel))
 }
 
@@ -198,3 +214,7 @@ fn copy_dir(from: &Path, to: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "skills_test.rs"]
+mod skills_test;
