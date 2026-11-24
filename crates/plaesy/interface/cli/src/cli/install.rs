@@ -1,10 +1,72 @@
 //! `plaesy install`, `uninstall`, `repair`, and `upgrade`: manage the installed binary.
 
 use std::io;
+use std::path::PathBuf;
 
 use super::common::{banner, logger};
 use super::CliResult;
+use crate::installer::update::{self, UpdateStatus};
 use crate::installer::{self, InstallerError};
+
+/// Prints the running version, the running binary path, and the installed binary path.
+pub fn version() -> CliResult {
+    println!("plaesy {}", crate::version());
+    println!("binary: {}", installer::running_binary()?.display());
+    match installer::installed_path() {
+        Ok(path) if path.is_file() => println!("installed: {}", path.display()),
+        Ok(path) => println!("installed: not installed (expected {})", path.display()),
+        Err(error) => println!("installed: unknown ({error})"),
+    }
+    Ok(())
+}
+
+/// `plaesy update --check`: compares the installed version with a local manifest. Offline only.
+#[derive(Debug, clap::Args)]
+pub struct UpdateArgs {
+    /// Compare the installed version with the manifest. Required, because downloading releases
+    /// is not implemented.
+    #[arg(long)]
+    pub check: bool,
+    /// Local JSON manifest whose `version` field names the latest release
+    #[arg(long, value_name = "PATH")]
+    pub manifest: Option<PathBuf>,
+}
+
+pub fn update(args: &UpdateArgs) -> CliResult {
+    if !args.check {
+        return Err(
+            "plaesy update needs --check; downloading a release is not implemented and the runtime stays offline"
+                .into(),
+        );
+    }
+    let Some(manifest) = args.manifest.as_deref() else {
+        return Err(
+            "--check needs --manifest <PATH> pointing to a local JSON file with a \"version\" field"
+                .into(),
+        );
+    };
+    let latest = update::manifest_version(manifest)?;
+    match update::installed_version()? {
+        None => {
+            println!("installed: not installed; run `plaesy install` first");
+            println!("latest:    {latest} ({})", manifest.display());
+        }
+        Some(installed) => {
+            println!("installed: {installed}");
+            println!("latest:    {latest} ({})", manifest.display());
+            match update::compare(installed, latest) {
+                UpdateStatus::UpToDate => println!("up to date"),
+                UpdateStatus::UpdateAvailable => {
+                    println!("update available: build {latest} and run its `plaesy upgrade`")
+                }
+                UpdateStatus::InstalledIsNewer => {
+                    println!("installed {installed} is newer than the manifest {latest}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 /// Prints the PATH hint when the install directory is not on PATH.
 fn print_path_hint(on_path: bool) -> CliResult {

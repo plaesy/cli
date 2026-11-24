@@ -1,0 +1,16 @@
+[package]
+name = "plaesy-adapter-model-openai-tools"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Model OpenAI-compatible dengan loop pemanggilan alat (chat/completions) untuk ACP (ADR 0003, adapter model)."
+
+[dependencies]
+plaesy-interface-acp = { path = "../../interface/acp" }
+serde_json = { workspace = true }
+ureq = { workspace = true }
+
+[lints]
+workspace = true

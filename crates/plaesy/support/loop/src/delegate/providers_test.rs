@@ -81,7 +81,11 @@ fn model_fallback_stops_on_a_terminal_error() {
     ]);
     let err = chain.complete(&Request::default()).unwrap_err();
     assert_eq!(err.class, Class::Terminal);
-    assert_eq!(calls.load(Ordering::SeqCst), 1, "the second model must not be called");
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "the second model must not be called"
+    );
 }
 
 #[test]

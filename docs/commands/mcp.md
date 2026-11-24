@@ -20,7 +20,26 @@ Guarantees:
 - Paths are confined to `.plaesy/`. Absolute paths, `..` escapes and symlinks that point outside the folder are refused. A write never follows a symlink.
 - stdout carries only protocol messages.
 
-Register the MCP server in the client configuration manually using `"command": "plaesy"` and `"args": ["mcp"]`. The `plaesy` binary must be on `PATH` for the client to start the server.
+Register the MCP server as a local stdio command. Use an absolute project root so
+each client sees the same `.plaesy/` folder regardless of its working directory:
+
+```bash
+codex mcp add plaesy-project -- plaesy mcp --root /absolute/path/to/project
+claude mcp add plaesy-project -- plaesy mcp --root /absolute/path/to/project
+```
+
+For Hermes, add this to `~/.hermes/config.yaml` under `mcp_servers`:
+
+```yaml
+mcp_servers:
+  plaesy-project:
+    command: plaesy
+    args: ["mcp", "--root", "/absolute/path/to/project"]
+```
+
+Use the installed binary's absolute path if `plaesy` is not on the client's `PATH`.
+`plaesy mcp` serves project files; shared vault tools use `plaesy memory serve --mcp`
+as described in [the memory MCP guide](../memory/mcp.md).
 
 ## Protocol
 

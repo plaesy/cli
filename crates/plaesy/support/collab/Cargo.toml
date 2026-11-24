@@ -1,0 +1,11 @@
+[package]
+name = "plaesy-collab"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Kolaborasi lokal untuk catatan teks: replika RGA dengan jam Lamport."
+
+[dependencies]
+thiserror = { workspace = true }

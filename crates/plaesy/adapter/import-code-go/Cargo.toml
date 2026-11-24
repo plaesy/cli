@@ -1,0 +1,19 @@
+[package]
+name = "plaesy-adapter-import-code-go"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Impor kode Go (struct dan tipe string dengan const) menjadi api-ir/1 dengan laporan kehilangan (ADR 0008)."
+
+[dependencies]
+gosyn = "0.2.16"
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+plaesy-domain-api = { path = "../../domain/api" }
+
+[lints]
+workspace = true

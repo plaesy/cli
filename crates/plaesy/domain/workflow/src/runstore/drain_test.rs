@@ -1,9 +1,9 @@
 use super::*;
+use crate::runstore::MemoryLog;
 
 #[test]
 fn runstore_shutdown_drains_pending_in_order_then_refuses() {
-    let dir = tempfile::tempdir().unwrap();
-    let log = RunLog::open(dir.path().join("run.log"));
+    let log = MemoryLog::default();
     let mut draining = DrainingLog::new(log.clone());
     draining.enqueue("one").unwrap();
     draining.enqueue("two").unwrap();

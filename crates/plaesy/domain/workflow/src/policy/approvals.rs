@@ -3,21 +3,19 @@
 //! Approvals and revocations are appended to a run log, so they survive a restart.
 //! The latest record for an action id decides whether it is approved.
 
-use crate::runstore::{RunLog, RunLogError};
+use crate::runstore::{RunLogError, RunSink};
 
 /// Append-only approval record stored in a run log.
 #[derive(Debug, Clone)]
-pub struct ApprovalStore {
-    log: RunLog,
+pub struct ApprovalStore<L: RunSink> {
+    log: L,
 }
 
-impl ApprovalStore {
-    /// Opens the approval record at `path`.
+impl<L: RunSink> ApprovalStore<L> {
+    /// Creates the approval record on top of a run log.
     #[must_use]
-    pub fn open(path: impl Into<std::path::PathBuf>) -> Self {
-        Self {
-            log: RunLog::open(path),
-        }
+    pub fn new(log: L) -> Self {
+        Self { log }
     }
 
     /// Records approval for one action id.

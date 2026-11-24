@@ -70,6 +70,103 @@ fn graph_lock_rejects_metadata_write_to_another_collection() {
     assert!(!foreign_task.join("issue.json").exists());
 }
 
+#[test]
+fn validate_label_accepts_lowercase_tokens_up_to_the_limit() {
+    for label in ["bug", "ui-polish", "v2_api", "a", "0"] {
+        assert_eq!(validate_label(label), Ok(()), "{label:?}");
+    }
+    let at_limit = "a".repeat(MAX_LABEL_CHARS);
+    assert_eq!(validate_label(&at_limit), Ok(()));
+}
+
+#[test]
+fn validate_label_rejects_empty_long_spaced_and_uppercase_labels() {
+    assert_eq!(validate_label(""), Err(LabelError::Empty));
+
+    let too_long = "a".repeat(MAX_LABEL_CHARS + 1);
+    assert_eq!(
+        validate_label(&too_long),
+        Err(LabelError::TooLong(too_long.clone()))
+    );
+
+    for label in [
+        "Bug",
+        "needs review",
+        " bug",
+        "bug ",
+        "tab\tx",
+        "ui/polish",
+        "héllo",
+    ] {
+        assert_eq!(
+            validate_label(label),
+            Err(LabelError::InvalidCharacter(label.to_owned())),
+            "{label:?}"
+        );
+    }
+}
+
+#[test]
+fn add_and_remove_label_are_idempotent_and_keep_order() {
+    let mut item = issue("item", None, &[]);
+    assert_eq!(item.add_label("bug"), Ok(true));
+    assert_eq!(item.add_label("ui"), Ok(true));
+    assert_eq!(item.add_label("bug"), Ok(false));
+    assert_eq!(item.labels, vec!["bug", "ui"]);
+
+    assert_eq!(item.remove_label("bug"), Ok(true));
+    assert_eq!(item.remove_label("bug"), Ok(false));
+    assert_eq!(item.labels, vec!["ui"]);
+}
+
+#[test]
+fn add_and_remove_reject_invalid_labels_without_changing_the_issue() {
+    let mut item = issue("item", None, &[]);
+    item.labels = vec!["keep".into()];
+    assert_eq!(
+        item.add_label("Bad Label"),
+        Err(LabelError::InvalidCharacter("Bad Label".into()))
+    );
+    assert_eq!(item.remove_label(""), Err(LabelError::Empty));
+    assert_eq!(item.labels, vec!["keep"]);
+}
+
+#[test]
+fn has_labels_requires_every_requested_label() {
+    let mut item = issue("item", None, &[]);
+    item.labels = vec!["bug".into(), "ui".into()];
+    let bug = "bug".to_owned();
+    let ui = "ui".to_owned();
+    let api = "api".to_owned();
+    assert!(item.has_labels(&[]));
+    assert!(item.has_labels(std::slice::from_ref(&bug)));
+    assert!(item.has_labels(&[bug.clone(), ui]));
+    assert!(!item.has_labels(&[bug, api]));
+}
+
+#[test]
+fn collection_validation_reports_labels_that_break_the_rule() {
+    let root = tempfile::tempdir().unwrap();
+    let tasks = tasks_dir(root.path());
+    for status in crate::tasks::STATUSES {
+        fs::create_dir_all(tasks.join(status.as_str())).unwrap();
+    }
+    let folder = tasks.join("todo/item");
+    fs::create_dir_all(&folder).unwrap();
+    let mut item = issue("item", None, &[]);
+    item.labels = vec!["Bad".into(), "ok".into()];
+    write_metadata_unlocked(&folder, &item).unwrap();
+
+    let problems = Issue::validate_collection(&tasks).unwrap();
+    assert_eq!(
+        problems,
+        vec![format!(
+            "item: invalid label: {}",
+            LabelError::InvalidCharacter("Bad".into())
+        )]
+    );
+}
+
 fn issue(id: &str, parent: Option<&str>, depends_on: &[&str]) -> Issue {
     Issue {
         id: id.into(),

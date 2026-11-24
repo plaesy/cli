@@ -8,7 +8,6 @@ publish = false
 description = "Run tugas dan kebijakan persetujuan (ADR 0003: workflow)."
 
 [dependencies]
-sha2 = { workspace = true }
 
-[dev-dependencies]
-tempfile = { workspace = true }
+[lints]
+workspace = true
