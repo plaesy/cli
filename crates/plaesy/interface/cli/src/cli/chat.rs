@@ -1193,8 +1193,15 @@ pub fn run(args: &Args) -> CliResult {
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
     let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 
-    let vault = args.vault.clone();
-    let record = move |decision: &Decision| record_decision(decision, vault.as_deref());
+    // Without --vault, the menus and saved decisions use the vault in settings (`watch_dir`).
+    let vault = args.vault.clone().or_else(|| {
+        chat_hooks::read_settings(&settings_path)
+            .get("watch_dir")
+            .and_then(serde_json::Value::as_str)
+            .map(PathBuf::from)
+    });
+    let record_vault = vault.clone();
+    let record = move |decision: &Decision| record_decision(decision, record_vault.as_deref());
 
     println!("{}", chat_text::banner(lang, &name));
     let stdin = io::stdin();
@@ -1204,7 +1211,7 @@ pub fn run(args: &Args) -> CliResult {
         &open,
         &record,
         &chat_pending::MemoryPending {
-            vault: args.vault.clone(),
+            vault,
             project: args.project.clone(),
             interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
             lang,
