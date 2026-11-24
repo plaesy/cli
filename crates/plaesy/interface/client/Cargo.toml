@@ -3,6 +3,30 @@ name = "plaesy-interface-client"
 version = "0.0.1"
 edition = "2021"
 publish = false
-description = "Permukaan editor flow visual (web dulu, Dioxus). Kerangka: belum ada UI (ADR 0011)."
+description = "Permukaan klien (ADR 0011): adapter HTTP/WS, router shell, dan guard. Fitur web, desktop, mobile."
+
+[features]
+default = []
+web = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
+desktop = []
+mobile = []
 
 [dependencies]
+serde_json = { workspace = true }
+# Renderer web (ADR 0011, delegasi owner: Dioxus). Hanya aktif dengan fitur `web`.
+dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "logger", "macro", "html", "hooks"] }
+# Dipakai langsung oleh makro rsx! yang dihasilkan Dioxus.
+dioxus-signals = { version = "0.7", optional = true }
+# shadcn/ui-style components for Dioxus (diaktifkan dengan fitur `web`).
+dioxus-shadcn = { workspace = true, optional = true }
+
+[[example]]
+name = "web"
+required-features = ["web"]
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+playwright-rs = "=0.21.1"
+tokio = { workspace = true }

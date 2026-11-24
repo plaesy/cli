@@ -1,0 +1,12 @@
+[package]
+name = "plaesy-adapter-pty"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Sesi terminal PTY lokal (ADR 0003: adapter/pty)."
+
+[dependencies]
+portable-pty = { workspace = true }
+thiserror = { workspace = true }

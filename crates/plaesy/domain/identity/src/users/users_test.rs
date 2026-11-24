@@ -133,7 +133,9 @@ fn users_json_round_trip_keeps_authentication() {
     let store = store_with_alice(Role::Operator);
     let restored = UserStore::from_json(&store.to_json().unwrap()).unwrap();
     assert!(restored.authenticate(&UserId::new("alice"), KEY).is_ok());
-    assert!(restored.authenticate(&UserId::new("alice"), OTHER_KEY).is_err());
+    assert!(restored
+        .authenticate(&UserId::new("alice"), OTHER_KEY)
+        .is_err());
     assert_eq!(
         restored.get(&UserId::new("alice")).unwrap().role(),
         Role::Operator

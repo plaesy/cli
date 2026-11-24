@@ -1,0 +1,22 @@
+[package]
+name = "plaesy-adapter-import-code-javascript"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Impor kode JavaScript dan TypeScript (kelas dan enum) menjadi api-ir/1 dengan laporan kehilangan (ADR 0008)."
+
+[dependencies]
+oxc_allocator = "0.159"
+oxc_ast = "0.159"
+oxc_parser = "0.159"
+oxc_span = "0.159"
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+plaesy-domain-api = { path = "../../domain/api" }
+
+[lints]
+workspace = true

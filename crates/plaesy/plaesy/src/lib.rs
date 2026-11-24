@@ -10,7 +10,7 @@ pub use plaesy_adapter_runtime::{adapter, runtime};
 pub use plaesy_analysis::{analyze, graph, reach, validate};
 pub use plaesy_common::{
     common, config, evidence, exclude, expected, files, imagegen, installer, mcpserver, projects,
-    sessions, trimmer,
+    sessions, telemetry, trimmer,
 };
 pub use plaesy_common::{version, VERSION};
 pub use plaesy_designlint::{designlint, evals};

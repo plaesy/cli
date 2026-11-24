@@ -16,7 +16,13 @@ fn users_save_then_load_round_trip_without_plain_key() {
     let path = users_path(dir.path());
     let mut store = UserStore::new();
     store
-        .create(UserId::new("alice"), "Alice", Role::Admin, KEY, "0123456789abcdef")
+        .create(
+            UserId::new("alice"),
+            "Alice",
+            Role::Admin,
+            KEY,
+            "0123456789abcdef",
+        )
         .unwrap();
     save_users(&path, &store).unwrap();
 
@@ -29,7 +35,10 @@ fn users_save_then_load_round_trip_without_plain_key() {
         .expect("correct key verifies after reload");
     assert_eq!(user.role(), Role::Admin);
     assert!(loaded
-        .authenticate(&UserId::new("alice"), "fake-wrong-key-zzzzzzzzzzzzzzzzzzzzzzzzzz")
+        .authenticate(
+            &UserId::new("alice"),
+            "fake-wrong-key-zzzzzzzzzzzzzzzzzzzzzzzzzz"
+        )
         .is_err());
 }
 

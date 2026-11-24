@@ -16,7 +16,7 @@ pub fn export_jsonl(log: &AuditLog, secrets: &SecretStore) -> String {
             "reason": event.reason,
         })
         .to_string();
-        out.push_str(&secrets.redact(&line));
+        out.push_str(&secrets.redact_all(&line));
         out.push('\n');
     }
     out
