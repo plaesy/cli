@@ -29,6 +29,10 @@ pub trait PendingStore {
     fn list(&self) -> Result<String, String>;
     /// Marks the question as answered with the option at 1-based `choice`.
     fn answer(&self, id: &str, choice: usize) -> Result<String, String>;
+    /// `/decisions`: every visible decision with its status.
+    fn list_decisions(&self) -> Result<String, String>;
+    /// `/decisions delete <id>`: archives the note. It stays in the vault and leaves the default list.
+    fn archive(&self, id: &str) -> Result<String, String>;
     /// `/pending` in a terminal: pick a question and an option with the keyboard. Stores that
     /// cannot prompt fall back to the plain list.
     fn menu(&self) -> Result<String, String> {
@@ -42,6 +46,8 @@ pub struct Listed {
     pub id: String,
     pub title: String,
     pub path: String,
+    #[serde(default)]
+    pub status: String,
 }
 
 /// Reads the listing JSON. Anything else is an error.
@@ -176,6 +182,37 @@ pub fn update_args(sha: &str, path: &str, vault: Option<&Path>) -> Vec<String> {
     args
 }
 
+/// `plaesy memory [--vault V] decisions --format json [--project P]`: every decision the index
+/// shows by default (proposed and active).
+pub fn list_all_args(vault: Option<&Path>, project: Option<&str>) -> Vec<String> {
+    let mut args = memory_prefix(vault);
+    args.extend([
+        "decisions".to_owned(),
+        "--format".to_owned(),
+        "json".to_owned(),
+    ]);
+    if let Some(project) = project {
+        args.push("--project".to_owned());
+        args.push(project.to_owned());
+    }
+    args
+}
+
+/// `plaesy memory [--vault V] archive --if-match <sha> --reason obsolete --yes <path>`.
+pub fn archive_args(sha: &str, path: &str, vault: Option<&Path>) -> Vec<String> {
+    let mut args = memory_prefix(vault);
+    args.extend([
+        "archive".to_owned(),
+        "--if-match".to_owned(),
+        sha.to_owned(),
+        "--reason".to_owned(),
+        "obsolete".to_owned(),
+        "--yes".to_owned(),
+        path.to_owned(),
+    ]);
+    args
+}
+
 fn memory_prefix(vault: Option<&Path>) -> Vec<String> {
     let mut args = vec!["memory".to_owned()];
     if let Some(vault) = vault {
@@ -244,6 +281,53 @@ impl MemoryPending {
 }
 
 impl PendingStore for MemoryPending {
+    fn list_decisions(&self) -> Result<String, String> {
+        let root = self.vault_root()?;
+        let items: Vec<Listed> = parse_listing(&run_memory(
+            &list_all_args(self.vault.as_deref(), self.project.as_deref()),
+            None,
+        )?)?
+        .into_iter()
+        .filter(|item| root.join(&item.path).is_file())
+        .collect();
+        if items.is_empty() {
+            return Ok("no decisions".to_owned());
+        }
+        Ok(items
+            .iter()
+            .map(|item| format!("{} [{}] {}", item.id, item.status, item.title))
+            .collect::<Vec<_>>()
+            .join(
+                "
+",
+            ))
+    }
+
+    fn archive(&self, id: &str) -> Result<String, String> {
+        let item = parse_listing(&run_memory(
+            &list_all_args(self.vault.as_deref(), self.project.as_deref()),
+            None,
+        )?)?
+        .into_iter()
+        .find(|item| item.id == id)
+        .ok_or_else(|| format!("no decision {id}"))?;
+        let fingerprint = run_memory(
+            &[
+                memory_prefix(self.vault.as_deref()),
+                vec!["fingerprint".to_owned(), item.path.clone()],
+            ]
+            .concat(),
+            None,
+        )?;
+        let sha = fingerprint
+            .split_whitespace()
+            .next()
+            .filter(|token| token.len() == 64)
+            .ok_or_else(|| format!("no fingerprint for {}", item.path))?;
+        run_memory(&archive_args(sha, &item.path, self.vault.as_deref()), None)?;
+        Ok(format!("{id} archived"))
+    }
+
     fn menu(&self) -> Result<String, String> {
         if !self.interactive {
             return self.list();

@@ -64,6 +64,31 @@ struct MemoryStore {
 }
 
 impl chat_pending::PendingStore for MemoryStore {
+    fn list_decisions(&self) -> Result<String, String> {
+        let items = self.items.lock().expect("items");
+        if items.is_empty() {
+            return Ok("no decisions".to_owned());
+        }
+        Ok(items
+            .iter()
+            .map(|(id, question, _)| format!("{id} [proposed] {question}"))
+            .collect::<Vec<_>>()
+            .join(
+                "
+",
+            ))
+    }
+
+    fn archive(&self, id: &str) -> Result<String, String> {
+        let mut items = self.items.lock().expect("items");
+        let before = items.len();
+        items.retain(|(item_id, _, _)| item_id != id);
+        if items.len() == before {
+            return Err(format!("no decision {id}"));
+        }
+        Ok(format!("{id} archived"))
+    }
+
     fn ask(&self, question: &str, options: &[String]) -> Result<String, String> {
         let mut items = self.items.lock().expect("items");
         let id = format!("decision-{}", items.len() + 1);
@@ -219,10 +244,7 @@ fn parse_input_recognises_decision_with_raw_rest() {
         Input::Decision("a | b | c".to_owned())
     );
     assert_eq!(parse_input("/decision"), Input::Decision(String::new()));
-    assert_eq!(
-        parse_input("/decisions"),
-        Input::Decisions(String::new())
-    );
+    assert_eq!(parse_input("/decisions"), Input::Decisions(String::new()));
 }
 
 #[test]
@@ -464,4 +486,54 @@ fn provider_without_name_prints_usage() {
     let (first, _) = fake("a", "x");
     let out = run_session(first, &no_open, "/provider\n/exit\n");
     assert!(out.contains("usage: /provider <name>"));
+}
+
+#[test]
+fn decisions_lists_proposed_items_and_archive_removes_them() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/ask Q? | a | b\n/decisions\n/decisions delete decision-1\n/decisions\n/exit\n",
+    );
+    assert!(
+        out.contains("decision-1 [proposed] Q?"),
+        "output was: {out}"
+    );
+    assert!(out.contains("decision-1 archived"), "output was: {out}");
+    assert!(
+        out.contains("no decisions"),
+        "archived item leaves the list: {out}"
+    );
+}
+
+#[test]
+fn decisions_delete_of_unknown_id_is_reported() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &store,
+        "/decisions delete nope\n/exit\n",
+    );
+    assert!(out.contains("error: no decision nope"), "output was: {out}");
+}
+
+#[test]
+fn decisions_with_text_still_saves_a_decision() {
+    let (provider, _) = fake("a", "x");
+    let store = MemoryStore::default();
+    let out = run_with_store(
+        provider,
+        &no_open,
+        &|_| Ok("decision note saved".to_owned()),
+        &store,
+        "/decisions jangan full test workspace\n/exit\n",
+    );
+    assert!(out.contains("decision note saved"), "output was: {out}");
 }

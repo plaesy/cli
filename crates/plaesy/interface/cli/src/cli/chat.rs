@@ -327,7 +327,15 @@ pub fn converse(
             },
             Input::Decisions(text) => {
                 if text.is_empty() {
-                    writeln!(out, "usage: /decisions <teks keputusan>")?;
+                    match pending.list_decisions() {
+                        Ok(list) => writeln!(out, "{list}")?,
+                        Err(err) => writeln!(out, "error: {err}")?,
+                    }
+                } else if let Some(id) = text.strip_prefix("delete ") {
+                    match pending.archive(id.trim()) {
+                        Ok(done) => writeln!(out, "{done}")?,
+                        Err(err) => writeln!(out, "error: {err}")?,
+                    }
                 } else {
                     let decision = Decision {
                         title: text.clone(),

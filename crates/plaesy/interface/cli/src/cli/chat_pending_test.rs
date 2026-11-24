@@ -48,6 +48,7 @@ fn parse_listing_reads_the_memory_json_shape() {
             id: "decision-1".to_owned(),
             title: "Q?".to_owned(),
             path: "decisions/q.md".to_owned(),
+            status: "proposed".to_owned(),
         }]
     );
 }
