@@ -1,0 +1,25 @@
+[package]
+name = "plaesy-interface-http"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Antarmuka HTTP untuk dokumen (ADR 0003: interface/http). Di atas port DocumentStore."
+
+[dependencies]
+plaesy-service = { path = "../../service" }
+plaesy-domain-api = { path = "../../domain/api" }
+plaesy-adapter-codegen-js = { path = "../../adapter/codegen-js" }
+plaesy-adapter-codegen-go = { path = "../../adapter/codegen-go" }
+axum = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
+tokio = { workspace = true }
+tower = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

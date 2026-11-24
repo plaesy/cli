@@ -1,0 +1,14 @@
+[package]
+name = "plaesy-plugin-sdk"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "SDK plugin: manifest, kapabilitas, dan host yang memberi izin sebelum memuat (ADR 0003: plugin/sdk)."
+
+[dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
