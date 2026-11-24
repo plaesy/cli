@@ -28,15 +28,17 @@ pub fn group_by_status(refs: &[TaskRef]) -> Vec<(Status, Vec<&TaskRef>)> {
 /// Shortens `text` to at most `max_chars` characters, counting `char`s rather than bytes.
 /// A shortened text ends with `…` and still fits in `max_chars`.
 pub fn truncate_title(text: &str, max_chars: usize) -> String {
-    let text = text.trim();
-    if text.chars().count() <= max_chars {
-        return text.to_owned();
+    // Collapse whitespace runs so a title never breaks the one-line card.
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if flat.chars().count() <= max_chars {
+        return flat;
     }
     if max_chars == 0 {
         return String::new();
     }
-    let kept: String = text.chars().take(max_chars - 1).collect();
-    format!("{kept}…")
+    let kept: String = flat.chars().take(max_chars - 1).collect();
+    // Drop the space left before the ellipsis so the cut never reads "gamma …".
+    format!("{}…", kept.trim_end())
 }
 
 /// The text a card shows before truncation: its title, or its name when the title is empty.
