@@ -287,3 +287,35 @@ pub fn task_done(lang: Lang, id: &str) -> String {
 #[cfg(test)]
 #[path = "chat_text_test.rs"]
 mod chat_text_test;
+
+pub fn advisor_usage(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "usage: /advisor <question>",
+        "pemakaian: /advisor <pertanyaan>",
+    )
+}
+
+pub fn advisor_not_set(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "no advisor set; add chat.advisor to settings.json",
+        "belum ada advisor; tambahkan chat.advisor di settings.json",
+    )
+}
+
+pub fn council_usage(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "usage: /council <question>",
+        "pemakaian: /council <pertanyaan>",
+    )
+}
+
+pub fn council_empty(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "no enabled providers for the council",
+        "tidak ada provider aktif untuk council",
+    )
+}

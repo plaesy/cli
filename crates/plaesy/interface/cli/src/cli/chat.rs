@@ -235,6 +235,10 @@ pub struct ChatSettings {
     pub agent_name: String,
     /// Peer agents and sessions offered by `@` (`agent.peers` in settings.json).
     pub peers: Vec<String>,
+    /// Provider `/advisor` asks (`chat.advisor` in settings.json).
+    pub advisor: Option<String>,
+    /// Providers `/council` asks, in configuration order.
+    pub council: Vec<String>,
 }
 
 /// One line typed at the prompt.
@@ -277,6 +281,10 @@ pub enum Input {
     Goal(String),
     /// `/compact` replaces the transcript with one summary written by the provider
     Compact,
+    /// `/advisor <question>`: the advisor provider reviews the conversation and the question
+    Advisor(String),
+    /// `/council <question>`: every enabled provider answers the question on its own
+    Council(String),
     Message(String),
 }
 
@@ -297,6 +305,18 @@ pub fn parse_input(line: &str) -> Input {
     }
     if let Some(rest) = text.strip_prefix("/goal ") {
         return Input::Goal(rest.trim().to_owned());
+    }
+    if text == "/advisor" {
+        return Input::Advisor(String::new());
+    }
+    if let Some(rest) = text.strip_prefix("/advisor ") {
+        return Input::Advisor(rest.trim().to_owned());
+    }
+    if text == "/council" {
+        return Input::Council(String::new());
+    }
+    if let Some(rest) = text.strip_prefix("/council ") {
+        return Input::Council(rest.trim().to_owned());
     }
     for (command, make) in [
         ("/ask", Input::Ask as fn(String) -> Input),
@@ -754,6 +774,80 @@ pub fn converse(
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 }
             }
+            Input::Advisor(question) => {
+                if question.is_empty() {
+                    writeln!(out, "{}", chat_text::advisor_usage(lang))?;
+                    continue;
+                }
+                let Some(name) = settings.advisor.clone() else {
+                    writeln!(out, "{}", chat_text::advisor_not_set(lang))?;
+                    continue;
+                };
+                let advisor = match open(&name) {
+                    Ok(advisor) => advisor,
+                    Err(err) => {
+                        writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?;
+                        continue;
+                    }
+                };
+                // The advisor sees the whole conversation so far, then the question.
+                let mut messages = vec![Message::system(
+                    "Anda adalah reviewer. Tinjau percakapan berikut dan jawab pertanyaan \
+                     terakhir dengan jujur: sebutkan risiko, celah, dan langkah yang disarankan."
+                        .to_owned(),
+                )];
+                messages.extend(transcript.history());
+                messages.push(Message::user(question));
+                let request = Request {
+                    prompt: String::new(),
+                    max_output_tokens: settings.max_tokens,
+                    timeout: settings.timeout,
+                    dir: String::new(),
+                };
+                match delegate::run_messages(advisor.as_ref(), &messages, &request) {
+                    Ok(response) => {
+                        writeln!(out, "[advisor {name}]")?;
+                        writeln!(out, "{}", response.text)?;
+                    }
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                }
+            }
+            Input::Council(question) => {
+                if question.is_empty() {
+                    writeln!(out, "{}", chat_text::council_usage(lang))?;
+                    continue;
+                }
+                if settings.council.is_empty() {
+                    writeln!(out, "{}", chat_text::council_empty(lang))?;
+                    continue;
+                }
+                let request = Request {
+                    prompt: String::new(),
+                    max_output_tokens: settings.max_tokens,
+                    timeout: settings.timeout,
+                    dir: String::new(),
+                };
+                // Each member answers alone, without the conversation, so the answers stay independent.
+                for name in settings.council.clone() {
+                    let member = match open(&name) {
+                        Ok(member) => member,
+                        Err(err) => {
+                            writeln!(out, "[{name}] {}", chat_text::error(lang, &err.to_string()))?;
+                            continue;
+                        }
+                    };
+                    let messages = vec![Message::user(question.clone())];
+                    match delegate::run_messages(member.as_ref(), &messages, &request) {
+                        Ok(response) => {
+                            writeln!(out, "[{name}]")?;
+                            writeln!(out, "{}", response.text)?;
+                        }
+                        Err(err) => {
+                            writeln!(out, "[{name}] {}", chat_text::error(lang, &err.to_string()))?
+                        }
+                    }
+                }
+            }
             Input::Pending => match pending.menu() {
                 Ok(text) => writeln!(out, "{text}")?,
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
@@ -953,6 +1047,19 @@ pub fn run(args: &Args) -> CliResult {
     } else {
         default_provider(&cfg)?
     };
+    // `chat.advisor` names the reviewer for /advisor; the repository setting wins over the user's.
+    let advisor = [
+        args.path.join(".plaesy").join("settings.json"),
+        settings_path.clone(),
+    ]
+    .iter()
+    .find_map(|path| {
+        chat_hooks::read_settings(path)
+            .get("chat")
+            .and_then(|chat| chat.get("advisor"))
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    });
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
     let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 
@@ -987,6 +1094,13 @@ pub fn run(args: &Args) -> CliResult {
             plugins: plugins.clone(),
             agent_name: agent_name.clone(),
             peers: peers.clone(),
+            advisor: advisor.clone(),
+            council: cfg
+                .providers
+                .iter()
+                .filter(|p| p.enabled)
+                .map(|p| p.name.clone())
+                .collect(),
         },
         stdin.lock(),
         &mut stdout,

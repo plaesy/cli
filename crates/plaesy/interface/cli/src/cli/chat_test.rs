@@ -168,6 +168,8 @@ fn run_with_store(
             plugins: Vec::new(),
             agent_name: "chat".to_owned(),
             peers: Vec::new(),
+            advisor: None,
+            council: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -651,6 +653,8 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
         peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -695,6 +699,8 @@ fn role_command_switches_and_refuses_unknown_names() {
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
         peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -792,4 +798,112 @@ fn compact_with_no_history_says_so_and_calls_nothing() {
 
     assert!(out.contains("nothing to compact"));
     assert!(seen.lock().expect("seen").is_empty());
+}
+
+fn run_with_members(
+    first: Box<dyn Provider>,
+    open: &ProviderOpener<'_>,
+    advisor: Option<&str>,
+    council: &[&str],
+    script: &str,
+) -> String {
+    let mut out = Vec::new();
+    converse(
+        first,
+        open,
+        &|_| Ok(String::new()),
+        &MemoryStore::default(),
+        ChatSettings {
+            timeout: Duration::from_secs(5),
+            max_tokens: 0,
+            lang: Lang::En,
+            repo: PathBuf::from("."),
+            interactive: false,
+            hooks: Vec::new(),
+            approved: Vec::new(),
+            mcp_servers: Vec::new(),
+            roles: Vec::new(),
+            role: "default".to_owned(),
+            skills_dir: PathBuf::from("."),
+            plugins: Vec::new(),
+            agent_name: "chat".to_owned(),
+            peers: Vec::new(),
+            advisor: advisor.map(str::to_owned),
+            council: council.iter().map(|name| (*name).to_owned()).collect(),
+        },
+        Cursor::new(script.to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    String::from_utf8(out).expect("utf8 output")
+}
+
+#[test]
+fn advisor_and_council_parse_their_questions() {
+    assert_eq!(parse_input("/advisor"), Input::Advisor(String::new()));
+    assert_eq!(
+        parse_input("/advisor apa risikonya?"),
+        Input::Advisor("apa risikonya?".to_owned())
+    );
+    assert_eq!(parse_input("/council"), Input::Council(String::new()));
+    assert_eq!(
+        parse_input("/council pilih a atau b"),
+        Input::Council("pilih a atau b".to_owned())
+    );
+}
+
+#[test]
+fn advisor_without_a_setting_says_so_and_calls_nothing() {
+    let (provider, seen) = fake("a", "tidak dipanggil");
+    let out = run_with_members(provider, &no_open, None, &[], "/advisor apa?\n/exit\n");
+
+    assert!(out.contains("no advisor set"));
+    assert!(seen.lock().expect("seen").is_empty());
+}
+
+#[test]
+fn advisor_reviews_through_its_own_provider() {
+    let (provider, _) = fake("a", "jawab");
+    let open =
+        |name: &str| -> Result<Box<dyn Provider>, String> { Ok(fake(name, "saran: uji dulu").0) };
+    let out = run_with_members(
+        provider,
+        &open,
+        Some("reviewer"),
+        &[],
+        "pertama\n/advisor apa risikonya?\n/exit\n",
+    );
+
+    assert!(out.contains("[advisor reviewer]"));
+    assert!(out.contains("saran: uji dulu"));
+}
+
+#[test]
+fn council_asks_every_member_separately() {
+    let (provider, _) = fake("a", "tidak dipakai");
+    let open = |name: &str| -> Result<Box<dyn Provider>, String> {
+        Ok(fake(name, &format!("jawab {name}")).0)
+    };
+    let out = run_with_members(
+        provider,
+        &open,
+        None,
+        &["satu", "dua"],
+        "/council pilih?\n/exit\n",
+    );
+
+    assert!(out.contains("[satu]") && out.contains("jawab satu"));
+    assert!(out.contains("[dua]") && out.contains("jawab dua"));
+    assert!(
+        !out.contains("tidak dipakai"),
+        "council does not use the current provider"
+    );
+}
+
+#[test]
+fn council_with_no_members_says_so() {
+    let (provider, _) = fake("a", "x");
+    let out = run_with_members(provider, &no_open, None, &[], "/council pilih?\n/exit\n");
+
+    assert!(out.contains("no enabled providers for the council"));
 }
