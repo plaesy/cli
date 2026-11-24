@@ -5,6 +5,7 @@
 //! goes and tests can capture it.
 
 pub mod banner;
+pub mod disk;
 pub mod git;
 pub mod log;
 pub mod validate;

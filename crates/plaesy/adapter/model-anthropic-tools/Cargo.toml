@@ -1,0 +1,16 @@
+[package]
+name = "plaesy-adapter-model-anthropic-tools"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Model Anthropic Messages API dengan loop tool_use untuk ACP. Opt-in: melanggar aturan offline (CLAUDE.md)."
+
+[dependencies]
+plaesy-interface-acp = { path = "../../interface/acp" }
+serde_json = { workspace = true }
+ureq = { workspace = true }
+
+[lints]
+workspace = true

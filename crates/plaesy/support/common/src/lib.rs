@@ -1,17 +1,22 @@
 //! Utilitas bersama, konfigurasi, dan VERSION.
 
+pub mod chat_webhook;
 pub mod common;
 pub mod config;
 pub mod evidence;
 pub mod exclude;
 pub mod expected;
+pub mod export;
+pub mod sse;
 pub mod files;
 pub mod imagegen;
 pub mod installer;
 pub mod mcpserver;
 pub mod projects;
 pub mod sessions;
+pub mod telemetry;
 pub mod trimmer;
+pub mod workspaces;
 pub mod voice;
 
 /// Release version, read from the repository-root `VERSION` file at build time.
