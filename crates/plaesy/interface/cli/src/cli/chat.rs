@@ -86,7 +86,11 @@ pub fn decision_args(decision: &Decision, vault: Option<&Path>, id: &str) -> Vec
         args.push("--vault".to_owned());
         args.push(vault.display().to_string());
     }
-    let body = format!("Pilihan: {}\n\nAlasan: {}\n", decision.chosen, decision.why);
+    let body = if decision.why.is_empty() {
+        format!("Keputusan: {}\n", decision.chosen)
+    } else {
+        format!("Pilihan: {}\n\nAlasan: {}\n", decision.chosen, decision.why)
+    };
     args.extend([
         "remember".to_owned(),
         decision.title.clone(),

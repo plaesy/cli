@@ -605,3 +605,16 @@ fn decisions_delete_without_id_prints_usage_and_saves_nothing() {
         "must not save as a decision: {out}"
     );
 }
+
+#[test]
+fn single_statement_decision_body_says_keputusan_not_an_empty_alasan() {
+    let statement = Decision {
+        title: "Uji".to_owned(),
+        chosen: "Uji".to_owned(),
+        why: String::new(),
+    };
+    let args = decision_args(&statement, None, "decision-x");
+    let body = args.iter().find(|a| a.starts_with("Keputusan:")).cloned();
+    assert_eq!(body.as_deref(), Some("Keputusan: Uji\n"), "args: {args:?}");
+    assert!(!args.iter().any(|a| a.contains("Alasan:")));
+}

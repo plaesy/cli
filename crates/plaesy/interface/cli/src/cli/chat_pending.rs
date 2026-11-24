@@ -201,6 +201,8 @@ pub fn rewrite_decision(content: &str, text: &str) -> String {
             format!("# {text}")
         } else if line.starts_with("Keputusan: ") {
             format!("Keputusan: {text}")
+        } else if line.starts_with("Pilihan: ") {
+            format!("Pilihan: {text}")
         } else {
             line.to_owned()
         };
