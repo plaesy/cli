@@ -6,6 +6,7 @@ pub mod advisor;
 pub mod analyze;
 pub mod approvals;
 pub mod audit;
+pub mod chat;
 pub mod codegen_cmd;
 pub mod common;
 pub mod dashboard;
@@ -28,6 +29,7 @@ pub mod reach;
 pub mod relay;
 pub mod remote;
 pub mod sessions;
+pub mod skills;
 pub mod status;
 pub mod tasks;
 pub mod tasks_board;
@@ -38,7 +40,6 @@ pub mod tasks_label;
 pub mod tasks_run;
 pub mod tasks_validate;
 pub mod telemetry;
-pub mod skills;
 pub mod trim;
 pub mod validate;
 pub mod voice;
@@ -112,6 +113,8 @@ pub enum Command {
     Trim(trim::Args),
     /// List and copy skills between agent providers (claude, codex, agents, hermes)
     Skills(skills::Args),
+    /// Interactive multi-turn chat with a configured provider (/provider, /clear, /exit)
+    Chat(chat::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
     /// Durable, acknowledged direct messaging between agents
@@ -164,6 +167,7 @@ impl Command {
             Self::Doctor(_) => "doctor",
             Self::Trim(_) => "trim",
             Self::Skills(_) => "skills",
+            Self::Chat(_) => "chat",
             Self::Images(_) => "images",
             Self::Relay(_) => "relay",
             Self::Files(_) => "files",
@@ -263,6 +267,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Doctor(args) => doctor::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Skills(args) => skills::run(&args),
+        Command::Chat(args) => chat::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Relay(args) => relay::run(&args),
         Command::Audit(args) => audit::run(&args),

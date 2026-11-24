@@ -202,3 +202,102 @@ fn cli_provider_runs_a_local_command_with_the_prompt_on_stdin() {
         .unwrap();
     assert_eq!(reply.text, "hello there");
 }
+
+#[test]
+fn anthropic_body_sends_the_whole_conversation() {
+    let messages = vec![
+        Message::user("satu"),
+        Message::assistant("dua"),
+        Message::user("tiga"),
+    ];
+    let body = anthropic_body("claude-x", 256, &messages);
+    assert_eq!(body["model"], "claude-x");
+    assert_eq!(body["max_tokens"], 256);
+    assert_eq!(
+        body["messages"],
+        json!([
+            { "role": "user", "content": "satu" },
+            { "role": "assistant", "content": "dua" },
+            { "role": "user", "content": "tiga" },
+        ])
+    );
+}
+
+#[test]
+fn anthropic_reply_joins_text_blocks_and_reads_usage() {
+    let reply = json!({
+        "content": [
+            { "type": "text", "text": "halo " },
+            { "type": "tool_use", "name": "x" },
+            { "type": "text", "text": "dunia" },
+        ],
+        "usage": { "input_tokens": 7, "output_tokens": 3 },
+    });
+    let got = anthropic_reply(&reply);
+    assert_eq!(got.text, "halo dunia");
+    assert_eq!(got.input_tokens, Some(7));
+    assert_eq!(got.output_tokens, Some(3));
+}
+
+#[test]
+fn ollama_body_uses_chat_messages_without_streaming() {
+    let messages = vec![
+        Message::user("a"),
+        Message::assistant("b"),
+        Message::user("c"),
+    ];
+    let body = ollama_body("llama", 64, &messages);
+    assert_eq!(body["stream"], false);
+    assert_eq!(body["options"]["num_predict"], 64);
+    assert_eq!(
+        body["messages"][1],
+        json!({ "role": "assistant", "content": "b" })
+    );
+    assert!(
+        body.get("prompt").is_none(),
+        "chat API takes messages, not prompt"
+    );
+}
+
+#[test]
+fn ollama_reply_reads_message_content_and_counts() {
+    let reply = json!({
+        "message": { "role": "assistant", "content": "  jawab  " },
+        "prompt_eval_count": 11,
+        "eval_count": 4,
+    });
+    let got = ollama_reply(&reply);
+    assert_eq!(got.text, "jawab");
+    assert_eq!(got.input_tokens, Some(11));
+    assert_eq!(got.output_tokens, Some(4));
+}
+
+#[test]
+fn openai_body_and_reply_round_trip_a_conversation() {
+    let messages = vec![
+        Message::user("q"),
+        Message::assistant("a"),
+        Message::user("r"),
+    ];
+    let body = openai_body("gpt-x", 0, &messages);
+    assert_eq!(
+        body["messages"][2],
+        json!({ "role": "user", "content": "r" })
+    );
+    assert_eq!(body["max_tokens"], 0);
+
+    let reply = json!({
+        "choices": [{ "message": { "role": "assistant", "content": " ok " } }],
+        "usage": { "prompt_tokens": 5, "completion_tokens": 2 },
+    });
+    let got = openai_reply("p", &reply).expect("reply has a choice");
+    assert_eq!(got.text, "ok");
+    assert_eq!(got.input_tokens, Some(5));
+    assert_eq!(got.output_tokens, Some(2));
+}
+
+#[test]
+fn openai_reply_without_choices_is_terminal() {
+    let err = openai_reply("p", &json!({ "choices": [] })).expect_err("no choice");
+    assert_eq!(err.class, Class::Terminal);
+}
