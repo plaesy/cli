@@ -26,7 +26,9 @@ Command behavior and options are described in the pages below. The executable is
 | `tasks` | [Task lifecycle](tasks.md) |
 | `trim` | [Trim context and output](trim.md) |
 | `uninstall` | [Uninstall](uninstall.md) |
+| `update` | [Update check](install.md#update---check) |
 | `upgrade` | [Upgrade](upgrade.md) |
 | `validate` | [Validation](validate.md) |
+| `version` | [Version](install.md#version) |
 
 Commands may have nested subcommands; see the individual reference and the command's `--help` output. For setup and navigation across the complete documentation tree, see the [documentation index](../README.md).

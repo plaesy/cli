@@ -1,0 +1,19 @@
+[package]
+name = "plaesy-adapter-sqlite"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+publish = false
+description = "Penyimpanan dokumen SQLite dengan migrasi saat dibuka (adapter untuk port DocumentStore)."
+
+[dependencies]
+plaesy-service = { path = "../../service" }
+rusqlite = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

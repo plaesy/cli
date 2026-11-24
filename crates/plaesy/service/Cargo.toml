@@ -13,3 +13,6 @@ plaesy-domain-api = { path = "../domain/api" }
 plaesy-domain-app = { path = "../domain/app" }
 plaesy-domain-design = { path = "../domain/design" }
 serde_json = "1"
+
+[lints]
+workspace = true

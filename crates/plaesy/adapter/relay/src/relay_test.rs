@@ -296,7 +296,9 @@ fn stale_release_token_is_ignored_and_oversized_error_is_rejected() {
     let claimed = store.claim_next("b", 60).unwrap().unwrap();
     let token = claimed.lease_owner.unwrap();
     assert_eq!(
-        store.release_claim("stale-1", "b", "other-token", "x").unwrap(),
+        store
+            .release_claim("stale-1", "b", "other-token", "x")
+            .unwrap(),
         None
     );
     assert!(matches!(

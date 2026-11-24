@@ -60,8 +60,8 @@ Keep one database per model if you want to compare them.
 
 ## Configuration
 
-Layering (later wins): defaults → `Plaesy/settings.json` from `memory onboard` →
-`~/.hermes/memory.toml` → `.plaesy/memory.toml` → environment. Partial files are
+Layering (later wins): defaults → `.plaesy/settings.json` from `plaesy onboard` (home folder) →
+`.plaesy/settings.json` → environment. Partial files are
 fine; only the keys you set are overridden. The settings file is under the
 platform's local application data folder, or under `PLAESY_ROOT` when set.
 

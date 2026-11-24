@@ -10,6 +10,7 @@ pub mod auth;
 pub mod keys;
 pub mod shared;
 pub mod transport;
+pub mod users;
 
 const MAX_BODY_BYTES: usize = 64 * 1024;
 const MAX_ERROR_BYTES: usize = 1024;
@@ -323,7 +324,9 @@ impl MessageStore {
         validate_agent(recipient)?;
         validate_id(owner)?;
         if error.len() > MAX_ERROR_BYTES {
-            return Err(MessageError::Invalid("error must be at most 1024 UTF-8 bytes"));
+            return Err(MessageError::Invalid(
+                "error must be at most 1024 UTF-8 bytes",
+            ));
         }
         let now_ms = chrono::Utc::now().timestamp_millis();
         let tx = self
@@ -370,9 +373,7 @@ impl MessageStore {
     /// so choose a retention period longer than any sender's retry window.
     pub fn purge_completed(&mut self, older_than: Duration) -> Result<usize, MessageError> {
         let age_ms = i64::try_from(older_than.as_millis()).unwrap_or(i64::MAX);
-        let cutoff_ms = chrono::Utc::now()
-            .timestamp_millis()
-            .saturating_sub(age_ms);
+        let cutoff_ms = chrono::Utc::now().timestamp_millis().saturating_sub(age_ms);
         let removed = self.connection.execute(
             "DELETE FROM relay_messages WHERE acknowledged_at IS NOT NULL AND acked_at_epoch_ms IS NOT NULL AND acked_at_epoch_ms<=?1",
             params![cutoff_ms],

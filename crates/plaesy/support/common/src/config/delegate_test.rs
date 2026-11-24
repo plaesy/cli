@@ -20,6 +20,14 @@ fn only_the_claude_cli_starts_enabled_and_no_provider_is_billable_except_anthrop
         .map(|p| p.name.as_str())
         .collect();
     assert_eq!(billable, ["anthropic"]);
+    let codex = cfg
+        .providers
+        .iter()
+        .find(|p| p.name == "codex-cli")
+        .unwrap();
+    assert!(!codex.enabled);
+    assert_eq!(codex.command, "codex");
+    assert_eq!(codex.args, ["exec", "--ephemeral", "-"]);
 }
 
 #[test]
