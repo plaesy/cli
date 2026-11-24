@@ -38,6 +38,9 @@ pub struct Args {
     /// Maximum output tokens per reply; 0 means the provider default
     #[arg(long, default_value_t = 0)]
     pub max_tokens: u32,
+    /// This session's name on the relay. Overrides agent.name in settings.json, so two sessions can differ
+    #[arg(long)]
+    pub agent: Option<String>,
     /// Role to start with: a name from `roles` in settings.json. Default: "default"
     #[arg(long)]
     pub role: Option<String>,
@@ -821,12 +824,14 @@ pub fn run(args: &Args) -> CliResult {
                 .collect()
         })
         .unwrap_or_default();
-    let agent_name = chat_hooks::read_settings(&settings_path)
-        .get("agent")
-        .and_then(|agent| agent.get("name"))
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("chat")
-        .to_owned();
+    let agent_name = args.agent.clone().unwrap_or_else(|| {
+        chat_hooks::read_settings(&settings_path)
+            .get("agent")
+            .and_then(|agent| agent.get("name"))
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("chat")
+            .to_owned()
+    });
     let (mut plugins, mut problems) = chat_plugins::discover(
         &home.join(".plaesy").join("plugins"),
         chat_hooks::Scope::User,
