@@ -161,6 +161,7 @@ fn run_with_store(
             interactive: false,
             hooks: Vec::new(),
             approved: Vec::new(),
+            mcp_servers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,

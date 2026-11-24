@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::chat_hooks;
+use super::chat_mcp;
 use super::chat_pending;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
@@ -200,6 +201,8 @@ pub struct ChatSettings {
     pub hooks: Vec<chat_hooks::HookSpec>,
     /// Fingerprints of repository hooks the owner approved.
     pub approved: Vec<String>,
+    /// MCP servers from the repository and the user.
+    pub mcp_servers: Vec<chat_mcp::McpServer>,
 }
 
 /// One line typed at the prompt.
@@ -222,6 +225,8 @@ pub enum Input {
     Pending,
     /// `/tasks`: the task folders, as a menu in a terminal
     Tasks,
+    /// `/mcp` lists servers; `/mcp call <server> <tool> <json>` calls an allowed tool
+    Mcp(String),
     /// `/pick` followed by the raw `<id> <number>` text
     Pick(String),
     Message(String),
@@ -242,6 +247,7 @@ pub fn parse_input(line: &str) -> Input {
     for (command, make) in [
         ("/ask", Input::Ask as fn(String) -> Input),
         ("/pick", Input::Pick as fn(String) -> Input),
+        ("/mcp", Input::Mcp as fn(String) -> Input),
     ] {
         if let Some(rest) = text
             .strip_prefix(command)
@@ -360,6 +366,38 @@ pub fn converse(
                 },
                 Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
+            Input::Mcp(rest) => {
+                let result = if rest.is_empty() {
+                    Ok(chat_mcp::list_all(
+                        &settings.mcp_servers,
+                        &settings.approved,
+                    ))
+                } else if let Some(call_args) = rest.strip_prefix("call ") {
+                    let mut parts = call_args.trim().splitn(3, ' ');
+                    match (parts.next(), parts.next()) {
+                        (Some(server), Some(tool)) if !server.is_empty() && !tool.is_empty() => {
+                            let json = parts.next().unwrap_or("{}");
+                            match serde_json::from_str::<serde_json::Value>(json) {
+                                Ok(arguments) => chat_mcp::call(
+                                    &settings.mcp_servers,
+                                    &settings.approved,
+                                    server,
+                                    tool,
+                                    arguments,
+                                ),
+                                Err(err) => Err(format!("arguments must be JSON: {err}")),
+                            }
+                        }
+                        _ => Err(chat_text::usage(lang, Usage::Mcp).to_owned()),
+                    }
+                } else {
+                    Err(chat_text::usage(lang, Usage::Mcp).to_owned())
+                };
+                match result {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
             Input::Tasks => {
                 let result = if settings.interactive {
                     chat_tasks::menu(&settings.repo, lang)
@@ -500,6 +538,14 @@ pub fn run(args: &Args) -> CliResult {
         chat_hooks::Scope::User,
     )?);
     let approved = chat_hooks::load_approved(&settings_path.with_file_name("approved-hooks.json"));
+    let mut mcp_servers = chat_mcp::parse_servers(
+        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        chat_hooks::Scope::Repo,
+    )?;
+    mcp_servers.extend(chat_mcp::parse_servers(
+        &chat_hooks::read_settings(&settings_path),
+        chat_hooks::Scope::User,
+    )?);
     let cfg = super::delegate::load_delegate_config(&args.path)?;
     let timeout = crate::reach::duration::parse(&args.timeout)
         .ok_or_else(|| format!("invalid --timeout {:?}", args.timeout))?;
@@ -536,6 +582,7 @@ pub fn run(args: &Args) -> CliResult {
             interactive: std::io::IsTerminal::is_terminal(&io::stdin()),
             hooks: hooks.clone(),
             approved: approved.clone(),
+            mcp_servers: mcp_servers.clone(),
         },
         stdin.lock(),
         &mut stdout,

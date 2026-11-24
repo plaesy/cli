@@ -56,6 +56,7 @@ pub enum Usage {
     Decision,
     DecisionsUpdate,
     DecisionsDelete,
+    Mcp,
     Provider,
 }
 
@@ -82,6 +83,11 @@ pub fn usage(lang: Lang, kind: Usage) -> &'static str {
             "usage: /decisions update <id> <teks baru>",
         ),
         Usage::DecisionsDelete => "usage: /decisions delete <id>",
+        Usage::Mcp => pick(
+            lang,
+            "usage: /mcp | /mcp call <server> <tool> <json>",
+            "usage: /mcp | /mcp call <server> <tool> <json>",
+        ),
         Usage::Provider => "usage: /provider <name>",
     }
 }
