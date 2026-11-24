@@ -3217,6 +3217,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "plaesy-adapter-import-tasks"
+version = "0.0.1"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "plaesy-adapter-memory"
 version = "0.0.1"
 dependencies = [
