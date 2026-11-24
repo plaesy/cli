@@ -13,6 +13,7 @@ use std::time::Duration;
 
 use super::chat_agents;
 use super::chat_hooks;
+use super::chat_lsp;
 use super::chat_mcp;
 use super::chat_pending;
 use super::chat_plugins;
@@ -241,6 +242,8 @@ pub struct ChatSettings {
     pub advisor: Option<String>,
     /// Providers `/council` asks, in configuration order.
     pub council: Vec<String>,
+    /// Language servers for `/lsp` (`lsp.servers` in settings.json).
+    pub lsp_servers: Vec<chat_lsp::Server>,
 }
 
 /// One line typed at the prompt.
@@ -285,6 +288,8 @@ pub enum Input {
     Compact,
     /// `/debug`: what this session is running with, without secrets or transcript text
     Debug,
+    /// `/lsp <definition|references|hover> <file>:<line>:<col>`, read-only
+    Lsp(String),
     /// `/advisor <question>`: the advisor provider reviews the conversation and the question
     Advisor(String),
     /// `/council <question>`: every enabled provider answers the question on its own
@@ -310,6 +315,9 @@ pub fn parse_input(line: &str) -> Input {
     }
     if let Some(rest) = text.strip_prefix("/goal ") {
         return Input::Goal(rest.trim().to_owned());
+    }
+    if let Some(rest) = text.strip_prefix("/lsp ") {
+        return Input::Lsp(rest.trim().to_owned());
     }
     if text == "/advisor" {
         return Input::Advisor(String::new());
@@ -820,6 +828,20 @@ pub fn converse(
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 }
             }
+            Input::Lsp(rest) => {
+                let (action, target) = rest.split_once(' ').unwrap_or((rest.as_str(), ""));
+                let result = chat_lsp::run(
+                    &settings.lsp_servers,
+                    &settings.approved,
+                    &settings.repo,
+                    action,
+                    target.trim(),
+                );
+                match result {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
             Input::Debug => {
                 let repo = settings.repo.display().to_string();
                 let timeout = format!("{:?}", settings.timeout);
@@ -1116,6 +1138,14 @@ pub fn run(args: &Args) -> CliResult {
     } else {
         default_provider(&cfg)?
     };
+    let mut lsp_servers = chat_lsp::parse_servers(
+        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        chat_hooks::Scope::Repo,
+    )?;
+    lsp_servers.extend(chat_lsp::parse_servers(
+        &chat_hooks::read_settings(&settings_path),
+        chat_hooks::Scope::User,
+    )?);
     // `chat.advisor` names the reviewer for /advisor; the repository setting wins over the user's.
     let advisor = [
         args.path.join(".plaesy").join("settings.json"),
@@ -1170,6 +1200,7 @@ pub fn run(args: &Args) -> CliResult {
                 .filter(|p| p.enabled)
                 .map(|p| p.name.clone())
                 .collect(),
+            lsp_servers: lsp_servers.clone(),
         },
         io::BufReader::new(stdin),
         &mut stdout,

@@ -170,6 +170,7 @@ fn run_with_store(
             peers: Vec::new(),
             advisor: None,
             council: Vec::new(),
+            lsp_servers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -655,6 +656,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         peers: Vec::new(),
         advisor: None,
         council: Vec::new(),
+        lsp_servers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -701,6 +703,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         peers: Vec::new(),
         advisor: None,
         council: Vec::new(),
+        lsp_servers: Vec::new(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -830,6 +833,7 @@ fn run_with_members(
             peers: Vec::new(),
             advisor: advisor.map(str::to_owned),
             council: council.iter().map(|name| (*name).to_owned()).collect(),
+            lsp_servers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
