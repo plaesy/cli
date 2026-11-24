@@ -1,17 +1,16 @@
-//! `plaesy tasks board`: the tasks of every spec as text, one section per status column.
+//! `plaesy tasks board`: every spec's tasks as text columns, one per status folder.
 
 use std::path::Path;
 
 use super::CliResult;
 use crate::tasks::{self, Status, TaskRef, STATUSES};
 
-/// Longest title printed in full. Longer titles are cut with `...`.
-pub const TITLE_WIDTH: usize = 60;
+/// Longest title shown on a card, in characters. Longer titles end with `…`.
+pub const MAX_TITLE_CHARS: usize = 60;
 
-/// Groups tasks into the status columns, in lifecycle order. Empty columns are kept so
-/// every status shows up. Inside a column, more urgent priorities come first, then by name.
-#[must_use]
-pub fn columns(refs: &[TaskRef]) -> Vec<(Status, Vec<&TaskRef>)> {
+/// Each status with its tasks, in lifecycle order. Every status appears, even when empty.
+/// Inside a column, tasks are ordered by priority prefix; ties keep their name order.
+pub fn group_by_status(refs: &[TaskRef]) -> Vec<(Status, Vec<&TaskRef>)> {
     STATUSES
         .into_iter()
         .map(|status| {
@@ -26,53 +25,64 @@ pub fn columns(refs: &[TaskRef]) -> Vec<(Status, Vec<&TaskRef>)> {
         .collect()
 }
 
-/// Collapses whitespace runs to single spaces, then cuts the text to at most `max_chars`
-/// characters. A cut text ends with `...`, and the cut never splits a character.
-#[must_use]
+/// Shortens `text` to at most `max_chars` characters, counting `char`s rather than bytes.
+/// A shortened text ends with `…` and still fits in `max_chars`.
 pub fn truncate_title(text: &str, max_chars: usize) -> String {
-    const ELLIPSIS: &str = "...";
+    // Collapse whitespace runs so a title never breaks the one-line card.
     let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if flat.chars().count() <= max_chars {
         return flat;
     }
-    if max_chars <= ELLIPSIS.len() {
-        return flat.chars().take(max_chars).collect();
+    if max_chars == 0 {
+        return String::new();
     }
-    let kept: String = flat.chars().take(max_chars - ELLIPSIS.len()).collect();
-    format!("{}{ELLIPSIS}", kept.trim_end())
+    let kept: String = flat.chars().take(max_chars - 1).collect();
+    // Drop the space left before the ellipsis so the cut never reads "gamma …".
+    format!("{}…", kept.trim_end())
 }
 
-/// Renders the board as text: a header with the total, then one section per status with its
-/// count and one line per task. A task shows its title (or its name when the title is empty),
-/// cut to `title_width` characters, followed by its name.
-#[must_use]
-pub fn render(refs: &[TaskRef], title_width: usize) -> String {
-    let mut out = format!("Task Board ({} tasks)\n", refs.len());
-    for (status, column) in columns(refs) {
-        out.push_str(&format!("\n{status} ({})\n", column.len()));
+/// The text a card shows before truncation: its title, or its name when the title is empty.
+fn card_title(task: &TaskRef) -> &str {
+    if task.title.trim().is_empty() {
+        &task.name
+    } else {
+        &task.title
+    }
+}
+
+/// The board as lines of text: a header, then one section per status column.
+pub fn render_board(refs: &[TaskRef]) -> Vec<String> {
+    let mut lines = vec![
+        format!("📋 Task Board ({} tasks)", refs.len()),
+        String::new(),
+    ];
+    for (status, column) in group_by_status(refs) {
+        lines.push(format!("{status} ({})", column.len()));
         if column.is_empty() {
-            out.push_str("  (none)\n");
+            lines.push("  (none)".to_owned());
         }
         for task in column {
-            let label = if task.title.trim().is_empty() {
-                &task.name
-            } else {
-                &task.title
-            };
-            out.push_str(&format!(
-                "  - {} ({})\n",
-                truncate_title(label, title_width),
-                task.name
+            lines.push(format!(
+                "  - {}",
+                truncate_title(card_title(task), MAX_TITLE_CHARS)
             ));
+            lines.push(format!("    {}", task.name));
         }
+        lines.push(String::new());
     }
-    out
+    lines
 }
 
-/// Prints the board for every spec under `tasks_dir`. A missing tasks folder prints empty columns.
+/// Prints the board for every task under `tasks_dir`. A missing folder prints empty columns.
+///
+/// # Errors
+///
+/// Filesystem or symlink problems reported by the task listing.
 pub fn run(tasks_dir: &Path) -> CliResult {
     let refs = tasks::list_all_tasks(tasks_dir)?;
-    print!("{}", render(&refs, TITLE_WIDTH));
+    for line in render_board(&refs) {
+        println!("{line}");
+    }
     Ok(())
 }
 
