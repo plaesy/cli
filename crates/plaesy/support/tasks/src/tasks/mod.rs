@@ -18,6 +18,7 @@
 
 pub mod check;
 pub mod claim;
+pub mod comments;
 pub mod contracts;
 pub mod inflight;
 pub mod issue;
@@ -75,6 +76,16 @@ pub enum TasksError {
     AlreadyExists { status: Status, task: String },
     #[error("task already exists: {0}")]
     Duplicate(String),
+    #[error("comment text is empty")]
+    EmptyComment,
+    #[error("comment {id} not found on {task}")]
+    CommentNotFound { task: String, id: u64 },
+    #[error("{context}: {source}")]
+    Json {
+        context: String,
+        #[source]
+        source: serde_json::Error,
+    },
     #[error("task {0} has no topic; every task needs one (topic: in task.md)")]
     NoTopic(String),
     #[error("{0} missing reference(s)")]

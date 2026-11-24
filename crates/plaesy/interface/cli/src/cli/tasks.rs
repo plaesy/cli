@@ -28,6 +28,15 @@ pub enum TasksCommand {
     Issues(super::tasks_issue::Args),
     /// Update an issue's metadata without changing its stable task ID
     UpdateIssue(super::tasks_issue::UpdateArgs),
+    /// Add a comment to a task; @name mentions are stored with it
+    Comment { task: String, text: String },
+    /// List a task's comments, or remove one with --delete <id>
+    Comments {
+        task: String,
+        /// ID of the comment to remove
+        #[arg(long)]
+        delete: Option<u64>,
+    },
     /// List tasks across every status (or --all for the board, --sync-context for context.md)
     List {
         /// Show every spec's tasks as one board, with title and phase, and report integrity problems
@@ -236,6 +245,13 @@ pub fn run(args: &Args) -> CliResult {
         TasksCommand::Create(create) => super::tasks_create::run(create, &tasks_dir()?, &spec),
         TasksCommand::Issues(issues) => super::tasks_issue::run(issues, &tasks_dir()?),
         TasksCommand::UpdateIssue(update) => super::tasks_issue::update(update, &tasks_dir()?),
+        TasksCommand::Comment { task, text } => {
+            super::tasks_comment::add(task, text, &tasks_dir()?)
+        }
+        TasksCommand::Comments { task, delete } => match delete {
+            Some(id) => super::tasks_comment::delete(task, *id, &tasks_dir()?),
+            None => super::tasks_comment::list(task, &tasks_dir()?),
+        },
         TasksCommand::List { all, sync_context } => {
             if *sync_context {
                 return sync_in_flight();

@@ -6,6 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add task comments: `plaesy tasks comment <id> <text>` appends a comment, `plaesy tasks comments <id>`
+  lists them with their `@name` mentions, and `plaesy tasks comments <id> --delete <comment-id>` removes
+  one. Comments are stored in `comments.jsonl` in the task folder.
 - Add a read-only `plaesy memory curate` review across hygiene, unanswered searches, exact duplicates,
   unlinked notes, and knowledge folders that may need an index; expose it through MCP and scheduled jobs.
 - Consolidate the Plaesy CLI and memory engine into one `plaesy` binary, with memory, validation,
