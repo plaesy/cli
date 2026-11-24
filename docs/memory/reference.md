@@ -434,7 +434,7 @@ Jobs are configured in `[[schedule.jobs]]`; see [operations](operations.md#sched
 ### onboard
 
 ```bash
-plaesy memory onboard [--vault PATH] [--root PATH] [--yes] [--no-model] [--rerank] [--no-index]
+plaesy onboard [--vault PATH] [--root PATH] [--yes] [--no-model] [--rerank] [--no-index]
 ```
 
 Options: `--vault PATH`, `--root PATH`, `--yes`, `--no-model`, `--rerank`, and `--no-index`.
@@ -442,15 +442,14 @@ Options: `--vault PATH`, `--root PATH`, `--yes`, `--no-model`, `--rerank`, and `
 its vault itself and does not require the ordinary memory vault selector.
 
 First-run setup: choose or confirm a vault, download the embedding model, optionally index notes,
-and write settings to `<local app data>/Plaesy/settings.json` (Windows:
-`%LOCALAPPDATA%\Plaesy\settings.json`; Linux: `~/.local/share/Plaesy/settings.json`; macOS:
-`~/Library/Application Support/Plaesy/settings.json`).
+and write settings to `~/.plaesy/settings.json` on Windows, Linux, and macOS alike (`PLAESY_ROOT`
+or `--root` changes the home folder).
 
 ---
 
 ## MCP Server
 
-**Tools** (six read-only; two bounded write tools):
+**Tools** (six read-only; three bounded write tools):
 
 ### memory_search
 
@@ -516,10 +515,21 @@ note candidates, and knowledge folders that may need an index. No vault notes ar
 ### memory_remember
 
 ```json
-{"method": "memory_remember", "params": {"title": "str", "body": "str", "folder": "relative/path", "tier": "semantic", "confidence": "medium"}}
+{"method": "memory_remember", "params": {"title": "str", "body": "str", "folder": "relative/path", "tier": "semantic", "confidence": "medium", "note_type": "context", "id": "project-checkpoint", "project": "project-id", "scope": ["project-id"], "status": "active", "supersedes": []}}
 ```
 
 Creates a new note inside the vault; it never overwrites an existing note.
+Graph fields are optional, but `note_type` and `id` are required together.
+
+---
+
+### memory_remember_session
+
+```json
+{"method": "memory_remember_session", "params": {"title": "str", "date": "YYYY-MM-DD", "summary": "str", "links": [{"label": "str", "url": "https://..."}]}}
+```
+
+Saves a summary of one working session as a note in the `sessions` folder (tier `episodic`, confidence `medium`). The note lists the session date in its body and the links under `Tautan`. Only `http` and `https` links are accepted; labels must not contain brackets. The note is indexed at once, so `memory_search` finds it. It never overwrites an existing note: the same title on the same date is refused.
 
 ---
 
@@ -663,5 +673,5 @@ Environment variable overrides: `PLAESY_*`, `MEMORY_*`.
 - **One SQLite connection per daemon** behind an async mutex: concurrent SQL readers within one daemon currently serialize. Use one daemon per vault; do not open SQLite/HNSW directly from multiple agents.
 - **Single writer boundary**: SQLite WAL permits concurrent reads but still has one writer. Multi-host or sustained high-write workloads should migrate the metadata store to a client/server database.
 - **Multilingual default model**: multilingual-e5-small. all-MiniLM-L6-v2 remains available for English-focused vaults.
-- **No network at runtime**: model download once by `make model` or `plaesy memory onboard`.
+- **No network at runtime**: model download once by `make model` or `plaesy onboard`.
 - **ONNX RC version**: 2.0.0-rc.14 (stable release pending).

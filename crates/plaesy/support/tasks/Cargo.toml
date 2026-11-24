@@ -7,6 +7,10 @@ license = "MIT"
 publish = false
 description = "Siklus hidup tugas dan checklist (ADR 0003: workflow)."
 
+[features]
+# Exposes fixtures to tests in sibling crates. Not enabled in product builds.
+test-support = []
+
 [dependencies]
 plaesy-adapter-memory = { path = "../../adapter/memory" }
 plaesy-common = { path = "../common" }
@@ -19,3 +23,6 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+
+[lints]
+workspace = true

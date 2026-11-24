@@ -6,12 +6,15 @@
 //!   token categories, component instances, unique node IDs).
 //! - Codegen writes a Rust module with a token table and a node table. It does not
 //!   yet emit Dioxus `rsx!` components; that is a later adapter step.
+//! - `css` turns tokens into CSS custom properties, with light values in `:root` and
+//!   dark overrides in a dark-mode block.
 //! - The round trip checks that IDs, hierarchy, node kinds, and token values survive
 //!   IR -> Rust module -> IR. It does not compare rendered output.
 //! - Lenient reading moves unknown fields into `extensions` and reports a warning
 //!   for each (ADR 0009, section 2).
 
 pub mod codegen;
+pub mod css;
 pub mod dioxus_codegen;
 pub mod lenient;
 pub mod roundtrip;
