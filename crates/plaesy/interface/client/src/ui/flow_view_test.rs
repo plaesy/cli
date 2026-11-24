@@ -1,61 +1,40 @@
-//! Unit tests for `flow_view.rs`: ARIA attributes, text status, and escaping.
-
 use super::*;
 
-fn sample() -> FlowView {
-    FlowView {
-        modules: vec![Entry {
-            name: "auth".to_string(),
-            status: Status::Ok,
-        }],
-        flows: vec![Entry {
-            name: "login".to_string(),
-            status: Status::Failed,
-        }],
+fn module(id: &str, kind: &str, inputs: &[(&str, &str)]) -> ModuleView {
+    ModuleView {
+        id: id.to_owned(),
+        kind: kind.to_owned(),
+        inputs: inputs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+            .collect(),
     }
 }
 
 #[test]
-fn lists_carry_role_and_aria_label() {
-    let html = render(&sample());
-    assert!(html.contains("role=\"list\" aria-label=\"Daftar modul\""));
-    assert!(html.contains("role=\"list\" aria-label=\"Daftar alur\""));
-    assert!(html.contains("role=\"listitem\""));
+fn escape_neutralizes_markup() {
+    assert_eq!(
+        escape("<script>\"x\" & 'y'</script>"),
+        "&lt;script&gt;&quot;x&quot; &amp; &#39;y&#39;&lt;/script&gt;"
+    );
 }
 
 #[test]
-fn status_is_shown_as_text_not_only_color() {
-    let html = render(&sample());
-    assert!(html.contains("Status: Berhasil"));
-    assert!(html.contains("Status: Gagal"));
-    assert!(html.contains("class=\"flow-item status-failed\""));
+fn render_lists_modules_edges_and_is_escaped() {
+    let modules = vec![
+        module("m1", "action", &[]),
+        module("m2", "pass", &[("total", "m1.amount")]),
+    ];
+    let html = render_flow("<alur>", &modules);
+    assert!(html.contains("&lt;alur&gt;"));
+    assert!(html.contains("m1 &rarr; m2"));
+    assert!(html.contains("Tidak ada masalah lokal."));
+    assert!(!html.contains("<alur>"));
 }
 
 #[test]
-fn empty_list_says_so_in_text() {
-    let html = render(&FlowView::default());
-    assert!(html.contains("Tidak ada modul."));
-    assert!(html.contains("Tidak ada alur."));
-    assert!(!html.contains("role=\"list\""));
-}
-
-#[test]
-fn names_are_escaped() {
-    let view = FlowView {
-        modules: vec![Entry {
-            name: "<script>alert(1)</script>".to_string(),
-            status: Status::Draft,
-        }],
-        flows: Vec::new(),
-    };
-    let html = render(&view);
-    assert!(!html.contains("<script>"));
-    assert!(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
-    assert!(html.contains("Status: Draf"));
-}
-
-#[test]
-fn escape_html_covers_all_special_characters() {
-    assert_eq!(escape_html("&<>\"'"), "&amp;&lt;&gt;&quot;&#39;");
-    assert_eq!(escape_html("plain"), "plain");
+fn render_reports_local_issues() {
+    let modules = vec![module("m1", "action", &[]), module("m1", "pass", &[])];
+    let html = render_flow("flow", &modules);
+    assert!(html.contains("id modul ganda: m1"));
 }

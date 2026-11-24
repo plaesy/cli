@@ -21,9 +21,14 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 |---|---|---|
 | `create` | `<priority> <category> <title>` | Create a task in the backlog, for the current spec (created first if missing) |
 | `list` | `[--all]`, `[--sync-context]` | List tasks across every status; `--all` shows every spec with integrity problems; `--sync-context` rewrites the In-Flight section of `.plaesy/context.md` |
+| `board` | | Show every spec's tasks as text columns, one per status folder, with a count per column; titles longer than 60 characters are cut with `…` |
 | `list-status` | `<status>` | List tasks in one status |
+| `create-subtask` | `<parent> <priority> <category> <title>` | Create a backlog task of type `subtask` under an existing parent. A missing parent is refused and no task is created |
+| `children` | `<parent>` | List the direct child issues of a parent with type, status, and title; grandchildren are not included. Refuses an unknown parent or an invalid issue collection |
 | `issues` | `[--spec NAME]`, `[--type TYPE]`, repeatable `[--label LABEL]`, `[--assignee NAME]`, `[--milestone NAME]`, `[--status STATUS]`, `[--dependencies]` | Filter issue metadata and optionally display dependency readiness (derived; does not rewrite lifecycle status) |
 | `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, and cycles |
+| `label add` | `<task-id> <LABEL>...` | Add labels to one issue; labels it already has are skipped |
+| `label remove` | `<task-id> <LABEL>...` | Remove labels from one issue; labels it lacks are skipped |
 | `next` | — | Move the next backlog task into `todo` and report it |
 | `start` | `<task>` | Move task to `doing` |
 | `complete` | `<task>` | Move a task from `review` to `done`. A reviewer runs this after checking the evidence. Refuses any other status. |

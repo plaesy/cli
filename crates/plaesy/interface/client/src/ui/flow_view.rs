@@ -1,66 +1,13 @@
-//! HTML markup for the flow editor's module and flow lists.
+//! Tampilan HTML read-only untuk satu flow (default web, delegasi owner: dapat dicabut).
 //!
-//! Framework-free string rendering. It is a stand-in until the Dioxus editor lands, so it does not
-//! define that editor's components. The accessibility contract is kept here: each list has a role
-//! and an `aria-label`, and each status is shown as text (`Berhasil`, `Gagal`, `Draf`), not only as
-//! a color class.
+//! Renderer ini pure Rust: tanpa framework dan tanpa I/O. Semua teks dari dokumen di-escape,
+//! sehingga nilai berbahaya tidak bisa menyisipkan markup.
 
-/// Status of a module or flow.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Ok,
-    Failed,
-    Draft,
-}
+use crate::features::flow::model::{edges, validate, LocalIssue, ModuleView};
 
-impl Status {
-    /// Visible, screen-reader-readable label in Indonesian.
-    #[must_use]
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Ok => "Berhasil",
-            Self::Failed => "Gagal",
-            Self::Draft => "Draf",
-        }
-    }
-
-    /// CSS class for the color cue. It supplements the label and never replaces it.
-    fn css_class(self) -> &'static str {
-        match self {
-            Self::Ok => "status-ok",
-            Self::Failed => "status-failed",
-            Self::Draft => "status-draft",
-        }
-    }
-}
-
-/// One named module or flow.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Entry {
-    pub name: String,
-    pub status: Status,
-}
-
-/// The data shown by the flow view.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct FlowView {
-    pub modules: Vec<Entry>,
-    pub flows: Vec<Entry>,
-}
-
-/// Renders the module and flow lists as HTML.
+/// Mengubah teks menjadi aman untuk konten dan atribut HTML.
 #[must_use]
-pub fn render(view: &FlowView) -> String {
-    let mut html = String::from("<div class=\"flow-view\">\n");
-    push_list(&mut html, "Daftar modul", "modul", &view.modules);
-    push_list(&mut html, "Daftar alur", "alur", &view.flows);
-    html.push_str("</div>\n");
-    html
-}
-
-/// Escapes the five HTML-special characters for use in text and quoted attribute values.
-#[must_use]
-pub fn escape_html(text: &str) -> String {
+pub fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
         match c {
@@ -75,22 +22,74 @@ pub fn escape_html(text: &str) -> String {
     out
 }
 
-fn push_list(html: &mut String, label: &str, noun: &str, items: &[Entry]) {
-    let label = escape_html(label);
-    if items.is_empty() {
-        html.push_str(&format!("<p class=\"flow-empty\">Tidak ada {noun}.</p>\n"));
-        return;
+/// Halaman HTML lengkap untuk daftar modul flow, edge, dan masalah validasi lokal.
+#[must_use]
+pub fn render_flow(name: &str, modules: &[ModuleView]) -> String {
+    let mut body = String::new();
+    body.push_str(&format!("<h1>{}</h1>\n", escape(name)));
+
+    body.push_str("<section><h2>Modul</h2>\n<ul role=\"list\" aria-label=\"Daftar modul\">\n");
+    for module in modules {
+        body.push_str(&format!(
+            "<li><strong>{}</strong> <code>{}</code>",
+            escape(&module.id),
+            escape(&module.kind)
+        ));
+        if !module.inputs.is_empty() {
+            body.push_str("<ul>");
+            for (key, source) in &module.inputs {
+                body.push_str(&format!(
+                    "<li>{} = <code>{}</code></li>",
+                    escape(key),
+                    escape(source)
+                ));
+            }
+            body.push_str("</ul>");
+        }
+        body.push_str("</li>\n");
     }
-    html.push_str(&format!("<ul role=\"list\" aria-label=\"{label}\" class=\"flow-list\">\n"));
-    for item in items {
-        html.push_str(&format!(
-            "  <li role=\"listitem\" class=\"flow-item {}\"><span class=\"flow-name\">{}</span> <span class=\"flow-status\">Status: {}</span></li>\n",
-            item.status.css_class(),
-            escape_html(&item.name),
-            item.status.label(),
+    body.push_str("</ul></section>\n");
+
+    body.push_str("<section><h2>Alur data</h2>\n<ul role=\"list\" aria-label=\"Daftar alur data\">\n");
+    for edge in edges(modules) {
+        body.push_str(&format!(
+            "<li>{} &rarr; {}</li>\n",
+            escape(&edge.from),
+            escape(&edge.to)
         ));
     }
-    html.push_str("</ul>\n");
+    body.push_str("</ul></section>\n");
+
+    let issues = validate(modules);
+    body.push_str("<section aria-label=\"Masalah validasi\"><h2>Masalah</h2>\n");
+    if issues.is_empty() {
+        body.push_str("<p>Tidak ada masalah lokal.</p>\n");
+    } else {
+        body.push_str("<ul>\n");
+        for issue in &issues {
+            body.push_str(&format!("<li>{}</li>\n", escape(&describe(issue))));
+        }
+        body.push_str("</ul>\n");
+    }
+    body.push_str("</section>\n");
+
+    format!(
+        "<!doctype html>\n<html lang=\"id\">\n<head>\n<meta charset=\"utf-8\">\n\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+         <title>{}</title>\n</head>\n<body>\n{}</body>\n</html>\n",
+        escape(name),
+        body
+    )
+}
+
+fn describe(issue: &LocalIssue) -> String {
+    match issue {
+        LocalIssue::EmptyId => "modul tanpa id".to_owned(),
+        LocalIssue::DuplicateId(id) => format!("id modul ganda: {id}"),
+        LocalIssue::UnknownSource { module, source } => {
+            format!("modul {module} merujuk ke sumber tidak dikenal: {source}")
+        }
+    }
 }
 
 #[cfg(test)]

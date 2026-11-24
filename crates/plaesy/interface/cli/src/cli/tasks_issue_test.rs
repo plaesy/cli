@@ -145,3 +145,95 @@ fn rejected_parent_cycle_restores_original_json() {
     assert!(update(&update_args, &tasks).is_err());
     assert_eq!(fs::read(path).unwrap(), old);
 }
+
+/// Writes a task folder under `todo/` whose metadata has the given parent.
+fn add_issue(tasks: &std::path::Path, id: &str, parent: Option<&str>) {
+    let folder = tasks.join("todo").join(id);
+    fs::create_dir_all(&folder).unwrap();
+    fs::write(folder.join(TASK_FILE), "---\ntitle: test\n---\n").unwrap();
+    issue::write_metadata_unlocked(
+        &folder,
+        &Issue {
+            id: id.into(),
+            status: Status::Todo,
+            kind: "subtask".into(),
+            parent: parent.map(str::to_owned),
+            depends_on: vec![],
+            labels: vec![],
+            assignee: None,
+            milestone: None,
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn children_lists_only_direct_children() {
+    let (_root, tasks) = fixture();
+    let mut b = Issue::read(&tasks, Status::Todo, "b").unwrap();
+    b.parent = Some("a".into());
+    issue::write_metadata_unlocked(&tasks.join("todo/b"), &b).unwrap();
+    add_issue(&tasks, "c", Some("b"));
+
+    let issues = Issue::load_collection(&tasks).unwrap();
+    let ids: Vec<&str> = direct_children(&issues, "a")
+        .into_iter()
+        .map(|issue| issue.id.as_str())
+        .collect();
+    assert_eq!(ids, vec!["b"]);
+    assert!(children(&ChildrenArgs { parent: "b".into() }, &tasks).is_ok());
+}
+
+#[test]
+fn children_of_a_task_without_subtasks_is_empty_and_ok() {
+    let (_root, tasks) = fixture();
+    let issues = Issue::load_collection(&tasks).unwrap();
+    assert!(direct_children(&issues, "a").is_empty());
+    assert!(children(&ChildrenArgs { parent: "a".into() }, &tasks).is_ok());
+}
+
+#[test]
+fn children_rejects_unknown_parent() {
+    let (_root, tasks) = fixture();
+    let error = children(
+        &ChildrenArgs {
+            parent: "ghost".into(),
+        },
+        &tasks,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("issue not found: ghost"));
+}
+
+#[test]
+fn update_rejects_parent_that_does_not_exist() {
+    let (_root, tasks) = fixture();
+    let path = tasks.join("todo/a/issue.json");
+    let old = fs::read(&path).unwrap();
+    let mut update_args = args("a");
+    update_args.parent = Some("ghost".into());
+
+    let error = update(&update_args, &tasks).unwrap_err();
+
+    assert!(error.to_string().contains("missing parent ghost"));
+    assert_eq!(fs::read(path).unwrap(), old);
+}
+
+#[test]
+fn parent_cycle_through_three_issues_is_rejected_and_restored() {
+    let (_root, tasks) = fixture();
+    let mut b = Issue::read(&tasks, Status::Todo, "b").unwrap();
+    b.parent = Some("a".into());
+    issue::write_metadata_unlocked(&tasks.join("todo/b"), &b).unwrap();
+    add_issue(&tasks, "c", Some("b"));
+    let path = tasks.join("todo/a/issue.json");
+    let old = fs::read(&path).unwrap();
+    let mut update_args = args("a");
+    // Chain a -> c -> b -> a would close a cycle.
+    update_args.parent = Some("c".into());
+
+    let error = update(&update_args, &tasks).unwrap_err();
+
+    assert!(error.to_string().contains("relationship cycle detected"));
+    assert_eq!(fs::read(path).unwrap(), old);
+}
