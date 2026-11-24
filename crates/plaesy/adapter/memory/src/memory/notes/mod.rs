@@ -18,7 +18,10 @@ use std::time::Duration;
 
 mod engine;
 mod lock;
+mod session;
 mod template;
+
+pub use session::{SessionLink, SessionSummary, MAX_SESSION_LINKS, SESSION_FOLDER, SESSION_TIER};
 // Used by the test modules via `super::*`.
 #[cfg(test)]
 use engine::strip_last_verified;

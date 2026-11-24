@@ -12,6 +12,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
   task, install, and development reload commands.
 - Add cross-platform install lifecycle coverage and CI/release workflows.
 - Add a synthetic secret-scanner regression corpus that reports precision and recall without using real credentials.
+- Add `memory_remember_session` to the memory MCP server: saves a session summary (title, date, summary, http(s) links) as an indexed note in the `sessions` folder, found by the existing search.
 
 ### Fixed
 

@@ -76,6 +76,7 @@ async fn handshake_and_tool_listing() {
             "memory_missing",
             "memory_curate",
             "memory_remember",
+            "memory_remember_session",
             "memory_resolve_gap",
             "memory_stats"
         ]
@@ -272,6 +273,72 @@ async fn missing_tool_lists_gaps_read_only() {
         .expect("gaps")
         .len();
     assert_eq!(before, after);
+}
+
+#[tokio::test]
+async fn remember_session_tool_saves_indexed_summary_and_rejects_bad_input() {
+    let (e, dir) = engine().await;
+    e.set_watch_root(dir.path().to_path_buf());
+    let call = |id: u64, args: Value| json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"memory_remember_session","arguments":args}});
+    let ok = rpc(
+        &e,
+        call(
+            1,
+            json!({
+                "title": "Checkpoint work",
+                "date": "2026-11-23",
+                "summary": "Fixed quartzmeadow checkpoint ordering.",
+                "links": [{"label": "PR 12", "url": "https://example.com/pull/12"}]
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(ok["result"]["isError"], false);
+    let file = dir
+        .path()
+        .join("sessions")
+        .join("sesi-2026-11-23-checkpoint-work.md");
+    let text = std::fs::read_to_string(&file).expect("session note written");
+    assert!(text.contains("tier: episodic"));
+    assert!(text.contains("Tanggal: 2026-11-23"));
+    assert!(text.contains("- [PR 12](https://example.com/pull/12)"));
+    let hits = e.search("quartzmeadow", 3).await.expect("search");
+    assert!(hits
+        .iter()
+        .any(|h| h.source_path.ends_with("sesi-2026-11-23-checkpoint-work.md")));
+
+    let bad_date = rpc(
+        &e,
+        call(
+            2,
+            json!({"title": "Bad", "date": "2026-13-40", "summary": "x"}),
+        ),
+    )
+    .await;
+    assert_eq!(bad_date["result"]["isError"], true);
+    let bad_link = rpc(
+        &e,
+        call(
+            3,
+            json!({
+                "title": "Bad link",
+                "date": "2026-11-23",
+                "summary": "x",
+                "links": [{"label": "Script", "url": "javascript:alert(1)"}]
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(bad_link["result"]["isError"], true);
+    let bad_shape = rpc(
+        &e,
+        call(
+            4,
+            json!({"title": "Bad shape", "date": "2026-11-23", "summary": "x", "links": ["https://example.com"]}),
+        ),
+    )
+    .await;
+    assert_eq!(bad_shape["result"]["isError"], true);
 }
 
 #[tokio::test]

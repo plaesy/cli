@@ -523,6 +523,16 @@ Creates a new note inside the vault; it never overwrites an existing note.
 
 ---
 
+### memory_remember_session
+
+```json
+{"method": "memory_remember_session", "params": {"title": "str", "date": "YYYY-MM-DD", "summary": "str", "links": [{"label": "str", "url": "https://..."}]}}
+```
+
+Saves a summary of one working session as a note in the `sessions` folder (tier `episodic`, confidence `medium`). The note lists the session date in its body and the links under `Tautan`. Only `http` and `https` links are accepted; labels must not contain brackets. The note is indexed at once, so `memory_search` finds it. It never overwrites an existing note: the same title on the same date is refused.
+
+---
+
 ### memory_resolve_gap
 
 ```json
