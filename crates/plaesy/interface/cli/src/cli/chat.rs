@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::chat_agents;
 use super::chat_hooks;
 use super::chat_mcp;
 use super::chat_pending;
@@ -216,6 +217,8 @@ pub struct ChatSettings {
     pub skills_dir: PathBuf,
     /// Plugins from the user folder and the repository.
     pub plugins: Vec<chat_plugins::Plugin>,
+    /// This chat's name on the relay (`agent.name` in settings.json; default "chat").
+    pub agent_name: String,
 }
 
 /// One line typed at the prompt.
@@ -244,6 +247,10 @@ pub enum Input {
     Role(String),
     /// `/plugins` lists plugins and their commands
     Plugins,
+    /// `/agent inbox|reply|ack` for messages to other agents, through the relay
+    Agent(String),
+    /// `@name <text>`: send a message to another agent or chat session, through the relay
+    Mention(String, String),
     /// `/plugin run <plugin> <command> [args...]`
     Plugin(String),
     /// `/pick` followed by the raw `<id> <number>` text
@@ -270,6 +277,7 @@ pub fn parse_input(line: &str) -> Input {
         ("/mcp", Input::Mcp as fn(String) -> Input),
         ("/role", Input::Role as fn(String) -> Input),
         ("/plugin", Input::Plugin as fn(String) -> Input),
+        ("/agent", Input::Agent as fn(String) -> Input),
     ] {
         if let Some(rest) = text
             .strip_prefix(command)
@@ -301,6 +309,19 @@ pub fn parse_input(line: &str) -> Input {
     {
         return Input::Decisions(rest.trim().to_owned());
     }
+    if let Some(rest) = text.strip_prefix('@') {
+        let (name, body) = match rest.split_once(' ') {
+            Some((name, body)) => (name, body.trim()),
+            None => (rest, ""),
+        };
+        if !name.is_empty()
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Input::Mention(name.to_owned(), body.to_owned());
+        }
+    }
     Input::Message(text.to_owned())
 }
 
@@ -325,6 +346,64 @@ pub fn default_provider(cfg: &DelegateConfig) -> Result<String, String> {
             "no enabled, non-billable provider; pass --provider (see delegate.providers in .plaesy/settings.json)"
                 .to_owned()
         })
+}
+
+/// Splits `"<word> <rest>"`; both parts must be non-empty.
+fn split_word(text: &str) -> Option<(&str, &str)> {
+    let (head, tail) = text.trim().split_once(' ')?;
+    let tail = tail.trim();
+    (!head.is_empty() && !tail.is_empty()).then_some((head, tail))
+}
+
+/// `/agent`: messages to other agents through the relay. Incoming text is shown, never acted on.
+fn agent_command(repo: &Path, from: &str, rest: &str) -> Result<String, String> {
+    let usage = || chat_text::usage(Lang::En, Usage::Agent).to_owned();
+    let inbox = || -> Result<Vec<chat_agents::Incoming>, String> {
+        chat_agents::parse_inbox(&chat_agents::run_relay(
+            repo,
+            &chat_agents::inbox_args(from),
+        )?)
+    };
+    let rest = rest.trim();
+    if rest == "inbox" {
+        return Ok(chat_agents::render_incoming(&inbox()?));
+    }
+    if let Some(ack) = rest.strip_prefix("ack ") {
+        let id = ack.trim();
+        chat_agents::run_relay(repo, &chat_agents::ack_args(id, from))?;
+        return Ok(format!("acknowledged {id}"));
+    }
+    if let Some(send) = rest.strip_prefix("send ") {
+        let (to, text) = split_word(send).ok_or_else(usage)?;
+        chat_agents::check_outgoing(text, 1)?;
+        let id = chat_agents::new_id(from, to, text, chat_agents::nanos_now());
+        chat_agents::run_relay(
+            repo,
+            &chat_agents::send_args(from, to, &id, &chat_agents::encode(1, text)),
+        )?;
+        return Ok(format!("sent {id} to {to}"));
+    }
+    if let Some(reply) = rest.strip_prefix("reply ") {
+        let (id, text) = split_word(reply).ok_or_else(usage)?;
+        let incoming = inbox()?
+            .into_iter()
+            .find(|item| item.id == id)
+            .ok_or_else(|| format!("no message {id}"))?;
+        let depth = chat_agents::decode(&incoming.body).depth + 1;
+        chat_agents::check_outgoing(text, depth)?;
+        let new_id = chat_agents::new_id(from, &incoming.sender, text, chat_agents::nanos_now());
+        chat_agents::run_relay(
+            repo,
+            &chat_agents::send_args(
+                from,
+                &incoming.sender,
+                &new_id,
+                &chat_agents::encode(depth, text),
+            ),
+        )?;
+        return Ok(format!("replied {new_id} to {}", incoming.sender));
+    }
+    Err(usage())
 }
 
 /// Runs the hooks of one event, prints their warnings, and returns the reason when a hook blocked.
@@ -482,6 +561,20 @@ pub fn converse(
                     }
                 }
             }
+            Input::Agent(rest) => {
+                match agent_command(&settings.repo, &settings.agent_name, &rest) {
+                    Ok(text) => writeln!(out, "{text}")?,
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                }
+            }
+            Input::Mention(to, body) => match agent_command(
+                &settings.repo,
+                &settings.agent_name,
+                &format!("send {to} {body}"),
+            ) {
+                Ok(text) => writeln!(out, "{text}")?,
+                Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+            },
             Input::Plugins => writeln!(
                 out,
                 "{}",
@@ -664,6 +757,12 @@ pub fn run(args: &Args) -> CliResult {
         chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     let skills_dir = super::skills::store_dir(&home);
+    let agent_name = chat_hooks::read_settings(&settings_path)
+        .get("agent")
+        .and_then(|agent| agent.get("name"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("chat")
+        .to_owned();
     let (mut plugins, mut problems) = chat_plugins::discover(
         &home.join(".plaesy").join("plugins"),
         chat_hooks::Scope::User,
@@ -728,6 +827,7 @@ pub fn run(args: &Args) -> CliResult {
             role: active_role.name.clone(),
             skills_dir: skills_dir.clone(),
             plugins: plugins.clone(),
+            agent_name: agent_name.clone(),
         },
         stdin.lock(),
         &mut stdout,

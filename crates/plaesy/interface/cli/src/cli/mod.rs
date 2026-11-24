@@ -7,6 +7,7 @@ pub mod analyze;
 pub mod approvals;
 pub mod audit;
 pub mod chat;
+pub mod chat_agents;
 pub mod chat_hooks;
 pub mod chat_mcp;
 pub mod chat_plugins;

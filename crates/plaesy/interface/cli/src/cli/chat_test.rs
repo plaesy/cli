@@ -166,6 +166,7 @@ fn run_with_store(
             role: "default".to_owned(),
             skills_dir: PathBuf::from("."),
             plugins: Vec::new(),
+            agent_name: "chat".to_owned(),
         },
         Cursor::new(script.to_owned()),
         &mut out,
@@ -647,6 +648,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         role: "reviewer".to_owned(),
         skills_dir: PathBuf::from("."),
         plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -689,6 +691,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         role: "default".to_owned(),
         skills_dir: PathBuf::from("."),
         plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
     };
     let store = MemoryStore::default();
     let mut out = Vec::new();
@@ -709,4 +712,21 @@ fn role_command_switches_and_refuses_unknown_names() {
         "output was: {text}"
     );
     assert!(seen.lock().expect("seen")[0].starts_with("System: Tulis singkat."));
+}
+
+#[test]
+fn at_mentions_address_another_agent_and_bare_at_is_text() {
+    assert_eq!(
+        parse_input("@nara halo teman"),
+        Input::Mention("nara".to_owned(), "halo teman".to_owned())
+    );
+    assert_eq!(
+        parse_input("@creative"),
+        Input::Mention("creative".to_owned(), String::new())
+    );
+    assert_eq!(parse_input("@ halo"), Input::Message("@ halo".to_owned()));
+    assert_eq!(
+        parse_input("email a@b.com"),
+        Input::Message("email a@b.com".to_owned())
+    );
 }
