@@ -283,6 +283,8 @@ pub enum Input {
     Goal(String),
     /// `/compact` replaces the transcript with one summary written by the provider
     Compact,
+    /// `/debug`: what this session is running with, without secrets or transcript text
+    Debug,
     /// `/advisor <question>`: the advisor provider reviews the conversation and the question
     Advisor(String),
     /// `/council <question>`: every enabled provider answers the question on its own
@@ -302,6 +304,7 @@ pub fn parse_input(line: &str) -> Input {
         "/tasks" => return Input::Tasks,
         "/plugins" => return Input::Plugins,
         "/compact" => return Input::Compact,
+        "/debug" => return Input::Debug,
         "/goal" => return Input::Goal(String::new()),
         _ => {}
     }
@@ -816,6 +819,29 @@ pub fn converse(
                     }
                     Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
                 }
+            }
+            Input::Debug => {
+                let repo = settings.repo.display().to_string();
+                let timeout = format!("{:?}", settings.timeout);
+                let facts = chat_text::DebugFacts {
+                    version: env!("CARGO_PKG_VERSION"),
+                    provider: provider.name(),
+                    role: &active.name,
+                    repo: &repo,
+                    agent: &settings.agent_name,
+                    turns: transcript.len(),
+                    goal_set: goal.is_some(),
+                    hooks: settings.hooks.len(),
+                    mcp_servers: settings.mcp_servers.len(),
+                    plugins: settings.plugins.len(),
+                    roles: settings.roles.len(),
+                    peers: settings.peers.len(),
+                    advisor: settings.advisor.as_deref(),
+                    council: settings.council.len(),
+                    timeout: &timeout,
+                    max_tokens: settings.max_tokens,
+                };
+                writeln!(out, "{}", chat_text::debug_report(lang, &facts))?;
             }
             Input::Advisor(question) => {
                 if question.is_empty() {

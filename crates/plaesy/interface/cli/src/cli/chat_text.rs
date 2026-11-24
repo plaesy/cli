@@ -326,3 +326,78 @@ pub fn queued(lang: Lang, waiting: usize) -> String {
         Lang::Id => format!("antre: {waiting} menunggu"),
     }
 }
+
+/// What `/debug` reports about the running session. Nothing secret: no keys, no transcript text.
+pub struct DebugFacts<'a> {
+    pub version: &'a str,
+    pub provider: &'a str,
+    pub role: &'a str,
+    pub repo: &'a str,
+    pub agent: &'a str,
+    pub turns: usize,
+    pub goal_set: bool,
+    pub hooks: usize,
+    pub mcp_servers: usize,
+    pub plugins: usize,
+    pub roles: usize,
+    pub peers: usize,
+    pub advisor: Option<&'a str>,
+    pub council: usize,
+    pub timeout: &'a str,
+    pub max_tokens: u32,
+}
+
+pub fn debug_report(lang: Lang, facts: &DebugFacts<'_>) -> String {
+    let rows: [(&str, &str, String); 16] = [
+        ("version", "versi", facts.version.to_owned()),
+        ("provider", "provider", facts.provider.to_owned()),
+        ("role", "role", facts.role.to_owned()),
+        ("repo", "repo", facts.repo.to_owned()),
+        ("agent", "agen", facts.agent.to_owned()),
+        (
+            "language",
+            "bahasa",
+            match lang {
+                Lang::En => "en",
+                Lang::Id => "id",
+            }
+            .to_owned(),
+        ),
+        ("turns", "giliran", facts.turns.to_string()),
+        (
+            "goal",
+            "goal",
+            if facts.goal_set { "set" } else { "none" }.to_owned(),
+        ),
+        ("hooks", "hook", facts.hooks.to_string()),
+        ("mcp servers", "server mcp", facts.mcp_servers.to_string()),
+        ("plugins", "plugin", facts.plugins.to_string()),
+        ("roles", "role", facts.roles.to_string()),
+        ("peers", "peer", facts.peers.to_string()),
+        (
+            "advisor",
+            "advisor",
+            facts.advisor.unwrap_or("none").to_owned(),
+        ),
+        (
+            "council members",
+            "anggota council",
+            facts.council.to_string(),
+        ),
+        ("timeout", "timeout", facts.timeout.to_owned()),
+    ];
+    let mut lines = vec![pick(lang, "debug", "debug").to_owned()];
+    for (en, id, value) in rows {
+        lines.push(format!("  {}: {value}", pick(lang, en, id)));
+    }
+    lines.push(format!(
+        "  {}: {}",
+        pick(lang, "max tokens", "token maksimum"),
+        if facts.max_tokens == 0 {
+            pick(lang, "provider default", "default provider").to_owned()
+        } else {
+            facts.max_tokens.to_string()
+        }
+    ));
+    lines.join("\n")
+}

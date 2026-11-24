@@ -934,3 +934,21 @@ fn queued_lines_run_in_order_when_none_is_steered() {
     assert_eq!(prompts.len(), 2);
     assert!(prompts[1].contains("pertama") && prompts[1].contains("kedua"));
 }
+
+#[test]
+fn debug_reports_the_session_without_transcript_text() {
+    assert_eq!(parse_input("/debug"), Input::Debug);
+    let (provider, _) = fake("alpha", "rahasia-jawaban");
+    let out = run_with_members(
+        provider,
+        &no_open,
+        Some("reviewer"),
+        &["satu"],
+        "rahasia-pertanyaan\n/debug\n/exit\n",
+    );
+
+    assert!(out.contains("provider: alpha"), "{out}");
+    assert!(out.contains("advisor: reviewer"), "{out}");
+    assert!(out.contains("council members: 1"), "{out}");
+    assert!(out.contains("turns: 2"), "{out}");
+}
