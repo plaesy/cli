@@ -327,7 +327,7 @@ pub fn converse(
             },
             Input::Decisions(text) => {
                 if text.is_empty() {
-                    match pending.list_decisions() {
+                    match pending.decisions_menu() {
                         Ok(list) => writeln!(out, "{list}")?,
                         Err(err) => writeln!(out, "error: {err}")?,
                     }

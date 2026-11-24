@@ -35,6 +35,11 @@ pub trait PendingStore {
     fn update(&self, id: &str, text: &str) -> Result<String, String>;
     /// `/decisions delete <id>`: archives the note. It stays in the vault and leaves the default list.
     fn archive(&self, id: &str) -> Result<String, String>;
+    /// `/decisions` in a terminal: pick a decision, then change its text or archive it.
+    /// Outside a terminal it is the plain list.
+    fn decisions_menu(&self) -> Result<String, String> {
+        self.list_decisions()
+    }
     /// `/pending` in a terminal: pick a question and an option with the keyboard. Stores that
     /// cannot prompt fall back to the plain list.
     fn menu(&self) -> Result<String, String> {
@@ -304,6 +309,59 @@ impl MemoryPending {
 }
 
 impl PendingStore for MemoryPending {
+    fn decisions_menu(&self) -> Result<String, String> {
+        if !self.interactive {
+            return self.list_decisions();
+        }
+        let root = self.vault_root()?;
+        let items: Vec<Listed> = parse_listing(&run_memory(
+            &list_all_args(self.vault.as_deref(), self.project.as_deref()),
+            None,
+        )?)?
+        .into_iter()
+        .filter(|item| root.join(&item.path).is_file())
+        .collect();
+        if items.is_empty() {
+            return Ok("no decisions".to_owned());
+        }
+        let labels: Vec<String> = items
+            .iter()
+            .map(|item| format!("[{}] {}", item.status, item.title))
+            .collect();
+        let Some(index) = dialoguer::Select::new()
+            .with_prompt(format!("{} keputusan", items.len()))
+            .items(&labels)
+            .default(0)
+            .interact_opt()
+            .map_err(|err| err.to_string())?
+        else {
+            return Ok("cancelled".to_owned());
+        };
+        let item = &items[index];
+        let actions = ["Ubah teks", "Arsipkan", "Batal"];
+        let Some(action) = dialoguer::Select::new()
+            .with_prompt(item.title.as_str())
+            .items(&actions)
+            .default(0)
+            .interact_opt()
+            .map_err(|err| err.to_string())?
+        else {
+            return Ok("cancelled".to_owned());
+        };
+        match action {
+            0 => {
+                let text: String = dialoguer::Input::new()
+                    .with_prompt(item.title.as_str())
+                    .with_initial_text(item.title.as_str())
+                    .interact_text()
+                    .map_err(|err| err.to_string())?;
+                self.update(&item.id, text.trim())
+            }
+            1 => self.archive(&item.id),
+            _ => Ok("cancelled".to_owned()),
+        }
+    }
+
     fn update(&self, id: &str, text: &str) -> Result<String, String> {
         let root = self.vault_root()?;
         let item = parse_listing(&run_memory(
