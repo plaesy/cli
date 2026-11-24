@@ -5,8 +5,8 @@
 - **stdio** (default): MCP over stdin/stdout.
 - **http**: Streamable HTTP at `/mcp`.
 
-Both transports sync/watch the notes directory in the background. Six tools are read-only; two
-bounded write tools create a new note or resolve a query gap. `memory_curate` combines health,
+Both transports sync/watch the notes directory in the background. Six tools are read-only; three
+bounded write tools create a new note, save a session summary, or resolve a query gap. `memory_curate` combines health,
 unanswered-query, duplicate, unlinked-note, and topic-index candidates into one bounded review; it
 does not modify vault files. No tool replaces or deletes a note.
 The server uses the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). Both
@@ -42,12 +42,61 @@ and do not expose Plaesy's listener directly to the network.
 
 ## Client configuration
 
+For several clients sharing one vault, run **one** Streamable HTTP server and point each
+client at the same `/mcp` URL. A stdio registration launches a separate server process
+per client; Plaesy's vault ownership lock prevents multiple writers from serving the
+same vault at once. Start the HTTP server with the vault selected explicitly:
+
+```bash
+plaesy memory --vault /path/to/vault serve --mcp --transport http --port 8080
+```
+
+Then register `http://127.0.0.1:8080/mcp` in each client. The URL must include `/mcp`.
+For a different port, change both the server command and every client URL.
+For example, use `--port 9123` and `http://127.0.0.1:9123/mcp` when port 8080 is occupied;
+pass `--http-url http://127.0.0.1:9123/mcp` to `plaesy memory config mcp` so its snippets match.
+
+## Process lifecycle
+
+A server using stdio is started and stopped by its client. It needs no OS service.
+For multiple clients sharing one writable vault, run one HTTP memory server as a long-lived
+process. On Linux, a systemd user service with `Restart=on-failure` can supervise that
+process. On Windows, use a user logon task if it must start automatically. Select the
+vault explicitly and keep exactly one writable server for that vault. The separate
+`plaesy memory schedule install` task runs periodic maintenance; it does not keep
+the HTTP MCP server alive.
+
+The project-scoped `plaesy mcp --root <project>` server remains an stdio process per
+client and project. Its project file tools should not be exposed through the shared
+vault endpoint without explicit project access controls.
+
+### Codex
+
+```bash
+codex mcp add plaesy-memory --url http://127.0.0.1:8080/mcp
+```
+
+Check with `codex mcp get plaesy-memory`. The CLI can print a TOML snippet with
+`plaesy memory config mcp --app codex`.
+
+### Hermes Agent
+
+Add this entry to `~/.hermes/config.yaml` under the existing `mcp_servers` map:
+
+```yaml
+mcp_servers:
+  plaesy-memory:
+    url: http://127.0.0.1:8080/mcp
+```
+
+Reload MCP in Hermes and check its connection with `hermes mcp test plaesy-memory`.
+The CLI can print the snippet with `plaesy memory config mcp --app hermes`.
+
 ### Claude Code / Claude Desktop
 
 ```bash
-# HTTP transport (recommended)
-claude mcp add plaesy-memory \
-  -- /path/to/plaesy memory serve --mcp --transport http --port 8080
+# HTTP transport (shared server)
+claude mcp add --transport http plaesy-memory http://127.0.0.1:8080/mcp
 
 # Stdio alternative (single command, no HTTP server)
 claude mcp add plaesy-memory \
@@ -58,15 +107,19 @@ claude mcp add plaesy-memory \
 ### Kilo Code
 
 ```bash
-# HTTP transport
-kilo mcp add plaesy-memory \
-  -- /path/to/plaesy memory serve --mcp --transport http --port 8080
-
-# Stdio alternative
-kilo mcp add plaesy-memory \
-  -e MEMORY_WATCH_DIR=C:/path/to/notes -e MEMORY_DB_PATH=C:/path/to/index/state.db \
-  -- /path/to/plaesy memory serve --mcp
+# Kilo CLI: add to kilo.jsonc or .kilo/kilo.jsonc
+{
+  "mcp": {
+    "plaesy-memory": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8080/mcp",
+      "enabled": true
+    }
+  }
+}
 ```
+
+Run `plaesy memory config mcp --app kilocode` for the local stdio alternative.
 
 ### n8n
 
@@ -75,20 +128,20 @@ kilo mcp add plaesy-memory \
 1. Start the memory server: `plaesy memory serve --mcp --transport http --port 8080`
 2. In n8n, add "MCP Server Trigger" node
 3. Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-   `memory_stats`, `memory_remember`, and `memory_resolve_gap`
+   `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 **Option B - MCP Client (n8n calls remote MCP server):**
 
 - Set "Server URL" to: `http://127.0.0.1:8080/mcp`
 - Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-  `memory_stats`, `memory_remember`, and `memory_resolve_gap`
+  `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 ### Dify
 
 In Dify: Knowledge / MCP Server / Add MCP Server → select "Streamable HTTP".
 Server URL: `http://127.0.0.1:8080/mcp`
 Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
-`memory_stats`, `memory_remember`, and `memory_resolve_gap`
+`memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 ### Claude Code (quick reference)
 
@@ -121,11 +174,6 @@ export default {
 }
 ```
 
-### Hermes (external provider)
-
-Start the MCP server (stdio or HTTP), then add Plaesy as an external provider in Hermes settings,
-pointing at the stdio command or HTTP URL.
-
 ### Print all snippets
 
 ```bash
@@ -136,7 +184,7 @@ plaesy memory config mcp --list
 
 ```bash
 plaesy memory config mcp --app <name>
-# Available: claude-code, crewai, n8n, dify, kilocode, paperclip
+# Available: claude-code, codex, hermes, cursor, crewai, n8n, dify, kilocode, paperclip
 ```
 
 Searches issued before the first background sync finishes only see what is indexed so far.
