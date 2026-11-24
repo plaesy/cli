@@ -40,8 +40,8 @@ pub mod tasks_validate;
 pub mod telemetry;
 pub mod trim;
 pub mod validate;
-pub mod workspace;
 pub mod voice;
+pub mod workspace;
 
 use clap::{Parser, Subcommand};
 
@@ -180,9 +180,9 @@ impl Command {
             Self::Workspace(_) => "workspace",
             Self::Onboard(_) => "onboard",
             Self::Export(_) => "export",
-            // Reading the telemetry summary is not itself recorded.
             Self::Voice(_) => "voice",
             Self::Remote(_) => "remote",
+            // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
     }
