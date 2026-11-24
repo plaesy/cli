@@ -38,3 +38,17 @@ fn render_reports_local_issues() {
     let html = render_flow("flow", &modules);
     assert!(html.contains("id modul ganda: m1"));
 }
+
+#[test]
+fn escape_covers_all_special_characters() {
+    assert_eq!(escape("&<>\"'"), "&amp;&lt;&gt;&quot;&#39;");
+    assert_eq!(escape("plain"), "plain");
+}
+
+#[test]
+fn render_escapes_module_ids() {
+    let modules = vec![module("<script>alert(1)</script>", "action", &[])];
+    let html = render_flow("flow", &modules);
+    assert!(!html.contains("<script>"));
+    assert!(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+}

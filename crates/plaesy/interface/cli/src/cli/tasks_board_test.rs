@@ -83,6 +83,17 @@ fn long_titles_are_cut_to_the_limit_with_an_ellipsis() {
 }
 
 #[test]
+fn truncate_collapses_whitespace_so_a_title_stays_on_one_line() {
+    assert_eq!(truncate_title("a\n  b\tc", 10), "a b c");
+}
+
+#[test]
+fn truncate_does_not_leave_a_space_before_the_ellipsis() {
+    // Character 17 is a space; the cut must not print "gamma …".
+    assert_eq!(truncate_title("alpha beta gamma delta", 18), "alpha beta gamma…");
+}
+
+#[test]
 fn truncation_counts_characters_not_bytes() {
     // Each `é` is two bytes; a byte-based cut would split a character and panic.
     let cut = truncate_title("ééééé", 3);
