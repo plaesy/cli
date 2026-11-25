@@ -376,16 +376,24 @@ impl MemoryConfig {
 }
 
 /// Settings files, lowest precedence first: the user file written by `plaesy onboard`, then the
-/// project file in `.plaesy/`. Both use the same schema (see [`MemoryConfig`]).
+/// project file in `.plaesy/`: `config.toml` when it exists, otherwise the older `settings.json`.
+/// All use the same schema (see [`MemoryConfig`]).
 pub fn standard_config_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Some(user) = crate::memory::settings::default_path() {
         paths.push(user);
     }
-    paths.push(PathBuf::from(".plaesy").join("settings.json"));
+    let toml = PathBuf::from(".plaesy").join("config.toml");
+    if toml.is_file() {
+        paths.push(toml);
+    } else {
+        paths.push(PathBuf::from(".plaesy").join("settings.json"));
+    }
     paths
 }
 
+/// Reads a settings file as a JSON value. A `.toml` file is parsed as TOML and converted; any other
+/// file is JSON.
 fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
     let raw = std::fs::read_to_string(path).map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
@@ -393,6 +401,16 @@ fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
             path.display()
         ))
     })?;
+    if path.extension().is_some_and(|ext| ext == "toml") {
+        let table: toml::Table = raw.parse().map_err(|e| {
+            crate::memory::error::MemoryError::ConfigError(format!(
+                "invalid TOML in {}: {e}",
+                path.display()
+            ))
+        })?;
+        return serde_json::to_value(table)
+            .map_err(|e| crate::memory::error::MemoryError::ConfigError(e.to_string()));
+    }
     serde_json::from_str(&raw).map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
             "invalid JSON in {}: {e}",

@@ -35,6 +35,19 @@ async fn test_load_from_file_errors() {
     assert!(MemoryConfig::load_from_file(&invalid).await.is_err());
 }
 
+#[tokio::test]
+async fn test_load_from_file_reads_toml_by_extension() {
+    let dir = tempfile::tempdir().expect("tmp");
+    let p = dir.path().join("config.toml");
+    std::fs::write(&p, "[search]\ndefault_limit = 7\n").expect("write");
+    let cfg = MemoryConfig::load_from_file(&p).await.expect("load");
+    assert_eq!(cfg.search.default_limit, 7);
+    assert_eq!(cfg.search.max_limit, 100); // untouched default
+    let bad = dir.path().join("bad.toml");
+    std::fs::write(&bad, "[search\n").expect("write");
+    assert!(MemoryConfig::load_from_file(&bad).await.is_err());
+}
+
 #[test]
 fn test_apply_env_overrides_and_rejects_garbage() {
     let mut cfg = MemoryConfig::default();
