@@ -1225,3 +1225,11 @@ fn split_model_reads_provider_at_model() {
     assert_eq!(split_model("ollama"), ("ollama", None));
     assert_eq!(split_model("ollama@"), ("ollama@", None));
 }
+
+#[test]
+fn resume_and_learn_parse_their_arguments() {
+    assert_eq!(parse_input("/resume"), Input::Resume(String::new()));
+    assert_eq!(parse_input("/resume delete chat-1.jsonl"), Input::Resume("delete chat-1.jsonl".to_owned()));
+    assert_eq!(parse_input("/learn"), Input::Learn(String::new()));
+    assert_eq!(parse_input("/learn save"), Input::Learn("save".to_owned()));
+}

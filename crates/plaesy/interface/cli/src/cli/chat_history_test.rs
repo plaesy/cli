@@ -62,3 +62,37 @@ fn new_names_are_chat_files() {
         "{name}"
     );
 }
+
+#[test]
+fn list_is_newest_first_with_turn_counts_and_the_first_line() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    save(temp.path(), "chat-1.jsonl", &turns()).expect("save");
+    save(temp.path(), "chat-2.jsonl", &turns()[..1]).expect("save");
+    let saved = list(temp.path());
+    assert_eq!(saved.len(), 2);
+    assert_eq!(saved[0].name, "chat-2.jsonl");
+    assert_eq!(saved[0].turns, 1);
+    assert_eq!(saved[1].turns, 2);
+    assert_eq!(saved[1].first, "Apa ibukota Indonesia?");
+}
+
+#[test]
+fn delete_removes_one_file_and_refuses_paths() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    save(temp.path(), "chat-1.jsonl", &turns()).expect("save");
+    assert!(delete(temp.path(), "../chat-1.jsonl").is_err());
+    assert!(delete(temp.path(), "catatan.txt").is_err());
+    delete(temp.path(), "chat-1.jsonl").expect("delete");
+    assert!(list(temp.path()).is_empty());
+}
+
+#[test]
+fn clear_removes_every_saved_session_and_counts_them() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    save(temp.path(), "chat-1.jsonl", &turns()).expect("save");
+    save(temp.path(), "chat-2.jsonl", &turns()).expect("save");
+    fs::write(temp.path().join("lain.txt"), "x").expect("write");
+    assert_eq!(clear(temp.path()), Ok(2));
+    assert!(temp.path().join("lain.txt").exists());
+    assert_eq!(clear(&temp.path().join("tidak-ada")), Ok(0));
+}

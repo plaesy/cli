@@ -281,6 +281,8 @@ pub const COMMANDS: &[(&str, &str, &str)] = &[
     ("/skill", "load a skill into this session", "muat skill ke sesi ini"),
     ("/model", "show the provider and model in use", "lihat provider dan model yang dipakai"),
     ("/subagent", "run a task in its own git worktree", "jalankan tugas di worktree git sendiri"),
+    ("/resume", "continue, list or delete saved chats", "lanjutkan, daftar, atau hapus chat tersimpan"),
+    ("/learn", "propose lessons and a skill from this chat", "usulkan pelajaran dan skill dari chat ini"),
     ("/advisor", "ask the advisor", "minta review advisor"),
     ("/council", "ask every provider", "tanya semua provider"),
     (

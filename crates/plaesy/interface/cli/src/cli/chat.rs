@@ -22,6 +22,7 @@ use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::chat_history;
+use super::chat_learn;
 use super::chat_subagent;
 use super::chat_tools;
 use super::chat_todo;
@@ -453,6 +454,10 @@ pub enum Input {
     Model(String),
     /// `/subagent <task>`: a separate run in its own git worktree (needs --tools --allow-writes)
     Subagent(String),
+    /// `/resume [name | delete <name> | clear]`: list saved sessions, continue one, or delete them
+    Resume(String),
+    /// `/learn [save]`: propose lessons and a skill from this session; `save` keeps them
+    Learn(String),
     /// `/skill [name|clear]`: load a skill into this session, or list the loaded ones
     Skill(String),
     /// `/find <text>`: search the saved sessions
@@ -488,6 +493,8 @@ pub fn parse_input(line: &str) -> Input {
         "/undo" => return Input::Undo,
         "/model" => return Input::Model(String::new()),
         "/subagent" => return Input::Subagent(String::new()),
+        "/resume" => return Input::Resume(String::new()),
+        "/learn" => return Input::Learn(String::new()),
         "/skill" => return Input::Skill(String::new()),
         "/find" => return Input::Find(String::new()),
         "/providers" => return Input::Providers,
@@ -495,6 +502,12 @@ pub fn parse_input(line: &str) -> Input {
         "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/resume ") {
+        return Input::Resume(rest.trim().to_owned());
+    }
+    if let Some(rest) = text.strip_prefix("/learn ") {
+        return Input::Learn(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/model ") {
         return Input::Model(rest.trim().to_owned());
@@ -816,6 +829,8 @@ pub fn converse(
     let mut todos = chat_todo::Todos::default();
     // Skills loaded with `/skill` for this session only: name and the text sent as a system message.
     let mut session_skills: Vec<(String, String)> = Vec::new();
+    // The proposal from `/learn`, kept until `/learn save` or the next `/learn`.
+    let mut pending_learn: Option<chat_learn::Proposal> = None;
     // A reader thread forwards lines as they arrive, so lines typed while a reply is running wait
     // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
     let (sender, receiver) = mpsc::channel::<io::Result<String>>();
@@ -1203,6 +1218,99 @@ pub fn converse(
                 }
                 _ => writeln!(out, "pakai: /subagent <tugas>")?,
             },
+            Input::Resume(arg) => {
+                let dir = chat_history::dir(&settings.repo);
+                if arg.is_empty() {
+                    let saved = chat_history::list(&dir);
+                    if saved.is_empty() {
+                        writeln!(out, "tidak ada sesi tersimpan")?;
+                    }
+                    for item in saved {
+                        writeln!(out, "{}  {} giliran  {}", item.name, item.turns, item.first)?;
+                    }
+                } else if let Some(name) = arg.strip_prefix("delete ") {
+                    match chat_history::delete(&dir, name.trim()) {
+                        Ok(()) => writeln!(out, "dihapus: {}", name.trim())?,
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                } else if arg == "clear" {
+                    match chat_history::clear(&dir) {
+                        Ok(count) => writeln!(out, "{count} sesi dihapus")?,
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                } else {
+                    match chat_history::check_name(&arg) {
+                        Ok(()) => match chat_history::load(&dir.join(&arg)) {
+                            Ok(turns) => {
+                                let count = turns.len();
+                                transcript = Transcript::from_pairs(turns);
+                                writeln!(out, "dilanjutkan dari {arg}: {count} giliran")?;
+                            }
+                            Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                        },
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                }
+            }
+            Input::Learn(arg) => {
+                if arg == "save" {
+                    match pending_learn.take() {
+                        None => writeln!(out, "belum ada usulan; jalankan /learn dulu")?,
+                        Some(proposal) => {
+                            for lesson in &proposal.lessons {
+                                let decision = Decision {
+                                    title: "Pelajaran dari sesi chat".to_owned(),
+                                    chosen: lesson.clone(),
+                                    why: "disimpan lewat /learn save".to_owned(),
+                                };
+                                match record(&decision) {
+                                    Ok(text) => writeln!(out, "{}", text.trim())?,
+                                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                                }
+                            }
+                            if let Some(draft) = &proposal.skill {
+                                match chat_learn::write_skill(&settings.skills_dir, draft) {
+                                    Ok(true) => writeln!(out, "skill diperbarui: {}", draft.name)?,
+                                    Ok(false) => writeln!(out, "skill dibuat: {}", draft.name)?,
+                                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                                }
+                            }
+                        }
+                    }
+                } else if transcript.is_empty() {
+                    writeln!(out, "belum ada percakapan untuk dipelajari")?;
+                } else {
+                    let messages = chat_learn::messages(transcript.history());
+                    let request = Request {
+                        prompt: String::new(),
+                        max_output_tokens: settings.max_tokens,
+                        timeout: settings.timeout,
+                        dir: String::new(),
+                    };
+                    match delegate::run_messages(provider.as_ref(), &messages, &request) {
+                        Ok(response) => match chat_learn::parse(&response.text) {
+                            Ok(proposal) => {
+                                writeln!(out, "usulan pelajaran:")?;
+                                for lesson in &proposal.lessons {
+                                    writeln!(out, "- {lesson}")?;
+                                }
+                                match &proposal.skill {
+                                    Some(draft) => writeln!(
+                                        out,
+                                        "usulan skill: {} - {}",
+                                        draft.name, draft.description
+                                    )?,
+                                    None => writeln!(out, "tanpa skill baru")?,
+                                }
+                                writeln!(out, "ketik /learn save untuk menyimpan")?;
+                                pending_learn = Some(proposal);
+                            }
+                            Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                        },
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                    }
+                }
+            }
             Input::Model(name) => {
                 if name.is_empty() {
                     writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;

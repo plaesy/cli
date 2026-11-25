@@ -76,7 +76,7 @@ pub fn find(roles: &[Role], name: &str) -> Option<Role> {
 }
 
 /// A skill name must be one folder name: no separators and no `.` or `..`.
-fn valid_skill_name(name: &str) -> bool {
+pub fn valid_skill_name(name: &str) -> bool {
     !name.is_empty() && !name.contains(['/', '\\', '.'])
 }
 

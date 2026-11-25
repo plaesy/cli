@@ -39,6 +39,8 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 9: sebagian lanjut. `plaesy memory schedule list` menambah daftar jadwal; `list_schedules` (baca) dan `generate_image` (butuh --allow-writes, lewat `plaesy images create`).
 - Slice 10: `/model <nama>` ganti model untuk provider aktif (format `provider` di `open_provider`).
 - Slice 12: `web_search` lewat `plaesy reach exa` (butuh `"chat": {"web": true}` dan platform exa dikonfigurasi).
+- /resume: daftar, lanjutkan, `delete <nama>`, dan `clear` untuk sesi di `.plaesy/chats`.
+- /learn: usulan pelajaran dan skill dari sesi; `/learn save` menyimpan pelajaran sebagai keputusan dan menulis skill ke folder skill.
 - Slice 9: sebagian. `create_task` dan `schedule_once` (butuh --allow-writes) dan `list_tasks` (baca). Cron tidak punya perintah daftar.
 - Slice 10: sebagian. `/model` menampilkan. Ganti model belum: model ada di entri provider, dan ProviderOpener hanya menerima nama.
 - Slice 11: selesai. `/subagent <tugas>` (butuh --allow-writes): worktree git terpisah di `.plaesy/subagents`, tanpa merge.

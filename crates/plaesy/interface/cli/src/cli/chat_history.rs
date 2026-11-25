@@ -125,3 +125,90 @@ pub fn search(dir: &Path, query: &str) -> Vec<Hit> {
 #[cfg(test)]
 #[path = "chat_history_test.rs"]
 mod chat_history_test;
+
+/// One saved session, for `/resume` listings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Saved {
+    /// File name under the chats folder.
+    pub name: String,
+    /// Number of turns in the file.
+    pub turns: usize,
+    /// The first user line, cut to 60 characters.
+    pub first: String,
+}
+
+/// Every saved session, newest first. Files that cannot be read are left out.
+#[must_use]
+pub fn list(dir: &Path) -> Vec<Saved> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".jsonl"))
+        .collect();
+    names.sort();
+    names.reverse();
+    names
+        .into_iter()
+        .filter_map(|name| {
+            let turns = load(&dir.join(&name)).ok()?;
+            let first = turns
+                .iter()
+                .find(|(role, _)| role == "user")
+                .map_or_else(String::new, |(_, text)| text.chars().take(60).collect());
+            Some(Saved {
+                name,
+                turns: turns.len(),
+                first,
+            })
+        })
+        .collect()
+}
+
+/// A saved file name: a plain `.jsonl` name under the chats folder, with no path parts.
+///
+/// # Errors
+///
+/// A message when the name has a path separator, `..`, or lacks the `.jsonl` extension.
+pub fn check_name(name: &str) -> Result<(), String> {
+    if name.is_empty()
+        || name.contains(['/', '\\'])
+        || name.contains("..")
+        || !name.ends_with(".jsonl")
+    {
+        return Err(format!("nama sesi tidak valid: {name}"));
+    }
+    Ok(())
+}
+
+/// Deletes one saved session.
+///
+/// # Errors
+///
+/// An invalid name, or the I/O error when the file cannot be removed.
+pub fn delete(dir: &Path, name: &str) -> Result<(), String> {
+    check_name(name)?;
+    fs::remove_file(dir.join(name)).map_err(|e| format!("{name}: {e}"))
+}
+
+/// Deletes every saved session and returns how many were removed.
+///
+/// # Errors
+///
+/// The I/O error from listing the folder or removing a file.
+pub fn clear(dir: &Path) -> Result<usize, String> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return Ok(0);
+    };
+    let mut removed = 0;
+    for entry in entries.filter_map(Result::ok) {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".jsonl") {
+            fs::remove_file(entry.path()).map_err(|e| format!("{name}: {e}"))?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}

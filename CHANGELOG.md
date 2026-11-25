@@ -15,6 +15,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - `plaesy chat` has `/skill <name>`, which loads a skill's `SKILL.md` into the session as a system message; `/skill` lists the loaded ones and `/skill clear` removes them.
 - `plaesy chat` has a read-only `list_tasks` tool, and `/model` shows the provider and model in use. Changing the model in a session is not built yet.
 - `plaesy chat --allow-writes` adds `create_task` and `schedule_once`. `web_fetch` is the only chat tool that uses the network; it is off unless `"chat": {"web": true}` is set in `settings.json`. `/subagent <task>` runs a task in its own git worktree under `.plaesy/subagents`; nothing is merged.
+- `/resume` lists saved chats, continues one (`/resume <file>`), deletes one (`/resume delete <file>`), or deletes all (`/resume clear`). `/learn` proposes lessons and a skill from the session; `/learn save` records the lessons as decisions and writes the skill to the skills folder. Nothing is written until `save`.
 - `plaesy chat --learn` asks the provider for a short summary of the session when it ends and saves it as a decision, through the same path as `/decision`.
 - `plaesy chat` saves each session that has a turn to `.plaesy/chats/chat-<millis>.jsonl` when it ends (`--no-save` turns this off). `--resume <file>` starts from a saved session, and `/find <text>` searches all saved sessions. The files stay local.
 - `plaesy chat` has `/todo`, a checklist for the session: add, mark done or undone, remove, or clear by number. It is kept in memory only.
