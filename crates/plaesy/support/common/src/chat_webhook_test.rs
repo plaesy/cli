@@ -4,10 +4,13 @@ use std::cell::RefCell;
 
 use super::*;
 
+/// One recorded request: URL, headers, and body.
+type Recorded = (String, Vec<(String, String)>, Vec<u8>);
+
 /// Pemanggil HTTP palsu yang mencatat setiap permintaan.
 struct FakePoster {
     status: Result<u16, &'static str>,
-    calls: RefCell<Vec<(String, Vec<(String, String)>, Vec<u8>)>>,
+    calls: RefCell<Vec<Recorded>>,
 }
 
 impl FakePoster {

@@ -617,6 +617,13 @@ fn write_state(out: &mut impl Write, provider: &dyn Provider) -> io::Result<()> 
     out.write_all(&[STATE_MARK])
 }
 
+/// Writes the estimated context in use for the `--tui` status line: `STATE_MARK ctx N STATE_MARK`.
+fn write_context(out: &mut impl Write, tokens: usize) -> io::Result<()> {
+    out.write_all(&[STATE_MARK])?;
+    write!(out, "ctx {tokens}")?;
+    out.write_all(&[STATE_MARK])
+}
+
 /// The line that opens and closes a block of lines sent as one message.
 pub const BLOCK_FENCE: &str = "\"\"\"";
 
@@ -704,6 +711,7 @@ pub fn converse(
     let mut awaiting_mark = false;
     loop {
         if std::mem::take(&mut awaiting_mark) && settings.turn_marks {
+            write_context(out, transcript.estimated_tokens())?;
             out.write_all(&[TURN_MARK])?;
             out.flush()?;
         }

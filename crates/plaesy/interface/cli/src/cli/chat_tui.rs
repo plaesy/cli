@@ -18,7 +18,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph};
 
-use super::chat::{BLOCK_FENCE, STATE_MARK, TURN_MARK, USAGE_MARK};
+use super::chat::{BLOCK_FENCE, CONTEXT_WINDOW_TOKENS, STATE_MARK, TURN_MARK, USAGE_MARK};
 use super::chat_text::Lang;
 
 /// Most lines kept in the conversation view. Older lines are dropped.
@@ -485,6 +485,8 @@ struct Screen {
     /// Input and output tokens summed over the session; only providers that report them count.
     tokens_out: u64,
     tokens_in: u64,
+    /// Estimated tokens of the conversation kept, from the chat's `ctx` state mark.
+    context_tokens: Option<u64>,
     /// A usage or state mark whose body is still arriving, with the mark byte that opened it.
     capture: Option<(u8, String)>,
     /// Advances each frame, to turn the busy indicator.
@@ -557,6 +559,13 @@ impl Screen {
 
     /// Sets the provider and model from a state mark body, `name TAB model`.
     fn record_state(&mut self, body: &str) {
+        // `ctx <tokens>` is the estimated context in use, written before each turn mark.
+        if let Some(used) = body.strip_prefix("ctx ") {
+            if let Ok(used) = used.trim().parse::<u64>() {
+                self.context_tokens = Some(used);
+            }
+            return;
+        }
         let (name, model) = body.split_once('\t').unwrap_or((body, ""));
         if !name.is_empty() {
             self.provider = name.to_owned();
@@ -585,10 +594,20 @@ impl Screen {
     /// The session's token totals for the status line, with a trailing separator; empty until a
     /// provider reports a count.
     fn usage_text(&self) -> String {
+        let context = match self.context_tokens {
+            Some(used) => format!(
+                "ctx {}% · ",
+                used * 100 / CONTEXT_WINDOW_TOKENS.max(1) as u64
+            ),
+            None => String::new(),
+        };
         if self.tokens_in == 0 && self.tokens_out == 0 {
-            return String::new();
+            return context;
         }
-        format!("tokens {} in · {} out · ", self.tokens_in, self.tokens_out)
+        format!(
+            "{context}tokens {} in · {} out · ",
+            self.tokens_in, self.tokens_out
+        )
     }
 
     /// Up: the previous line sent. The first Up keeps the line being typed as the draft.
@@ -807,6 +826,7 @@ where
         reply_started: false,
         last_took: None,
         tokens_in: 0,
+        context_tokens: None,
         tokens_out: 0,
         capture: None,
         tick: 0,

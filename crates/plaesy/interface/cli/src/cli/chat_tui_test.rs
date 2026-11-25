@@ -198,6 +198,7 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         reply_started: false,
         last_took: None,
         tokens_in: 0,
+        context_tokens: None,
         tokens_out: 0,
         capture: None,
         tick: 0,
@@ -433,4 +434,20 @@ fn the_time_of_the_last_reply_stays_in_the_status_line_once_it_is_written() {
     screen.receive(&char::from(TURN_MARK).to_string());
     assert_eq!(screen.pending, 0);
     assert!(screen.status_text().contains("last 13s"));
+}
+
+#[test]
+fn status_shows_the_context_percent_from_the_chat_state_mark() {
+    let mut screen = screen_with_history(&[]);
+    assert!(!screen.status_text().contains("ctx"));
+    screen.receive(&format!(
+        "{}ctx 1600{}",
+        char::from(STATE_MARK),
+        char::from(STATE_MARK)
+    ));
+    assert!(
+        screen.status_text().contains("ctx 5%"),
+        "{}",
+        screen.status_text()
+    );
 }
