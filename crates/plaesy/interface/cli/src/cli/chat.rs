@@ -63,9 +63,12 @@ pub struct Args {
     /// Language for chat text: en or id. Default: "language" in ~/.plaesy/settings.json, then en
     #[arg(long)]
     pub lang: Option<String>,
-    /// Let the model call read-only tools (read_file, list_dir) under the repository root
+    /// Let the model call tools (read_file, list_dir; writes need --allow-writes) under the repository root
     #[arg(long)]
     pub tools: bool,
+    /// Let tools write files and run commands (`write_file`, `run_command`). Needs --tools
+    #[arg(long, requires = "tools")]
+    pub allow_writes: bool,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -297,8 +300,8 @@ pub struct ChatSettings {
     pub roles: Vec<chat_roles::Role>,
     /// The role to start with.
     pub role: String,
-    /// Repository root for read-only tools (`--tools`). None means the model gets no tools.
-    pub tools_root: Option<PathBuf>,
+    /// Tools the model may call (`--tools`). None means the model gets no tools.
+    pub tools: Option<chat_tools::Tools>,
     /// Skill store, where roles find their skills.
     pub skills_dir: PathBuf,
     /// Plugins from the user folder and the repository.
@@ -1238,16 +1241,16 @@ pub fn converse(
                         "messages": messages.len(),
                     }),
                 );
-                let result = match settings.tools_root.as_deref() {
+                let result = match settings.tools.as_ref() {
                     // With tools the reply is written after its tool rounds finish, so it is not streamed.
-                    Some(root) => {
-                        messages.insert(0, Message::system(chat_tools::PROTOCOL.to_owned()));
+                    Some(tools) => {
+                        messages.insert(0, Message::system(chat_tools::protocol(tools.allow_writes)));
                         let mut notes = String::new();
                         let result = chat_tools::run_turn(
                             provider.as_ref(),
                             &messages,
                             &request,
-                            root,
+                            tools,
                             &mut |note| {
                                 notes.push_str(note);
                                 notes.push('\n');
@@ -1449,7 +1452,10 @@ pub fn run(args: &Args) -> CliResult {
         roles: roles.clone(),
         role: active_role.name.clone(),
         skills_dir: skills_dir.clone(),
-        tools_root: args.tools.then(|| args.path.clone()),
+        tools: args.tools.then(|| chat_tools::Tools {
+            root: args.path.clone(),
+            allow_writes: args.allow_writes,
+        }),
         plugins: plugins.clone(),
         agent_name: agent_name.clone(),
         peers: peers.clone(),

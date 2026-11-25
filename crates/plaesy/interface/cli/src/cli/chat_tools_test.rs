@@ -54,6 +54,13 @@ fn request() -> Request {
     }
 }
 
+fn tools(root: &std::path::Path, allow_writes: bool) -> Tools {
+    Tools {
+        root: root.to_path_buf(),
+        allow_writes,
+    }
+}
+
 fn repo() -> tempfile::TempDir {
     let temp = tempfile::tempdir().expect("tempdir");
     fs::create_dir_all(temp.path().join("src")).expect("mkdir");
@@ -81,7 +88,7 @@ fn text_without_a_block_or_with_bad_json_is_not_a_call() {
 fn read_file_returns_the_content_under_the_root() {
     let temp = repo();
     let out = execute(
-        temp.path(),
+        &tools(temp.path(), false),
         &json!({"tool":"read_file","path":"src/main.rs"}),
     );
     assert_eq!(out, "fn main() {}\n");
@@ -90,7 +97,10 @@ fn read_file_returns_the_content_under_the_root() {
 #[test]
 fn list_dir_marks_folders_and_sorts_names() {
     let temp = repo();
-    let out = execute(temp.path(), &json!({"tool":"list_dir","path":"."}));
+    let out = execute(
+        &tools(temp.path(), false),
+        &json!({"tool":"list_dir","path":"."}),
+    );
     assert_eq!(out, "README.md\nsrc/");
 }
 
@@ -103,7 +113,10 @@ fn paths_outside_the_root_are_refused() {
         "src/../../x",
         "C:\\Windows\\win.ini",
     ] {
-        let out = execute(temp.path(), &json!({"tool":"read_file","path":path}));
+        let out = execute(
+            &tools(temp.path(), false),
+            &json!({"tool":"read_file","path":path}),
+        );
         assert!(
             out.starts_with("error:"),
             "seharusnya ditolak: {path} -> {out}"
@@ -119,7 +132,7 @@ fn a_symlink_that_leaves_the_root_is_refused() {
     fs::write(outside.path().join("rahasia.txt"), "x").expect("write");
     std::os::unix::fs::symlink(outside.path(), temp.path().join("link")).expect("symlink");
     let out = execute(
-        temp.path(),
+        &tools(temp.path(), false),
         &json!({"tool":"read_file","path":"link/rahasia.txt"}),
     );
     assert!(out.starts_with("error:"), "{out}");
@@ -129,12 +142,12 @@ fn a_symlink_that_leaves_the_root_is_refused() {
 fn unknown_tools_and_missing_files_come_back_as_text() {
     let temp = repo();
     assert_eq!(
-        execute(temp.path(), &json!({"tool":"hapus_semua"})),
+        execute(&tools(temp.path(), false), &json!({"tool":"hapus_semua"})),
         "error: alat tidak dikenal: hapus_semua"
     );
     assert!(
         execute(
-            temp.path(),
+            &tools(temp.path(), false),
             &json!({"tool":"read_file","path":"tidak_ada.txt"})
         )
         .starts_with("error:")
@@ -145,7 +158,10 @@ fn unknown_tools_and_missing_files_come_back_as_text() {
 fn long_output_is_cut_at_a_character_boundary() {
     let temp = repo();
     fs::write(temp.path().join("besar.txt"), "é".repeat(MAX_OUTPUT_BYTES)).expect("write");
-    let out = execute(temp.path(), &json!({"tool":"read_file","path":"besar.txt"}));
+    let out = execute(
+        &tools(temp.path(), false),
+        &json!({"tool":"read_file","path":"besar.txt"}),
+    );
     assert!(out.ends_with("[dipotong]"));
     assert!(out.len() <= MAX_OUTPUT_BYTES + "\n[dipotong]".len());
 }
@@ -159,9 +175,15 @@ fn a_turn_runs_the_call_and_sends_its_result_back() {
     ]);
     let messages = vec![Message::user("apa isi README?")];
     let mut notes = Vec::new();
-    let response = run_turn(&provider, &messages, &request(), temp.path(), &mut |n| {
-        notes.push(n.to_owned());
-    })
+    let response = run_turn(
+        &provider,
+        &messages,
+        &request(),
+        &tools(temp.path(), false),
+        &mut |n| {
+            notes.push(n.to_owned());
+        },
+    )
     .expect("turn");
     assert_eq!(response.text, "README berisi sapaan halo.");
     assert_eq!(notes, vec!["[alat] read_file README.md".to_owned()]);
@@ -180,9 +202,88 @@ fn a_model_that_keeps_asking_is_stopped_at_the_round_limit() {
         &provider,
         &[Message::user("terus")],
         &request(),
-        temp.path(),
+        &tools(temp.path(), false),
         &mut |_| {},
     )
     .expect_err("limit");
     assert!(err.to_string().contains("batas"), "{err}");
+}
+
+#[test]
+fn writes_are_refused_without_allow_writes() {
+    let temp = repo();
+    let call = json!({"tool":"write_file","path":"novo.txt","content":"x"});
+    let out = execute(&tools(temp.path(), false), &call);
+    assert!(out.contains("--allow-writes"), "{out}");
+    assert!(!temp.path().join("novo.txt").exists());
+    let run = json!({"tool":"run_command","command":"cmd","args":[]});
+    assert!(execute(&tools(temp.path(), false), &run).contains("--allow-writes"));
+}
+
+#[test]
+fn write_file_creates_and_replaces_a_file_under_the_root() {
+    let temp = repo();
+    let allowed = tools(temp.path(), true);
+    let out = execute(
+        &allowed,
+        &json!({"tool":"write_file","path":"src/nuevo.rs","content":"fn x() {}"}),
+    );
+    assert!(out.starts_with("ditulis"), "{out}");
+    assert_eq!(
+        fs::read_to_string(temp.path().join("src/nuevo.rs")).expect("read"),
+        "fn x() {}"
+    );
+    let _ = execute(
+        &allowed,
+        &json!({"tool":"write_file","path":"README.md","content":"baru"}),
+    );
+    assert_eq!(
+        fs::read_to_string(temp.path().join("README.md")).expect("read"),
+        "baru"
+    );
+}
+
+#[test]
+fn write_file_refuses_paths_outside_the_root() {
+    let temp = repo();
+    let allowed = tools(temp.path(), true);
+    for path in ["../luar.txt", "/tmp/luar.txt", "src/../../luar.txt"] {
+        let out = execute(
+            &allowed,
+            &json!({"tool":"write_file","path":path,"content":"x"}),
+        );
+        assert!(
+            out.starts_with("error:"),
+            "seharusnya ditolak: {path} -> {out}"
+        );
+    }
+}
+
+#[test]
+fn run_command_runs_a_program_in_the_root_and_reports_the_exit_code() {
+    let temp = repo();
+    let allowed = tools(temp.path(), true);
+    let program = if cfg!(windows) { "cmd" } else { "sh" };
+    let args: Vec<&str> = if cfg!(windows) {
+        vec!["/C", "echo", "halo"]
+    } else {
+        vec!["-c", "echo halo"]
+    };
+    let out = execute(
+        &allowed,
+        &json!({"tool":"run_command","command":program,"args":args}),
+    );
+    assert!(out.starts_with("exit=Some(0)"), "{out}");
+    assert!(out.contains("halo"), "{out}");
+}
+
+#[test]
+fn run_command_refuses_a_path_as_the_program() {
+    let temp = repo();
+    let allowed = tools(temp.path(), true);
+    let out = execute(
+        &allowed,
+        &json!({"tool":"run_command","command":"./skrip","args":[]}),
+    );
+    assert!(out.starts_with("error:"), "{out}");
 }

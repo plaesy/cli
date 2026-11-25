@@ -13,7 +13,7 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 ## Slice
 
 1. **Loop tool baca-saja** (`chat_tools.rs`, `chat_tools_test.rs`): `read_file`, `list_dir`, dengan `--tools`. Status: selesai.
-2. **Persetujuan dan tulis/edit** `write_file`, `run_command`: prompt y/n di line prompt; di TUI lewat penanda kontrol. Belum.
+2. **Tulis dan jalankan perintah**: `write_file` dan `run_command` dengan `--allow-writes`. Selesai. Persetujuan per panggilan (prompt y/n, di TUI lewat penanda kontrol) belum ada.
 3. **Checkpoint dan `/undo`**: snapshot sebelum tulis. Belum.
 4. **Kompresi yang menyisakan ekor** di `compact_transcript`. Belum.
 5. **Todo dalam sesi**. Belum.
@@ -29,3 +29,4 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 ## Status
 
 - Slice 1: selesai (tool baca-saja, `--tools`).
+- Slice 2: selesai (`--allow-writes`, tanpa persetujuan per panggilan).
