@@ -18,7 +18,7 @@ use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
-use super::chat::TURN_MARK;
+use super::chat::{BLOCK_FENCE, TURN_MARK};
 use super::chat_text::Lang;
 
 /// Most lines kept in the conversation view. Older lines are dropped.
@@ -27,6 +27,8 @@ pub const MAX_LINES: usize = 2000;
 const PAGE: usize = 10;
 /// Most commands listed at once under the input.
 const MAX_SHOWN: usize = 8;
+/// Tallest the input box grows, border included; longer entries scroll out of view.
+const MAX_ENTRY_HEIGHT: u16 = 8;
 
 /// Lines typed by the person, read by the chat as if they came from stdin. Reading blocks until a
 /// line arrives, and reports end of input once the sender is gone.
@@ -177,6 +179,26 @@ impl Input {
     pub fn text(&self) -> String {
         self.chars.iter().collect()
     }
+
+    /// The cursor as (row, column) counted from the top of a multi-line input.
+    pub fn cursor_position(&self) -> (usize, usize) {
+        let before = &self.chars[..self.cursor];
+        let row = before.iter().filter(|c| **c == '\n').count();
+        let column = before.iter().rev().take_while(|c| **c != '\n').count();
+        (row, column)
+    }
+}
+
+/// The lines sent to the chat for one submitted entry. An entry with line breaks is sent as a
+/// fenced block, so the chat reads it as one message.
+pub fn wire_lines(text: &str) -> Vec<String> {
+    if !text.contains('\n') {
+        return vec![text.to_owned()];
+    }
+    let mut lines = vec![BLOCK_FENCE.to_owned()];
+    lines.extend(text.split('\n').map(str::to_owned));
+    lines.push(BLOCK_FENCE.to_owned());
+    lines
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -188,6 +210,8 @@ pub enum Action {
     Home,
     End,
     Submit,
+    /// Alt+Enter or Ctrl+J: a line break in the input, without sending.
+    Newline,
     ScrollUp,
     ScrollDown,
     /// Up or Down: moves the highlight when the command list is open.
@@ -206,7 +230,9 @@ pub fn action(key: &KeyEvent) -> Action {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     match key.code {
         KeyCode::Char('c') if ctrl => Action::Quit,
+        KeyCode::Char('j') if ctrl => Action::Newline,
         KeyCode::Esc => Action::Cancel,
+        KeyCode::Enter if key.modifiers.contains(KeyModifiers::ALT) => Action::Newline,
         KeyCode::Enter => Action::Submit,
         KeyCode::Tab => Action::Complete,
         KeyCode::Up => Action::Up,
@@ -378,7 +404,7 @@ impl Screen {
     fn draw(&self, frame: &mut Frame<'_>) {
         let [log, entry, status] = Layout::vertical([
             Constraint::Min(1),
-            Constraint::Length(3),
+            Constraint::Length(self.entry_height()),
             Constraint::Length(1),
         ])
         .areas(frame.area());
@@ -442,6 +468,12 @@ impl Screen {
         frame.render_widget(log, area);
     }
 
+    /// Rows the input box needs: one per line of the entry, with a border, up to a limit.
+    fn entry_height(&self) -> u16 {
+        let lines = self.input.text().split('\n').count() as u16;
+        (lines + 2).clamp(3, MAX_ENTRY_HEIGHT)
+    }
+
     fn draw_input(&self, frame: &mut Frame<'_>, area: Rect) {
         let prompt = match self.lang {
             Lang::En => " message ",
@@ -449,10 +481,13 @@ impl Screen {
         };
         let entry = Paragraph::new(self.input.text()).block(Block::bordered().title(prompt));
         frame.render_widget(entry, area);
-        // Place the cursor inside the box, after the typed characters.
+        // Place the cursor inside the box, after the typed characters on its line.
+        let (row, column) = self.input.cursor_position();
         let max_x = area.x + area.width.saturating_sub(2);
-        let x = (area.x + 1 + self.input.cursor as u16).min(max_x);
-        frame.set_cursor_position((x, area.y + 1));
+        let x = (area.x + 1 + column as u16).min(max_x);
+        let max_y = area.y + area.height.saturating_sub(2);
+        let y = (area.y + 1 + row as u16).min(max_y);
+        frame.set_cursor_position((x, y));
     }
 
     fn status_text(&self) -> String {
@@ -482,10 +517,12 @@ impl Screen {
             (Lang::En, false, true) => "closing after the current reply…".to_owned(),
             (Lang::Id, false, true) => "menutup setelah balasan selesai…".to_owned(),
             (Lang::En, false, false) => {
-                "Enter send · PgUp/PgDn scroll · Esc quit · /exit ends the chat".to_owned()
+                "Enter send · Alt+Enter new line · PgUp/PgDn scroll · Esc quit · /exit ends the chat"
+                    .to_owned()
             }
             (Lang::Id, false, false) => {
-                "Enter kirim · PgUp/PgDn gulir · Esc keluar · /exit mengakhiri chat".to_owned()
+                "Enter kirim · Alt+Enter baris baru · PgUp/PgDn gulir · Esc keluar · /exit mengakhiri chat"
+                    .to_owned()
             }
         }
     }
@@ -621,10 +658,18 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
             if let Some(tx) = line_tx.as_ref() {
                 screen.transcript.push_user(&line);
                 // A send fails only when the session has already ended; the frame loop notices that.
-                let _ = tx.send(line);
+                for part in wire_lines(&line) {
+                    let _ = tx.send(part);
+                }
                 screen.pending += 1;
                 screen.sent_at.get_or_insert_with(Instant::now);
             }
+        }
+        Action::Newline => {
+            screen.input.insert('\n');
+            screen.selected = 0;
+            screen.popup_hidden = false;
+            screen.history_pos = None;
         }
         Action::Cancel => {
             if open.is_empty() {

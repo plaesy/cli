@@ -171,6 +171,37 @@ fn screen_with_history(lines: &[&str]) -> Screen {
 }
 
 #[test]
+fn alt_enter_and_ctrl_j_add_a_line_break_while_enter_sends() {
+    let alt_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT);
+    assert_eq!(action(&alt_enter), Action::Newline);
+    let ctrl_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL);
+    assert_eq!(action(&ctrl_j), Action::Newline);
+    let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+    assert_eq!(action(&enter), Action::Submit);
+}
+
+#[test]
+fn cursor_position_counts_rows_and_columns_in_a_multi_line_input() {
+    let mut input = Input::default();
+    input.set("satu\ndua");
+    assert_eq!(input.cursor_position(), (1, 3));
+    input.home();
+    assert_eq!(input.cursor_position(), (0, 0));
+}
+
+#[test]
+fn a_multi_line_entry_reaches_the_chat_as_one_message() {
+    assert_eq!(wire_lines("halo"), vec!["halo".to_owned()]);
+    assert_eq!(wire_lines("a\nb"), vec!["\"\"\"", "a", "b", "\"\"\""]);
+    let mut reader = crate::cli::chat::BlockReader::default();
+    let messages: Vec<String> = wire_lines("a\nb")
+        .into_iter()
+        .filter_map(|line| reader.push(line))
+        .collect();
+    assert_eq!(messages, vec!["a\nb".to_owned()]);
+}
+
+#[test]
 fn elapsed_time_is_shown_while_a_reply_is_pending() {
     assert_eq!(clock(Duration::from_secs(5)), "5s");
     assert_eq!(clock(Duration::from_secs(75)), "1m15s");

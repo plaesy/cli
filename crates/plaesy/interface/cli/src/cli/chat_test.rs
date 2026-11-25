@@ -1022,3 +1022,26 @@ fn providers_lists_every_registered_one_and_marks_the_active() {
     assert!(text.contains("  beta: enabled, billable"), "{text}");
     assert!(text.contains("  gamma: disabled"), "{text}");
 }
+
+#[test]
+fn a_fenced_block_is_one_message_with_its_newlines() {
+    let mut reader = BlockReader::default();
+    assert_eq!(reader.push("satu".to_owned()), Some("satu".to_owned()));
+    assert_eq!(reader.push("\"\"\"".to_owned()), None);
+    assert_eq!(reader.push("baris a".to_owned()), None);
+    assert_eq!(reader.push("baris b".to_owned()), None);
+    assert_eq!(
+        reader.push("\"\"\"".to_owned()),
+        Some("baris a\nbaris b".to_owned())
+    );
+    assert_eq!(reader.push("dua".to_owned()), Some("dua".to_owned()));
+}
+
+#[test]
+fn an_unclosed_block_is_sent_at_the_end_of_input() {
+    let mut reader = BlockReader::default();
+    reader.push("\"\"\"".to_owned());
+    reader.push("sisa".to_owned());
+    assert_eq!(reader.finish(), Some("sisa".to_owned()));
+    assert_eq!(reader.finish(), None);
+}

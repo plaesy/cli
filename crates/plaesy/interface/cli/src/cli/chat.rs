@@ -528,6 +528,39 @@ pub fn take_next(queue: &mut VecDeque<String>) -> String {
     }
 }
 
+/// The line that opens and closes a block of lines sent as one message.
+pub const BLOCK_FENCE: &str = "\"\"\"";
+
+/// Joins a block of lines between two `"""` fence lines into one message, so a message can span
+/// several lines. Lines outside a block pass through unchanged.
+#[derive(Debug, Default)]
+pub struct BlockReader {
+    open: Option<Vec<String>>,
+}
+
+impl BlockReader {
+    /// Feeds one line; returns the message it completes, if any.
+    pub fn push(&mut self, line: String) -> Option<String> {
+        match self.open.as_mut() {
+            None if line.trim() == BLOCK_FENCE => {
+                self.open = Some(Vec::new());
+                None
+            }
+            None => Some(line),
+            Some(_) if line.trim() == BLOCK_FENCE => self.finish(),
+            Some(lines) => {
+                lines.push(line);
+                None
+            }
+        }
+    }
+
+    /// Ends the input: a block still open at the end is sent as it is.
+    pub fn finish(&mut self) -> Option<String> {
+        self.open.take().map(|lines| lines.join("\n"))
+    }
+}
+
 /// Runs the read-eval loop over `input`, writing replies and notices to `out`. A failed call is
 /// reported and does not end the session or enter the transcript.
 pub fn converse(
@@ -556,10 +589,21 @@ pub fn converse(
     // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
     let (sender, receiver) = mpsc::channel::<io::Result<String>>();
     thread::spawn(move || {
+        let mut blocks = BlockReader::default();
         for line in input.lines() {
-            if sender.send(line).is_err() {
-                break;
+            let message = match line {
+                Ok(line) => match blocks.push(line) {
+                    Some(message) => Ok(message),
+                    None => continue,
+                },
+                Err(err) => Err(err),
+            };
+            if sender.send(message).is_err() {
+                return;
             }
+        }
+        if let Some(message) = blocks.finish() {
+            let _ = sender.send(Ok(message));
         }
     });
     let mut queue: VecDeque<String> = VecDeque::new();
