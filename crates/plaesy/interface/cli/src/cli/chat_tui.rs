@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph};
 use ratatui::Frame;
@@ -335,7 +335,27 @@ pub fn styled_line(line: &str) -> Line<'static> {
         spans.extend(inline_spans(item));
         return Line::from(spans);
     }
+    // A numbered item keeps its indentation and shows its number in bold.
+    if let Some((number, item)) = ordered_item(trimmed) {
+        let indent = &line[..line.len() - trimmed.len()];
+        let mut spans = vec![
+            Span::raw(indent.to_owned()),
+            Span::styled(format!("{number}. "), Style::new().bold()),
+        ];
+        spans.extend(inline_spans(item));
+        return Line::from(spans);
+    }
     Line::from(inline_spans(line))
+}
+
+/// `3. text` as its number and its text.
+fn ordered_item(text: &str) -> Option<(&str, &str)> {
+    let digits = text.chars().take_while(char::is_ascii_digit).count();
+    if digits == 0 {
+        return None;
+    }
+    let item = text[digits..].strip_prefix(". ")?;
+    Some((&text[..digits], item))
 }
 
 /// Splits a line at its `code`, **bold**, and [link](url) markers. An unmatched marker styles the
@@ -357,6 +377,12 @@ fn inline_spans(text: &str) -> Vec<Span<'static>> {
                 rest = &rest[used..];
                 continue;
             }
+            if let Some((inner, style, used)) = emphasis_at(rest) {
+                push_span(&mut spans, &mut plain, bold, code);
+                spans.push(Span::styled(inner.to_owned(), style));
+                rest = &rest[used..];
+                continue;
+            }
         }
         rest = &rest[c.len_utf8()..];
         if c == '`' {
@@ -372,6 +398,25 @@ fn inline_spans(text: &str) -> Vec<Span<'static>> {
     }
     push_span(&mut spans, &mut plain, bold, code);
     spans
+}
+
+/// `*italic*` or `~~struck~~` at the start of `text`: the inner text, its style, and the bytes used.
+/// Only a single star opens italics, so `**bold**` and `snake_case` are left alone.
+fn emphasis_at(text: &str) -> Option<(&str, Style, usize)> {
+    let (mark, style) = if text.starts_with("~~") {
+        ("~~", Style::new().add_modifier(Modifier::CROSSED_OUT))
+    } else if text.starts_with('*') && !text.starts_with("**") {
+        ("*", Style::new().add_modifier(Modifier::ITALIC))
+    } else {
+        return None;
+    };
+    let body = &text[mark.len()..];
+    let end = body.find(mark)?;
+    let inner = &body[..end];
+    if inner.is_empty() || inner.starts_with(' ') || inner.ends_with(' ') {
+        return None;
+    }
+    Some((inner, style, 2 * mark.len() + end))
 }
 
 /// A `[label](url)` at the start of `text`: the label, the address, and the bytes the link uses.

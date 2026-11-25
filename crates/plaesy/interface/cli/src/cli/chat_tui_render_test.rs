@@ -1,5 +1,5 @@
 use super::*;
-use ratatui::style::Color;
+use ratatui::style::{Color, Modifier, Style};
 
 fn lines(text: &[&str]) -> Vec<String> {
     text.iter().map(|line| line.to_string()).collect()
@@ -104,4 +104,40 @@ fn a_word_longer_than_the_width_is_split_inside() {
     let rows = render(&lines(&["abcdefghijkl"]), 5);
     let texts: Vec<String> = rows.iter().map(text).collect();
     assert_eq!(texts, vec!["abcde", "fghij", "kl"]);
+}
+
+#[test]
+fn numbered_items_keep_their_number_bold_and_their_indent() {
+    let rows = render(&lines(&["  3. tiga *miring*"]), 40);
+    assert_eq!(text(&rows[0]), "  3. tiga miring");
+    assert_eq!(rows[0].spans[1].style, Style::new().bold());
+    assert!(rows[0]
+        .spans
+        .last()
+        .is_some_and(|s| s.style.add_modifier == Modifier::ITALIC));
+}
+
+#[test]
+fn italic_and_strikethrough_are_styled_but_snake_case_is_not() {
+    let rows = render(&lines(&["~~lama~~ dan snake_case_nama dan **tebal**"]), 60);
+    assert_eq!(text(&rows[0]), "lama dan snake_case_nama dan tebal");
+    assert_eq!(rows[0].spans[0].style.add_modifier, Modifier::CROSSED_OUT);
+}
+
+#[test]
+fn a_code_block_shows_its_language_as_a_label() {
+    let rows = render(&lines(&["```rust", "let a = 1;", "```"]), 40);
+    assert_eq!(text(&rows[0]), "─── rust");
+    assert_eq!(text(&rows[1]), "let a = 1;");
+}
+
+#[test]
+fn an_escaped_pipe_and_a_pipe_in_code_stay_in_their_cell() {
+    let rows = render(
+        &lines(&["| a \\| b | c |", "|---|---|", "| `x|y` | z |"]),
+        40,
+    );
+    assert!(text(&rows[0]).contains("a | b"));
+    assert!(text(&rows[2]).contains("x|y"));
+    assert_eq!(rows.len(), 3);
 }

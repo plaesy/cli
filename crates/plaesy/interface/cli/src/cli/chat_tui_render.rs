@@ -32,11 +32,20 @@ fn logical(lines: &[String], width: usize) -> Vec<Line<'static>> {
         let line = lines[index].as_str();
         let trimmed = line.trim_start();
         if let Some(info) = trimmed.strip_prefix("```") {
+            let language = info.trim();
+            let opening = diff.is_none();
             diff = match diff {
                 Some(_) => None,
-                None => Some(matches!(info.trim(), "diff" | "patch")),
+                None => Some(matches!(language, "diff" | "patch")),
             };
-            out.push(green(line));
+            if opening && !language.is_empty() {
+                // The language is shown as a label above the block.
+                out.push(
+                    Line::from(format!("─── {language}")).style(Style::new().fg(Color::DarkGray)),
+                );
+            } else {
+                out.push(green(line));
+            }
             index += 1;
         } else if let Some(is_diff) = diff {
             out.push(if is_diff {
@@ -195,10 +204,31 @@ fn cells(row: &str) -> Vec<String> {
     let inner = row.trim();
     let inner = inner.strip_prefix('|').unwrap_or(inner);
     let inner = inner.strip_suffix('|').unwrap_or(inner);
-    inner
-        .split('|')
-        .map(|cell| cell.trim().to_owned())
-        .collect()
+    // A pipe is a separator unless it is escaped as `\|` or sits inside `code`.
+    let mut out = vec![String::new()];
+    let mut code = false;
+    let mut chars = inner.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' && chars.peek() == Some(&'|') {
+            chars.next();
+            push_to_last(&mut out, '|');
+        } else if c == '|' && !code {
+            out.push(String::new());
+        } else {
+            if c == '`' {
+                code = !code;
+            }
+            push_to_last(&mut out, c);
+        }
+    }
+    out.into_iter().map(|cell| cell.trim().to_owned()).collect()
+}
+
+/// Adds a character to the cell being read, the last one in `out`.
+fn push_to_last(out: &mut [String], c: char) {
+    if let Some(cell) = out.last_mut() {
+        cell.push(c);
+    }
 }
 
 /// Whether a row is the header rule: every cell is dashes, optionally with colons for alignment.

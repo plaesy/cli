@@ -211,7 +211,8 @@ fn fenced_code_lines_are_green_and_bullets_get_a_bullet() {
         .iter()
         .map(|row| row.style.fg == Some(Color::Green))
         .collect();
-    assert_eq!(green, vec![false, true, true, true, false]);
+    // The opening fence shows its language as a grey label; the code and closing fence are green.
+    assert_eq!(green, vec![false, false, true, true, false]);
 
     let item = styled_line("  - satu **dua**");
     assert_eq!(item.spans[0].content.as_ref(), "  • ");
