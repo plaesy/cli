@@ -9,7 +9,7 @@
 use std::io::{self, BufReader, Read, Write};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -299,8 +299,20 @@ struct Screen {
     provider: String,
     /// Lines sent whose turn-end mark has not arrived yet; above zero, a reply is still coming.
     pending: usize,
+    /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
+    sent_at: Option<Instant>,
     /// Advances each frame, to turn the busy indicator.
     tick: usize,
+}
+
+/// Elapsed time as `5s`, or `1m05s` from a minute on.
+fn clock(elapsed: Duration) -> String {
+    let secs = elapsed.as_secs();
+    if secs < 60 {
+        format!("{secs}s")
+    } else {
+        format!("{}m{:02}s", secs / 60, secs % 60)
+    }
 }
 
 /// Frames of the busy indicator, in ASCII so every terminal shows them.
@@ -312,6 +324,9 @@ impl Screen {
         for (index, part) in text.split(char::from(TURN_MARK)).enumerate() {
             if index > 0 {
                 self.pending = self.pending.saturating_sub(1);
+                if self.pending == 0 {
+                    self.sent_at = None;
+                }
             }
             if !part.is_empty() {
                 self.transcript.push_text(part);
@@ -447,7 +462,15 @@ impl Screen {
                 Lang::En => "working…",
                 Lang::Id => "sedang menjawab…",
             };
-            return format!("[{}] {frame} {label} · {}", self.provider, self.hints());
+            let timing = self
+                .sent_at
+                .map(|at| format!(" {} ·", clock(at.elapsed())))
+                .unwrap_or_else(|| " ·".to_owned());
+            return format!(
+                "[{}] {frame} {label}{timing} {}",
+                self.provider,
+                self.hints()
+            );
         }
         format!("[{}] {}", self.provider, self.hints())
     }
@@ -492,6 +515,7 @@ where
         draft: String::new(),
         provider: provider.to_owned(),
         pending: 0,
+        sent_at: None,
         tick: 0,
     };
     let mut line_tx = Some(line_tx);
@@ -599,6 +623,7 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
                 // A send fails only when the session has already ended; the frame loop notices that.
                 let _ = tx.send(line);
                 screen.pending += 1;
+                screen.sent_at.get_or_insert_with(Instant::now);
             }
         }
         Action::Cancel => {

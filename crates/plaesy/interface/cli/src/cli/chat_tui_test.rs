@@ -165,8 +165,27 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         draft: String::new(),
         provider: "test".to_owned(),
         pending: 0,
+        sent_at: None,
         tick: 0,
     }
+}
+
+#[test]
+fn elapsed_time_is_shown_while_a_reply_is_pending() {
+    assert_eq!(clock(Duration::from_secs(5)), "5s");
+    assert_eq!(clock(Duration::from_secs(75)), "1m15s");
+
+    let mut screen = screen_with_history(&[]);
+    screen.pending = 1;
+    screen.sent_at = Some(Instant::now());
+    assert!(screen.status_text().contains("0s ·"));
+
+    screen.receive(&char::from(TURN_MARK).to_string());
+    assert_eq!(
+        screen.sent_at,
+        None,
+        "the timer stops when the last reply ends"
+    );
 }
 
 #[test]
