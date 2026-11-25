@@ -11,7 +11,7 @@ Cakupan: seluruh perilaku produk yang didokumentasikan di `website/docs/` pada c
 - Verifikasi kode Hermes: 75 nama tool dari referensi ditemukan sebagai string literal di `tools/`, `plugins/`, atau `agent/`. Adapter platform ada di `plugins/platforms/` (26 direktori). Slash command dan subcommand CLI yang diperiksa ditemukan di `hermes_cli/`. Perilaku tiap tool tidak dijalankan.
 - Status plaesy: dicek dengan grep di `crates/` dan dengan membaca modul serta berkas tes terkait (`*_test.rs`, `tests/`). Baris `sebagian` hanya diberikan bila ada kode dan tes untuk perilaku yang setara. Kemiripan nama modul saja tidak cukup. Tidak ada baris `ada`, karena tidak ada perilaku Hermes yang sudah setara penuh di plaesy.
 
-Legenda Status di plaesy: `belum` = tidak ada padanan perilaku; `sebagian` = ada kode dan tes untuk sebagian perilaku, dengan batas dijelaskan di bagian Bukti.
+Legenda Status di plaesy: `belum` = tidak ada padanan perilaku; `sebagian` = ada kode dan tes untuk sebagian perilaku, dengan batas dijelaskan di bagian Bukti; `ada` = ada kode dan tes untuk seluruh perilaku; `di luar batas` = tidak termasuk subset chat, dengan alasan dan persetujuan pemilik.
 
 ## Tabel fitur
 
