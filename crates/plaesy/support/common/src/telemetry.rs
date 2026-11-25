@@ -1,8 +1,8 @@
 //! Local, opt-in telemetry: counts command runs, errors and durations in
 //! `.plaesy/telemetry.jsonl`. Nothing is sent over the network. Recording is off unless
-//! `.plaesy/settings.json` sets `telemetry.enabled` to `true`.
+//! `.plaesy/config.toml` (or the older `settings.json`) sets `telemetry.enabled` to `true`.
 
-use crate::config::{manager::ConfigManager, schema::UnifiedConfig, ConfigError};
+use crate::config::ConfigError;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -70,10 +70,11 @@ impl Summary {
     }
 }
 
-/// `<root>/.plaesy/settings.json`, the unified configuration that holds the telemetry switch.
+/// `<root>/.plaesy/config.toml`, the project configuration that holds the telemetry switch. The
+/// older `settings.json` is read only while this file is absent (see [`crate::config::project`]).
 #[must_use]
 pub fn config_path(root: &Path) -> PathBuf {
-    root.join(".plaesy").join("settings.json")
+    crate::config::project::config_path(root)
 }
 
 /// `<root>/.plaesy/telemetry.jsonl`, the event log.
@@ -88,9 +89,19 @@ pub fn log_path(root: &Path) -> PathBuf {
 ///
 /// The config file exists but cannot be read or parsed.
 pub fn is_enabled(root: &Path) -> Result<bool, Error> {
-    let manager = ConfigManager::new(config_path(root), UnifiedConfig::default());
-    let cfg = manager.load()?;
-    Ok(cfg.telemetry.as_ref().is_some_and(|t| t.enabled))
+    let value = crate::config::project::read_project_value(root).map_err(io::Error::other)?;
+    let Some(section) = value.get("telemetry") else {
+        return Ok(false);
+    };
+    let Some(table) = section.as_object() else {
+        return Err(io::Error::other("telemetry must be a table").into());
+    };
+    match table.get("enabled") {
+        None => Ok(false),
+        Some(flag) => flag
+            .as_bool()
+            .ok_or_else(|| io::Error::other("telemetry.enabled must be true or false").into()),
+    }
 }
 
 /// Appends one command run to the log when telemetry is enabled. When it is disabled, nothing

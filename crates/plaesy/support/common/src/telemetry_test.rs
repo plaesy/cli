@@ -22,7 +22,7 @@ fn telemetry_is_off_by_default() {
 #[test]
 fn config_without_telemetry_section_stays_off() {
     let root = tempfile::tempdir().unwrap();
-    write_config(root.path(), r#"{"version": 1}"#);
+    write_config(root.path(), "version = 1\n");
 
     assert!(!is_enabled(root.path()).unwrap());
     record(root.path(), "tasks", true, Duration::from_millis(10)).unwrap();
@@ -32,10 +32,7 @@ fn config_without_telemetry_section_stays_off() {
 #[test]
 fn explicit_false_stays_off() {
     let root = tempfile::tempdir().unwrap();
-    write_config(
-        root.path(),
-        r#"{"version": 1, "telemetry": {"enabled": false}}"#,
-    );
+    write_config(root.path(), "version = 1\n\n[telemetry]\nenabled = false\n");
 
     assert!(!is_enabled(root.path()).unwrap());
     record(root.path(), "tasks", true, Duration::from_millis(10)).unwrap();
@@ -45,10 +42,7 @@ fn explicit_false_stays_off() {
 #[test]
 fn opt_in_records_and_summary_totals_are_correct() {
     let root = tempfile::tempdir().unwrap();
-    write_config(
-        root.path(),
-        r#"{"version": 1, "telemetry": {"enabled": true}}"#,
-    );
+    write_config(root.path(), "version = 1\n\n[telemetry]\nenabled = true\n");
     assert!(is_enabled(root.path()).unwrap());
 
     record(root.path(), "tasks", true, Duration::from_millis(10)).unwrap();
@@ -78,6 +72,18 @@ fn opt_in_records_and_summary_totals_are_correct() {
 }
 
 #[test]
+fn settings_json_still_switches_telemetry_on_when_config_toml_is_absent() {
+    let root = tempfile::tempdir().unwrap();
+    fs::create_dir_all(root.path().join(".plaesy")).unwrap();
+    fs::write(
+        root.path().join(".plaesy").join("settings.json"),
+        r#"{"telemetry": {"enabled": true}}"#,
+    )
+    .unwrap();
+    assert!(is_enabled(root.path()).unwrap());
+}
+
+#[test]
 fn malformed_lines_are_counted_and_skipped() {
     let root = tempfile::tempdir().unwrap();
     fs::create_dir_all(root.path().join(".plaesy")).unwrap();
@@ -101,9 +107,16 @@ fn missing_log_gives_empty_summary() {
 #[test]
 fn invalid_config_is_a_typed_error_not_a_silent_opt_in() {
     let root = tempfile::tempdir().unwrap();
-    write_config(root.path(), r#"{"version": 1, "telemetry": "yes"}"#);
+    write_config(root.path(), "[telemetry]\nenabled = \"yes\"\n");
 
     assert!(is_enabled(root.path()).is_err());
     assert!(record(root.path(), "tasks", true, Duration::from_millis(1)).is_err());
     assert!(!log_path(root.path()).exists());
+}
+
+#[test]
+fn a_telemetry_value_that_is_not_a_table_is_an_error() {
+    let root = tempfile::tempdir().unwrap();
+    write_config(root.path(), "telemetry = \"yes\"\n");
+    assert!(is_enabled(root.path()).is_err());
 }
