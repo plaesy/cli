@@ -1128,3 +1128,17 @@ fn every_line_closes_one_turn_mark_even_when_a_handler_skips_the_loop_end() {
     let marks = out.iter().filter(|byte| **byte == TURN_MARK).count();
     assert_eq!(marks, 2, "output: {}", String::from_utf8_lossy(&out));
 }
+
+#[test]
+fn compact_keeps_the_newest_turns_verbatim() {
+    let (provider, seen) = fake("a", "ringkasan lama");
+    let input = "satu\ndua\ntiga\nempat\n/compact\nakhir\n/exit\n";
+    let out = run_session(provider, &no_open, input);
+
+    assert!(out.contains("compacted 4 turns into one summary"), "{out}");
+    let prompts = seen.lock().expect("seen").clone();
+    let last = prompts.last().expect("prompt after compact");
+    assert!(last.contains("ringkasan lama"), "{last}");
+    assert!(last.contains("tiga") && last.contains("empat"), "tail kept: {last}");
+    assert!(!last.contains("satu"), "old turns are gone: {last}");
+}

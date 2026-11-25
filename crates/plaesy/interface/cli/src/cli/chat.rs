@@ -219,6 +219,27 @@ impl Transcript {
             .collect()
     }
 
+    /// The first `count` turns as messages, oldest first.
+    pub fn head_history(&self, count: usize) -> Vec<Message> {
+        self.turns[..count]
+            .iter()
+            .map(|(role, text)| match role {
+                Role::User => Message::user(text.clone()),
+                Role::Assistant => Message::assistant(text.clone()),
+            })
+            .collect()
+    }
+
+    /// Replaces the first `count` turns with the summary, and keeps the rest after it.
+    pub fn replace_head(&mut self, count: usize, summary: &str) {
+        let tail = self.turns.split_off(count);
+        self.turns = vec![
+            (Role::User, "Ringkasan percakapan sebelumnya:".to_owned()),
+            (Role::Assistant, summary.to_owned()),
+        ];
+        self.turns.extend(tail);
+    }
+
     /// Every earlier turn, then the new user message, oldest first.
     pub fn messages(&self, next_user: &str) -> Vec<Message> {
         let mut out: Vec<Message> = self
@@ -239,6 +260,9 @@ impl Transcript {
     }
 }
 
+/// Turns kept verbatim after a compaction.
+const KEEP_TAIL: usize = 4;
+
 /// Replaces the transcript with one summary the provider writes. Shared by `/compact` and the
 /// automatic compaction before a turn that would overflow the context meter.
 fn compact_transcript(
@@ -257,20 +281,23 @@ fn compact_transcript(
         timeout: settings.timeout,
         dir: String::new(),
     };
+    // The newest turns stay verbatim, so the model keeps the exact wording of the last exchanges.
+    let cut = if transcript.len() > KEEP_TAIL {
+        transcript.len() - KEEP_TAIL
+    } else {
+        transcript.len()
+    };
     let mut messages = vec![Message::system(
         "Ringkas percakapan berikut menjadi catatan singkat. Pertahankan fakta, \
          keputusan, dan langkah berikutnya. Jawab dalam bahasa percakapan."
             .to_owned(),
     )];
-    messages.extend(transcript.history());
+    messages.extend(transcript.head_history(cut));
     messages.push(Message::user("Ringkas percakapan di atas.".to_owned()));
     match delegate::run_messages(provider, &messages, &request) {
         Ok(response) => {
-            let turns = transcript.len();
-            transcript.clear();
-            transcript.push(Role::User, "Ringkasan percakapan sebelumnya:");
-            transcript.push(Role::Assistant, response.text.clone());
-            writeln!(out, "{}", chat_text::compacted(lang, turns))?;
+            transcript.replace_head(cut, &response.text);
+            writeln!(out, "{}", chat_text::compacted(lang, cut))?;
             writeln!(out, "{}", response.text)
         }
         Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string())),
