@@ -31,21 +31,44 @@ fn read_optional(path: &Path) -> Result<Option<String>, String> {
     }
 }
 
-/// The project configuration as a JSON value. `config.toml` wins; `settings.json` is read only
-/// when it is absent. Neither file gives `Value::Null`.
+/// The project configuration as a JSON value: `<repo>/.plaesy/config.toml`, or the older
+/// `settings.json` while that is absent. Neither file gives `Value::Null`.
 ///
 /// # Errors
 ///
 /// A file that cannot be read, or that does not parse as its format.
 pub fn read_project_value(repo: &Path) -> Result<Value, String> {
-    let toml_path = config_path(repo);
+    read_config_dir(&repo.join(".plaesy"))
+}
+
+/// The user configuration in the home folder: `~/.plaesy/config.toml`, or `settings.json` while that
+/// is absent. `None` when there is no home folder.
+///
+/// # Errors
+///
+/// A file that cannot be read, or that does not parse as its format.
+pub fn read_user_value() -> Result<Value, String> {
+    match dirs::home_dir() {
+        Some(home) => read_config_dir(&home.join(".plaesy")),
+        None => Ok(Value::Null),
+    }
+}
+
+/// Reads `config.toml` in `folder`, or `settings.json` there while it is absent. `folder` is the
+/// `.plaesy` folder itself.
+///
+/// # Errors
+///
+/// A file that cannot be read, or that does not parse as its format.
+pub fn read_config_dir(folder: &Path) -> Result<Value, String> {
+    let toml_path = folder.join("config.toml");
     if let Some(text) = read_optional(&toml_path)? {
         let table: toml::Table = text
             .parse()
             .map_err(|err| format!("parsing {}: {err}", toml_path.display()))?;
         return serde_json::to_value(table).map_err(|err| err.to_string());
     }
-    let json_path = legacy_settings_path(repo);
+    let json_path = folder.join("settings.json");
     match read_optional(&json_path)? {
         Some(text) => serde_json::from_str(&text)
             .map_err(|err| format!("parsing {}: {err}", json_path.display())),

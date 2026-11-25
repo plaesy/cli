@@ -86,17 +86,17 @@ fn resolve_plaesy_dir(home: &Path, flag: Option<&Path>, env: Option<OsString>) -
     if let Some(dir) = env.filter(|d| !d.is_empty()) {
         return PathBuf::from(dir);
     }
-    if let Some(dir) = settings_skills_dir(&home.join(".plaesy").join("settings.json")) {
+    if let Some(dir) = settings_skills_dir(&home.join(".plaesy")) {
         return dir;
     }
     home.join(".plaesy").join("skills")
 }
 
-/// Reads `skills.dir` from a settings file. A missing or unreadable file falls through to the
-/// default, so skill commands still work without a settings file.
-fn settings_skills_dir(path: &Path) -> Option<PathBuf> {
-    let raw = fs::read_to_string(path).ok()?;
-    let value: serde_json::Value = serde_json::from_str(&raw).ok()?;
+/// Reads `skills.dir` from the config in a `.plaesy` folder (`config.toml`, or `settings.json` while
+/// that is absent). A missing or unreadable file falls through to the default, so skill commands
+/// still work without a config file.
+fn settings_skills_dir(folder: &Path) -> Option<PathBuf> {
+    let value = plaesy_common::config::project::read_config_dir(folder).ok()?;
     let dir = value.get("skills")?.get("dir")?.as_str()?;
     (!dir.is_empty()).then(|| PathBuf::from(dir))
 }

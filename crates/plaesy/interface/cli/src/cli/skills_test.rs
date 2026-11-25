@@ -74,13 +74,13 @@ fn settings_malformed_or_empty_dir_falls_through_to_default() {
     let settings = home.path().join(".plaesy").join("settings.json");
 
     write(&settings, "{ not json");
-    assert_eq!(settings_skills_dir(&settings), None);
+    assert_eq!(settings_skills_dir(settings.parent().unwrap()), None);
 
     write(&settings, r#"{"skills":{"dir":""}}"#);
-    assert_eq!(settings_skills_dir(&settings), None);
+    assert_eq!(settings_skills_dir(settings.parent().unwrap()), None);
 
     write(&settings, r#"{"other":1}"#);
-    assert_eq!(settings_skills_dir(&settings), None);
+    assert_eq!(settings_skills_dir(settings.parent().unwrap()), None);
 
     assert_eq!(
         resolve_plaesy_dir(home.path(), None, None),

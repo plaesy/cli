@@ -25,17 +25,16 @@ impl Lang {
     }
 }
 
-/// `--lang` wins, then `"language"` in the settings file, then English. A missing settings file
-/// is not an error; an unknown language value is.
-pub fn resolve(flag: Option<&str>, settings: &Path) -> Result<Lang, String> {
+/// `--lang` wins, then `"language"` in the config under `folder` (a `.plaesy` folder: `config.toml`,
+/// or `settings.json` while that is absent), then English. A missing config is not an error; an
+/// unknown language value is.
+pub fn resolve(flag: Option<&str>, folder: &Path) -> Result<Lang, String> {
     if let Some(flag) = flag {
         return Lang::parse(flag);
     }
-    if let Ok(raw) = std::fs::read_to_string(settings) {
-        if let Ok(value) = serde_json::from_str::<Value>(&raw) {
-            if let Some(lang) = value.get("language").and_then(Value::as_str) {
-                return Lang::parse(lang);
-            }
+    if let Ok(value) = crate::config::project::read_config_dir(folder) {
+        if let Some(lang) = value.get("language").and_then(Value::as_str) {
+            return Lang::parse(lang);
         }
     }
     Ok(Lang::En)

@@ -1708,24 +1708,26 @@ pub fn converse(
 }
 
 pub fn run(args: &Args) -> CliResult {
-    let settings_path = dirs::home_dir()
+    // The user's `.plaesy` folder: `config.toml`, or `settings.json` until it is migrated.
+    let user_dir = dirs::home_dir()
         .ok_or("home directory is not available")?
-        .join(".plaesy")
-        .join("settings.json");
+        .join(".plaesy");
+    let user_settings =
+        crate::config::project::read_config_dir(&user_dir).unwrap_or(serde_json::Value::Null);
     // Project settings: `.plaesy/config.toml`, or `settings.json` until it is migrated.
     let repo_settings = crate::config::project::read_project_value_or_null(&args.path);
-    let lang = chat_text::resolve(args.lang.as_deref(), &settings_path)?;
+    let lang = chat_text::resolve(args.lang.as_deref(), &user_dir)?;
     let mut hooks = chat_hooks::parse_hooks(
         &repo_settings,
         chat_hooks::Scope::Repo,
     )?;
     hooks.extend(chat_hooks::parse_hooks(
-        &chat_hooks::read_settings(&settings_path),
+        &user_settings,
         chat_hooks::Scope::User,
     )?);
-    let approved = chat_hooks::load_approved(&settings_path.with_file_name("approved-hooks.json"));
+    let approved = chat_hooks::load_approved(&user_dir.join("approved-hooks.json"));
     let roles = chat_roles::merge(
-        chat_roles::parse_roles(&chat_hooks::read_settings(&settings_path))?,
+        chat_roles::parse_roles(&user_settings)?,
         chat_roles::parse_roles(&repo_settings)?,
     );
     let role_name = args
@@ -1736,7 +1738,7 @@ pub fn run(args: &Args) -> CliResult {
         chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     let skills_dir = super::skills::store_dir(&home);
-    let peers: Vec<String> = chat_hooks::read_settings(&settings_path)
+    let peers: Vec<String> = user_settings.clone()
         .get("agent")
         .and_then(|agent| agent.get("peers"))
         .and_then(serde_json::Value::as_array)
@@ -1748,7 +1750,7 @@ pub fn run(args: &Args) -> CliResult {
         })
         .unwrap_or_default();
     let agent_name = args.agent.clone().unwrap_or_else(|| {
-        chat_hooks::read_settings(&settings_path)
+        user_settings.clone()
             .get("agent")
             .and_then(|agent| agent.get("name"))
             .and_then(serde_json::Value::as_str)
@@ -1773,7 +1775,7 @@ pub fn run(args: &Args) -> CliResult {
         chat_hooks::Scope::Repo,
     )?;
     mcp_servers.extend(chat_mcp::parse_servers(
-        &chat_hooks::read_settings(&settings_path),
+        &user_settings,
         chat_hooks::Scope::User,
     )?);
     let cfg = super::delegate::load_delegate_config(&args.path)?;
@@ -1792,11 +1794,10 @@ pub fn run(args: &Args) -> CliResult {
         chat_hooks::Scope::Repo,
     )?;
     lsp_servers.extend(chat_lsp::parse_servers(
-        &chat_hooks::read_settings(&settings_path),
+        &user_settings,
         chat_hooks::Scope::User,
     )?);
     // `chat.advisor` names the reviewer for /advisor; the repository setting wins over the user's.
-    let user_settings = chat_hooks::read_settings(&settings_path);
     let advisor = [&repo_settings, &user_settings]
         .into_iter()
         .find_map(|settings| {
@@ -1821,7 +1822,7 @@ pub fn run(args: &Args) -> CliResult {
 
     // Without --vault, the menus and saved decisions use the vault in settings (`watch_dir`).
     let vault = args.vault.clone().or_else(|| {
-        chat_hooks::read_settings(&settings_path)
+        user_settings.clone()
             .get("watch_dir")
             .and_then(serde_json::Value::as_str)
             .map(PathBuf::from)

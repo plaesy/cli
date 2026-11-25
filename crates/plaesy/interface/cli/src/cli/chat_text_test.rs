@@ -14,18 +14,18 @@ fn resolve_prefers_flag_then_settings_then_english() {
     let settings = dir.path().join("settings.json");
 
     assert_eq!(
-        resolve(None, &settings),
+        resolve(None, dir.path()),
         Ok(Lang::En),
         "no file means English"
     );
 
     std::fs::write(&settings, r#"{"language":"id"}"#).expect("write");
-    assert_eq!(resolve(None, &settings), Ok(Lang::Id));
-    assert_eq!(resolve(Some("en"), &settings), Ok(Lang::En), "flag wins");
+    assert_eq!(resolve(None, dir.path()), Ok(Lang::Id));
+    assert_eq!(resolve(Some("en"), dir.path()), Ok(Lang::En), "flag wins");
 
     std::fs::write(&settings, r#"{"language":"klingon"}"#).expect("write");
     assert!(
-        resolve(None, &settings).is_err(),
+        resolve(None, dir.path()).is_err(),
         "unknown value is an error"
     );
 }

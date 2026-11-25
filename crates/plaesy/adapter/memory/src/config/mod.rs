@@ -380,16 +380,21 @@ impl MemoryConfig {
 /// All use the same schema (see [`MemoryConfig`]).
 pub fn standard_config_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
-    if let Some(user) = crate::memory::settings::default_path() {
-        paths.push(user);
+    if let Some(folder) = crate::memory::settings::default_path().as_deref().and_then(std::path::Path::parent) {
+        paths.push(config_file_in(folder.to_path_buf()));
     }
-    let toml = PathBuf::from(".plaesy").join("config.toml");
-    if toml.is_file() {
-        paths.push(toml);
-    } else {
-        paths.push(PathBuf::from(".plaesy").join("settings.json"));
-    }
+    paths.push(config_file_in(PathBuf::from(".plaesy")));
     paths
+}
+
+/// The file to read in a `.plaesy` folder: `config.toml` when it exists, otherwise `settings.json`.
+fn config_file_in(folder: PathBuf) -> PathBuf {
+    let toml = folder.join("config.toml");
+    if toml.is_file() {
+        toml
+    } else {
+        folder.join("settings.json")
+    }
 }
 
 /// Reads a settings file as a JSON value. A `.toml` file is parsed as TOML and converted; any other
