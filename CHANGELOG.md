@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- Add a command list to `plaesy chat --tui`: typing `/` shows matching commands; Up and Down pick one, Enter or Tab completes it into the input without sending, and a second Enter sends. Esc closes the list.
 - Add `plaesy chat --tui`, a full-screen view with the conversation, an input line, and a status line. The same chat loop runs underneath, so commands, hooks, and providers behave as in the line prompt. Enter sends, PageUp and PageDown scroll, and Esc ends the session after the current reply.
 - Add `/lsp definition|references|hover <file>:<line>:<col>` to `plaesy chat`, read-only, answered by a language server from `lsp.servers` in settings.json. Repository servers need approval, as MCP servers do.
 - Add `/providers` to list every registered provider with its status, and `/debug` to show what the session runs with.

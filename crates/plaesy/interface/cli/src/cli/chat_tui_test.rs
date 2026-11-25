@@ -60,7 +60,15 @@ fn keys_map_to_screen_actions() {
         action(&key(KeyCode::Char('c'), KeyModifiers::CONTROL)),
         Action::Quit
     );
-    assert_eq!(action(&key(KeyCode::Esc, KeyModifiers::NONE)), Action::Quit);
+    assert_eq!(
+        action(&key(KeyCode::Esc, KeyModifiers::NONE)),
+        Action::Cancel
+    );
+    assert_eq!(action(&key(KeyCode::Up, KeyModifiers::NONE)), Action::Up);
+    assert_eq!(
+        action(&key(KeyCode::Tab, KeyModifiers::NONE)),
+        Action::Complete
+    );
     assert_eq!(
         action(&key(KeyCode::Enter, KeyModifiers::NONE)),
         Action::Submit
@@ -100,4 +108,43 @@ fn session_output_reaches_the_screen_channel() {
     drop(sink);
     let chunks: Vec<String> = rx.iter().collect();
     assert_eq!(chunks.concat(), "balasan\n");
+}
+
+#[test]
+fn typing_a_slash_lists_matching_commands_and_nothing_else() {
+    let names: Vec<&str> = suggestions("/pro")
+        .iter()
+        .map(|(name, _, _)| *name)
+        .collect();
+    assert_eq!(names, vec!["/provider", "/providers"]);
+    assert_eq!(suggestions("/").len(), COMMANDS.len());
+    assert!(
+        suggestions("halo").is_empty(),
+        "text without a slash shows no list"
+    );
+    assert!(
+        suggestions("/ask a").is_empty(),
+        "after the command name, no list"
+    );
+    assert!(suggestions("/zzz").is_empty());
+}
+
+#[test]
+fn enter_completes_the_highlighted_command_and_the_next_enter_sends_it() {
+    // First Enter on "/pro" with the first match highlighted: complete, adding a space.
+    assert_eq!(completion("/pro", 0).as_deref(), Some("/provider "));
+    assert_eq!(completion("/pro", 1).as_deref(), Some("/providers "));
+    // The command is already typed in full: nothing to complete, so Enter sends.
+    assert_eq!(completion("/exit", 0), None);
+    assert_eq!(completion("halo", 0), None);
+}
+
+#[test]
+fn set_replaces_the_line_and_puts_the_cursor_at_the_end() {
+    let mut input = Input::default();
+    input.insert('x');
+    input.set("/provider ");
+    assert_eq!(input.text(), "/provider ");
+    input.insert('a');
+    assert_eq!(input.text(), "/provider a");
 }

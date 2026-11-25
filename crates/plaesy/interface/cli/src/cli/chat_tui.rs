@@ -13,8 +13,9 @@ use std::time::Duration;
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::style::Style;
 use ratatui::text::{Line, Text};
-use ratatui::widgets::{Block, Paragraph, Wrap};
+use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
 use super::chat_text::Lang;
@@ -23,6 +24,8 @@ use super::chat_text::Lang;
 pub const MAX_LINES: usize = 2000;
 /// How far one PageUp or PageDown moves.
 const PAGE: usize = 10;
+/// Most commands listed at once under the input.
+const MAX_SHOWN: usize = 8;
 
 /// Lines typed by the person, read by the chat as if they came from stdin. Reading blocks until a
 /// line arrives, and reports end of input once the sender is gone.
@@ -158,6 +161,12 @@ impl Input {
         self.cursor = self.chars.len();
     }
 
+    /// Replaces the whole line and puts the cursor at its end.
+    pub fn set(&mut self, text: &str) {
+        self.chars = text.chars().collect();
+        self.cursor = self.chars.len();
+    }
+
     /// Returns the line and clears the input.
     pub fn take(&mut self) -> String {
         self.cursor = 0;
@@ -180,6 +189,13 @@ pub enum Action {
     Submit,
     ScrollUp,
     ScrollDown,
+    /// Up or Down: moves the highlight when the command list is open.
+    Up,
+    Down,
+    /// Tab: completes the highlighted command without sending.
+    Complete,
+    /// Esc: closes the command list if it is open, otherwise ends the session.
+    Cancel,
     Quit,
     Ignore,
 }
@@ -189,8 +205,11 @@ pub fn action(key: &KeyEvent) -> Action {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     match key.code {
         KeyCode::Char('c') if ctrl => Action::Quit,
-        KeyCode::Esc => Action::Quit,
+        KeyCode::Esc => Action::Cancel,
         KeyCode::Enter => Action::Submit,
+        KeyCode::Tab => Action::Complete,
+        KeyCode::Up => Action::Up,
+        KeyCode::Down => Action::Down,
         KeyCode::Backspace => Action::Backspace,
         KeyCode::Left => Action::Left,
         KeyCode::Right => Action::Right,
@@ -203,6 +222,59 @@ pub fn action(key: &KeyEvent) -> Action {
     }
 }
 
+/// The chat commands offered when the person types `/`: name, English note, Indonesian note.
+pub const COMMANDS: &[(&str, &str, &str)] = &[
+    ("/exit", "end the chat", "akhiri chat"),
+    ("/clear", "reset the history", "hapus riwayat"),
+    ("/provider", "switch provider", "ganti provider"),
+    ("/providers", "list providers", "daftar provider"),
+    ("/role", "switch role", "ganti role"),
+    ("/decision", "save a decision", "simpan keputusan"),
+    ("/decisions", "list decisions", "daftar keputusan"),
+    ("/ask", "ask a question", "ajukan pertanyaan"),
+    ("/pending", "open questions", "pertanyaan terbuka"),
+    ("/pick", "answer a question", "jawab pertanyaan"),
+    ("/tasks", "task menu", "menu tugas"),
+    ("/mcp", "MCP servers", "server MCP"),
+    ("/plugins", "list plugins", "daftar plugin"),
+    ("/plugin", "run a plugin", "jalankan plugin"),
+    ("/agent", "messages to agents", "pesan ke agen"),
+    ("/goal", "set the session goal", "atur goal sesi"),
+    ("/compact", "summarize the history", "ringkas riwayat"),
+    ("/advisor", "ask the advisor", "minta review advisor"),
+    ("/council", "ask every provider", "tanya semua provider"),
+    (
+        "/lsp",
+        "definition, references, hover",
+        "definisi, referensi, hover",
+    ),
+    ("/debug", "session details", "rincian sesi"),
+];
+
+/// Commands that start with the typed text. Only a single word typed after `/` opens the list.
+pub fn suggestions(input: &str) -> Vec<(&'static str, &'static str, &'static str)> {
+    if !input.starts_with('/') || input.contains(char::is_whitespace) {
+        return Vec::new();
+    }
+    COMMANDS
+        .iter()
+        .filter(|(name, _, _)| name.starts_with(input))
+        .copied()
+        .collect()
+}
+
+/// The text Enter or Tab puts in the input when a command is highlighted: the command and a space,
+/// so the person can add arguments. `None` when the input already is that command, so Enter sends.
+pub fn completion(input: &str, selected: usize) -> Option<String> {
+    let matches = suggestions(input);
+    let (name, _, _) = matches.get(selected)?;
+    if *name == input {
+        None
+    } else {
+        Some(format!("{name} "))
+    }
+}
+
 /// Everything the screen shows and remembers between key presses.
 struct Screen {
     lang: Lang,
@@ -212,9 +284,21 @@ struct Screen {
     scroll: usize,
     quitting: bool,
     finished: bool,
+    /// Which suggestion is highlighted.
+    selected: usize,
+    /// Set by Esc; cleared when the input changes, so the list comes back on the next key.
+    popup_hidden: bool,
 }
 
 impl Screen {
+    /// The commands to show now, or none when the list is hidden.
+    fn open_suggestions(&self) -> Vec<(&'static str, &'static str, &'static str)> {
+        if self.popup_hidden {
+            return Vec::new();
+        }
+        suggestions(&self.input.text())
+    }
+
     fn draw(&self, frame: &mut Frame<'_>) {
         let [log, entry, status] = Layout::vertical([
             Constraint::Min(1),
@@ -224,7 +308,47 @@ impl Screen {
         .areas(frame.area());
         self.draw_log(frame, log);
         self.draw_input(frame, entry);
+        self.draw_suggestions(frame, entry);
         frame.render_widget(Paragraph::new(self.status_text()), status);
+    }
+
+    /// The command list, just above the input line and over the conversation.
+    fn draw_suggestions(&self, frame: &mut Frame<'_>, entry: Rect) {
+        let matches = self.open_suggestions();
+        if matches.is_empty() {
+            return;
+        }
+        let shown = matches.len().min(MAX_SHOWN);
+        let height = shown as u16 + 2;
+        let width = entry.width.min(64);
+        let top = entry.y.saturating_sub(height);
+        let area = Rect::new(entry.x, top, width, height);
+        let lines: Vec<Line<'_>> = matches
+            .iter()
+            .take(shown)
+            .enumerate()
+            .map(|(index, (name, en, id))| {
+                let note = match self.lang {
+                    Lang::En => en,
+                    Lang::Id => id,
+                };
+                let text = format!("{name:<12} {note}");
+                if index == self.selected.min(shown - 1) {
+                    Line::from(text).style(Style::new().reversed())
+                } else {
+                    Line::from(text)
+                }
+            })
+            .collect();
+        let title = match self.lang {
+            Lang::En => " commands ",
+            Lang::Id => " perintah ",
+        };
+        frame.render_widget(Clear, area);
+        frame.render_widget(
+            Paragraph::new(Text::from(lines)).block(Block::bordered().title(title)),
+            area,
+        );
     }
 
     fn draw_log(&self, frame: &mut Frame<'_>, area: Rect) {
@@ -288,6 +412,8 @@ where
         scroll: 0,
         quitting: false,
         finished: false,
+        selected: 0,
+        popup_hidden: false,
     };
     let mut line_tx = Some(line_tx);
     let outcome = thread::scope(|scope| {
@@ -337,29 +463,67 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
     if key.kind != KeyEventKind::Press {
         return Ok(());
     }
+    let open = screen.open_suggestions();
     match action(&key) {
-        Action::Insert(c) => screen.input.insert(c),
-        Action::Backspace => screen.input.backspace(),
+        Action::Insert(c) => {
+            screen.input.insert(c);
+            screen.selected = 0;
+            screen.popup_hidden = false;
+        }
+        Action::Backspace => {
+            screen.input.backspace();
+            screen.selected = 0;
+            screen.popup_hidden = false;
+        }
         Action::Left => screen.input.left(),
         Action::Right => screen.input.right(),
         Action::Home => screen.input.home(),
         Action::End => screen.input.end(),
         Action::ScrollUp => screen.scroll = screen.scroll.saturating_add(PAGE),
         Action::ScrollDown => screen.scroll = screen.scroll.saturating_sub(PAGE),
+        Action::Up if !open.is_empty() => {
+            screen.selected = (screen.selected + open.len() - 1) % open.len();
+        }
+        Action::Down if !open.is_empty() => {
+            screen.selected = (screen.selected + 1) % open.len();
+        }
+        Action::Complete => {
+            if !open.is_empty() {
+                if let Some(text) = completion(&screen.input.text(), screen.selected) {
+                    screen.input.set(&text);
+                }
+            }
+        }
         Action::Submit => {
+            // With the list open, Enter first completes the highlighted command; a second Enter sends.
+            if !open.is_empty() {
+                if let Some(text) = completion(&screen.input.text(), screen.selected) {
+                    screen.input.set(&text);
+                    return Ok(());
+                }
+            }
             let line = screen.input.take();
             screen.scroll = 0;
+            screen.selected = 0;
             if let Some(tx) = line_tx.as_ref() {
                 screen.transcript.push_user(&line);
                 // A send fails only when the session has already ended; the frame loop notices that.
                 let _ = tx.send(line);
             }
         }
+        Action::Cancel => {
+            if open.is_empty() {
+                screen.quitting = true;
+                *line_tx = None;
+            } else {
+                screen.popup_hidden = true;
+            }
+        }
         Action::Quit => {
             screen.quitting = true;
             *line_tx = None;
         }
-        Action::Ignore => {}
+        Action::Up | Action::Down | Action::Ignore => {}
     }
     Ok(())
 }
