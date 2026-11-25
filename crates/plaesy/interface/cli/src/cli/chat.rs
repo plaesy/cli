@@ -376,6 +376,7 @@ pub enum Input {
     Compact,
     /// `/context` shows the estimated context used, as tokens and a percent of the window
     Context,
+    Undo,
     /// `/providers`: every registered provider, with the one in use marked
     Providers,
     /// `/debug`: what this session is running with, without secrets or transcript text
@@ -402,6 +403,7 @@ pub fn parse_input(line: &str) -> Input {
         "/plugins" => return Input::Plugins,
         "/compact" => return Input::Compact,
         "/context" => return Input::Context,
+        "/undo" => return Input::Undo,
         "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
         "/goal" => return Input::Goal(String::new()),
@@ -693,6 +695,8 @@ pub fn converse(
     let mut transcript = Transcript::default();
     // The session goal is kept for this run only; it is never written to disk.
     let mut goal: Option<String> = None;
+    // Files the model wrote with --allow-writes, newest last, so /undo can restore them.
+    let mut checkpoints: Vec<chat_tools::Checkpoint> = Vec::new();
     // A reader thread forwards lines as they arrive, so lines typed while a reply is running wait
     // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
     let (sender, receiver) = mpsc::channel::<io::Result<String>>();
@@ -988,6 +992,13 @@ pub fn converse(
             Input::Compact => {
                 compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
             }
+            Input::Undo => {
+                let line = match chat_tools::undo_last(&mut checkpoints) {
+                    Ok(text) => text,
+                    Err(text) => text,
+                };
+                writeln!(out, "{line}")?;
+            }
             Input::Context => {
                 let used = transcript.estimated_tokens();
                 writeln!(
@@ -1251,6 +1262,7 @@ pub fn converse(
                             &messages,
                             &request,
                             tools,
+                            &mut checkpoints,
                             &mut |note| {
                                 notes.push_str(note);
                                 notes.push('\n');

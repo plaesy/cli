@@ -80,10 +80,37 @@ pub fn find_call(text: &str) -> Option<Value> {
     value.is_object().then_some(value)
 }
 
+/// One file state saved before a write: the bytes it held, or None when the file did not exist.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Checkpoint {
+    pub path: PathBuf,
+    pub previous: Option<Vec<u8>>,
+}
+
+/// Undoes the last write: restores the saved bytes, or removes a file the write created.
+/// Returns a line for the chat.
+pub fn undo_last(undo: &mut Vec<Checkpoint>) -> Result<String, String> {
+    let Some(point) = undo.pop() else {
+        return Err("tidak ada tulisan yang bisa dibatalkan".to_owned());
+    };
+    let rel = point.path.display().to_string();
+    match point.previous {
+        Some(bytes) => fs::write(&point.path, bytes).map_err(|e| format!("{rel}: {e}"))?,
+        None => fs::remove_file(&point.path).map_err(|e| format!("{rel}: {e}"))?,
+    }
+    Ok(format!("dibatalkan: {rel}"))
+}
+
+#[cfg(test)]
+#[must_use]
+pub fn execute(tools: &Tools, call: &Value) -> String {
+    execute_with(tools, call, &mut Vec::new())
+}
+
 /// Runs one call and returns its result as text. Errors are returned as text too, so the model
 /// can read them and carry on.
 #[must_use]
-pub fn execute(tools: &Tools, call: &Value) -> String {
+pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> String {
     let name = call.get("tool").and_then(Value::as_str).unwrap_or("");
     let text = |key: &str| {
         call.get(key)
@@ -98,7 +125,7 @@ pub fn execute(tools: &Tools, call: &Value) -> String {
             "tidak diizinkan dalam sesi ini; sesi perlu dijalankan dengan --allow-writes"
                 .to_owned(),
         ),
-        "write_file" => write_file(&tools.root, &text("path"), &text("content")),
+        "write_file" => write_file(&tools.root, &text("path"), &text("content"), undo),
         "run_command" => {
             let args: Vec<String> = call
                 .get("args")
@@ -217,11 +244,20 @@ fn list_dir(root: &Path, rel: &str) -> Result<String, String> {
     Ok(names.join("\n"))
 }
 
-fn write_file(root: &Path, rel: &str, content: &str) -> Result<String, String> {
+fn write_file(
+    root: &Path,
+    rel: &str,
+    content: &str,
+    undo: &mut Vec<Checkpoint>,
+) -> Result<String, String> {
     let target = confine_new(root, rel)?;
     if target.is_dir() {
         return Err(format!("{rel} adalah folder"));
     }
+    undo.push(Checkpoint {
+        path: target.clone(),
+        previous: fs::read(&target).ok(),
+    });
     fs::write(&target, content).map_err(|e| format!("{rel}: {e}"))?;
     Ok(format!("ditulis {} byte ke {rel}", content.len()))
 }
@@ -301,6 +337,7 @@ pub fn run_turn(
     messages: &[Message],
     req: &Request,
     tools: &Tools,
+    undo: &mut Vec<Checkpoint>,
     on_note: &mut dyn FnMut(&str),
 ) -> Result<Response, DelegateError> {
     let mut conversation = messages.to_vec();
@@ -310,7 +347,7 @@ pub fn run_turn(
             return Ok(response);
         };
         on_note(&describe(&call));
-        let result = execute(tools, &call);
+        let result = execute_with(tools, &call, undo);
         conversation.push(Message::assistant(response.text.clone()));
         conversation.push(Message::user(format!("Hasil alat:\n{result}")));
     }

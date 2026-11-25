@@ -180,6 +180,7 @@ fn a_turn_runs_the_call_and_sends_its_result_back() {
         &messages,
         &request(),
         &tools(temp.path(), false),
+        &mut Vec::new(),
         &mut |n| {
             notes.push(n.to_owned());
         },
@@ -203,6 +204,7 @@ fn a_model_that_keeps_asking_is_stopped_at_the_round_limit() {
         &[Message::user("terus")],
         &request(),
         &tools(temp.path(), false),
+        &mut Vec::new(),
         &mut |_| {},
     )
     .expect_err("limit");
@@ -286,4 +288,34 @@ fn run_command_refuses_a_path_as_the_program() {
         &json!({"tool":"run_command","command":"./skrip","args":[]}),
     );
     assert!(out.starts_with("error:"), "{out}");
+}
+
+#[test]
+fn undo_restores_the_previous_bytes_or_removes_a_new_file() {
+    let temp = repo();
+    let allowed = tools(temp.path(), true);
+    let mut undo = Vec::new();
+    let _ = execute_with(
+        &allowed,
+        &json!({"tool":"write_file","path":"README.md","content":"baru"}),
+        &mut undo,
+    );
+    let _ = execute_with(
+        &allowed,
+        &json!({"tool":"write_file","path":"baru.txt","content":"x"}),
+        &mut undo,
+    );
+    assert_eq!(undo.len(), 2);
+    assert!(
+        undo_last(&mut undo)
+            .expect("undo")
+            .starts_with("dibatalkan")
+    );
+    assert!(!temp.path().join("baru.txt").exists());
+    undo_last(&mut undo).expect("undo");
+    assert_eq!(
+        fs::read_to_string(temp.path().join("README.md")).expect("read"),
+        "halo"
+    );
+    assert!(undo_last(&mut undo).is_err());
 }
