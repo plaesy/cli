@@ -1,15 +1,16 @@
 //! `/model` for `plaesy chat`: list the configured providers, pick one, and save the pick.
 //!
-//! A pick moves its provider to the front of `delegate.providers` in `.plaesy/settings.json`, where
+//! A pick moves its provider to the front of `delegate.providers` in `.plaesy/config.toml`, where
 //! `default_provider` looks first, and writes the model id into that entry. Other keys stay as they are.
+//! The first save copies `.plaesy/settings.json` into `config.toml` when the TOML file does not exist yet.
 
 use std::fs;
-use std::io;
 use std::path::Path;
 
-use serde_json::{json, Value};
+use serde_json::Value as JsonValue;
 
 use super::chat_text::Lang;
+use super::delegate::{config_path, read_optional, settings_path};
 use crate::config::delegate::DelegateProviderConfig;
 
 /// A parsed `/model` argument.
@@ -116,9 +117,9 @@ fn check_enabled(entry: &DelegateProviderConfig) -> Result<(), String> {
 ///
 /// # Errors
 ///
-/// Invalid JSON in `settings`, a non-object root or `delegate`, or an unknown provider.
+/// Invalid TOML in `config`, a `delegate` that is not a table, or an unknown provider.
 pub fn apply(
-    settings: &str,
+    config: &str,
     providers: &[DelegateProviderConfig],
     pick: &Pick,
 ) -> Result<String, String> {
@@ -133,40 +134,54 @@ pub fn apply(
     }
     list.insert(0, entry);
 
-    let mut root: Value = if settings.trim().is_empty() {
-        json!({})
+    let mut root: toml::Table = if config.trim().is_empty() {
+        toml::Table::new()
     } else {
-        serde_json::from_str(settings).map_err(|err| format!("settings.json tidak valid: {err}"))?
+        config
+            .parse()
+            .map_err(|err| format!("config.toml tidak valid: {err}"))?
     };
-    let object = root
-        .as_object_mut()
-        .ok_or_else(|| "settings.json harus berupa objek".to_owned())?;
-    let delegate = object
-        .entry("delegate")
-        .or_insert_with(|| json!({}))
-        .as_object_mut()
-        .ok_or_else(|| "delegate harus berupa objek".to_owned())?;
-    let encoded = serde_json::to_value(&list).map_err(|err| err.to_string())?;
+    let delegate = root
+        .entry("delegate".to_owned())
+        .or_insert_with(|| toml::Value::Table(toml::Table::new()))
+        .as_table_mut()
+        .ok_or_else(|| "delegate harus berupa tabel".to_owned())?;
+    let encoded = toml::Value::try_from(&list).map_err(|err| err.to_string())?;
     delegate.insert("providers".to_owned(), encoded);
-    serde_json::to_string_pretty(&root).map_err(|err| err.to_string())
+    toml::to_string_pretty(&root).map_err(|err| err.to_string())
 }
 
-/// Saves `pick` to the settings file at `path`, creating the file and folder when missing.
+/// Converts the text of an old `settings.json` into TOML, so the first save keeps every section.
+fn from_legacy_json(text: &str) -> Result<String, String> {
+    let value: JsonValue = serde_json::from_str(text)
+        .map_err(|err| format!("settings.json tidak valid: {err}"))?;
+    let table = toml::Value::try_from(value).map_err(|err| {
+        format!("settings.json tidak bisa diubah ke TOML (mungkin ada null): {err}")
+    })?;
+    toml::to_string_pretty(&table).map_err(|err| err.to_string())
+}
+
+/// Saves `pick` to `<repo>/.plaesy/config.toml`, creating the folder when missing. When that file
+/// does not exist yet, the old `settings.json` is the starting text.
 ///
 /// # Errors
 ///
 /// Read, write, or validation failures, each with the path.
-pub fn save(path: &Path, providers: &[DelegateProviderConfig], pick: &Pick) -> Result<(), String> {
-    let text = match fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(err) if err.kind() == io::ErrorKind::NotFound => String::new(),
-        Err(err) => return Err(format!("{}: {err}", path.display())),
+pub fn save(repo: &Path, providers: &[DelegateProviderConfig], pick: &Pick) -> Result<(), String> {
+    let toml_path = config_path(repo);
+    let start = match read_optional(&toml_path).map_err(|err| err.to_string())? {
+        Some(text) => text,
+        None => match read_optional(&settings_path(repo)).map_err(|err| err.to_string())? {
+            Some(legacy) => from_legacy_json(&legacy)?,
+            None => String::new(),
+        },
     };
-    let out = apply(&text, providers, pick)?;
-    if let Some(parent) = path.parent() {
+    let out = apply(&start, providers, pick)?;
+    if let Some(parent) = toml_path.parent() {
         fs::create_dir_all(parent).map_err(|err| format!("{}: {err}", parent.display()))?;
     }
-    fs::write(path, format!("{out}\n")).map_err(|err| format!("{}: {err}", path.display()))
+    fs::write(&toml_path, format!("{out}\n"))
+        .map_err(|err| format!("{}: {err}", toml_path.display()))
 }
 
 #[cfg(test)]

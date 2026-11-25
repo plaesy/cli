@@ -222,3 +222,10 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 
 - `web_fetch` aktif hanya jika `"chat": {"web": true}` ada di `.plaesy/settings.json` (repo) atau `~/.plaesy/settings.json`. Default mati. Repo menang atas pengguna. Aturan URL sama dengan webhook: `https` untuk host mana pun, `http` hanya loopback. Tidak ada web search; hanya ambil satu URL.
 - Ini satu-satunya alat `chat` yang memakai jaringan. `--tools` sekarang aktif secara default; `--no-tools` mematikannya.
+
+## Format konfigurasi: TOML (disetujui pemilik, 2026-11-25)
+
+- Konfigurasi proyek pindah dari `.plaesy/settings.json` ke `.plaesy/config.toml`. Pemilik memilih TOML, bukan mengganti nama tetap JSON, karena TOML mendukung komentar.
+- Pembacaan: `config.toml` didahulukan. `settings.json` dibaca hanya bila `config.toml` belum ada. Helper `delegate::config_path` dan `delegate::settings_path` adalah satu-satunya tempat path ini dibentuk.
+- Penulisan pertama (`/model`) menyalin `settings.json` ke `config.toml`, dan `settings.json` tidak diubah. Nilai `null` tidak bisa dikonversi dan ditolak dengan pesan jelas.
+- Status: baru `chat` dan `delegate` yang memakai helper ini. Crate lain (memory, skills, telemetry, reach, schedule, dan sebagainya) masih membaca `settings.json`. Sampai migrasi itu selesai, mengedit `settings.json` tidak memengaruhi `delegate` setelah `config.toml` ada.

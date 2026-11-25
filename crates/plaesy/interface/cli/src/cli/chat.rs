@@ -1329,11 +1329,10 @@ pub fn converse(
                         writeln!(out, "{}", chat_model::hint(lang))?;
                     }
                     Ok(providers) => {
-                        let settings_path = super::delegate::settings_path(&settings.repo);
                         let picked = chat_model::parse(&name, &providers, provider.name())
                             .and_then(|pick| {
                                 let next = open(&pick.target())?;
-                                chat_model::save(&settings_path, &providers, &pick)?;
+                                chat_model::save(&settings.repo, &providers, &pick)?;
                                 Ok(next)
                             });
                         match picked {
