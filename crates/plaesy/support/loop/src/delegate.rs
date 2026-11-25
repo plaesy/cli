@@ -110,6 +110,10 @@ pub trait Provider: Send + Sync {
     fn capabilities(&self) -> &[&'static str] {
         &[CAP_TEXT]
     }
+    /// The model this provider calls, for display. Empty when the provider does not name one.
+    fn model(&self) -> &str {
+        ""
+    }
     /// Makes one call.
     ///
     /// # Errors

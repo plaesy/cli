@@ -164,6 +164,7 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         history_pos: None,
         draft: String::new(),
         provider: "test".to_owned(),
+        model: String::new(),
         pending: 0,
         sent_at: None,
         tokens_in: 0,
@@ -189,6 +190,16 @@ fn markdown_headings_code_and_bold_are_styled() {
         styled_line("tanpa tanda").spans[0].content.as_ref(),
         "tanpa tanda"
     );
+}
+
+#[test]
+fn a_state_mark_switches_the_provider_and_model_in_the_status_line() {
+    let mut screen = screen_with_history(&[]);
+    assert!(screen.status_text().starts_with("[test] "));
+    let mark = char::from(STATE_MARK);
+    screen.receive(&format!("{mark}ollama\tqwen3{mark}"));
+    assert!(screen.status_text().starts_with("[ollama/qwen3] "));
+    assert!(!screen.transcript.visible(10, 0).join("").contains(mark));
 }
 
 #[test]

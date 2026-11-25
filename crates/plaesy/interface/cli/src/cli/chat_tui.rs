@@ -18,7 +18,7 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
-use super::chat::{BLOCK_FENCE, TURN_MARK, USAGE_MARK};
+use super::chat::{BLOCK_FENCE, STATE_MARK, TURN_MARK, USAGE_MARK};
 use super::chat_text::Lang;
 
 /// Most lines kept in the conversation view. Older lines are dropped.
@@ -370,8 +370,10 @@ struct Screen {
     history_pos: Option<usize>,
     /// The line being typed when recall began; Down past the newest entry restores it.
     draft: String,
-    /// The provider in use, shown in the status line.
+    /// The provider in use, shown in the status line. The chat reports a switch with a state mark.
     provider: String,
+    /// The model of that provider, when it names one.
+    model: String,
     /// Lines sent whose turn-end mark has not arrived yet; above zero, a reply is still coming.
     pending: usize,
     /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
@@ -399,13 +401,31 @@ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 impl Screen {
     /// Adds chat output to the view. Each turn-end mark closes one pending line and is not shown.
     fn receive(&mut self, text: &str) {
-        // Text between two usage marks is a token count; it is not shown.
+        // Text between two usage or state marks is bookkeeping for the status line; it is not shown.
         let mut visible = String::new();
-        for (index, part) in text.split(char::from(USAGE_MARK)).enumerate() {
-            if index % 2 == 1 {
-                self.record_usage(part);
+        let mut captured: Vec<(u8, String)> = Vec::new();
+        let mut open: Option<(u8, String)> = None;
+        for c in text.chars() {
+            match open.take() {
+                Some((kind, mut body)) => {
+                    if c == char::from(kind) {
+                        captured.push((kind, body));
+                    } else {
+                        body.push(c);
+                        open = Some((kind, body));
+                    }
+                }
+                None if c == char::from(USAGE_MARK) || c == char::from(STATE_MARK) => {
+                    open = Some((c as u8, String::new()));
+                }
+                None => visible.push(c),
+            }
+        }
+        for (kind, body) in captured {
+            if kind == USAGE_MARK {
+                self.record_usage(&body);
             } else {
-                visible.push_str(part);
+                self.record_state(&body);
             }
         }
         for (index, part) in visible.split(char::from(TURN_MARK)).enumerate() {
@@ -418,6 +438,24 @@ impl Screen {
             if !part.is_empty() {
                 self.transcript.push_text(part);
             }
+        }
+    }
+
+    /// Sets the provider and model from a state mark body, `name TAB model`.
+    fn record_state(&mut self, body: &str) {
+        let (name, model) = body.split_once('\t').unwrap_or((body, ""));
+        if !name.is_empty() {
+            self.provider = name.to_owned();
+            self.model = model.to_owned();
+        }
+    }
+
+    /// The provider as the status line names it: `name/model`, or just the name.
+    fn provider_label(&self) -> String {
+        if self.model.is_empty() {
+            self.provider.clone()
+        } else {
+            format!("{}/{}", self.provider, self.model)
         }
     }
 
@@ -583,11 +621,11 @@ impl Screen {
                 .unwrap_or_else(|| " ·".to_owned());
             return format!(
                 "[{}] {frame} {label}{timing} {usage}{}",
-                self.provider,
+                self.provider_label(),
                 self.hints()
             );
         }
-        format!("[{}] {usage}{}", self.provider, self.hints())
+        format!("[{}] {usage}{}", self.provider_label(), self.hints())
     }
 
     fn hints(&self) -> String {
@@ -631,6 +669,7 @@ where
         history_pos: None,
         draft: String::new(),
         provider: provider.to_owned(),
+        model: String::new(),
         pending: 0,
         sent_at: None,
         tokens_in: 0,

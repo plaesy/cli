@@ -403,6 +403,10 @@ impl Provider for AnthropicProvider {
         &self.name
     }
 
+    fn model(&self) -> &str {
+        &self.model
+    }
+
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
         self.complete_messages(&[Message::user(req.prompt.clone())], req)
     }
@@ -541,6 +545,10 @@ impl Provider for OllamaProvider {
         &self.name
     }
 
+    fn model(&self) -> &str {
+        &self.model
+    }
+
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
         self.complete_messages(&[Message::user(req.prompt.clone())], req)
     }
@@ -630,6 +638,10 @@ impl std::fmt::Debug for OpenAiProvider {
 impl Provider for OpenAiProvider {
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn model(&self) -> &str {
+        &self.model
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {

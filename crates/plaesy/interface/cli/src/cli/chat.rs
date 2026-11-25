@@ -545,6 +545,16 @@ fn write_usage(out: &mut impl Write, response: &delegate::Response) -> io::Resul
     out.write_all(&[USAGE_MARK])
 }
 
+/// Brackets the provider in use for the `--tui` status line: `STATE_MARK name TAB model STATE_MARK`.
+pub const STATE_MARK: u8 = 0x1d;
+
+/// Writes the provider in use for the `--tui` status line.
+fn write_state(out: &mut impl Write, provider: &dyn Provider) -> io::Result<()> {
+    out.write_all(&[STATE_MARK])?;
+    write!(out, "{}\t{}", provider.name(), provider.model())?;
+    out.write_all(&[STATE_MARK])
+}
+
 /// The line that opens and closes a block of lines sent as one message.
 pub const BLOCK_FENCE: &str = "\"\"\"";
 
@@ -599,6 +609,9 @@ pub fn converse(
         writeln!(out, "{}", chat_text::warning(lang, &warning))?;
     }
     fire_and_print(out, &settings, lang, "session.start", &[])?;
+    if settings.turn_marks {
+        write_state(out, provider.as_ref())?;
+    }
     let mut transcript = Transcript::default();
     // The session goal is kept for this run only; it is never written to disk.
     let mut goal: Option<String> = None;
@@ -650,6 +663,9 @@ pub fn converse(
             Input::Provider(name) => match open(&name) {
                 Ok(next) => {
                     provider = next;
+                    if settings.turn_marks {
+                        write_state(out, provider.as_ref())?;
+                    }
                     writeln!(out, "{}", chat_text::provider_switched(lang, &name))?;
                 }
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
