@@ -56,7 +56,7 @@ pub fn protocol(tools: &Tools) -> String {
          atau {\"tool\":\"list_dir\",\"path\":\".\"}, atau {\"tool\":\"list_tasks\"} untuk daftar task. Path harus relatif terhadap root repositori, \
          tanpa `..`.",
     );
-    text.push_str(" Juga bisa: {\"tool\":\"list_tasks\"}; dengan --allow-writes juga {\"tool\":\"create_task\",\"priority\":\"medium\",\"category\":\"chore\",\"title\":\"...\"} dan {\"tool\":\"schedule_once\"}.");
+    text.push_str(" Juga bisa: {\"tool\":\"list_tasks\"}; {\"tool\":\"list_schedules\"} untuk jadwal memori; dengan --allow-writes juga {\"tool\":\"create_task\",\"priority\":\"medium\",\"category\":\"chore\",\"title\":\"...\"} dan {\"tool\":\"schedule_once\"}, {\"tool\":\"generate_image\",\"prompt\":\"...\",\"out\":\"relatif/file.png\"} untuk membuat gambar. Untuk melihat jadwal: {\"tool\":\"list_schedules\"}.");
     if allow_writes {
         text.push_str(
             " Juga tersedia: {\"tool\":\"write_file\",\"path\":\"...\",\"content\":\"...\"} untuk \
@@ -148,6 +148,17 @@ pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> 
                 &text("title"),
             ],
         ),
+        "list_schedules" => run_plaesy(&tools.root, &["memory", "schedule", "list"]),
+        "generate_image" if !tools.allow_writes => Err(
+            "tidak diizinkan dalam sesi ini; sesi perlu dijalankan dengan --allow-writes"
+                .to_owned(),
+        ),
+        "generate_image" => generate_image(&tools.root, &text("prompt"), &text("out")),
+        "web_search" if !tools.web => Err(
+            "web tidak diaktifkan; aktifkan dengan \"chat\": {\"web\": true} di settings.json"
+                .to_owned(),
+        ),
+        "web_search" => web_search(&tools.root, &text("query")),
         "schedule_once" => run_plaesy(&tools.root, &["memory", "schedule", "once"]),
         "web_fetch" => web_fetch(&text("url")),
         "list_tasks" => Ok(super::chat_tasks::render(
@@ -417,4 +428,25 @@ fn web_fetch(url: &str) -> Result<String, String> {
         .read_to_string()
         .map_err(|e| format!("membaca balasan: {e}"))?;
     Ok(format!("status={status}\n{body}"))
+}
+
+/// Searches the web through `plaesy reach exa`. Needs that platform configured with
+/// `plaesy reach configure exa`; without it the reach error is returned as the result.
+fn web_search(root: &Path, query: &str) -> Result<String, String> {
+    if query.trim().is_empty() {
+        return Err("query kosong".to_owned());
+    }
+    run_plaesy(root, &["reach", "exa", query, "--action", "search"])
+}
+
+/// Generates an image with `plaesy images create` into a file under the root.
+fn generate_image(root: &Path, prompt: &str, out: &str) -> Result<String, String> {
+    let target = confine_new(root, out)?;
+    let target = target
+        .to_str()
+        .ok_or_else(|| "path tidak bisa dibaca sebagai teks".to_owned())?;
+    run_plaesy(
+        root,
+        &["images", "create", "--prompt", prompt, "--out", target],
+    )
 }

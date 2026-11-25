@@ -1218,3 +1218,10 @@ fn learn_saves_the_provider_summary_as_a_decision() {
     assert_eq!(decisions[0].title, "Ringkasan sesi chat");
     assert!(String::from_utf8(out).expect("utf8").contains("tersimpan"));
 }
+
+#[test]
+fn split_model_reads_provider_at_model() {
+    assert_eq!(split_model("ollama@qwen"), ("ollama", Some("qwen")));
+    assert_eq!(split_model("ollama"), ("ollama", None));
+    assert_eq!(split_model("ollama@"), ("ollama@", None));
+}

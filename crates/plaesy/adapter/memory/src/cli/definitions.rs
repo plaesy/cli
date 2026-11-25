@@ -262,7 +262,7 @@ pub(super) enum Command {
     /// Run scheduled jobs from the config: `once` runs what is due and exits (for Task Scheduler);
     /// `run` keeps going until Ctrl-C.
     Schedule {
-        /// `once`, `run`, `install`, or `uninstall`.
+        /// `once`, `run`, `list`, `install`, or `uninstall`.
         #[arg(value_enum)]
         mode: ScheduleMode,
     },
@@ -468,6 +468,7 @@ pub(super) enum ConfigSubcommand {
 pub(super) enum ScheduleMode {
     Once,
     Run,
+    List,
     Install,
     Uninstall,
 }

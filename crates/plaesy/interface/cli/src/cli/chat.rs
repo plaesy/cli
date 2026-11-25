@@ -449,7 +449,8 @@ pub enum Input {
     Context,
     Undo,
     /// `/model`: the provider and model in use
-    Model,
+    /// `/model [name]`: the model in use, or `/model <name>` to switch it for this provider
+    Model(String),
     /// `/subagent <task>`: a separate run in its own git worktree (needs --tools --allow-writes)
     Subagent(String),
     /// `/skill [name|clear]`: load a skill into this session, or list the loaded ones
@@ -485,7 +486,7 @@ pub fn parse_input(line: &str) -> Input {
         "/compact" => return Input::Compact,
         "/context" => return Input::Context,
         "/undo" => return Input::Undo,
-        "/model" => return Input::Model,
+        "/model" => return Input::Model(String::new()),
         "/subagent" => return Input::Subagent(String::new()),
         "/skill" => return Input::Skill(String::new()),
         "/find" => return Input::Find(String::new()),
@@ -494,6 +495,9 @@ pub fn parse_input(line: &str) -> Input {
         "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/model ") {
+        return Input::Model(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/subagent ") {
         return Input::Subagent(rest.trim().to_owned());
@@ -589,7 +593,12 @@ pub fn open_provider(
     confirm: bool,
     getenv: &Getenv,
 ) -> Result<Box<dyn Provider>, String> {
-    let entry = delegate::select(cfg, name, confirm)?;
+    // `name@model` opens the provider with another model id (`/model <name>`).
+    let (base, model) = split_model(name);
+    let mut entry = delegate::select(cfg, base, confirm)?;
+    if let Some(model) = model {
+        entry.model = model.to_owned();
+    }
     delegate::build(&entry, Arc::clone(getenv)).map_err(|err| err.to_string())
 }
 
@@ -1194,8 +1203,19 @@ pub fn converse(
                 }
                 _ => writeln!(out, "pakai: /subagent <tugas>")?,
             },
-            Input::Model => {
-                writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;
+            Input::Model(name) => {
+                if name.is_empty() {
+                    writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;
+                } else {
+                    let target = format!("{}@{name}", provider.name());
+                    match open(&target) {
+                        Ok(next) => {
+                            provider = next;
+                            writeln!(out, "model: {}", provider.model())?;
+                        }
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                }
             }
             Input::Undo => {
                 let line = match chat_tools::undo_last(&mut checkpoints) {
@@ -1807,5 +1827,15 @@ fn learn_from_session(
     match record(&decision) {
         Ok(text) => writeln!(out, "{}", text.trim()),
         Err(err) => writeln!(out, "{}", chat_text::error(settings.lang, &err)),
+    }
+}
+
+/// Splits `provider@model` into the provider name and the model id. A name without a non-empty
+/// model part is returned whole.
+#[must_use]
+pub fn split_model(name: &str) -> (&str, Option<&str>) {
+    match name.split_once('@') {
+        Some((base, model)) if !model.is_empty() => (base, Some(model)),
+        _ => (name, None),
     }
 }

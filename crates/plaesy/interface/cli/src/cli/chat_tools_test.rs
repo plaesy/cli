@@ -360,3 +360,16 @@ fn web_fetch_is_refused_unless_web_is_on_and_the_url_is_allowed() {
     );
     assert!(out.starts_with("error:"), "{out}");
 }
+
+#[test]
+fn web_search_and_image_generation_are_refused_when_off() {
+    let temp = repo();
+    let read_only = tools(temp.path(), false);
+    let out = execute(&read_only, &json!({"tool":"web_search","query":"rust"}));
+    assert!(out.contains("web tidak diaktifkan"), "{out}");
+    let out = execute(
+        &read_only,
+        &json!({"tool":"generate_image","prompt":"kucing","out":"a.png"}),
+    );
+    assert!(out.contains("--allow-writes"), "{out}");
+}

@@ -30,6 +30,11 @@ pub(super) async fn dispatch(
                         println!("{}", o.line(now));
                     }
                 }
+                ScheduleMode::List => {
+                    for job in &jobs {
+                        println!("{}	every {}s	{:?}", job.name, job.every.num_seconds(), job.action);
+                    }
+                }
                 ScheduleMode::Run => {
                     crate::memory::schedule::run_loop(&engine, &root, &jobs, log.as_deref())
                         .await?;
