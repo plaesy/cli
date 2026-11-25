@@ -7,29 +7,30 @@ use std::collections::VecDeque;
 use std::error::Error;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::Duration;
 
-use super::CliResult;
 use super::chat_agents;
+use super::chat_history;
 use super::chat_hooks;
+use super::chat_learn;
 use super::chat_lsp;
 use super::chat_mcp;
+use super::chat_model;
 use super::chat_pending;
 use super::chat_plugins;
 use super::chat_roles;
+use super::chat_subagent;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
-use super::chat_history;
-use super::chat_learn;
-use super::chat_subagent;
-use super::chat_tools;
 use super::chat_todo;
+use super::chat_tools;
 use super::chat_tui;
+use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
-use crate::delegate::{self, Message, Provider, Request, flatten};
+use crate::delegate::{self, flatten, Message, Provider, Request};
 use plaesy_common::trace;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -287,7 +288,11 @@ impl Transcript {
         let turns = pairs
             .into_iter()
             .map(|(role, text)| {
-                let role = if role == "user" { Role::User } else { Role::Assistant };
+                let role = if role == "user" {
+                    Role::User
+                } else {
+                    Role::Assistant
+                };
                 (role, text)
             })
             .collect();
@@ -1246,7 +1251,9 @@ pub fn converse(
                                 transcript = Transcript::from_pairs(turns);
                                 writeln!(out, "dilanjutkan dari {arg}: {count} giliran")?;
                             }
-                            Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                            Err(err) => {
+                                writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?
+                            }
                         },
                         Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
                     }
@@ -1312,16 +1319,35 @@ pub fn converse(
                 }
             }
             Input::Model(name) => {
-                if name.is_empty() {
-                    writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;
-                } else {
-                    let target = format!("{}@{name}", provider.name());
-                    match open(&target) {
-                        Ok(next) => {
-                            provider = next;
-                            writeln!(out, "model: {}", provider.model())?;
+                let loaded = super::delegate::load_delegate_config(&settings.repo)
+                    .map(|cfg| cfg.providers)
+                    .map_err(|err| err.to_string());
+                match loaded {
+                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    Ok(providers) if name.is_empty() => {
+                        writeln!(out, "{}", chat_model::render(&providers, provider.name()))?;
+                        writeln!(out, "{}", chat_model::hint(lang))?;
+                    }
+                    Ok(providers) => {
+                        let settings_path = super::delegate::settings_path(&settings.repo);
+                        let picked = chat_model::parse(&name, &providers, provider.name())
+                            .and_then(|pick| {
+                                let next = open(&pick.target())?;
+                                chat_model::save(&settings_path, &providers, &pick)?;
+                                Ok(next)
+                            });
+                        match picked {
+                            Ok(next) => {
+                                provider = next;
+                                writeln!(
+                                    out,
+                                    "provider: {}  model: {}",
+                                    provider.name(),
+                                    provider.model()
+                                )?;
+                            }
+                            Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
                         }
-                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
                     }
                 }
             }
@@ -1797,7 +1823,7 @@ pub fn run(args: &Args) -> CliResult {
     })
     .unwrap_or(false);
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
-    let open =|next: &str| open_provider(&cfg, next, args.confirm, &getenv);
+    let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 
     // Without --vault, the menus and saved decisions use the vault in settings (`watch_dir`).
     let vault = args.vault.clone().or_else(|| {
@@ -1830,7 +1856,10 @@ pub fn run(args: &Args) -> CliResult {
             web,
         }),
         chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),
-        resume: args.resume.as_ref().map(|name| chat_history::dir(&args.path).join(name)),
+        resume: args
+            .resume
+            .as_ref()
+            .map(|name| chat_history::dir(&args.path).join(name)),
         learn: args.learn,
         plugins: plugins.clone(),
         agent_name: agent_name.clone(),

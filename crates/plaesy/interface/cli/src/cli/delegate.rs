@@ -74,10 +74,17 @@ fn analysis_dir(repo: &Path) -> PathBuf {
     repo.join(".plaesy").join("analysis")
 }
 
+/// The project settings file under `repo`: `.plaesy/settings.json`. Every chat and delegate setting
+/// is read from it, so callers take the path from here rather than joining it themselves.
+#[must_use]
+pub fn settings_path(repo: &Path) -> PathBuf {
+    repo.join(".plaesy").join("settings.json")
+}
+
 /// The delegate section of `.plaesy/settings.json` under `repo`. A missing file or section gives the
 /// defaults.
 pub fn load_delegate_config(repo: &Path) -> Result<DelegateConfig, Box<dyn std::error::Error>> {
-    let path = repo.join(".plaesy").join("settings.json");
+    let path = settings_path(repo);
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(DelegateConfig::defaults()),
