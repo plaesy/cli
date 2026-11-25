@@ -15,6 +15,7 @@ pub mod mcpserver;
 pub mod projects;
 pub mod sessions;
 pub mod telemetry;
+pub mod trace;
 pub mod trimmer;
 pub mod workspaces;
 pub mod voice;

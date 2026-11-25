@@ -1045,3 +1045,43 @@ fn an_unclosed_block_is_sent_at_the_end_of_input() {
     assert_eq!(reader.finish(), Some("sisa".to_owned()));
     assert_eq!(reader.finish(), None);
 }
+
+#[test]
+fn every_line_closes_one_turn_mark_even_when_a_handler_skips_the_loop_end() {
+    // `/compact` with an empty transcript leaves the loop early; the TUI still needs its mark.
+    let (provider, _seen) = fake("a", "ok");
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles: Vec::new(),
+        role: String::new(),
+        skills_dir: PathBuf::from("."),
+        plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
+        peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
+        lsp_servers: Vec::new(),
+        turn_marks: true,
+        providers: Vec::new(),
+    };
+    let mut out = Vec::new();
+    converse(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &MemoryStore::default(),
+        settings,
+        Cursor::new("/compact\nhalo\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let marks = out.iter().filter(|byte| **byte == TURN_MARK).count();
+    assert_eq!(marks, 2, "output: {}", String::from_utf8_lossy(&out));
+}

@@ -25,6 +25,8 @@ use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
 use crate::delegate::{self, flatten, Message, Provider, Request};
+use plaesy_common::trace;
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
@@ -637,7 +639,14 @@ pub fn converse(
         }
     });
     let mut queue: VecDeque<String> = VecDeque::new();
+    // Each line taken from the queue ends with one TURN_MARK, written at the top of the next pass.
+    // A handler that skips the end of the loop with `continue` still closes its line this way.
+    let mut awaiting_mark = false;
     loop {
+        if std::mem::take(&mut awaiting_mark) && settings.turn_marks {
+            out.write_all(&[TURN_MARK])?;
+            out.flush()?;
+        }
         if queue.is_empty() {
             match receiver.recv() {
                 Ok(line) => queue.push_back(line?),
@@ -649,6 +658,7 @@ pub fn converse(
         }
         let waiting = queue.len() - 1;
         let line = take_next(&mut queue);
+        awaiting_mark = true;
         if waiting > 0 {
             writeln!(out, "{}", chat_text::queued(lang, waiting))?;
         }
@@ -1144,6 +1154,7 @@ pub fn converse(
                     "message.before_send",
                     &[("text", &text)],
                 )? {
+                    trace::event("chat.turn.refused", json!({ "reason": reason }));
                     writeln!(out, "{}", chat_text::error(lang, &reason))?;
                     continue;
                 }
@@ -1155,6 +1166,15 @@ pub fn converse(
                 messages.extend(transcript.messages(&text));
                 // Text goes out as the provider produces it, so a long reply shows while it is written.
                 let mut printed = false;
+                trace::event(
+                    "chat.turn.sent",
+                    json!({
+                        "provider": provider.name(),
+                        "model": provider.model(),
+                        "chars": text.chars().count(),
+                        "messages": messages.len(),
+                    }),
+                );
                 let result = delegate::run_messages_streaming(
                     provider.as_ref(),
                     &messages,
@@ -1167,6 +1187,16 @@ pub fn converse(
                 );
                 match result {
                     Ok(response) => {
+                        trace::event(
+                            "chat.turn.ok",
+                            json!({
+                                "provider": response.provider,
+                                "wall_ms": response.wall_ms,
+                                "chars": response.text.chars().count(),
+                                "empty": response.text.trim().is_empty(),
+                                "streamed": printed,
+                            }),
+                        );
                         writeln!(out)?;
                         if response.text.trim().is_empty() {
                             writeln!(out, "{}", chat_text::empty_reply(lang))?;
@@ -1185,6 +1215,10 @@ pub fn converse(
                         transcript.push(Role::Assistant, response.text);
                     }
                     Err(err) => {
+                        trace::event(
+                            "chat.turn.error",
+                            json!({ "provider": provider.name(), "error": err.to_string() }),
+                        );
                         if printed {
                             writeln!(out)?;
                         }
@@ -1192,9 +1226,6 @@ pub fn converse(
                     }
                 }
             }
-        }
-        if settings.turn_marks {
-            out.write_all(&[TURN_MARK])?;
         }
         out.flush()?;
     }
@@ -1367,7 +1398,10 @@ pub fn run(args: &Args) -> CliResult {
                 interactive,
                 lang,
             };
-            let _ = converse(provider, &open, &record, &pending, settings, input, out);
+            // The screen cannot show this error once the session has ended, so it goes to the trace.
+            if let Err(err) = converse(provider, &open, &record, &pending, settings, input, out) {
+                trace::event("chat.session.error", json!({ "error": err.to_string() }));
+            }
         })?;
         return Ok(());
     }

@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy chat` can trace each turn to a local file: set `PLAESY_TRACE=1` (writes `.plaesy/trace.jsonl`) or `PLAESY_TRACE=<path>`. Each line records the send, the reply's provider, size, and duration, or the error a provider returned. Message text is not recorded, and the chat screen is not affected.
 - `plaesy chat --tui` status line shows how long the last reply took, once it is written.
 - `plaesy chat` says so when a provider answers with no text, instead of showing nothing.
 - `plaesy chat --tui` shows markdown tables aligned in columns (a table too wide for the log stays as plain text), diff blocks in green, red, and cyan, fenced code with its language as a label and, for Rust, Python, JavaScript/TypeScript, and shell, keywords, strings, and comments coloured (other languages in green), rules, quotes, `[links](url)`, *italic*, ~~strikethrough~~, and numbered items with a bold number. Lines wrap to the log width, so the newest line stays visible, and bulleted items get a bullet. A `\|` or a pipe inside `code` stays in its table cell.
@@ -65,6 +66,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Fixed
 
+- `plaesy chat --tui` no longer counts a line as still pending when a command such as `/compact` with an empty transcript skips the end of the turn loop.
 - `plaesy memory serve` now reclaims a daemon lock left behind by a killed process. Before, it waited 30 seconds on that lock and then failed, so MCP clients timed out.
 - `plaesy mcp memory start|stop|status|uninstall` now fail with a clear message instead of a build error; the background memory service is not available in this build, so use `plaesy mcp memory serve` in the foreground.
 
