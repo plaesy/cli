@@ -1246,7 +1246,7 @@ pub fn run(args: &Args) -> CliResult {
     if args.tui {
         let confirm = args.confirm;
         let repo = args.path.display().to_string();
-        chat_tui::run(lang, &repo, |input, out| {
+        chat_tui::run(lang, &repo, &name, |input, out| {
             let open = |next: &str| open_provider(&cfg, next, confirm, &getenv);
             let record_vault = vault.clone();
             let record =

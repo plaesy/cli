@@ -288,9 +288,50 @@ struct Screen {
     selected: usize,
     /// Set by Esc; cleared when the input changes, so the list comes back on the next key.
     popup_hidden: bool,
+    /// Lines sent before, oldest first, recalled with Up and Down.
+    history: Vec<String>,
+    /// Position in `history` while recalling; `None` while typing a new line.
+    history_pos: Option<usize>,
+    /// The line being typed when recall began; Down past the newest entry restores it.
+    draft: String,
+    /// The provider in use, shown in the status line.
+    provider: String,
 }
 
 impl Screen {
+    /// Up: the previous line sent. The first Up keeps the line being typed as the draft.
+    fn recall_older(&mut self) {
+        if self.history.is_empty() {
+            return;
+        }
+        let index = match self.history_pos {
+            None => {
+                self.draft = self.input.text();
+                self.history.len() - 1
+            }
+            Some(0) => 0,
+            Some(index) => index - 1,
+        };
+        self.history_pos = Some(index);
+        self.input.set(&self.history[index]);
+    }
+
+    /// Down: the next line sent, or the draft once past the newest one.
+    fn recall_newer(&mut self) {
+        match self.history_pos {
+            None => {}
+            Some(index) if index + 1 < self.history.len() => {
+                self.history_pos = Some(index + 1);
+                self.input.set(&self.history[index + 1]);
+            }
+            Some(_) => {
+                self.history_pos = None;
+                let draft = std::mem::take(&mut self.draft);
+                self.input.set(&draft);
+            }
+        }
+    }
+
     /// The commands to show now, or none when the list is hidden.
     fn open_suggestions(&self) -> Vec<(&'static str, &'static str, &'static str)> {
         if self.popup_hidden {
@@ -380,6 +421,10 @@ impl Screen {
     }
 
     fn status_text(&self) -> String {
+        format!("[{}] {}", self.provider, self.hints())
+    }
+
+    fn hints(&self) -> String {
         match (self.lang, self.finished, self.quitting) {
             (Lang::En, true, _) => "session ended".to_owned(),
             (Lang::Id, true, _) => "sesi selesai".to_owned(),
@@ -397,7 +442,7 @@ impl Screen {
 
 /// Runs `session` on a worker thread and shows it in the terminal until it ends. `session` reads
 /// the typed lines and writes the chat's output, exactly as `converse` does with stdin and stdout.
-pub fn run<F>(lang: Lang, repo: &str, session: F) -> io::Result<()>
+pub fn run<F>(lang: Lang, repo: &str, provider: &str, session: F) -> io::Result<()>
 where
     F: FnOnce(BufReader<LineSource>, &mut OutputSink) + Send,
 {
@@ -414,6 +459,10 @@ where
         finished: false,
         selected: 0,
         popup_hidden: false,
+        history: Vec::new(),
+        history_pos: None,
+        draft: String::new(),
+        provider: provider.to_owned(),
     };
     let mut line_tx = Some(line_tx);
     let outcome = thread::scope(|scope| {
@@ -469,11 +518,13 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
             screen.input.insert(c);
             screen.selected = 0;
             screen.popup_hidden = false;
+            screen.history_pos = None;
         }
         Action::Backspace => {
             screen.input.backspace();
             screen.selected = 0;
             screen.popup_hidden = false;
+            screen.history_pos = None;
         }
         Action::Left => screen.input.left(),
         Action::Right => screen.input.right(),
@@ -487,6 +538,8 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
         Action::Down if !open.is_empty() => {
             screen.selected = (screen.selected + 1) % open.len();
         }
+        Action::Up => screen.recall_older(),
+        Action::Down => screen.recall_newer(),
         Action::Complete => {
             if !open.is_empty() {
                 if let Some(text) = completion(&screen.input.text(), screen.selected) {
@@ -505,6 +558,11 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
             let line = screen.input.take();
             screen.scroll = 0;
             screen.selected = 0;
+            screen.history_pos = None;
+            screen.draft.clear();
+            if !line.trim().is_empty() {
+                screen.history.push(line.clone());
+            }
             if let Some(tx) = line_tx.as_ref() {
                 screen.transcript.push_user(&line);
                 // A send fails only when the session has already ended; the frame loop notices that.
@@ -523,7 +581,7 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
             screen.quitting = true;
             *line_tx = None;
         }
-        Action::Up | Action::Down | Action::Ignore => {}
+        Action::Ignore => {}
     }
     Ok(())
 }

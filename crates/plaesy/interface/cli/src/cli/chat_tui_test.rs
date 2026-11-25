@@ -148,3 +148,60 @@ fn set_replaces_the_line_and_puts_the_cursor_at_the_end() {
     input.insert('a');
     assert_eq!(input.text(), "/provider a");
 }
+
+fn screen_with_history(lines: &[&str]) -> Screen {
+    Screen {
+        lang: Lang::En,
+        repo: ".".to_owned(),
+        transcript: Transcript::default(),
+        input: Input::default(),
+        scroll: 0,
+        quitting: false,
+        finished: false,
+        selected: 0,
+        popup_hidden: false,
+        history: lines.iter().map(|line| (*line).to_owned()).collect(),
+        history_pos: None,
+        draft: String::new(),
+        provider: "test".to_owned(),
+    }
+}
+
+#[test]
+fn up_and_down_recall_sent_lines_and_restore_the_draft() {
+    let mut screen = screen_with_history(&["satu", "dua", "tiga"]);
+    screen.input.set("sedang ketik");
+
+    screen.recall_older();
+    assert_eq!(screen.input.text(), "tiga");
+    screen.recall_older();
+    assert_eq!(screen.input.text(), "dua");
+    screen.recall_older();
+    screen.recall_older();
+    assert_eq!(screen.input.text(), "satu", "stops at the oldest line");
+
+    screen.recall_newer();
+    assert_eq!(screen.input.text(), "dua");
+    screen.recall_newer();
+    screen.recall_newer();
+    assert_eq!(
+        screen.input.text(),
+        "sedang ketik",
+        "past the newest, the draft comes back"
+    );
+    assert_eq!(screen.history_pos, None);
+}
+
+#[test]
+fn recall_does_nothing_without_history() {
+    let mut screen = screen_with_history(&[]);
+    screen.input.set("halo");
+    screen.recall_older();
+    assert_eq!(screen.input.text(), "halo");
+}
+
+#[test]
+fn status_names_the_provider() {
+    let screen = screen_with_history(&[]);
+    assert!(screen.status_text().starts_with("[test] "));
+}
