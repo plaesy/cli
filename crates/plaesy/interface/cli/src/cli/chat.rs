@@ -1168,6 +1168,9 @@ pub fn converse(
                 match result {
                     Ok(response) => {
                         writeln!(out)?;
+                        if response.text.trim().is_empty() {
+                            writeln!(out, "{}", chat_text::empty_reply(lang))?;
+                        }
                         if settings.turn_marks {
                             write_usage(out, &response)?;
                         }

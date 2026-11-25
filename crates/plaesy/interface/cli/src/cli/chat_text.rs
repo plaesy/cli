@@ -312,6 +312,15 @@ pub fn council_usage(lang: Lang) -> &'static str {
     )
 }
 
+/// Shown when the provider answers without any text, so the person knows the turn ended empty.
+pub fn empty_reply(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "the provider returned no text; try again or check /debug",
+        "provider tidak mengembalikan teks; coba lagi atau cek /debug",
+    )
+}
+
 pub fn council_empty(lang: Lang) -> &'static str {
     pick(
         lang,

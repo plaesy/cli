@@ -51,3 +51,9 @@ fn key_messages_are_translated_for_both_languages() {
     assert_eq!(action_archive(Lang::En), "Archive");
     assert_eq!(action_archive(Lang::Id), "Arsipkan");
 }
+
+#[test]
+fn an_empty_reply_gets_a_visible_notice_in_both_languages() {
+    assert!(empty_reply(Lang::En).contains("no text"));
+    assert!(empty_reply(Lang::Id).contains("tidak mengembalikan teks"));
+}
