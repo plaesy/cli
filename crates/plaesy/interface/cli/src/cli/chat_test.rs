@@ -171,6 +171,7 @@ fn run_with_store(
             advisor: None,
             council: Vec::new(),
             lsp_servers: Vec::new(),
+            turn_marks: false,
             providers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
@@ -658,6 +659,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         advisor: None,
         council: Vec::new(),
         lsp_servers: Vec::new(),
+        turn_marks: false,
         providers: Vec::new(),
     };
     let store = MemoryStore::default();
@@ -706,6 +708,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         advisor: None,
         council: Vec::new(),
         lsp_servers: Vec::new(),
+        turn_marks: false,
         providers: Vec::new(),
     };
     let store = MemoryStore::default();
@@ -837,6 +840,7 @@ fn run_with_members(
             advisor: advisor.map(str::to_owned),
             council: council.iter().map(|name| (*name).to_owned()).collect(),
             lsp_servers: Vec::new(),
+            turn_marks: false,
             providers: Vec::new(),
         },
         Cursor::new(script.to_owned()),
@@ -989,6 +993,7 @@ fn providers_lists_every_registered_one_and_marks_the_active() {
             advisor: None,
             council: Vec::new(),
             lsp_servers: Vec::new(),
+            turn_marks: false,
             providers: vec![
                 ProviderEntry {
                     name: "alpha".to_owned(),

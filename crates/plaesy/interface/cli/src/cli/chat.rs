@@ -250,7 +250,13 @@ pub struct ChatSettings {
     pub lsp_servers: Vec<chat_lsp::Server>,
     /// Every provider registered in settings, in configuration order (`/providers`).
     pub providers: Vec<ProviderEntry>,
+    /// Write a turn-end mark (a 0x1E byte) after each line is handled. The full-screen view uses it
+    /// to show that a reply is still coming. The plain prompt leaves it off.
+    pub turn_marks: bool,
 }
+
+/// Written after each handled line when `turn_marks` is on.
+pub const TURN_MARK: u8 = 0x1e;
 
 /// One registered provider, as listed by `/providers`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1087,6 +1093,9 @@ pub fn converse(
                 }
             }
         }
+        if settings.turn_marks {
+            out.write_all(&[TURN_MARK])?;
+        }
         out.flush()?;
     }
     fire_and_print(out, &settings, lang, "session.end", &[])?;
@@ -1242,6 +1251,7 @@ pub fn run(args: &Args) -> CliResult {
                 billable: p.billable,
             })
             .collect(),
+        turn_marks: args.tui,
     };
     if args.tui {
         let confirm = args.confirm;

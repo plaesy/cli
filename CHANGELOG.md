@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy chat --tui` shows a busy indicator in the status line from when a line is sent until its reply is written.
 - `plaesy chat --tui` recalls earlier lines with Up and Down when the command list is closed, and its status line shows the provider in use.
 - Add a command list to `plaesy chat --tui`: typing `/` shows matching commands; Up and Down pick one, Enter or Tab completes it into the input without sending, and a second Enter sends. Esc closes the list.
 - Add `plaesy chat --tui`, a full-screen view with the conversation, an input line, and a status line. The same chat loop runs underneath, so commands, hooks, and providers behave as in the line prompt. Enter sends, PageUp and PageDown scroll, and Esc ends the session after the current reply.

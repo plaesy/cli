@@ -164,7 +164,39 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         history_pos: None,
         draft: String::new(),
         provider: "test".to_owned(),
+        pending: 0,
+        tick: 0,
     }
+}
+
+#[test]
+fn turn_marks_close_pending_lines_and_are_not_shown() {
+    let mut screen = screen_with_history(&[]);
+    screen.pending = 2;
+    screen.receive("balasan satu\n");
+    screen.receive(&format!("balasan dua\n{}", char::from(TURN_MARK)));
+    assert_eq!(screen.pending, 1, "one mark arrived");
+    assert!(!screen
+        .transcript
+        .visible(10, 0)
+        .join("")
+        .contains(char::from(TURN_MARK)));
+    assert_eq!(
+        screen.transcript.visible(10, 0),
+        vec!["balasan satu", "balasan dua"]
+    );
+    screen.receive(&char::from(TURN_MARK).to_string());
+    assert_eq!(screen.pending, 0);
+    screen.receive(&char::from(TURN_MARK).to_string());
+    assert_eq!(screen.pending, 0, "never below zero");
+}
+
+#[test]
+fn status_shows_a_busy_indicator_while_a_reply_is_pending() {
+    let mut screen = screen_with_history(&[]);
+    assert!(!screen.status_text().contains("working"));
+    screen.pending = 1;
+    assert!(screen.status_text().contains("working"));
 }
 
 #[test]

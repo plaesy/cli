@@ -18,6 +18,7 @@ use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
+use super::chat::TURN_MARK;
 use super::chat_text::Lang;
 
 /// Most lines kept in the conversation view. Older lines are dropped.
@@ -296,9 +297,28 @@ struct Screen {
     draft: String,
     /// The provider in use, shown in the status line.
     provider: String,
+    /// Lines sent whose turn-end mark has not arrived yet; above zero, a reply is still coming.
+    pending: usize,
+    /// Advances each frame, to turn the busy indicator.
+    tick: usize,
 }
 
+/// Frames of the busy indicator, in ASCII so every terminal shows them.
+const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
+
 impl Screen {
+    /// Adds chat output to the view. Each turn-end mark closes one pending line and is not shown.
+    fn receive(&mut self, text: &str) {
+        for (index, part) in text.split(char::from(TURN_MARK)).enumerate() {
+            if index > 0 {
+                self.pending = self.pending.saturating_sub(1);
+            }
+            if !part.is_empty() {
+                self.transcript.push_text(part);
+            }
+        }
+    }
+
     /// Up: the previous line sent. The first Up keeps the line being typed as the draft.
     fn recall_older(&mut self) {
         if self.history.is_empty() {
@@ -421,6 +441,14 @@ impl Screen {
     }
 
     fn status_text(&self) -> String {
+        if self.pending > 0 {
+            let frame = SPINNER[self.tick % SPINNER.len()];
+            let label = match self.lang {
+                Lang::En => "working…",
+                Lang::Id => "sedang menjawab…",
+            };
+            return format!("[{}] {frame} {label} · {}", self.provider, self.hints());
+        }
         format!("[{}] {}", self.provider, self.hints())
     }
 
@@ -463,6 +491,8 @@ where
         history_pos: None,
         draft: String::new(),
         provider: provider.to_owned(),
+        pending: 0,
+        tick: 0,
     };
     let mut line_tx = Some(line_tx);
     let outcome = thread::scope(|scope| {
@@ -471,10 +501,11 @@ where
             session(BufReader::new(LineSource::new(line_rx)), &mut sink);
         });
         let outcome = loop {
+            screen.tick = screen.tick.wrapping_add(1);
             // Drain everything the chat printed since the last frame.
             loop {
                 match out_rx.try_recv() {
-                    Ok(text) => screen.transcript.push_text(&text),
+                    Ok(text) => screen.receive(&text),
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
                         screen.finished = true;
@@ -567,6 +598,7 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
                 screen.transcript.push_user(&line);
                 // A send fails only when the session has already ended; the frame loop notices that.
                 let _ = tx.send(line);
+                screen.pending += 1;
             }
         }
         Action::Cancel => {
