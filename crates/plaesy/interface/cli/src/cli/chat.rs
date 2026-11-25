@@ -22,6 +22,7 @@ use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::chat_history;
+use super::chat_subagent;
 use super::chat_tools;
 use super::chat_todo;
 use super::chat_tui;
@@ -80,6 +81,9 @@ pub struct Args {
     /// Let tools write files and run commands (`write_file`, `run_command`). Needs --tools
     #[arg(long, requires = "tools")]
     pub allow_writes: bool,
+    /// Let the model fetch web pages with `web_fetch` (https, or loopback http). Needs --tools
+    #[arg(long, requires = "tools")]
+    pub web: bool,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -449,6 +453,8 @@ pub enum Input {
     Undo,
     /// `/model`: the provider and model in use
     Model,
+    /// `/subagent <task>`: a separate run in its own git worktree (needs --tools --allow-writes)
+    Subagent(String),
     /// `/skill [name|clear]`: load a skill into this session, or list the loaded ones
     Skill(String),
     /// `/find <text>`: search the saved sessions
@@ -483,6 +489,7 @@ pub fn parse_input(line: &str) -> Input {
         "/context" => return Input::Context,
         "/undo" => return Input::Undo,
         "/model" => return Input::Model,
+        "/subagent" => return Input::Subagent(String::new()),
         "/skill" => return Input::Skill(String::new()),
         "/find" => return Input::Find(String::new()),
         "/providers" => return Input::Providers,
@@ -490,6 +497,9 @@ pub fn parse_input(line: &str) -> Input {
         "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/subagent ") {
+        return Input::Subagent(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/skill ") {
         return Input::Skill(rest.trim().to_owned());
@@ -1130,6 +1140,63 @@ pub fn converse(
                 let text = todos.apply(&arg);
                 writeln!(out, "{text}")?;
             }
+            Input::Subagent(task) => match settings.tools.clone() {
+                Some(tools) if tools.allow_writes && !task.is_empty() => {
+                    let dest = chat_subagent::dir(&settings.repo).join(chat_subagent::new_name());
+                    match chat_subagent::create_worktree(&settings.repo, &dest) {
+                        Ok(()) => {
+                            let sub = chat_tools::Tools {
+                                root: dest.clone(),
+                                allow_writes: true,
+                                web: tools.web,
+                            };
+                            let messages = vec![
+                                Message::system(chat_tools::protocol(&sub)),
+                                Message::system(
+                                    "Kerjakan tugas ini di worktree terpisah ini saja.".to_owned(),
+                                ),
+                                Message::user(task.clone()),
+                            ];
+                            let request = Request {
+                                prompt: String::new(),
+                                max_output_tokens: settings.max_tokens,
+                                timeout: settings.timeout,
+                                dir: String::new(),
+                            };
+                            let mut undo = Vec::new();
+                            let mut notes = String::new();
+                            let result = chat_tools::run_turn(
+                                provider.as_ref(),
+                                &messages,
+                                &request,
+                                &sub,
+                                &mut undo,
+                                &mut |note| {
+                                    notes.push_str(note);
+                                    notes.push('\n');
+                                },
+                            );
+                            let _ = out.write_all(notes.as_bytes());
+                            match result {
+                                Ok(response) => writeln!(
+                                    out,
+                                    "{}\n[worktree] {}",
+                                    response.text.trim(),
+                                    dest.display()
+                                )?,
+                                Err(err) => {
+                                    writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?;
+                                }
+                            }
+                        }
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                }
+                Some(_) if !task.is_empty() => {
+                    writeln!(out, "subagen butuh --tools dan --allow-writes")?;
+                }
+                _ => writeln!(out, "pakai: /subagent <tugas>")?,
+            },
             Input::Model => {
                 writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;
             }
@@ -1399,7 +1466,7 @@ pub fn converse(
                 let result = match settings.tools.as_ref() {
                     // With tools the reply is written after its tool rounds finish, so it is not streamed.
                     Some(tools) => {
-                        messages.insert(0, Message::system(chat_tools::protocol(tools.allow_writes)));
+                        messages.insert(0, Message::system(chat_tools::protocol(tools)));
                         let mut notes = String::new();
                         let result = chat_tools::run_turn(
                             provider.as_ref(),
@@ -1622,6 +1689,7 @@ pub fn run(args: &Args) -> CliResult {
         tools: args.tools.then(|| chat_tools::Tools {
             root: args.path.clone(),
             allow_writes: args.allow_writes,
+            web: args.web,
         }),
         chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),
         resume: args.resume.as_ref().map(|name| chat_history::dir(&args.path).join(name)),

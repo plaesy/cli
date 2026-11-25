@@ -58,6 +58,7 @@ fn tools(root: &std::path::Path, allow_writes: bool) -> Tools {
     Tools {
         root: root.to_path_buf(),
         allow_writes,
+        web: false,
     }
 }
 
@@ -325,4 +326,37 @@ fn list_tasks_is_read_only_and_works_without_writes() {
     let temp = repo();
     let out = execute(&tools(temp.path(), false), &json!({"tool":"list_tasks"}));
     assert!(!out.starts_with("error:"), "{out}");
+}
+
+#[test]
+fn create_task_and_schedule_need_allow_writes() {
+    let temp = repo();
+    let read_only = tools(temp.path(), false);
+    let out = execute(
+        &read_only,
+        &json!({"tool":"create_task","priority":"low","category":"chore","title":"x"}),
+    );
+    assert!(out.contains("--allow-writes"), "{out}");
+    assert!(execute(&read_only, &json!({"tool":"schedule_once"})).contains("--allow-writes"));
+}
+
+#[test]
+fn web_fetch_is_refused_unless_web_is_on_and_the_url_is_allowed() {
+    let temp = repo();
+    let off = tools(temp.path(), false);
+    let out = execute(
+        &off,
+        &json!({"tool":"web_fetch","url":"https://example.com"}),
+    );
+    assert!(out.contains("--web"), "{out}");
+    let on = Tools {
+        root: temp.path().to_path_buf(),
+        allow_writes: false,
+        web: true,
+    };
+    let out = execute(
+        &on,
+        &json!({"tool":"web_fetch","url":"http://203.0.113.5/x"}),
+    );
+    assert!(out.starts_with("error:"), "{out}");
 }

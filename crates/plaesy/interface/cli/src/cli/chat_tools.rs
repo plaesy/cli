@@ -42,17 +42,21 @@ pub struct Tools {
     pub root: PathBuf,
     /// True when `write_file` and `run_command` are allowed (`--allow-writes`).
     pub allow_writes: bool,
+    /// True when `web_fetch` is allowed (`--web`). Off by default: it is the only tool that uses the network.
+    pub web: bool,
 }
 
 /// Tells the model which tools exist and how to call them. Sent as a system message when tools are on.
 #[must_use]
-pub fn protocol(allow_writes: bool) -> String {
+pub fn protocol(tools: &Tools) -> String {
+    let allow_writes = tools.allow_writes;
     let mut text = String::from(
         "Kamu boleh memakai alat di repositori ini. Untuk memanggil alat, tulis satu blok \
          berikut dan berhenti:\n```tool\n{\"tool\":\"read_file\",\"path\":\"relatif/ke/root\"}\n```\n\
          atau {\"tool\":\"list_dir\",\"path\":\".\"}, atau {\"tool\":\"list_tasks\"} untuk daftar task. Path harus relatif terhadap root repositori, \
          tanpa `..`.",
     );
+    text.push_str(" Juga bisa: {\"tool\":\"list_tasks\"}; dengan --allow-writes juga {\"tool\":\"create_task\",\"priority\":\"medium\",\"category\":\"chore\",\"title\":\"...\"} dan {\"tool\":\"schedule_once\"}.");
     if allow_writes {
         text.push_str(
             " Juga tersedia: {\"tool\":\"write_file\",\"path\":\"...\",\"content\":\"...\"} untuk \
@@ -61,6 +65,9 @@ pub fn protocol(allow_writes: bool) -> String {
         );
     } else {
         text.push_str(" Menulis berkas dan menjalankan perintah tidak diizinkan dalam sesi ini.");
+    }
+    if tools.web {
+        text.push_str(" Juga bisa: {\"tool\":\"web_fetch\",\"url\":\"https://...\"} untuk membaca sebuah URL.");
     }
     text.push_str(
         " Hasil alat dikirim sebagai pesan berikutnya. Setelah hasilnya cukup, jawab biasa tanpa \
@@ -120,6 +127,29 @@ pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> 
     };
     let result = match name {
         "read_file" => read_file(&tools.root, &text("path")),
+        "create_task" if !tools.allow_writes => Err(
+            "tidak diizinkan dalam sesi ini; sesi perlu dijalankan dengan --allow-writes"
+                .to_owned(),
+        ),
+        "schedule_once" if !tools.allow_writes => Err(
+            "tidak diizinkan dalam sesi ini; sesi perlu dijalankan dengan --allow-writes"
+                .to_owned(),
+        ),
+        "web_fetch" if !tools.web => {
+            Err("web tidak diaktifkan; sesi perlu dijalankan dengan --web".to_owned())
+        }
+        "create_task" => run_plaesy(
+            &tools.root,
+            &[
+                "tasks",
+                "create",
+                &text("priority"),
+                &text("category"),
+                &text("title"),
+            ],
+        ),
+        "schedule_once" => run_plaesy(&tools.root, &["memory", "schedule", "once"]),
+        "web_fetch" => web_fetch(&text("url")),
         "list_tasks" => Ok(super::chat_tasks::render(
             super::chat_text::Lang::En,
             &super::chat_tasks::scan(&tools.root),
@@ -363,3 +393,28 @@ pub fn run_turn(
 #[cfg(test)]
 #[path = "chat_tools_test.rs"]
 mod chat_tools_test;
+
+/// Runs this same binary with `args` in `root`, the way `/tasks` runs its commands. Output or the
+/// error text is returned as a tool result.
+fn run_plaesy(root: &Path, args: &[&str]) -> Result<String, String> {
+    let args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
+    super::chat_tasks::run_command(root, &args)
+}
+
+/// Fetches a URL for `web_fetch`. `https` for any host, `http` only for loopback, the same rule as
+/// webhook URLs. The body is read as text and cut like other tool output.
+fn web_fetch(url: &str) -> Result<String, String> {
+    plaesy_common::chat_webhook::validate_url(url).map_err(|e| e.to_string())?;
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global(Some(COMMAND_TIMEOUT))
+        .build()
+        .into();
+    let mut response = agent.get(url).call().map_err(|e| format!("{url}: {e}"))?;
+    let status = response.status().as_u16();
+    let body = response
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| format!("membaca balasan: {e}"))?;
+    Ok(format!("status={status}\n{body}"))
+}

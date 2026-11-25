@@ -36,6 +36,11 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 6: selesai (`--resume`, `--no-save`, `/find`; sesi disimpan di `.plaesy/chats`)
 - Slice 7: selesai (`/skill <nama>` memuat SKILL.md ke sesi ini)
 - Slice 8: selesai (`--learn`: ringkasan sesi disimpan sebagai keputusan lewat perekam yang sama dengan `/decision`)
+- Slice 9: sebagian. `create_task` dan `schedule_once` (butuh --allow-writes) dan `list_tasks` (baca). Cron tidak punya perintah daftar.
+- Slice 10: sebagian. `/model` menampilkan. Ganti model belum: model ada di entri provider, dan ProviderOpener hanya menerima nama.
+- Slice 11: selesai. `/subagent <tugas>` (butuh --allow-writes): worktree git terpisah di `.plaesy/subagents`, tanpa merge.
+- Slice 12: sebagian. `web_fetch` dengan `--web`. Web search belum.
+- Slice 13: ditunda. Butuh dukungan multimodal dan I/O audio.
 - Slice 9: sebagian (`list_tasks` baca-saja untuk model; cron belum)
 - Slice 10: sebagian (`/model` menampilkan provider dan model; mengganti model belum)
 - Slice 11: ditunda (butuh keputusan: worktree git di luar repo utama)
