@@ -15,7 +15,7 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
+use ratatui::widgets::{Block, Clear, Paragraph};
 use ratatui::Frame;
 
 use super::chat::{BLOCK_FENCE, STATE_MARK, TURN_MARK, USAGE_MARK};
@@ -87,10 +87,6 @@ impl Write for OutputSink {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Transcript {
     lines: Vec<String>,
-    /// Whether each line is inside a fenced code block (the fence lines included).
-    code: Vec<bool>,
-    /// Whether the text after the last line break is inside a code block.
-    in_code: bool,
     partial: String,
 }
 
@@ -100,47 +96,30 @@ impl Transcript {
         while let Some(index) = self.partial.find('\n') {
             let line = self.partial[..index].trim_end_matches('\r').to_owned();
             self.partial.drain(..=index);
-            self.push_line(line);
+            self.lines.push(line);
         }
         if self.lines.len() > MAX_LINES {
             let extra = self.lines.len() - MAX_LINES;
             self.lines.drain(..extra);
-            self.code.drain(..extra);
         }
-    }
-
-    fn push_line(&mut self, line: String) {
-        let fence = line.trim_start().starts_with("```");
-        if fence {
-            self.in_code = !self.in_code;
-        }
-        self.code.push(self.in_code || fence);
-        self.lines.push(line);
     }
 
     pub fn push_user(&mut self, text: &str) {
         self.push_text(&format!("\n› {text}\n"));
     }
 
-    /// The lines that fit in `height`, ending `scroll` lines above the newest.
-    pub fn visible(&self, height: usize, scroll: usize) -> Vec<String> {
-        self.visible_marked(height, scroll)
-            .into_iter()
-            .map(|(line, _)| line)
-            .collect()
+    /// Every line, the unfinished one last.
+    pub fn all_lines(&self) -> Vec<String> {
+        let mut all = self.lines.clone();
+        if !self.partial.is_empty() {
+            all.push(self.partial.clone());
+        }
+        all
     }
 
-    /// Like [`Transcript::visible`], with whether each line is inside a code block.
-    pub fn visible_marked(&self, height: usize, scroll: usize) -> Vec<(String, bool)> {
-        let mut all: Vec<(String, bool)> = self
-            .lines
-            .iter()
-            .cloned()
-            .zip(self.code.iter().copied())
-            .collect();
-        if !self.partial.is_empty() {
-            all.push((self.partial.clone(), self.in_code));
-        }
+    /// The lines that fit in `height`, ending `scroll` lines above the newest.
+    pub fn visible(&self, height: usize, scroll: usize) -> Vec<String> {
+        let all = self.all_lines();
         let end = all.len().saturating_sub(scroll);
         let start = end.saturating_sub(height);
         all[start..end].to_vec()
@@ -339,8 +318,14 @@ pub fn styled_line(line: &str) -> Line<'static> {
     if text.len() < line.len() && text.starts_with(' ') {
         return Line::from(text.trim_start().to_owned()).style(Style::new().bold());
     }
-    // A bulleted item keeps its indentation and shows a bullet in place of the dash or star.
     let trimmed = line.trim_start();
+    // A quote keeps a bar in front of its text.
+    if let Some(quote) = trimmed.strip_prefix("> ") {
+        let mut spans = vec![Span::styled("▎ ", Style::new().fg(Color::DarkGray))];
+        spans.extend(inline_spans(quote));
+        return Line::from(spans);
+    }
+    // A bulleted item keeps its indentation and shows a bullet in place of the dash or star.
     if let Some(item) = trimmed
         .strip_prefix("- ")
         .or_else(|| trimmed.strip_prefix("* "))
@@ -353,18 +338,32 @@ pub fn styled_line(line: &str) -> Line<'static> {
     Line::from(inline_spans(line))
 }
 
-/// Splits a line at its `code` and **bold** markers. An unmatched marker styles the rest of the line.
+/// Splits a line at its `code`, **bold**, and [link](url) markers. An unmatched marker styles the
+/// rest of the line. A link shows its text underlined and its address after it.
 fn inline_spans(text: &str) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     let mut plain = String::new();
     let (mut bold, mut code) = (false, false);
-    let mut chars = text.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if !code {
+            if let Some((label, url, used)) = link_at(rest) {
+                push_span(&mut spans, &mut plain, bold, code);
+                spans.push(Span::styled(label.to_owned(), Style::new().underlined()));
+                spans.push(Span::styled(
+                    format!(" ({url})"),
+                    Style::new().fg(Color::DarkGray),
+                ));
+                rest = &rest[used..];
+                continue;
+            }
+        }
+        rest = &rest[c.len_utf8()..];
         if c == '`' {
             push_span(&mut spans, &mut plain, bold, code);
             code = !code;
-        } else if c == '*' && !code && chars.peek() == Some(&'*') {
-            chars.next();
+        } else if c == '*' && !code && rest.starts_with('*') {
+            rest = &rest[1..];
             push_span(&mut spans, &mut plain, bold, code);
             bold = !bold;
         } else {
@@ -373,6 +372,23 @@ fn inline_spans(text: &str) -> Vec<Span<'static>> {
     }
     push_span(&mut spans, &mut plain, bold, code);
     spans
+}
+
+/// A `[label](url)` at the start of `text`: the label, the address, and the bytes the link uses.
+fn link_at(text: &str) -> Option<(&str, &str, usize)> {
+    let body = text.strip_prefix('[')?;
+    let close = body.find("](")?;
+    let label = &body[..close];
+    if label.is_empty() || label.contains(['[', ']']) {
+        return None;
+    }
+    let after = &body[close + 2..];
+    let end = after.find(')')?;
+    let url = &after[..end];
+    if url.is_empty() || url.contains(char::is_whitespace) {
+        return None;
+    }
+    Some((label, url, 1 + close + 2 + end + 1))
 }
 
 fn push_span(spans: &mut Vec<Span<'static>>, plain: &mut String, bold: bool, code: bool) {
@@ -612,21 +628,13 @@ impl Screen {
 
     fn draw_log(&self, frame: &mut Frame<'_>, area: Rect) {
         let height = area.height.saturating_sub(2) as usize;
-        let lines: Vec<Line<'_>> = self
-            .transcript
-            .visible_marked(height, self.scroll)
-            .iter()
-            .map(|(line, code)| {
-                if *code {
-                    Line::from(line.clone()).style(Style::new().fg(Color::Green))
-                } else {
-                    styled_line(line)
-                }
-            })
-            .collect();
+        let width = area.width.saturating_sub(2) as usize;
+        // Rows are already wrapped to the width, so the scroll counts screen rows.
+        let rows = chat_tui_render::render(&self.transcript.all_lines(), width);
+        let end = rows.len().saturating_sub(self.scroll);
+        let start = end.saturating_sub(height);
         let title = format!(" plaesy chat · {} ", self.repo);
-        let log = Paragraph::new(Text::from(lines))
-            .wrap(Wrap { trim: false })
+        let log = Paragraph::new(Text::from(rows[start..end].to_vec()))
             .block(Block::bordered().title(title));
         frame.render_widget(log, area);
     }
@@ -855,6 +863,9 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
     }
     Ok(())
 }
+
+#[path = "chat_tui_render.rs"]
+mod chat_tui_render;
 
 #[cfg(test)]
 #[path = "chat_tui_test.rs"]

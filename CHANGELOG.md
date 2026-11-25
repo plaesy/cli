@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
-- `plaesy chat --tui` shows fenced code blocks in green and bulleted items with a bullet; tables are shown as plain text.
+- `plaesy chat --tui` shows markdown tables aligned in columns (a table too wide for the log stays as plain text), diff blocks in green, red, and cyan, fenced code in green, rules, quotes, and `[links](url)`. Lines wrap to the log width, so the newest line stays visible, and bulleted items get a bullet.
 - `plaesy chat --tui` status line shows the provider and model in use, and follows `/provider` switches.
 - `plaesy chat --tui` takes a multi-line message: Alt+Enter or Ctrl+J adds a line break, and Enter sends. The chat reads a block between `"""` lines as one message, in the line prompt too.
 - `plaesy chat --tui` shows the session's input and output tokens in the status line, for providers that report them; replies are styled lightly (headings, `code`, **bold**).

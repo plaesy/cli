@@ -2,6 +2,34 @@ use super::*;
 use std::io::Read;
 use std::sync::mpsc;
 
+use ratatui::backend::TestBackend;
+use ratatui::Terminal;
+
+/// The screen drawn at `width` by `height`, one string per row.
+fn drawn(screen: &Screen, width: u16, height: u16) -> String {
+    let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
+    terminal
+        .draw(|frame| screen.draw(frame))
+        .expect("draw the screen");
+    let buffer = terminal.backend().buffer();
+    buffer
+        .content()
+        .chunks(buffer.area().width as usize)
+        .map(|row| row.iter().map(|cell| cell.symbol()).collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[test]
+fn the_newest_line_stays_visible_when_older_lines_wrap() {
+    let mut screen = screen_with_history(&[]);
+    let long = "kata ".repeat(20);
+    screen
+        .transcript
+        .push_text(&format!("{long}\n{long}\n{long}\nterakhir\n"));
+    assert!(drawn(&screen, 40, 10).contains("terakhir"));
+}
+
 #[test]
 fn transcript_splits_lines_and_keeps_a_partial_line_until_its_end() {
     let mut transcript = Transcript::default();
@@ -175,12 +203,15 @@ fn screen_with_history(lines: &[&str]) -> Screen {
 }
 
 #[test]
-fn fenced_code_lines_are_marked_and_bullets_get_a_bullet() {
+fn fenced_code_lines_are_green_and_bullets_get_a_bullet() {
     let mut transcript = Transcript::default();
     transcript.push_text("teks\n```rust\nlet a = 1;\n```\nlagi\n");
-    let marked = transcript.visible_marked(10, 0);
-    let flags: Vec<bool> = marked.iter().map(|(_, code)| *code).collect();
-    assert_eq!(flags, vec![false, true, true, true, false]);
+    let rows = chat_tui_render::render(&transcript.all_lines(), 40);
+    let green: Vec<bool> = rows
+        .iter()
+        .map(|row| row.style.fg == Some(Color::Green))
+        .collect();
+    assert_eq!(green, vec![false, true, true, true, false]);
 
     let item = styled_line("  - satu **dua**");
     assert_eq!(item.spans[0].content.as_ref(), "  • ");
