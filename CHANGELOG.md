@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy chat --tui` takes a multi-line message: Alt+Enter or Ctrl+J adds a line break, and Enter sends. The chat reads a block between `"""` lines as one message, in the line prompt too.
+- `plaesy chat --tui` shows the session's input and output tokens in the status line, for providers that report them; replies are styled lightly (headings, `code`, **bold**).
 - `plaesy chat` streams replies from HTTP providers (Anthropic, Ollama, OpenAI-compatible) as they are generated, so `--tui` and the line prompt show text while it arrives. CLI providers still return the whole reply at once.
 - `plaesy chat --tui` shows the seconds since a line was sent while its reply is pending.
 - `plaesy chat --tui` shows a busy indicator in the status line from when a line is sent until its reply is written.

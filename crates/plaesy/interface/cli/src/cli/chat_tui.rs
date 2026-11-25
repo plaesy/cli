@@ -13,12 +13,12 @@ use std::time::{Duration, Instant};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::Style;
-use ratatui::text::{Line, Text};
+use ratatui::style::{Color, Style};
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph, Wrap};
 use ratatui::Frame;
 
-use super::chat::{BLOCK_FENCE, TURN_MARK};
+use super::chat::{BLOCK_FENCE, TURN_MARK, USAGE_MARK};
 use super::chat_text::Lang;
 
 /// Most lines kept in the conversation view. Older lines are dropped.
@@ -302,6 +302,55 @@ pub fn completion(input: &str, selected: usize) -> Option<String> {
     }
 }
 
+/// One transcript line with light markdown: a heading is bold, `code` is yellow, **bold** is bold,
+/// and the person's own lines (`› `) are cyan.
+pub fn styled_line(line: &str) -> Line<'static> {
+    if line.starts_with("› ") {
+        return Line::from(line.to_owned()).style(Style::new().cyan());
+    }
+    let text = line.trim_start_matches('#');
+    if text.len() < line.len() && text.starts_with(' ') {
+        return Line::from(text.trim_start().to_owned()).style(Style::new().bold());
+    }
+    Line::from(inline_spans(line))
+}
+
+/// Splits a line at its `code` and **bold** markers. An unmatched marker styles the rest of the line.
+fn inline_spans(text: &str) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    let mut plain = String::new();
+    let (mut bold, mut code) = (false, false);
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '`' {
+            push_span(&mut spans, &mut plain, bold, code);
+            code = !code;
+        } else if c == '*' && !code && chars.peek() == Some(&'*') {
+            chars.next();
+            push_span(&mut spans, &mut plain, bold, code);
+            bold = !bold;
+        } else {
+            plain.push(c);
+        }
+    }
+    push_span(&mut spans, &mut plain, bold, code);
+    spans
+}
+
+fn push_span(spans: &mut Vec<Span<'static>>, plain: &mut String, bold: bool, code: bool) {
+    if plain.is_empty() {
+        return;
+    }
+    let mut style = Style::new();
+    if bold {
+        style = style.bold();
+    }
+    if code {
+        style = style.fg(Color::Yellow);
+    }
+    spans.push(Span::styled(std::mem::take(plain), style));
+}
+
 /// Everything the screen shows and remembers between key presses.
 struct Screen {
     lang: Lang,
@@ -327,6 +376,9 @@ struct Screen {
     pending: usize,
     /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
     sent_at: Option<Instant>,
+    /// Input and output tokens summed over the session; only providers that report them count.
+    tokens_in: u64,
+    tokens_out: u64,
     /// Advances each frame, to turn the busy indicator.
     tick: usize,
 }
@@ -347,7 +399,16 @@ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 impl Screen {
     /// Adds chat output to the view. Each turn-end mark closes one pending line and is not shown.
     fn receive(&mut self, text: &str) {
-        for (index, part) in text.split(char::from(TURN_MARK)).enumerate() {
+        // Text between two usage marks is a token count; it is not shown.
+        let mut visible = String::new();
+        for (index, part) in text.split(char::from(USAGE_MARK)).enumerate() {
+            if index % 2 == 1 {
+                self.record_usage(part);
+            } else {
+                visible.push_str(part);
+            }
+        }
+        for (index, part) in visible.split(char::from(TURN_MARK)).enumerate() {
             if index > 0 {
                 self.pending = self.pending.saturating_sub(1);
                 if self.pending == 0 {
@@ -358,6 +419,24 @@ impl Screen {
                 self.transcript.push_text(part);
             }
         }
+    }
+
+    /// Adds one reply's counts, written as `input output` with `-` for an unreported count.
+    fn record_usage(&mut self, text: &str) {
+        let mut counts = text.split_whitespace().map(|n| n.parse::<u64>().ok());
+        if let (Some(input), Some(output)) = (counts.next().flatten(), counts.next().flatten()) {
+            self.tokens_in += input;
+            self.tokens_out += output;
+        }
+    }
+
+    /// The session's token totals for the status line, with a trailing separator; empty until a
+    /// provider reports a count.
+    fn usage_text(&self) -> String {
+        if self.tokens_in == 0 && self.tokens_out == 0 {
+            return String::new();
+        }
+        format!("tokens {} in · {} out · ", self.tokens_in, self.tokens_out)
     }
 
     /// Up: the previous line sent. The first Up keeps the line being typed as the draft.
@@ -458,8 +537,8 @@ impl Screen {
         let lines: Vec<Line<'_>> = self
             .transcript
             .visible(height, self.scroll)
-            .into_iter()
-            .map(Line::from)
+            .iter()
+            .map(|line| styled_line(line))
             .collect();
         let title = format!(" plaesy chat · {} ", self.repo);
         let log = Paragraph::new(Text::from(lines))
@@ -491,6 +570,7 @@ impl Screen {
     }
 
     fn status_text(&self) -> String {
+        let usage = self.usage_text();
         if self.pending > 0 {
             let frame = SPINNER[self.tick % SPINNER.len()];
             let label = match self.lang {
@@ -502,12 +582,12 @@ impl Screen {
                 .map(|at| format!(" {} ·", clock(at.elapsed())))
                 .unwrap_or_else(|| " ·".to_owned());
             return format!(
-                "[{}] {frame} {label}{timing} {}",
+                "[{}] {frame} {label}{timing} {usage}{}",
                 self.provider,
                 self.hints()
             );
         }
-        format!("[{}] {}", self.provider, self.hints())
+        format!("[{}] {usage}{}", self.provider, self.hints())
     }
 
     fn hints(&self) -> String {
@@ -553,6 +633,8 @@ where
         provider: provider.to_owned(),
         pending: 0,
         sent_at: None,
+        tokens_in: 0,
+        tokens_out: 0,
         tick: 0,
     };
     let mut line_tx = Some(line_tx);

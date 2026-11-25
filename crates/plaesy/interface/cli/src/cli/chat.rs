@@ -528,6 +528,23 @@ pub fn take_next(queue: &mut VecDeque<String>) -> String {
     }
 }
 
+/// Brackets the token counts of one reply in a `--tui` stream: `USAGE_MARK input output USAGE_MARK`.
+/// A count the provider does not report is written as `-`.
+pub const USAGE_MARK: u8 = 0x1f;
+
+/// Writes one reply's token counts for the `--tui` screen.
+fn write_usage(out: &mut impl Write, response: &delegate::Response) -> io::Result<()> {
+    let count = |n: Option<u64>| n.map_or_else(|| "-".to_owned(), |n| n.to_string());
+    out.write_all(&[USAGE_MARK])?;
+    write!(
+        out,
+        "{} {}",
+        count(response.input_tokens),
+        count(response.output_tokens)
+    )?;
+    out.write_all(&[USAGE_MARK])
+}
+
 /// The line that opens and closes a block of lines sent as one message.
 pub const BLOCK_FENCE: &str = "\"\"\"";
 
@@ -1135,6 +1152,9 @@ pub fn converse(
                 match result {
                     Ok(response) => {
                         writeln!(out)?;
+                        if settings.turn_marks {
+                            write_usage(out, &response)?;
+                        }
                         fire_and_print(
                             out,
                             &settings,

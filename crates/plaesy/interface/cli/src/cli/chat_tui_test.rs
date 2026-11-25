@@ -166,8 +166,47 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         provider: "test".to_owned(),
         pending: 0,
         sent_at: None,
+        tokens_in: 0,
+        tokens_out: 0,
         tick: 0,
     }
+}
+
+#[test]
+fn markdown_headings_code_and_bold_are_styled() {
+    let heading = styled_line("## Judul");
+    assert_eq!(heading.spans[0].content.as_ref(), "Judul");
+    assert_eq!(heading.style, Style::new().bold());
+
+    let mixed = styled_line("pakai `kode` dan **tebal**");
+    let texts: Vec<&str> = mixed.spans.iter().map(|s| s.content.as_ref()).collect();
+    assert_eq!(texts, vec!["pakai ", "kode", " dan ", "tebal"]);
+    assert_eq!(mixed.spans[1].style, Style::new().fg(Color::Yellow));
+    assert_eq!(mixed.spans[3].style, Style::new().bold());
+
+    assert_eq!(styled_line("› halo").style, Style::new().cyan());
+    assert_eq!(
+        styled_line("tanpa tanda").spans[0].content.as_ref(),
+        "tanpa tanda"
+    );
+}
+
+#[test]
+fn token_counts_add_up_in_the_status_line_and_are_not_shown() {
+    let mut screen = screen_with_history(&[]);
+    let mark = char::from(USAGE_MARK);
+    screen.receive(&format!(
+        "balasan\n{mark}12 4{mark}{}",
+        char::from(TURN_MARK)
+    ));
+    assert_eq!(screen.transcript.visible(10, 0), vec!["balasan"]);
+    assert!(screen.status_text().contains("tokens 12 in · 4 out"));
+
+    screen.receive(&format!("lagi\n{mark}3 2{mark}"));
+    assert!(screen.status_text().contains("tokens 15 in · 6 out"));
+
+    screen.receive(&format!("tanpa hitungan\n{mark}- -{mark}"));
+    assert!(screen.status_text().contains("tokens 15 in · 6 out"));
 }
 
 #[test]
