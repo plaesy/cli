@@ -218,7 +218,7 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Slice 4a: `/decision <judul> | <pilihan> | <alasan>` di `plaesy chat` menyimpan catatan memori bertipe `decision` di folder `decisions` lewat `plaesy memory remember` (flag `--vault` opsional). Diuji lewat perekam yang bisa diganti (15 tes chat lulus) dan lewat binary yang dibangun ulang, dengan vault sementara: catatan tertulis di `decisions/`. Di-commit di `feat/chat-decision` (`c75d272`). `--type decision` mewajibkan `--id` tidak kosong; sudah diberi id dari hash judul dan waktu. `/pending` dan gerbang kebijakan belum dibuat.
 - Binary terpasang `%LOCALAPPDATA%\Plaesy\bin\plaesy.exe` (22 Nov 2026) belum memuat `skills` maupun `chat`. Tidak ada `target/debug/plaesy.exe` di checkout ini. Untuk mencoba perubahan ini, build `plaesy` lalu pakai binary dari `target/`. Jangan timpa binary terpasang sebelum `plaesy mcp` dihentikan (lihat CLAUDE.md).
 
-## Jaringan di `plaesy chat` (dibuat plaesy chat, belum disetujui pemilik)
+## Jaringan di `plaesy chat` (dipindah ke settings atas persetujuan pemilik)
 
-- `web_fetch` hanya aktif dengan `plaesy chat --tools --web`. Aturan URL sama dengan webhook: `https` untuk host mana pun, `http` hanya loopback. Tidak ada web search; hanya ambil satu URL.
-- Ini satu-satunya alat `chat` yang memakai jaringan. Default mati. Keputusan ini perlu persetujuan pemilik sebelum dianggap berlaku.
+- `web_fetch` aktif hanya jika `"chat": {"web": true}` ada di `.plaesy/settings.json` (repo) atau `~/.plaesy/settings.json`. Default mati. Repo menang atas pengguna. Aturan URL sama dengan webhook: `https` untuk host mana pun, `http` hanya loopback. Tidak ada web search; hanya ambil satu URL.
+- Ini satu-satunya alat `chat` yang memakai jaringan. `--tools` sekarang aktif secara default; `--no-tools` mematikannya.

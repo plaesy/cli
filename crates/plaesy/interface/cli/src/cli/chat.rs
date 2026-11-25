@@ -66,9 +66,9 @@ pub struct Args {
     /// Language for chat text: en or id. Default: "language" in ~/.plaesy/settings.json, then en
     #[arg(long)]
     pub lang: Option<String>,
-    /// Let the model call tools (read_file, list_dir; writes need --allow-writes) under the repository root
+    /// Turn off the tools the model may call (read_file, list_dir, list_tasks). They are on by default
     #[arg(long)]
-    pub tools: bool,
+    pub no_tools: bool,
     /// At the end, have the provider summarise the session and save the summary as a decision
     #[arg(long)]
     pub learn: bool,
@@ -78,12 +78,9 @@ pub struct Args {
     /// Start from a session saved under `.plaesy/chats`, by its file name
     #[arg(long)]
     pub resume: Option<String>,
-    /// Let tools write files and run commands (`write_file`, `run_command`). Needs --tools
-    #[arg(long, requires = "tools")]
+    /// Let tools write files and run commands (`write_file`, `run_command`, `create_task`, `schedule_once`)
+    #[arg(long)]
     pub allow_writes: bool,
-    /// Let the model fetch web pages with `web_fetch` (https, or loopback http). Needs --tools
-    #[arg(long, requires = "tools")]
-    pub web: bool,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -1658,8 +1655,21 @@ pub fn run(args: &Args) -> CliResult {
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned)
     });
+    // `chat.web` allows the web_fetch tool. Off by default; the repository setting wins over the user's.
+    let web = [
+        args.path.join(".plaesy").join("settings.json"),
+        settings_path.clone(),
+    ]
+    .iter()
+    .find_map(|path| {
+        chat_hooks::read_settings(path)
+            .get("chat")
+            .and_then(|chat| chat.get("web"))
+            .and_then(serde_json::Value::as_bool)
+    })
+    .unwrap_or(false);
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
-    let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
+    let open =|next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 
     // Without --vault, the menus and saved decisions use the vault in settings (`watch_dir`).
     let vault = args.vault.clone().or_else(|| {
@@ -1686,10 +1696,10 @@ pub fn run(args: &Args) -> CliResult {
         roles: roles.clone(),
         role: active_role.name.clone(),
         skills_dir: skills_dir.clone(),
-        tools: args.tools.then(|| chat_tools::Tools {
+        tools: (!args.no_tools).then(|| chat_tools::Tools {
             root: args.path.clone(),
             allow_writes: args.allow_writes,
-            web: args.web,
+            web,
         }),
         chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),
         resume: args.resume.as_ref().map(|name| chat_history::dir(&args.path).join(name)),
