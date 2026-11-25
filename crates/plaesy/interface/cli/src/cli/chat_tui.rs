@@ -87,6 +87,10 @@ impl Write for OutputSink {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Transcript {
     lines: Vec<String>,
+    /// Whether each line is inside a fenced code block (the fence lines included).
+    code: Vec<bool>,
+    /// Whether the text after the last line break is inside a code block.
+    in_code: bool,
     partial: String,
 }
 
@@ -95,13 +99,23 @@ impl Transcript {
         self.partial.push_str(text);
         while let Some(index) = self.partial.find('\n') {
             let line = self.partial[..index].trim_end_matches('\r').to_owned();
-            self.lines.push(line);
             self.partial.drain(..=index);
+            self.push_line(line);
         }
         if self.lines.len() > MAX_LINES {
             let extra = self.lines.len() - MAX_LINES;
             self.lines.drain(..extra);
+            self.code.drain(..extra);
         }
+    }
+
+    fn push_line(&mut self, line: String) {
+        let fence = line.trim_start().starts_with("```");
+        if fence {
+            self.in_code = !self.in_code;
+        }
+        self.code.push(self.in_code || fence);
+        self.lines.push(line);
     }
 
     pub fn push_user(&mut self, text: &str) {
@@ -110,9 +124,22 @@ impl Transcript {
 
     /// The lines that fit in `height`, ending `scroll` lines above the newest.
     pub fn visible(&self, height: usize, scroll: usize) -> Vec<String> {
-        let mut all: Vec<String> = self.lines.clone();
+        self.visible_marked(height, scroll)
+            .into_iter()
+            .map(|(line, _)| line)
+            .collect()
+    }
+
+    /// Like [`Transcript::visible`], with whether each line is inside a code block.
+    pub fn visible_marked(&self, height: usize, scroll: usize) -> Vec<(String, bool)> {
+        let mut all: Vec<(String, bool)> = self
+            .lines
+            .iter()
+            .cloned()
+            .zip(self.code.iter().copied())
+            .collect();
         if !self.partial.is_empty() {
-            all.push(self.partial.clone());
+            all.push((self.partial.clone(), self.in_code));
         }
         let end = all.len().saturating_sub(scroll);
         let start = end.saturating_sub(height);
@@ -311,6 +338,17 @@ pub fn styled_line(line: &str) -> Line<'static> {
     let text = line.trim_start_matches('#');
     if text.len() < line.len() && text.starts_with(' ') {
         return Line::from(text.trim_start().to_owned()).style(Style::new().bold());
+    }
+    // A bulleted item keeps its indentation and shows a bullet in place of the dash or star.
+    let trimmed = line.trim_start();
+    if let Some(item) = trimmed
+        .strip_prefix("- ")
+        .or_else(|| trimmed.strip_prefix("* "))
+    {
+        let indent = &line[..line.len() - trimmed.len()];
+        let mut spans = vec![Span::raw(format!("{indent}• "))];
+        spans.extend(inline_spans(item));
+        return Line::from(spans);
     }
     Line::from(inline_spans(line))
 }
@@ -576,9 +614,15 @@ impl Screen {
         let height = area.height.saturating_sub(2) as usize;
         let lines: Vec<Line<'_>> = self
             .transcript
-            .visible(height, self.scroll)
+            .visible_marked(height, self.scroll)
             .iter()
-            .map(|line| styled_line(line))
+            .map(|(line, code)| {
+                if *code {
+                    Line::from(line.clone()).style(Style::new().fg(Color::Green))
+                } else {
+                    styled_line(line)
+                }
+            })
             .collect();
         let title = format!(" plaesy chat · {} ", self.repo);
         let log = Paragraph::new(Text::from(lines))

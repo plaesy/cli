@@ -175,6 +175,22 @@ fn screen_with_history(lines: &[&str]) -> Screen {
 }
 
 #[test]
+fn fenced_code_lines_are_marked_and_bullets_get_a_bullet() {
+    let mut transcript = Transcript::default();
+    transcript.push_text("teks\n```rust\nlet a = 1;\n```\nlagi\n");
+    let marked = transcript.visible_marked(10, 0);
+    let flags: Vec<bool> = marked.iter().map(|(_, code)| *code).collect();
+    assert_eq!(flags, vec![false, true, true, true, false]);
+
+    let item = styled_line("  - satu **dua**");
+    assert_eq!(item.spans[0].content.as_ref(), "  • ");
+    assert_eq!(item.spans[1].content.as_ref(), "satu ");
+    assert_eq!(item.spans[2].content.as_ref(), "dua");
+    assert_eq!(item.spans[2].style, Style::new().bold());
+    assert_eq!(styled_line("**tebal**").spans[0].content.as_ref(), "tebal");
+}
+
+#[test]
 fn a_mark_split_across_chunks_is_still_read_and_not_shown() {
     let mut screen = screen_with_history(&[]);
     let state = char::from(STATE_MARK);
