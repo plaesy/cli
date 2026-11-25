@@ -5,12 +5,13 @@
 //! The first save copies `.plaesy/settings.json` into `config.toml` when the TOML file does not exist yet.
 
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use serde_json::Value as JsonValue;
 
 use super::chat_text::Lang;
-use super::delegate::{config_path, read_optional, settings_path};
+use crate::config::project::{config_path, legacy_settings_path};
 use crate::config::delegate::DelegateProviderConfig;
 
 /// A parsed `/model` argument.
@@ -161,6 +162,15 @@ fn from_legacy_json(text: &str) -> Result<String, String> {
     toml::to_string_pretty(&table).map_err(|err| err.to_string())
 }
 
+/// Reads a file, returning `None` when it does not exist.
+fn read_text(path: &Path) -> Result<Option<String>, String> {
+    match fs::read_to_string(path) {
+        Ok(text) => Ok(Some(text)),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(format!("{}: {err}", path.display())),
+    }
+}
+
 /// Saves `pick` to `<repo>/.plaesy/config.toml`, creating the folder when missing. When that file
 /// does not exist yet, the old `settings.json` is the starting text.
 ///
@@ -169,9 +179,9 @@ fn from_legacy_json(text: &str) -> Result<String, String> {
 /// Read, write, or validation failures, each with the path.
 pub fn save(repo: &Path, providers: &[DelegateProviderConfig], pick: &Pick) -> Result<(), String> {
     let toml_path = config_path(repo);
-    let start = match read_optional(&toml_path).map_err(|err| err.to_string())? {
+    let start = match read_text(&toml_path)? {
         Some(text) => text,
-        None => match read_optional(&settings_path(repo)).map_err(|err| err.to_string())? {
+        None => match read_text(&legacy_settings_path(repo))? {
             Some(legacy) => from_legacy_json(&legacy)?,
             None => String::new(),
         },

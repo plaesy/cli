@@ -1712,9 +1712,11 @@ pub fn run(args: &Args) -> CliResult {
         .ok_or("home directory is not available")?
         .join(".plaesy")
         .join("settings.json");
+    // Project settings: `.plaesy/config.toml`, or `settings.json` until it is migrated.
+    let repo_settings = crate::config::project::read_project_value_or_null(&args.path);
     let lang = chat_text::resolve(args.lang.as_deref(), &settings_path)?;
     let mut hooks = chat_hooks::parse_hooks(
-        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        &repo_settings,
         chat_hooks::Scope::Repo,
     )?;
     hooks.extend(chat_hooks::parse_hooks(
@@ -1724,9 +1726,7 @@ pub fn run(args: &Args) -> CliResult {
     let approved = chat_hooks::load_approved(&settings_path.with_file_name("approved-hooks.json"));
     let roles = chat_roles::merge(
         chat_roles::parse_roles(&chat_hooks::read_settings(&settings_path))?,
-        chat_roles::parse_roles(&chat_hooks::read_settings(
-            &args.path.join(".plaesy").join("settings.json"),
-        ))?,
+        chat_roles::parse_roles(&repo_settings)?,
     );
     let role_name = args
         .role
@@ -1769,7 +1769,7 @@ pub fn run(args: &Args) -> CliResult {
         eprintln!("plugin skipped: {problem}");
     }
     let mut mcp_servers = chat_mcp::parse_servers(
-        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        &repo_settings,
         chat_hooks::Scope::Repo,
     )?;
     mcp_servers.extend(chat_mcp::parse_servers(
@@ -1788,7 +1788,7 @@ pub fn run(args: &Args) -> CliResult {
         default_provider(&cfg)?
     };
     let mut lsp_servers = chat_lsp::parse_servers(
-        &chat_hooks::read_settings(&args.path.join(".plaesy").join("settings.json")),
+        &repo_settings,
         chat_hooks::Scope::Repo,
     )?;
     lsp_servers.extend(chat_lsp::parse_servers(
@@ -1796,31 +1796,26 @@ pub fn run(args: &Args) -> CliResult {
         chat_hooks::Scope::User,
     )?);
     // `chat.advisor` names the reviewer for /advisor; the repository setting wins over the user's.
-    let advisor = [
-        args.path.join(".plaesy").join("settings.json"),
-        settings_path.clone(),
-    ]
-    .iter()
-    .find_map(|path| {
-        chat_hooks::read_settings(path)
-            .get("chat")
-            .and_then(|chat| chat.get("advisor"))
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_owned)
-    });
+    let user_settings = chat_hooks::read_settings(&settings_path);
+    let advisor = [&repo_settings, &user_settings]
+        .into_iter()
+        .find_map(|settings| {
+            settings
+                .get("chat")
+                .and_then(|chat| chat.get("advisor"))
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        });
     // `chat.web` allows the web_fetch tool. Off by default; the repository setting wins over the user's.
-    let web = [
-        args.path.join(".plaesy").join("settings.json"),
-        settings_path.clone(),
-    ]
-    .iter()
-    .find_map(|path| {
-        chat_hooks::read_settings(path)
-            .get("chat")
-            .and_then(|chat| chat.get("web"))
-            .and_then(serde_json::Value::as_bool)
-    })
-    .unwrap_or(false);
+    let web = [&repo_settings, &user_settings]
+        .into_iter()
+        .find_map(|settings| {
+            settings
+                .get("chat")
+                .and_then(|chat| chat.get("web"))
+                .and_then(serde_json::Value::as_bool)
+        })
+        .unwrap_or(false);
     let provider = open_provider(&cfg, &name, args.confirm, &getenv)?;
     let open = |next: &str| open_provider(&cfg, next, args.confirm, &getenv);
 

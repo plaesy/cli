@@ -74,43 +74,15 @@ fn analysis_dir(repo: &Path) -> PathBuf {
     repo.join(".plaesy").join("analysis")
 }
 
-/// The project config file under `repo`: `.plaesy/config.toml`. Chat and delegate settings are read
-/// from it. Callers take the path from here rather than joining it themselves.
-#[must_use]
-pub fn config_path(repo: &Path) -> PathBuf {
-    repo.join(".plaesy").join("config.toml")
-}
-
-/// The older JSON file, `.plaesy/settings.json`. It is read only while `config.toml` does not exist.
-#[must_use]
-pub fn settings_path(repo: &Path) -> PathBuf {
-    repo.join(".plaesy").join("settings.json")
-}
-
-/// Reads a file, returning `None` when it does not exist.
-pub fn read_optional(path: &Path) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    match fs::read_to_string(path) {
-        Ok(text) => Ok(Some(text)),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(format!("reading {}: {e}", path.display()).into()),
-    }
-}
-
-/// The delegate section under `repo`. `config.toml` wins; `settings.json` is read only when it is
-/// absent. A missing file or section gives the defaults.
+/// The delegate section of the project config under `repo` (`config.toml`, or `settings.json` while
+/// that is absent). A missing file or section gives the defaults.
 pub fn load_delegate_config(repo: &Path) -> Result<DelegateConfig, Box<dyn std::error::Error>> {
-    let toml_path = config_path(repo);
-    if let Some(text) = read_optional(&toml_path)? {
-        let unified: UnifiedConfig = toml::from_str(&text)
-            .map_err(|e| format!("parsing {}: {e}", toml_path.display()))?;
-        return Ok(unified.delegate.unwrap_or_else(DelegateConfig::defaults));
-    }
-    let json_path = settings_path(repo);
-    let Some(text) = read_optional(&json_path)? else {
+    let value = crate::config::project::read_project_value(repo)?;
+    if value.is_null() {
         return Ok(DelegateConfig::defaults());
-    };
-    let unified: UnifiedConfig = serde_json::from_str(&text)
-        .map_err(|e| format!("parsing {}: {e}", json_path.display()))?;
+    }
+    let unified: UnifiedConfig = serde_json::from_value(value)
+        .map_err(|e| format!("delegate settings in {}: {e}", repo.display()))?;
     Ok(unified.delegate.unwrap_or_else(DelegateConfig::defaults))
 }
 

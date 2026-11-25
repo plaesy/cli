@@ -5,6 +5,7 @@
 
 pub mod delegate;
 pub mod manager;
+pub mod project;
 pub mod schema;
 
 use std::io;
