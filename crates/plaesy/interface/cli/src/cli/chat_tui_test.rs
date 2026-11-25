@@ -205,7 +205,7 @@ fn screen_with_history(lines: &[&str]) -> Screen {
 #[test]
 fn fenced_code_lines_are_green_and_bullets_get_a_bullet() {
     let mut transcript = Transcript::default();
-    transcript.push_text("teks\n```rust\nlet a = 1;\n```\nlagi\n");
+    transcript.push_text("teks\n```text\nlet a = 1;\n```\nlagi\n");
     let rows = chat_tui_render::render(&transcript.all_lines(), 40);
     let green: Vec<bool> = rows
         .iter()

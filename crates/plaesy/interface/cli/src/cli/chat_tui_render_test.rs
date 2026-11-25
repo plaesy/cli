@@ -141,3 +141,44 @@ fn an_escaped_pipe_and_a_pipe_in_code_stay_in_their_cell() {
     assert!(text(&rows[2]).contains("x|y"));
     assert_eq!(rows.len(), 3);
 }
+
+#[test]
+fn rust_code_gets_keywords_strings_and_comments_coloured() {
+    let rows = render(
+        &lines(&["```rust", "fn main() { let s = \"hi\"; // nota", "```"]),
+        60,
+    );
+    assert_eq!(text(&rows[1]), "fn main() { let s = \"hi\"; // nota");
+    let keyword = rows[1]
+        .spans
+        .iter()
+        .find(|s| s.content == "fn")
+        .expect("keyword span");
+    assert_eq!(keyword.style, Style::new().fg(Color::Magenta).bold());
+    let string = rows[1]
+        .spans
+        .iter()
+        .find(|s| s.content == "\"hi\"")
+        .expect("string span");
+    assert_eq!(string.style.fg, Some(Color::Yellow));
+    let comment = rows[1].spans.last().expect("comment span");
+    assert_eq!(comment.content, "// nota");
+    assert_eq!(comment.style.fg, Some(Color::DarkGray));
+}
+
+#[test]
+fn python_comments_use_a_hash_and_unknown_languages_stay_green() {
+    let rows = render(
+        &lines(&[
+            "```python",
+            "def f(): # tanda",
+            "```",
+            "```text",
+            "def f()",
+            "```",
+        ]),
+        60,
+    );
+    assert_eq!(rows[1].spans.last().expect("comment").content, "# tanda");
+    assert_eq!(rows[4].style.fg, Some(Color::Green));
+}

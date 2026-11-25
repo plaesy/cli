@@ -25,20 +25,15 @@ pub fn render(lines: &[String], width: usize) -> Vec<Line<'static>> {
 /// One line per input line, before wrapping. Tables are the exception: one table is several lines.
 fn logical(lines: &[String], width: usize) -> Vec<Line<'static>> {
     let mut out = Vec::with_capacity(lines.len());
-    // Inside a fenced block: whether the block is a diff. `None` outside any block.
-    let mut diff: Option<bool> = None;
+    // The language of the fenced block being read, `None` outside any block.
+    let mut block: Option<String> = None;
     let mut index = 0;
     while index < lines.len() {
         let line = lines[index].as_str();
         let trimmed = line.trim_start();
         if let Some(info) = trimmed.strip_prefix("```") {
             let language = info.trim();
-            let opening = diff.is_none();
-            diff = match diff {
-                Some(_) => None,
-                None => Some(matches!(language, "diff" | "patch")),
-            };
-            if opening && !language.is_empty() {
+            if block.is_none() && !language.is_empty() {
                 // The language is shown as a label above the block.
                 out.push(
                     Line::from(format!("─── {language}")).style(Style::new().fg(Color::DarkGray)),
@@ -46,12 +41,15 @@ fn logical(lines: &[String], width: usize) -> Vec<Line<'static>> {
             } else {
                 out.push(green(line));
             }
+            block = match block {
+                Some(_) => None,
+                None => Some(language.to_owned()),
+            };
             index += 1;
-        } else if let Some(is_diff) = diff {
-            out.push(if is_diff {
-                diff_line(line)
-            } else {
-                green(line)
+        } else if let Some(language) = block.as_deref() {
+            out.push(match language {
+                "diff" | "patch" => diff_line(line),
+                _ => code_line(line, language),
             });
             index += 1;
         } else if trimmed.starts_with('|') {
@@ -68,6 +66,95 @@ fn logical(lines: &[String], width: usize) -> Vec<Line<'static>> {
 
 fn green(line: &str) -> Line<'static> {
     Line::from(line.to_owned()).style(Style::new().fg(Color::Green))
+}
+
+/// A line of a fenced block. Languages with a keyword list get keywords in magenta, strings in
+/// yellow, and comments in grey; any other language stays green.
+fn code_line(line: &str, language: &str) -> Line<'static> {
+    let Some((keywords, comment)) = syntax(language) else {
+        return green(line);
+    };
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    let mut rest = line;
+    while let Some(c) = rest.chars().next() {
+        let (piece, style) = if rest.starts_with(comment) {
+            (rest, Style::new().fg(Color::DarkGray))
+        } else if c == '"' || c == '\'' {
+            let end = rest[1..].find(c).map_or(rest.len(), |at| at + 2);
+            (&rest[..end], Style::new().fg(Color::Yellow))
+        } else if c.is_alphanumeric() || c == '_' {
+            let end = rest
+                .find(|ch: char| !(ch.is_alphanumeric() || ch == '_'))
+                .unwrap_or(rest.len());
+            let word = &rest[..end];
+            let style = if keywords.contains(&word) {
+                Style::new().fg(Color::Magenta).bold()
+            } else {
+                Style::new().fg(Color::Green)
+            };
+            (word, style)
+        } else {
+            (&rest[..c.len_utf8()], Style::new().fg(Color::Green))
+        };
+        spans.push(Span::styled(piece.to_owned(), style));
+        rest = &rest[piece.len()..];
+    }
+    Line::from(spans)
+}
+
+/// The keywords and the comment marker of a language, by the name a fence gives it.
+fn syntax(language: &str) -> Option<(&'static [&'static str], &'static str)> {
+    const RUST: &[&str] = &[
+        "fn", "let", "mut", "const", "struct", "enum", "impl", "trait", "pub", "use", "mod",
+        "match", "if", "else", "for", "while", "loop", "return", "async", "await", "self", "Self",
+        "crate", "where", "type", "static", "unsafe", "move", "dyn", "true", "false", "None",
+        "Some", "Ok", "Err",
+    ];
+    const PYTHON: &[&str] = &[
+        "def", "class", "import", "from", "return", "if", "elif", "else", "for", "while", "in",
+        "not", "and", "or", "is", "lambda", "with", "as", "try", "except", "finally", "raise",
+        "pass", "yield", "async", "await", "None", "True", "False",
+    ];
+    const SCRIPT: &[&str] = &[
+        "function",
+        "const",
+        "let",
+        "var",
+        "return",
+        "if",
+        "else",
+        "for",
+        "while",
+        "class",
+        "new",
+        "import",
+        "export",
+        "from",
+        "async",
+        "await",
+        "try",
+        "catch",
+        "throw",
+        "typeof",
+        "null",
+        "undefined",
+        "true",
+        "false",
+        "this",
+        "interface",
+        "type",
+    ];
+    const SHELL: &[&str] = &[
+        "if", "then", "else", "elif", "fi", "for", "do", "done", "while", "case", "esac",
+        "function", "return", "export", "local",
+    ];
+    match language.to_ascii_lowercase().as_str() {
+        "rust" | "rs" => Some((RUST, "//")),
+        "python" | "py" => Some((PYTHON, "#")),
+        "js" | "javascript" | "ts" | "typescript" => Some((SCRIPT, "//")),
+        "sh" | "bash" | "shell" | "zsh" => Some((SHELL, "#")),
+        _ => None,
+    }
 }
 
 /// A line of a diff block: additions green, removals red, hunk headers cyan, file headers bold.
