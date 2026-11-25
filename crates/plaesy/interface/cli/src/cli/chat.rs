@@ -21,6 +21,7 @@ use super::chat_plugins;
 use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
+use super::chat_history;
 use super::chat_tools;
 use super::chat_todo;
 use super::chat_tui;
@@ -67,6 +68,12 @@ pub struct Args {
     /// Let the model call tools (read_file, list_dir; writes need --allow-writes) under the repository root
     #[arg(long)]
     pub tools: bool,
+    /// Do not save this session to `.plaesy/chats` when it ends
+    #[arg(long)]
+    pub no_save: bool,
+    /// Start from a session saved under `.plaesy/chats`, by its file name
+    #[arg(long)]
+    pub resume: Option<String>,
     /// Let tools write files and run commands (`write_file`, `run_command`). Needs --tools
     #[arg(long, requires = "tools")]
     pub allow_writes: bool,
@@ -256,6 +263,32 @@ impl Transcript {
     }
 
     /// The flattened prompt for the next user message, as a completion-style provider sees it.
+    /// Every turn as (role, text), oldest first; role is "user" or "assistant".
+    pub fn pairs(&self) -> Vec<(String, String)> {
+        self.turns
+            .iter()
+            .map(|(role, text)| {
+                let role = match role {
+                    Role::User => "user",
+                    Role::Assistant => "assistant",
+                };
+                (role.to_owned(), text.clone())
+            })
+            .collect()
+    }
+
+    /// Rebuilds a transcript from saved (role, text) pairs.
+    pub fn from_pairs(pairs: Vec<(String, String)>) -> Self {
+        let turns = pairs
+            .into_iter()
+            .map(|(role, text)| {
+                let role = if role == "user" { Role::User } else { Role::Assistant };
+                (role, text)
+            })
+            .collect();
+        Self { turns }
+    }
+
     pub fn render(&self, next_user: &str) -> String {
         flatten(&self.messages(next_user))
     }
@@ -330,6 +363,10 @@ pub struct ChatSettings {
     pub role: String,
     /// Tools the model may call (`--tools`). None means the model gets no tools.
     pub tools: Option<chat_tools::Tools>,
+    /// Folder where the session is saved when it ends. None means no saving.
+    pub chats_dir: Option<PathBuf>,
+    /// A saved session file to start from.
+    pub resume: Option<PathBuf>,
     /// Skill store, where roles find their skills.
     pub skills_dir: PathBuf,
     /// Plugins from the user folder and the repository.
@@ -405,6 +442,8 @@ pub enum Input {
     /// `/context` shows the estimated context used, as tokens and a percent of the window
     Context,
     Undo,
+    /// `/find <text>`: search the saved sessions
+    Find(String),
     /// `/todo [add|done|undone|rm|clear] ...`: the session checklist
     Todo(String),
     /// `/providers`: every registered provider, with the one in use marked
@@ -434,11 +473,15 @@ pub fn parse_input(line: &str) -> Input {
         "/compact" => return Input::Compact,
         "/context" => return Input::Context,
         "/undo" => return Input::Undo,
+        "/find" => return Input::Find(String::new()),
         "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
         "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/find ") {
+        return Input::Find(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/todo ") {
         return Input::Todo(rest.trim().to_owned());
@@ -727,6 +770,15 @@ pub fn converse(
         write_state(out, provider.as_ref())?;
     }
     let mut transcript = Transcript::default();
+    if let Some(path) = &settings.resume {
+        match chat_history::load(path) {
+            Ok(turns) => {
+                writeln!(out, "resumed {} turns from {}", turns.len(), path.display())?;
+                transcript = Transcript::from_pairs(turns);
+            }
+            Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+        }
+    }
     // The session goal is kept for this run only; it is never written to disk.
     let mut goal: Option<String> = None;
     // Files the model wrote with --allow-writes, newest last, so /undo can restore them.
@@ -1026,6 +1078,15 @@ pub fn converse(
             }
             Input::Compact => {
                 compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
+            }
+            Input::Find(query) => {
+                let hits = chat_history::search(&chat_history::dir(&settings.repo), &query);
+                if hits.is_empty() {
+                    writeln!(out, "tidak ada yang cocok")?;
+                }
+                for hit in hits {
+                    writeln!(out, "{}:{}  {}", hit.file, hit.line, hit.snippet)?;
+                }
             }
             Input::Todo(arg) => {
                 let text = todos.apply(&arg);
@@ -1370,6 +1431,14 @@ pub fn converse(
         }
         out.flush()?;
     }
+    if let Some(dir) = &settings.chats_dir {
+        if !transcript.is_empty() {
+            match chat_history::save(dir, &chat_history::new_name(), &transcript.pairs()) {
+                Ok(path) => writeln!(out, "saved chat: {}", path.display())?,
+                Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+            }
+        }
+    }
     fire_and_print(out, &settings, lang, "session.end", &[])?;
     Ok(())
 }
@@ -1507,6 +1576,8 @@ pub fn run(args: &Args) -> CliResult {
             root: args.path.clone(),
             allow_writes: args.allow_writes,
         }),
+        chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),
+        resume: args.resume.as_ref().map(|name| chat_history::dir(&args.path).join(name)),
         plugins: plugins.clone(),
         agent_name: agent_name.clone(),
         peers: peers.clone(),

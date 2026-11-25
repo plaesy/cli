@@ -15,6 +15,7 @@ pub mod chat_pending;
 pub mod chat_plugins;
 pub mod chat_roles;
 pub mod chat_tasks;
+pub mod chat_history;
 pub mod chat_todo;
 pub mod chat_tools;
 pub mod chat_text;
