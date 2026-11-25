@@ -16,7 +16,7 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 2. **Tulis dan jalankan perintah**: `write_file` dan `run_command` dengan `--allow-writes`. Selesai. Persetujuan per panggilan (prompt y/n, di TUI lewat penanda kontrol) belum ada.
 3. **Checkpoint dan `/undo`**: snapshot sebelum tulis. Selesai, tapi hanya di memori sesi; belum ada riwayat di disk.
 4. **Kompresi yang menyisakan ekor** di `compact_transcript`. Selesai.
-5. **Todo dalam sesi**. Belum.
+5. **Todo dalam sesi**. Selesai sebagai perintah `/todo`; belum bisa dipakai model sebagai alat.
 6. **Sesi tersimpan dan pencarian sesi**: cek `cli/sessions.rs` dulu. Belum.
 7. **Skill di chat**: rencana lama slice 3. Belum.
 8. **Memori otomatis**: cek `memory_remember_session` dulu. Belum.
@@ -32,3 +32,4 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 2: selesai (`--allow-writes`, tanpa persetujuan per panggilan).
 - Slice 3: selesai (`/undo` untuk tulisan sesi ini).
 - Slice 4: selesai (`/compact` menyisakan 4 giliran terakhir apa adanya)
+- Slice 5: selesai (`/todo`, daftar tugas dalam sesi, tidak disimpan)

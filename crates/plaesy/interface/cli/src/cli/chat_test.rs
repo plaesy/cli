@@ -1142,3 +1142,9 @@ fn compact_keeps_the_newest_turns_verbatim() {
     assert!(last.contains("tiga") && last.contains("empat"), "tail kept: {last}");
     assert!(!last.contains("satu"), "old turns are gone: {last}");
 }
+
+#[test]
+fn todo_parses_its_arguments_and_the_bare_command() {
+    assert_eq!(parse_input("/todo"), Input::Todo(String::new()));
+    assert_eq!(parse_input("/todo add tulis tes"), Input::Todo("add tulis tes".to_owned()));
+}

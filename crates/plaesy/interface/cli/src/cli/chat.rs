@@ -22,6 +22,7 @@ use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::chat_tools;
+use super::chat_todo;
 use super::chat_tui;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
@@ -404,6 +405,8 @@ pub enum Input {
     /// `/context` shows the estimated context used, as tokens and a percent of the window
     Context,
     Undo,
+    /// `/todo [add|done|undone|rm|clear] ...`: the session checklist
+    Todo(String),
     /// `/providers`: every registered provider, with the one in use marked
     Providers,
     /// `/debug`: what this session is running with, without secrets or transcript text
@@ -433,8 +436,12 @@ pub fn parse_input(line: &str) -> Input {
         "/undo" => return Input::Undo,
         "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
+        "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/todo ") {
+        return Input::Todo(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/goal ") {
         return Input::Goal(rest.trim().to_owned());
@@ -724,6 +731,7 @@ pub fn converse(
     let mut goal: Option<String> = None;
     // Files the model wrote with --allow-writes, newest last, so /undo can restore them.
     let mut checkpoints: Vec<chat_tools::Checkpoint> = Vec::new();
+    let mut todos = chat_todo::Todos::default();
     // A reader thread forwards lines as they arrive, so lines typed while a reply is running wait
     // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
     let (sender, receiver) = mpsc::channel::<io::Result<String>>();
@@ -1018,6 +1026,10 @@ pub fn converse(
             }
             Input::Compact => {
                 compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
+            }
+            Input::Todo(arg) => {
+                let text = todos.apply(&arg);
+                writeln!(out, "{text}")?;
             }
             Input::Undo => {
                 let line = match chat_tools::undo_last(&mut checkpoints) {

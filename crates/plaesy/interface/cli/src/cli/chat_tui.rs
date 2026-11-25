@@ -276,6 +276,7 @@ pub const COMMANDS: &[(&str, &str, &str)] = &[
     ("/compact", "summarize the history", "ringkas riwayat"),
     ("/context", "show the context size", "lihat ukuran konteks"),
     ("/undo", "undo the last file write", "batalkan tulisan file terakhir"),
+    ("/todo", "keep a session checklist", "daftar tugas sesi"),
     ("/advisor", "ask the advisor", "minta review advisor"),
     ("/council", "ask every provider", "tanya semua provider"),
     (
