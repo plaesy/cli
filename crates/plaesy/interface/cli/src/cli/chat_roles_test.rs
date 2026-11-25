@@ -15,9 +15,11 @@ fn parse_reads_the_roles_map() {
     assert_eq!(roles[0].name, "reviewer");
     assert_eq!(roles[0].provider.as_deref(), Some("claude-cli"));
     assert_eq!(roles[0].skills, vec!["code-review"]);
-    assert!(parse_roles(&serde_json::Value::Null)
-        .expect("ok")
-        .is_empty());
+    assert!(
+        parse_roles(&serde_json::Value::Null)
+            .expect("ok")
+            .is_empty()
+    );
 }
 
 #[test]
@@ -79,4 +81,27 @@ fn tool_list_narrows_only_when_present() {
     narrow.tools = vec!["search".to_owned()];
     assert!(tool_allowed(&narrow, "search"));
     assert!(!tool_allowed(&narrow, "delete"));
+}
+
+#[test]
+fn load_skill_reads_skill_md_and_refuses_bad_or_missing_names() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir_all(temp.path().join("tes")).expect("mkdir");
+    std::fs::write(
+        temp.path().join("tes").join("SKILL.md"),
+        "Cara menulis tes.\n",
+    )
+    .expect("write");
+    let text = load_skill(temp.path(), "tes").expect("loaded");
+    assert_eq!(text, "# Skill: tes\n\nCara menulis tes.");
+    assert!(
+        load_skill(temp.path(), "tidak-ada")
+            .unwrap_err()
+            .contains("tidak ditemukan")
+    );
+    assert!(
+        load_skill(temp.path(), "../rahasia")
+            .unwrap_err()
+            .contains("tidak valid")
+    );
 }

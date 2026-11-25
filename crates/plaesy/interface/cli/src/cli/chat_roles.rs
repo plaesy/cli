@@ -116,3 +116,17 @@ pub fn tool_allowed(role: &Role, tool: &str) -> bool {
 #[cfg(test)]
 #[path = "chat_roles_test.rs"]
 mod chat_roles_test;
+
+/// Reads one skill for `/skill`: its `SKILL.md`, under a heading that names it.
+///
+/// # Errors
+///
+/// A message when the name is not a valid skill name or the skill has no `SKILL.md`.
+pub fn load_skill(skills_dir: &Path, name: &str) -> Result<String, String> {
+    if !valid_skill_name(name) {
+        return Err(format!("nama skill tidak valid: {name}"));
+    }
+    std::fs::read_to_string(skills_dir.join(name).join("SKILL.md"))
+        .map(|text| format!("# Skill: {name}\n\n{}", text.trim()))
+        .map_err(|_| format!("skill {name} tidak ditemukan di {}", skills_dir.display()))
+}

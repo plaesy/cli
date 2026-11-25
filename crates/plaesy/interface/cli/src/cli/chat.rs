@@ -442,6 +442,8 @@ pub enum Input {
     /// `/context` shows the estimated context used, as tokens and a percent of the window
     Context,
     Undo,
+    /// `/skill [name|clear]`: load a skill into this session, or list the loaded ones
+    Skill(String),
     /// `/find <text>`: search the saved sessions
     Find(String),
     /// `/todo [add|done|undone|rm|clear] ...`: the session checklist
@@ -473,12 +475,16 @@ pub fn parse_input(line: &str) -> Input {
         "/compact" => return Input::Compact,
         "/context" => return Input::Context,
         "/undo" => return Input::Undo,
+        "/skill" => return Input::Skill(String::new()),
         "/find" => return Input::Find(String::new()),
         "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
         "/todo" => return Input::Todo(String::new()),
         "/goal" => return Input::Goal(String::new()),
         _ => {}
+    }
+    if let Some(rest) = text.strip_prefix("/skill ") {
+        return Input::Skill(rest.trim().to_owned());
     }
     if let Some(rest) = text.strip_prefix("/find ") {
         return Input::Find(rest.trim().to_owned());
@@ -784,6 +790,8 @@ pub fn converse(
     // Files the model wrote with --allow-writes, newest last, so /undo can restore them.
     let mut checkpoints: Vec<chat_tools::Checkpoint> = Vec::new();
     let mut todos = chat_todo::Todos::default();
+    // Skills loaded with `/skill` for this session only: name and the text sent as a system message.
+    let mut session_skills: Vec<(String, String)> = Vec::new();
     // A reader thread forwards lines as they arrive, so lines typed while a reply is running wait
     // in the queue. A line starting with `!` is steered: it runs next, ahead of the other queued lines.
     let (sender, receiver) = mpsc::channel::<io::Result<String>>();
@@ -1079,6 +1087,28 @@ pub fn converse(
             Input::Compact => {
                 compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
             }
+            Input::Skill(arg) => {
+                if arg.is_empty() {
+                    if session_skills.is_empty() {
+                        writeln!(out, "tidak ada skill tambahan")?;
+                    }
+                    for (name, _) in &session_skills {
+                        writeln!(out, "{name}")?;
+                    }
+                } else if arg == "clear" {
+                    session_skills.clear();
+                    writeln!(out, "skill tambahan dihapus")?;
+                } else {
+                    match chat_roles::load_skill(&settings.skills_dir, &arg) {
+                        Ok(text) => {
+                            session_skills.retain(|(name, _)| name != &arg);
+                            session_skills.push((arg.clone(), text));
+                            writeln!(out, "skill dimuat: {arg}")?;
+                        }
+                        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err))?,
+                    }
+                }
+            }
             Input::Find(query) => {
                 let hits = chat_history::search(&chat_history::dir(&settings.repo), &query);
                 if hits.is_empty() {
@@ -1339,6 +1369,9 @@ pub fn converse(
                 let mut messages: Vec<Message> = system.into_iter().map(Message::system).collect();
                 if let Some(goal) = &goal {
                     messages.push(Message::system(format!("Goal sesi ini: {goal}")));
+                }
+                for (_, text) in &session_skills {
+                    messages.push(Message::system(text.clone()));
                 }
                 messages.extend(transcript.messages(&text));
                 // Text goes out as the provider produces it, so a long reply shows while it is written.

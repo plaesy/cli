@@ -278,6 +278,7 @@ pub const COMMANDS: &[(&str, &str, &str)] = &[
     ("/undo", "undo the last file write", "batalkan tulisan file terakhir"),
     ("/todo", "keep a session checklist", "daftar tugas sesi"),
     ("/find", "search the saved chats", "cari di chat tersimpan"),
+    ("/skill", "load a skill into this session", "muat skill ke sesi ini"),
     ("/advisor", "ask the advisor", "minta review advisor"),
     ("/council", "ask every provider", "tanya semua provider"),
     (

@@ -18,7 +18,7 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 4. **Kompresi yang menyisakan ekor** di `compact_transcript`. Selesai.
 5. **Todo dalam sesi**. Selesai sebagai perintah `/todo`; belum bisa dipakai model sebagai alat.
 6. **Sesi tersimpan dan pencarian sesi**: selesai. `cli/sessions.rs` berisi status sesi, bukan riwayat chat, jadi tidak dipakai.
-7. **Skill di chat**: rencana lama slice 3. Belum.
+7. **Skill di chat**: selesai lewat `/skill <nama>`. Peran (`roles`) sudah memuat skill sejak awal.
 8. **Memori otomatis**: cek `memory_remember_session` dulu. Belum.
 9. **Cron dan kanban sebagai tool**. Belum.
 10. **`/model` dan override per giliran**. Belum.
@@ -34,3 +34,4 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 4: selesai (`/compact` menyisakan 4 giliran terakhir apa adanya)
 - Slice 5: selesai (`/todo`, daftar tugas dalam sesi, tidak disimpan)
 - Slice 6: selesai (`--resume`, `--no-save`, `/find`; sesi disimpan di `.plaesy/chats`)
+- Slice 7: selesai (`/skill <nama>` memuat SKILL.md ke sesi ini)
