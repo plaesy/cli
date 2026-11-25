@@ -379,8 +379,10 @@ struct Screen {
     /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
     sent_at: Option<Instant>,
     /// Input and output tokens summed over the session; only providers that report them count.
-    tokens_in: u64,
     tokens_out: u64,
+    tokens_in: u64,
+    /// A usage or state mark whose body is still arriving, with the mark byte that opened it.
+    capture: Option<(u8, String)>,
     /// Advances each frame, to turn the busy indicator.
     tick: usize,
 }
@@ -402,21 +404,21 @@ impl Screen {
     /// Adds chat output to the view. Each turn-end mark closes one pending line and is not shown.
     fn receive(&mut self, text: &str) {
         // Text between two usage or state marks is bookkeeping for the status line; it is not shown.
+        // A mark and its body can arrive in different chunks, so an open capture is kept on the screen.
         let mut visible = String::new();
         let mut captured: Vec<(u8, String)> = Vec::new();
-        let mut open: Option<(u8, String)> = None;
         for c in text.chars() {
-            match open.take() {
+            match self.capture.take() {
                 Some((kind, mut body)) => {
                     if c == char::from(kind) {
                         captured.push((kind, body));
                     } else {
                         body.push(c);
-                        open = Some((kind, body));
+                        self.capture = Some((kind, body));
                     }
                 }
                 None if c == char::from(USAGE_MARK) || c == char::from(STATE_MARK) => {
-                    open = Some((c as u8, String::new()));
+                    self.capture = Some((c as u8, String::new()));
                 }
                 None => visible.push(c),
             }
@@ -674,6 +676,7 @@ where
         sent_at: None,
         tokens_in: 0,
         tokens_out: 0,
+        capture: None,
         tick: 0,
     };
     let mut line_tx = Some(line_tx);

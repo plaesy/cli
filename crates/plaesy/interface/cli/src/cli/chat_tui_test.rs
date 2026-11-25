@@ -169,8 +169,26 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         sent_at: None,
         tokens_in: 0,
         tokens_out: 0,
+        capture: None,
         tick: 0,
     }
+}
+
+#[test]
+fn a_mark_split_across_chunks_is_still_read_and_not_shown() {
+    let mut screen = screen_with_history(&[]);
+    let state = char::from(STATE_MARK);
+    let usage = char::from(USAGE_MARK);
+    // The chat writes each piece of a mark separately, so the screen gets them in separate chunks.
+    screen.receive(&state.to_string());
+    screen.receive("ollama\tqwen2.5:7b");
+    screen.receive(&state.to_string());
+    screen.receive(&format!("balasan\n{usage}"));
+    screen.receive("45 18");
+    screen.receive(&usage.to_string());
+    assert!(screen.status_text().starts_with("[ollama/qwen2.5:7b] "));
+    assert!(screen.status_text().contains("tokens 45 in · 18 out"));
+    assert_eq!(screen.transcript.visible(10, 0), vec!["balasan"]);
 }
 
 #[test]
