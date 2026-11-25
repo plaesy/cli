@@ -274,6 +274,7 @@ pub const COMMANDS: &[(&str, &str, &str)] = &[
     ("/agent", "messages to agents", "pesan ke agen"),
     ("/goal", "set the session goal", "atur goal sesi"),
     ("/compact", "summarize the history", "ringkas riwayat"),
+    ("/context", "show the context size", "lihat ukuran konteks"),
     ("/advisor", "ask the advisor", "minta review advisor"),
     ("/council", "ask every provider", "tanya semua provider"),
     (

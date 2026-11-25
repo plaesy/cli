@@ -7,10 +7,11 @@ use std::collections::VecDeque;
 use std::error::Error;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 
+use super::CliResult;
 use super::chat_agents;
 use super::chat_hooks;
 use super::chat_lsp;
@@ -21,10 +22,9 @@ use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
 use super::chat_tui;
-use super::CliResult;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
-use crate::delegate::{self, flatten, Message, Provider, Request};
+use crate::delegate::{self, Message, Provider, Request, flatten};
 use plaesy_common::trace;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -159,6 +159,17 @@ pub enum Role {
     Assistant,
 }
 
+/// Context window the meter measures against. Estimated, not read from the provider.
+pub const CONTEXT_WINDOW_TOKENS: usize = 32_000;
+
+/// Percent of the window at which the history is compacted before the next turn.
+pub const AUTO_COMPACT_PERCENT: usize = 80;
+
+/// Rough token count: about four characters per token.
+pub fn estimate_tokens(text: &str) -> usize {
+    text.chars().count().div_ceil(4)
+}
+
 /// Turns of one conversation, oldest first.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Transcript {
@@ -172,6 +183,14 @@ impl Transcript {
 
     pub fn clear(&mut self) {
         self.turns.clear();
+    }
+
+    /// Estimated tokens of every turn kept, for the context meter.
+    pub fn estimated_tokens(&self) -> usize {
+        self.turns
+            .iter()
+            .map(|(_, text)| estimate_tokens(text))
+            .sum()
     }
 
     pub fn len(&self) -> usize {
@@ -210,6 +229,44 @@ impl Transcript {
     /// The flattened prompt for the next user message, as a completion-style provider sees it.
     pub fn render(&self, next_user: &str) -> String {
         flatten(&self.messages(next_user))
+    }
+}
+
+/// Replaces the transcript with one summary the provider writes. Shared by `/compact` and the
+/// automatic compaction before a turn that would overflow the context meter.
+fn compact_transcript(
+    out: &mut impl Write,
+    provider: &dyn Provider,
+    transcript: &mut Transcript,
+    settings: &ChatSettings,
+) -> io::Result<()> {
+    let lang = settings.lang;
+    if transcript.is_empty() {
+        return writeln!(out, "{}", chat_text::nothing_to_compact(lang));
+    }
+    let request = Request {
+        prompt: String::new(),
+        max_output_tokens: settings.max_tokens,
+        timeout: settings.timeout,
+        dir: String::new(),
+    };
+    let mut messages = vec![Message::system(
+        "Ringkas percakapan berikut menjadi catatan singkat. Pertahankan fakta, \
+         keputusan, dan langkah berikutnya. Jawab dalam bahasa percakapan."
+            .to_owned(),
+    )];
+    messages.extend(transcript.history());
+    messages.push(Message::user("Ringkas percakapan di atas.".to_owned()));
+    match delegate::run_messages(provider, &messages, &request) {
+        Ok(response) => {
+            let turns = transcript.len();
+            transcript.clear();
+            transcript.push(Role::User, "Ringkasan percakapan sebelumnya:");
+            transcript.push(Role::Assistant, response.text.clone());
+            writeln!(out, "{}", chat_text::compacted(lang, turns))?;
+            writeln!(out, "{}", response.text)
+        }
+        Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string())),
     }
 }
 
@@ -308,6 +365,8 @@ pub enum Input {
     Goal(String),
     /// `/compact` replaces the transcript with one summary written by the provider
     Compact,
+    /// `/context` shows the estimated context used, as tokens and a percent of the window
+    Context,
     /// `/providers`: every registered provider, with the one in use marked
     Providers,
     /// `/debug`: what this session is running with, without secrets or transcript text
@@ -333,6 +392,7 @@ pub fn parse_input(line: &str) -> Input {
         "/tasks" => return Input::Tasks,
         "/plugins" => return Input::Plugins,
         "/compact" => return Input::Compact,
+        "/context" => return Input::Context,
         "/providers" => return Input::Providers,
         "/debug" => return Input::Debug,
         "/goal" => return Input::Goal(String::new()),
@@ -909,34 +969,15 @@ pub fn converse(
                 }
             }
             Input::Compact => {
-                if transcript.is_empty() {
-                    writeln!(out, "{}", chat_text::nothing_to_compact(lang))?;
-                    continue;
-                }
-                let request = Request {
-                    prompt: String::new(),
-                    max_output_tokens: settings.max_tokens,
-                    timeout: settings.timeout,
-                    dir: String::new(),
-                };
-                let mut messages = vec![Message::system(
-                    "Ringkas percakapan berikut menjadi catatan singkat. Pertahankan fakta, \
-                     keputusan, dan langkah berikutnya. Jawab dalam bahasa percakapan."
-                        .to_owned(),
-                )];
-                messages.extend(transcript.history());
-                messages.push(Message::user("Ringkas percakapan di atas.".to_owned()));
-                match delegate::run_messages(provider.as_ref(), &messages, &request) {
-                    Ok(response) => {
-                        let turns = transcript.len();
-                        transcript.clear();
-                        transcript.push(Role::User, "Ringkasan percakapan sebelumnya:");
-                        transcript.push(Role::Assistant, response.text.clone());
-                        writeln!(out, "{}", chat_text::compacted(lang, turns))?;
-                        writeln!(out, "{}", response.text)?;
-                    }
-                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
-                }
+                compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
+            }
+            Input::Context => {
+                let used = transcript.estimated_tokens();
+                writeln!(
+                    out,
+                    "{}",
+                    chat_text::context_usage(lang, used, CONTEXT_WINDOW_TOKENS)
+                )?;
             }
             Input::Providers => {
                 if settings.providers.is_empty() {
@@ -1141,6 +1182,14 @@ pub fn converse(
                 Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
             Input::Message(text) => {
+                // Compact before a turn that would fill the window, so the next reply still fits.
+                let limit = CONTEXT_WINDOW_TOKENS * AUTO_COMPACT_PERCENT / 100;
+                if !transcript.is_empty()
+                    && transcript.estimated_tokens() + estimate_tokens(&text) > limit
+                {
+                    writeln!(out, "{}", chat_text::auto_compacting(lang))?;
+                    compact_transcript(out, provider.as_ref(), &mut transcript, &settings)?;
+                }
                 let request = Request {
                     prompt: String::new(),
                     max_output_tokens: settings.max_tokens,

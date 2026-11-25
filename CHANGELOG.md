@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 - `plaesy chat` can trace each turn to a local file: set `PLAESY_TRACE=1` (writes `.plaesy/trace.jsonl`) or `PLAESY_TRACE=<path>`. Each line records the send, the reply's provider, size, and duration, or the error a provider returned. Message text is not recorded, and the chat screen is not affected.
 - `plaesy chat --tui` status line shows how long the last reply took, once it is written.
+- `plaesy chat` estimates the context in use (about four characters per token, against a 32 000-token window) and `/context` prints it. Before a turn that would pass 80% of the window, the history is compacted into one summary first, the same as `/compact`. The window is a fixed estimate, not read from the provider.
 - `plaesy chat` says so when a provider answers with no text, instead of showing nothing.
 - `plaesy chat --tui` shows markdown tables aligned in columns (a table too wide for the log stays as plain text), diff blocks in green, red, and cyan, fenced code with its language as a label and, for Rust, Python, JavaScript/TypeScript, and shell, keywords, strings, and comments coloured (other languages in green), rules, quotes, `[links](url)`, *italic*, ~~strikethrough~~, and numbered items with a bold number. Lines wrap to the log width, so the newest line stays visible, and bulleted items get a bullet. A `\|` or a pipe inside `code` stays in its table cell.
 - `plaesy chat --tui` status line shows the provider and model in use, and follows `/provider` switches.

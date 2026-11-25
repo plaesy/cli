@@ -170,6 +170,22 @@ pub fn compacted(lang: Lang, turns: usize) -> String {
     }
 }
 
+pub fn auto_compacting(lang: Lang) -> &'static str {
+    pick(
+        lang,
+        "context nearly full; compacting the history first",
+        "konteks hampir penuh; riwayat diringkas dulu",
+    )
+}
+
+pub fn context_usage(lang: Lang, used: usize, window: usize) -> String {
+    let percent = used * 100 / window.max(1);
+    match lang {
+        Lang::En => format!("context ~{used} of {window} tokens ({percent}%)"),
+        Lang::Id => format!("konteks ~{used} dari {window} token ({percent}%)"),
+    }
+}
+
 pub fn no_pending(lang: Lang) -> &'static str {
     pick(lang, "no pending questions", "tidak ada pertanyaan terbuka")
 }

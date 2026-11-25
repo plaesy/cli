@@ -801,6 +801,43 @@ fn compact_replaces_history_with_the_summary() {
 }
 
 #[test]
+fn context_command_reports_the_estimated_size() {
+    let (provider, seen) = fake("a", "tidak dipanggil");
+    let out = run_session(provider, &no_open, "/context\n/exit\n");
+
+    assert!(out.contains("context ~0 of 32000 tokens (0%)"), "{out}");
+    assert!(seen.lock().expect("seen").is_empty());
+}
+
+#[test]
+fn estimate_is_about_four_characters_per_token() {
+    assert_eq!(estimate_tokens(""), 0);
+    assert_eq!(estimate_tokens("abcd"), 1);
+    assert_eq!(estimate_tokens("abcde"), 2);
+}
+
+#[test]
+fn history_is_compacted_before_a_turn_that_would_overflow_the_window() {
+    // 110 000 characters is about 27 500 tokens, which is over the 80% limit of a 32 000 window.
+    let big = "x".repeat(110_000);
+    let (provider, seen) = fake("a", "ringkasan singkat");
+    let out = run_session(provider, &no_open, &format!("{big}\nkedua\n/exit\n"));
+
+    assert!(out.contains("context nearly full"), "{out}");
+    assert!(out.contains("compacted 2 turns"), "{out}");
+    let prompts = seen.lock().expect("seen").clone();
+    assert_eq!(
+        prompts.len(),
+        3,
+        "first message, the summary, then the next message"
+    );
+    assert!(
+        prompts[2].len() < 1_000,
+        "after compaction the big message is gone"
+    );
+}
+
+#[test]
 fn compact_with_no_history_says_so_and_calls_nothing() {
     let (provider, seen) = fake("a", "tidak dipanggil");
     let out = run_session(provider, &no_open, "/compact\n/exit\n");
