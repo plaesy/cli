@@ -319,3 +319,10 @@ fn undo_restores_the_previous_bytes_or_removes_a_new_file() {
     );
     assert!(undo_last(&mut undo).is_err());
 }
+
+#[test]
+fn list_tasks_is_read_only_and_works_without_writes() {
+    let temp = repo();
+    let out = execute(&tools(temp.path(), false), &json!({"tool":"list_tasks"}));
+    assert!(!out.starts_with("error:"), "{out}");
+}

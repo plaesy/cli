@@ -447,6 +447,8 @@ pub enum Input {
     /// `/context` shows the estimated context used, as tokens and a percent of the window
     Context,
     Undo,
+    /// `/model`: the provider and model in use
+    Model,
     /// `/skill [name|clear]`: load a skill into this session, or list the loaded ones
     Skill(String),
     /// `/find <text>`: search the saved sessions
@@ -480,6 +482,7 @@ pub fn parse_input(line: &str) -> Input {
         "/compact" => return Input::Compact,
         "/context" => return Input::Context,
         "/undo" => return Input::Undo,
+        "/model" => return Input::Model,
         "/skill" => return Input::Skill(String::new()),
         "/find" => return Input::Find(String::new()),
         "/providers" => return Input::Providers,
@@ -1126,6 +1129,9 @@ pub fn converse(
             Input::Todo(arg) => {
                 let text = todos.apply(&arg);
                 writeln!(out, "{text}")?;
+            }
+            Input::Model => {
+                writeln!(out, "provider: {}  model: {}", provider.name(), provider.model())?;
             }
             Input::Undo => {
                 let line = match chat_tools::undo_last(&mut checkpoints) {

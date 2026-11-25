@@ -50,7 +50,7 @@ pub fn protocol(allow_writes: bool) -> String {
     let mut text = String::from(
         "Kamu boleh memakai alat di repositori ini. Untuk memanggil alat, tulis satu blok \
          berikut dan berhenti:\n```tool\n{\"tool\":\"read_file\",\"path\":\"relatif/ke/root\"}\n```\n\
-         atau {\"tool\":\"list_dir\",\"path\":\".\"}. Path harus relatif terhadap root repositori, \
+         atau {\"tool\":\"list_dir\",\"path\":\".\"}, atau {\"tool\":\"list_tasks\"} untuk daftar task. Path harus relatif terhadap root repositori, \
          tanpa `..`.",
     );
     if allow_writes {
@@ -120,6 +120,10 @@ pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> 
     };
     let result = match name {
         "read_file" => read_file(&tools.root, &text("path")),
+        "list_tasks" => Ok(super::chat_tasks::render(
+            super::chat_text::Lang::En,
+            &super::chat_tasks::scan(&tools.root),
+        )),
         "list_dir" => list_dir(&tools.root, &text("path")),
         "write_file" | "run_command" if !tools.allow_writes => Err(
             "tidak diizinkan dalam sesi ini; sesi perlu dijalankan dengan --allow-writes"

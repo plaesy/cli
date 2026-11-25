@@ -20,8 +20,8 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 6. **Sesi tersimpan dan pencarian sesi**: selesai. `cli/sessions.rs` berisi status sesi, bukan riwayat chat, jadi tidak dipakai.
 7. **Skill di chat**: selesai lewat `/skill <nama>`. Peran (`roles`) sudah memuat skill sejak awal.
 8. **Memori otomatis**: selesai lewat `--learn`. Ringkasan dibuat provider dan disimpan sebagai keputusan. Belum memakai `memory_remember_session`.
-9. **Cron dan kanban sebagai tool**. Belum.
-10. **`/model` dan override per giliran**. Belum.
+9. **Cron dan kanban sebagai tool**: sebagian. Daftar task sudah bisa dibaca model; cron dan pembuatan task belum.
+10. **`/model` dan override per giliran**: sebagian. `/model` menampilkan; ganti model belum.
 11. **Subagen di worktree**. Belum.
 12. **Web search dan extract**: opt-in di konfigurasi, dicatat di `docs/platform/decisions.md`. Belum.
 13. **Vision, TTS, image generation**: ditunda. Butuh dukungan multimodal dan I/O audio. Tidak dibuat stub.
@@ -36,3 +36,8 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 6: selesai (`--resume`, `--no-save`, `/find`; sesi disimpan di `.plaesy/chats`)
 - Slice 7: selesai (`/skill <nama>` memuat SKILL.md ke sesi ini)
 - Slice 8: selesai (`--learn`: ringkasan sesi disimpan sebagai keputusan lewat perekam yang sama dengan `/decision`)
+- Slice 9: sebagian (`list_tasks` baca-saja untuk model; cron belum)
+- Slice 10: sebagian (`/model` menampilkan provider dan model; mengganti model belum)
+- Slice 11: ditunda (butuh keputusan: worktree git di luar repo utama)
+- Slice 12: ditunda (butuh keputusan: jaringan opt-in, dan entri di docs/platform/decisions.md)
+- Slice 13: ditunda (butuh dukungan multimodal dan I/O audio)
