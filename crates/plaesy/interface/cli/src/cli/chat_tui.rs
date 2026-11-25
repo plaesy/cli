@@ -477,6 +477,8 @@ struct Screen {
     pending: usize,
     /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
     sent_at: Option<Instant>,
+    /// How long the last reply took, from sending to its turn-end mark; shown when idle.
+    last_took: Option<Duration>,
     /// Input and output tokens summed over the session; only providers that report them count.
     tokens_out: u64,
     tokens_in: u64,
@@ -533,7 +535,9 @@ impl Screen {
             if index > 0 {
                 self.pending = self.pending.saturating_sub(1);
                 if self.pending == 0 {
-                    self.sent_at = None;
+                    if let Some(at) = self.sent_at.take() {
+                        self.last_took = Some(at.elapsed());
+                    }
                 }
             }
             if !part.is_empty() {
@@ -724,7 +728,12 @@ impl Screen {
                 self.hints()
             );
         }
-        format!("[{}] {usage}{}", self.provider_label(), self.hints())
+        let last = match (self.last_took, self.lang) {
+            (Some(took), Lang::En) => format!("last {} · ", clock(took)),
+            (Some(took), Lang::Id) => format!("terakhir {} · ", clock(took)),
+            (None, _) => String::new(),
+        };
+        format!("[{}] {last}{usage}{}", self.provider_label(), self.hints())
     }
 
     fn hints(&self) -> String {
@@ -771,6 +780,7 @@ where
         model: String::new(),
         pending: 0,
         sent_at: None,
+        last_took: None,
         tokens_in: 0,
         tokens_out: 0,
         capture: None,

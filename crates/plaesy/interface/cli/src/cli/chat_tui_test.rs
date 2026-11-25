@@ -195,6 +195,7 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         model: String::new(),
         pending: 0,
         sent_at: None,
+        last_took: None,
         tokens_in: 0,
         tokens_out: 0,
         capture: None,
@@ -401,4 +402,15 @@ fn recall_does_nothing_without_history() {
 fn status_names_the_provider() {
     let screen = screen_with_history(&[]);
     assert!(screen.status_text().starts_with("[test] "));
+}
+
+#[test]
+fn the_time_of_the_last_reply_stays_in_the_status_line_once_it_is_written() {
+    let mut screen = screen_with_history(&[]);
+    screen.pending = 1;
+    screen.sent_at = Some(Instant::now() - Duration::from_secs(13));
+    screen.receive("balasan\n");
+    screen.receive(&char::from(TURN_MARK).to_string());
+    assert_eq!(screen.pending, 0);
+    assert!(screen.status_text().contains("last 13s"));
 }
