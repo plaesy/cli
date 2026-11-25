@@ -1076,9 +1076,21 @@ pub fn converse(
                     messages.push(Message::system(format!("Goal sesi ini: {goal}")));
                 }
                 messages.extend(transcript.messages(&text));
-                match delegate::run_messages(provider.as_ref(), &messages, &request) {
+                // Text goes out as the provider produces it, so a long reply shows while it is written.
+                let mut printed = false;
+                let result = delegate::run_messages_streaming(
+                    provider.as_ref(),
+                    &messages,
+                    &request,
+                    &mut |chunk| {
+                        printed |= !chunk.is_empty();
+                        let _ = out.write_all(chunk.as_bytes());
+                        let _ = out.flush();
+                    },
+                );
+                match result {
                     Ok(response) => {
-                        writeln!(out, "{}", response.text)?;
+                        writeln!(out)?;
                         fire_and_print(
                             out,
                             &settings,
@@ -1089,7 +1101,12 @@ pub fn converse(
                         transcript.push(Role::User, text);
                         transcript.push(Role::Assistant, response.text);
                     }
-                    Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
+                    Err(err) => {
+                        if printed {
+                            writeln!(out)?;
+                        }
+                        writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?;
+                    }
                 }
             }
         }

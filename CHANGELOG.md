@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy chat` streams replies from HTTP providers (Anthropic, Ollama, OpenAI-compatible) as they are generated, so `--tui` and the line prompt show text while it arrives. CLI providers still return the whole reply at once.
+- `plaesy chat --tui` shows the seconds since a line was sent while its reply is pending.
 - `plaesy chat --tui` shows a busy indicator in the status line from when a line is sent until its reply is written.
 - `plaesy chat --tui` recalls earlier lines with Up and Down when the command list is closed, and its status line shows the provider in use.
 - Add a command list to `plaesy chat --tui`: typing `/` shows matching commands; Up and Down pick one, Enter or Tab completes it into the input without sending, and a second Enter sends. Esc closes the list.

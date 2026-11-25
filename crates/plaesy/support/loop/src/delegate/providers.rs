@@ -431,6 +431,43 @@ impl Provider for AnthropicProvider {
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
         Ok(anthropic_reply(&reply))
     }
+
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        let key = (self.getenv)(&self.key_env)
+            .filter(|k| !k.is_empty())
+            .ok_or_else(|| {
+                DelegateError::terminal(format!(
+                    "provider {:?}: environment variable {} is not set",
+                    self.name, self.key_env
+                ))
+            })?;
+        let mut body = anthropic_body(&self.model, max_tokens(req), messages);
+        body["stream"] = json!(true);
+        let url = format!("{}/v1/messages", self.endpoint.trim_end_matches('/'));
+        let headers = [
+            ("content-type", "application/json".to_owned()),
+            ("anthropic-version", "2023-06-01".to_owned()),
+            ("x-api-key", key),
+        ];
+        let mut reply = empty_reply();
+        post_lines(
+            &self.name,
+            &url,
+            &headers,
+            &body,
+            req.timeout,
+            &mut |line| match sse_data(line) {
+                Some(data) => anthropic_stream_event(&self.name, data, &mut reply, &mut *on_text),
+                None => Ok(()),
+            },
+        )?;
+        Ok(reply)
+    }
 }
 
 /// Request body for the Messages API. Roles are `user` and `assistant`.
@@ -519,6 +556,28 @@ impl Provider for OllamaProvider {
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
         Ok(ollama_reply(&reply))
     }
+
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        let mut body = ollama_body(&self.model, max_tokens(req), messages);
+        body["stream"] = json!(true);
+        let url = format!("{}/api/chat", self.endpoint.trim_end_matches('/'));
+        let headers = [("content-type", "application/json".to_owned())];
+        let mut reply = empty_reply();
+        post_lines(
+            &self.name,
+            &url,
+            &headers,
+            &body,
+            req.timeout,
+            &mut |line| ollama_stream_line(&self.name, line, &mut reply, &mut *on_text),
+        )?;
+        Ok(reply)
+    }
 }
 
 /// Request body for Ollama's `/api/chat`, one non-streaming reply.
@@ -599,6 +658,39 @@ impl Provider for OpenAiProvider {
         let reply = post_json(&self.name, &url, &headers, &body, req.timeout)?;
         openai_reply(&self.name, &reply)
     }
+
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        let mut headers = vec![("content-type", "application/json".to_owned())];
+        if !self.key_env.is_empty() {
+            let key = (self.getenv)(&self.key_env)
+                .filter(|k| !k.is_empty())
+                .ok_or_else(|| {
+                    DelegateError::terminal(format!(
+                        "provider {:?}: environment variable {} is not set",
+                        self.name, self.key_env
+                    ))
+                })?;
+            headers.push(("authorization", format!("Bearer {key}")));
+        }
+        let mut body = openai_body(&self.model, req.max_output_tokens, messages);
+        body["stream"] = json!(true);
+        let url = format!("{}/chat/completions", self.endpoint.trim_end_matches('/'));
+        let mut reply = empty_reply();
+        post_lines(
+            &self.name,
+            &url,
+            &headers,
+            &body,
+            req.timeout,
+            &mut |line| openai_stream_line(&self.name, line, &mut reply, &mut *on_text),
+        )?;
+        Ok(reply)
+    }
 }
 
 /// Request body for an OpenAI-compatible chat completions call. Zero `max_tokens` is sent as is.
@@ -630,12 +722,198 @@ pub fn openai_reply(provider: &str, reply: &Value) -> Result<ProviderReply, Dele
     })
 }
 
+fn empty_reply() -> ProviderReply {
+    ProviderReply {
+        text: String::new(),
+        input_tokens: None,
+        output_tokens: None,
+    }
+}
+
+/// The payload of one Server-Sent Events line (`data: ...`), or `None` for any other line.
+#[must_use]
+pub fn sse_data(line: &str) -> Option<&str> {
+    line.strip_prefix("data:").map(str::trim)
+}
+
+/// Applies one Messages API stream event. Text deltas go to `on_text` and into the reply; token
+/// counts arrive on the first and the last event.
+///
+/// # Errors
+///
+/// Terminal for an undecodable event; an `overloaded_error` is transient, other errors terminal.
+pub fn anthropic_stream_event(
+    provider: &str,
+    data: &str,
+    reply: &mut ProviderReply,
+    on_text: &mut dyn FnMut(&str),
+) -> Result<(), DelegateError> {
+    let event: Value = serde_json::from_str(data).map_err(|e| {
+        DelegateError::terminal(format!("provider {provider:?}: decoding stream event: {e}"))
+    })?;
+    match event["type"].as_str() {
+        Some("message_start") => {
+            reply.input_tokens = event["message"]["usage"]["input_tokens"]
+                .as_u64()
+                .or(reply.input_tokens);
+        }
+        Some("content_block_delta") => {
+            if let Some(text) = event["delta"]["text"].as_str() {
+                on_text(text);
+                reply.text.push_str(text);
+            }
+        }
+        Some("message_delta") => {
+            reply.output_tokens = event["usage"]["output_tokens"]
+                .as_u64()
+                .or(reply.output_tokens);
+        }
+        Some("error") => {
+            let message = format!(
+                "provider {provider:?}: {}",
+                event["error"]["message"].as_str().unwrap_or("stream error")
+            );
+            return Err(
+                if event["error"]["type"].as_str() == Some("overloaded_error") {
+                    DelegateError::transient(message)
+                } else {
+                    DelegateError::terminal(message)
+                },
+            );
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Applies one `/api/chat` stream line: a JSON object per line, the last one with `done` true
+/// and the token counts.
+///
+/// # Errors
+///
+/// Terminal for an undecodable line or an error object.
+pub fn ollama_stream_line(
+    provider: &str,
+    line: &str,
+    reply: &mut ProviderReply,
+    on_text: &mut dyn FnMut(&str),
+) -> Result<(), DelegateError> {
+    if line.trim().is_empty() {
+        return Ok(());
+    }
+    let event: Value = serde_json::from_str(line).map_err(|e| {
+        DelegateError::terminal(format!("provider {provider:?}: decoding stream line: {e}"))
+    })?;
+    if let Some(error) = event["error"].as_str() {
+        return Err(DelegateError::terminal(format!(
+            "provider {provider:?}: {error}"
+        )));
+    }
+    if let Some(text) = event["message"]["content"].as_str() {
+        if !text.is_empty() {
+            on_text(text);
+            reply.text.push_str(text);
+        }
+    }
+    if event["done"].as_bool() == Some(true) {
+        reply.input_tokens = event["prompt_eval_count"].as_u64();
+        reply.output_tokens = event["eval_count"].as_u64();
+    }
+    Ok(())
+}
+
+/// Applies one OpenAI-compatible stream line (`data: {chunk}`, ending with `data: [DONE]`).
+///
+/// # Errors
+///
+/// Terminal for an undecodable chunk or an error object.
+pub fn openai_stream_line(
+    provider: &str,
+    line: &str,
+    reply: &mut ProviderReply,
+    on_text: &mut dyn FnMut(&str),
+) -> Result<(), DelegateError> {
+    let Some(data) = sse_data(line) else {
+        return Ok(());
+    };
+    if data.is_empty() || data == "[DONE]" {
+        return Ok(());
+    }
+    let event: Value = serde_json::from_str(data).map_err(|e| {
+        DelegateError::terminal(format!("provider {provider:?}: decoding stream chunk: {e}"))
+    })?;
+    if event["error"].is_object() {
+        return Err(DelegateError::terminal(format!(
+            "provider {provider:?}: {}",
+            event["error"]["message"].as_str().unwrap_or("stream error")
+        )));
+    }
+    if let Some(text) = event["choices"][0]["delta"]["content"].as_str() {
+        if !text.is_empty() {
+            on_text(text);
+            reply.text.push_str(text);
+        }
+    }
+    if let Some(tokens) = event["usage"]["prompt_tokens"].as_u64() {
+        reply.input_tokens = Some(tokens);
+    }
+    if let Some(tokens) = event["usage"]["completion_tokens"].as_u64() {
+        reply.output_tokens = Some(tokens);
+    }
+    Ok(())
+}
+
 fn max_tokens(req: &Request) -> u32 {
     if req.max_output_tokens == 0 {
         DEFAULT_MAX_OUTPUT_TOKENS
     } else {
         req.max_output_tokens
     }
+}
+
+/// POSTs JSON and passes each line of a 2xx reply to `on_line` as it arrives, so a streamed
+/// reply shows while it is generated. A non-2xx reply is read whole and classified by
+/// [`http_error`], as [`post_json`] does.
+fn post_lines(
+    provider: &str,
+    url: &str,
+    headers: &[(&str, String)],
+    body: &Value,
+    timeout: Duration,
+    on_line: &mut dyn FnMut(&str) -> Result<(), DelegateError>,
+) -> Result<(), DelegateError> {
+    let config = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global((!timeout.is_zero()).then_some(timeout))
+        .build();
+    let agent: ureq::Agent = config.into();
+    let mut request = agent.post(url);
+    for (name, value) in headers {
+        request = request.header(*name, value.as_str());
+    }
+    let mut response = request.send(body.to_string()).map_err(|e| {
+        DelegateError::transient(format!("provider {provider:?}: request failed: {e}"))
+    })?;
+    let status = response.status().as_u16();
+    let retry = response
+        .headers()
+        .get("retry-after")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    if !(200..=299).contains(&status) {
+        let text = response.body_mut().read_to_string().map_err(|e| {
+            DelegateError::transient(format!("provider {provider:?}: reading response: {e}"))
+        })?;
+        return Err(http_error(provider, status, retry.as_deref(), &text));
+    }
+    let reader = std::io::BufReader::new(response.body_mut().as_reader());
+    for line in std::io::BufRead::lines(reader) {
+        let line = line.map_err(|e| {
+            DelegateError::transient(format!("provider {provider:?}: reading response: {e}"))
+        })?;
+        on_line(&line)?;
+    }
+    Ok(())
 }
 
 /// POSTs JSON and returns the decoded 2xx body. A non-2xx response is classified

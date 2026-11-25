@@ -134,6 +134,23 @@ pub trait Provider: Send + Sync {
         };
         self.complete(&flat)
     }
+    /// Like [`Provider::complete_messages`], but passes each piece of text to `on_text` as it
+    /// arrives. The default makes one call and passes the whole reply once, so a provider that
+    /// cannot stream still works.
+    ///
+    /// # Errors
+    ///
+    /// A [`DelegateError`] classified for the chain.
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        let reply = self.complete_messages(messages, req)?;
+        on_text(&reply.text);
+        Ok(reply)
+    }
 }
 
 /// One turn of a conversation. `role` is `user` or `assistant`.
@@ -478,6 +495,22 @@ pub fn run_messages(
 ) -> Result<Response, DelegateError> {
     let started = Instant::now();
     let reply = provider.complete_messages(messages, req)?;
+    Ok(response_from(provider, reply, started))
+}
+
+/// Like [`run_messages`], but `on_text` receives the reply as it is generated.
+///
+/// # Errors
+///
+/// The provider's [`DelegateError`].
+pub fn run_messages_streaming(
+    provider: &dyn Provider,
+    messages: &[Message],
+    req: &Request,
+    on_text: &mut dyn FnMut(&str),
+) -> Result<Response, DelegateError> {
+    let started = Instant::now();
+    let reply = provider.complete_messages_streaming(messages, req, on_text)?;
     Ok(response_from(provider, reply, started))
 }
 

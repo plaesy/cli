@@ -318,3 +318,116 @@ fn anthropic_body_without_system_has_no_system_field() {
     let body = anthropic_body("claude-x", 64, &[Message::user("halo")]);
     assert!(body.get("system").is_none());
 }
+
+fn empty_stream_reply() -> ProviderReply {
+    ProviderReply {
+        text: String::new(),
+        input_tokens: None,
+        output_tokens: None,
+    }
+}
+
+#[test]
+fn anthropic_stream_passes_text_deltas_and_collects_tokens() {
+    let mut reply = empty_stream_reply();
+    let mut seen = String::new();
+    let events = [
+        r#"{"type":"message_start","message":{"usage":{"input_tokens":12}}}"#,
+        r#"{"type":"content_block_delta","delta":{"type":"text_delta","text":"Halo"}}"#,
+        r#"{"type":"content_block_delta","delta":{"type":"text_delta","text":", dunia"}}"#,
+        r#"{"type":"message_delta","usage":{"output_tokens":4}}"#,
+        r#"{"type":"message_stop"}"#,
+    ];
+    for data in events {
+        anthropic_stream_event("p", data, &mut reply, &mut |t| seen.push_str(t)).expect("event");
+    }
+    assert_eq!(seen, "Halo, dunia");
+    assert_eq!(reply.text, "Halo, dunia");
+    assert_eq!(
+        (reply.input_tokens, reply.output_tokens),
+        (Some(12), Some(4))
+    );
+}
+
+#[test]
+fn anthropic_stream_error_event_is_classified() {
+    let mut reply = empty_stream_reply();
+    let overloaded = r#"{"type":"error","error":{"type":"overloaded_error","message":"sibuk"}}"#;
+    let err = anthropic_stream_event("p", overloaded, &mut reply, &mut |_| {}).expect_err("error");
+    assert_eq!(err.class, Class::Transient);
+
+    let invalid = r#"{"type":"error","error":{"type":"invalid_request_error","message":"salah"}}"#;
+    let err = anthropic_stream_event("p", invalid, &mut reply, &mut |_| {}).expect_err("error");
+    assert_eq!(err.class, Class::Terminal);
+}
+
+#[test]
+fn ollama_stream_reads_one_object_per_line_and_the_final_counts() {
+    let mut reply = empty_stream_reply();
+    let mut seen = String::new();
+    let lines = [
+        r#"{"message":{"content":"Ha"},"done":false}"#,
+        "",
+        r#"{"message":{"content":"lo"},"done":false}"#,
+        r#"{"message":{"content":""},"done":true,"prompt_eval_count":7,"eval_count":2}"#,
+    ];
+    for line in lines {
+        ollama_stream_line("p", line, &mut reply, &mut |t| seen.push_str(t)).expect("line");
+    }
+    assert_eq!(seen, "Halo");
+    assert_eq!(
+        (reply.input_tokens, reply.output_tokens),
+        (Some(7), Some(2))
+    );
+}
+
+#[test]
+fn openai_stream_skips_done_and_reads_content_deltas() {
+    let mut reply = empty_stream_reply();
+    let mut seen = String::new();
+    let lines = [
+        "",
+        r#"data: {"choices":[{"delta":{"role":"assistant"}}]}"#,
+        r#"data: {"choices":[{"delta":{"content":"Ha"}}]}"#,
+        r#"data: {"choices":[{"delta":{"content":"lo"}}]}"#,
+        "data: [DONE]",
+    ];
+    for line in lines {
+        openai_stream_line("p", line, &mut reply, &mut |t| seen.push_str(t)).expect("line");
+    }
+    assert_eq!(seen, "Halo");
+    assert_eq!(reply.text, "Halo");
+}
+
+#[test]
+fn post_lines_hands_over_each_line_of_a_2xx_reply() {
+    use std::io::{Read as _, Write as _};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let addr = listener.local_addr().expect("address");
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut request = [0u8; 4096];
+        let _ = stream.read(&mut request);
+        let body = "{\"a\":1}\n{\"a\":2}\n";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/x-ndjson\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        stream.write_all(response.as_bytes()).expect("write");
+    });
+    let mut lines = Vec::new();
+    post_lines(
+        "p",
+        &format!("http://{addr}/api/chat"),
+        &[("content-type", "application/json".to_owned())],
+        &json!({ "x": 1 }),
+        Duration::from_secs(5),
+        &mut |line| {
+            lines.push(line.to_owned());
+            Ok(())
+        },
+    )
+    .expect("post");
+    server.join().expect("server thread");
+    assert_eq!(lines, vec!["{\"a\":1}", "{\"a\":2}"]);
+}

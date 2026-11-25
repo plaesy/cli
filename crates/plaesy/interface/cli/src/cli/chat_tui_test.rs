@@ -182,8 +182,7 @@ fn elapsed_time_is_shown_while_a_reply_is_pending() {
 
     screen.receive(&char::from(TURN_MARK).to_string());
     assert_eq!(
-        screen.sent_at,
-        None,
+        screen.sent_at, None,
         "the timer stops when the last reply ends"
     );
 }
