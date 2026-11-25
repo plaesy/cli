@@ -21,6 +21,7 @@ use super::chat_plugins;
 use super::chat_roles;
 use super::chat_tasks;
 use super::chat_text::{self, Lang, Usage};
+use super::chat_tools;
 use super::chat_tui;
 use crate::config::delegate::DelegateConfig;
 use crate::delegate::providers::Getenv;
@@ -62,6 +63,9 @@ pub struct Args {
     /// Language for chat text: en or id. Default: "language" in ~/.plaesy/settings.json, then en
     #[arg(long)]
     pub lang: Option<String>,
+    /// Let the model call read-only tools (read_file, list_dir) under the repository root
+    #[arg(long)]
+    pub tools: bool,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -293,6 +297,8 @@ pub struct ChatSettings {
     pub roles: Vec<chat_roles::Role>,
     /// The role to start with.
     pub role: String,
+    /// Repository root for read-only tools (`--tools`). None means the model gets no tools.
+    pub tools_root: Option<PathBuf>,
     /// Skill store, where roles find their skills.
     pub skills_dir: PathBuf,
     /// Plugins from the user folder and the repository.
@@ -1232,16 +1238,40 @@ pub fn converse(
                         "messages": messages.len(),
                     }),
                 );
-                let result = delegate::run_messages_streaming(
-                    provider.as_ref(),
-                    &messages,
-                    &request,
-                    &mut |chunk| {
-                        printed |= !chunk.is_empty();
-                        let _ = out.write_all(chunk.as_bytes());
-                        let _ = out.flush();
-                    },
-                );
+                let result = match settings.tools_root.as_deref() {
+                    // With tools the reply is written after its tool rounds finish, so it is not streamed.
+                    Some(root) => {
+                        messages.insert(0, Message::system(chat_tools::PROTOCOL.to_owned()));
+                        let mut notes = String::new();
+                        let result = chat_tools::run_turn(
+                            provider.as_ref(),
+                            &messages,
+                            &request,
+                            root,
+                            &mut |note| {
+                                notes.push_str(note);
+                                notes.push('\n');
+                            },
+                        );
+                        let _ = out.write_all(notes.as_bytes());
+                        if let Ok(response) = &result {
+                            printed = !response.text.is_empty();
+                            let _ = out.write_all(response.text.as_bytes());
+                            let _ = out.flush();
+                        }
+                        result
+                    }
+                    None => delegate::run_messages_streaming(
+                        provider.as_ref(),
+                        &messages,
+                        &request,
+                        &mut |chunk| {
+                            printed |= !chunk.is_empty();
+                            let _ = out.write_all(chunk.as_bytes());
+                            let _ = out.flush();
+                        },
+                    ),
+                };
                 match result {
                     Ok(response) => {
                         trace::event(
@@ -1419,6 +1449,7 @@ pub fn run(args: &Args) -> CliResult {
         roles: roles.clone(),
         role: active_role.name.clone(),
         skills_dir: skills_dir.clone(),
+        tools_root: args.tools.then(|| args.path.clone()),
         plugins: plugins.clone(),
         agent_name: agent_name.clone(),
         peers: peers.clone(),
