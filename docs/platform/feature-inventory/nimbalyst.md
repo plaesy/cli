@@ -20,7 +20,7 @@
 | NMB-004 | Klien MCP: sambungkan server MCP apa pun, dengan hasil alat dirender sebagai widget visual | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/README.md?plain=1#L28 | Ringkasan README | belum |
 | NMB-005 | Setiap editor, termasuk bawaan, memakai kontrak EditorHost yang sama sehingga editor kustom setara | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/README.md?plain=1#L29 | Ringkasan README | belum |
 | NMB-006 | Konten dan status disimpan sebagai berkas biasa (markdown, slash command, repo git) tanpa penyimpanan tertutup | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/README.md?plain=1#L30 | Ringkasan README | ada |
-| NMB-007 | Sesi paralel dapat dicari dan dilanjutkan (search dan resume) | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/README.md?plain=1#L49 | Ringkasan README | belum |
+| NMB-007 | Sesi paralel dapat dicari dan dilanjutkan (search dan resume) | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/README.md?plain=1#L49 | Ringkasan README | sebagian |
 | NMB-008 | Editor markdown WYSIWYG: teks dan format ditampilkan langsung saat diedit | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/docs/FEATURE_INVENTORY.md?plain=1#L9 | Editor | belum |
 | NMB-009 | Pintasan markdown dan perintah slash di editor markdown | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/docs/FEATURE_INVENTORY.md?plain=1#L9 | Editor | belum |
 | NMB-010 | Diagram tersemat di dalam dokumen markdown | https://github.com/nimbalyst/nimbalyst/blob/30482d5b719cd7609fb02645008c2f5088565ab9/docs/FEATURE_INVENTORY.md?plain=1#L9 | Editor | belum |
@@ -703,6 +703,8 @@ Semua jalur berawal dari `crates/plaesy/`. Setiap bukti adalah berkas tes yang s
 - NMB-603 (`sebagian`): penyimpanan SQLite dengan migrasi skema saat database dibuka (`adapter/sqlite/src/sqlite_test.rs`). Tanpa migrasi dari PGLite dan tanpa UI pengaturan database.
 - NMB-660 (`sebagian`): tambah tugas dan tolak symlink di jalur tugas (`support/tasks/src/tasks/tasks_test.rs`). Pemindahan status dan `tasks validate` ada di kode, tetapi tesnya belum dicocokkan.
 - NMB-661 (`sebagian`): tugas adalah berkas biasa yang dapat disunting manusia (`task.md`). Tanpa UI.
+
+- Sesi chat (`/resume`, `/find`): `interface/cli/src/cli/chat_history.rs`, `chat_history_test.rs`. Batas: pencarian dan lanjutkan sesi berjalan satu per satu, tidak paralel (NMB-007 sebagian).
 
 ## Batasan verifikasi
 
