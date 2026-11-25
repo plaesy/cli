@@ -4,16 +4,17 @@
 //! API keys are read from the environment on every call and sent only in a
 //! request header. They never reach a response, an error, or a log.
 
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use chrono::DateTime;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use super::{Class, DelegateError, Message, Provider, ProviderReply, Request};
+use super::{Class, DelegateError, Message, Provider, ProviderReply, Request, flatten};
 use crate::config::delegate::DelegateProviderConfig;
 
 /// Output-token allowance when a request sets none.
@@ -215,6 +216,51 @@ impl Provider for CliProvider {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        let text = self.run_cli(req, None)?;
+        Ok(ProviderReply {
+            text: text.trim().to_owned(),
+            input_tokens: None,
+            output_tokens: None,
+        })
+    }
+
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        if !self.streams_json() {
+            let reply = self.complete_messages(messages, req)?;
+            on_text(&reply.text);
+            return Ok(reply);
+        }
+        let flat = Request {
+            prompt: flatten(messages),
+            ..req.clone()
+        };
+        let mut reply = empty_reply();
+        {
+            let mut feed = |line: &str| claude_stream_line(line, &mut reply, &mut *on_text);
+            self.run_cli(&flat, Some(&mut feed))?;
+        }
+        Ok(reply)
+    }
+}
+
+impl CliProvider {
+    /// True when the arguments ask for `--output-format stream-json`, which the reply parser reads.
+    fn streams_json(&self) -> bool {
+        self.args.iter().any(|arg| arg == "stream-json")
+    }
+
+    /// Runs the command with the prompt on stdin and returns its stdout. `on_line` receives each
+    /// stdout line as it arrives, so a streaming reply shows before the process ends.
+    fn run_cli(
+        &self,
+        req: &Request,
+        mut on_line: Option<&mut dyn FnMut(&str)>,
+    ) -> Result<String, DelegateError> {
         let mut command = Command::new(&self.command);
         command
             .args(&self.args)
@@ -265,12 +311,19 @@ impl Provider for CliProvider {
             let _ = stdin.write_all(prompt.as_bytes());
         });
         let stdout_pipe = child.stdout.take();
-        let mut stdout = piped_or_kill(&mut child, stdout_pipe, "stdout", &self.name)?;
+        let stdout = piped_or_kill(&mut child, stdout_pipe, "stdout", &self.name)?;
         let stderr_pipe = child.stderr.take();
         let mut stderr = piped_or_kill(&mut child, stderr_pipe, "stderr", &self.name)?;
+        // Each line is also sent to the caller, so a streaming reply can show while the process runs.
+        let (line_tx, line_rx) = mpsc::channel::<String>();
         let out_reader = thread::spawn(move || {
             let mut buf = String::new();
-            let _ = stdout.read_to_string(&mut buf);
+            for line in BufReader::new(stdout).lines() {
+                let Ok(line) = line else { break };
+                buf.push_str(&line);
+                buf.push('\n');
+                let _ = line_tx.send(line);
+            }
             buf
         });
         let err_reader = thread::spawn(move || {
@@ -282,6 +335,7 @@ impl Provider for CliProvider {
         let started = Instant::now();
         let mut termination_failed = false;
         let mut status = loop {
+            drain_lines(&line_rx, &mut on_line);
             match child.try_wait() {
                 Ok(Some(status)) => break Ok(status),
                 Ok(None) => {
@@ -350,6 +404,7 @@ impl Provider for CliProvider {
         }
         let _ = writer.join();
         let stdout_text = out_reader.join().unwrap_or_default();
+        drain_lines(&line_rx, &mut on_line);
         let stderr_text = err_reader.join().unwrap_or_default();
         #[cfg(windows)]
         unsafe {
@@ -357,11 +412,7 @@ impl Provider for CliProvider {
         }
 
         match status {
-            Ok(status) if status.success() => Ok(ProviderReply {
-                text: stdout_text.trim().to_owned(),
-                input_tokens: None,
-                output_tokens: None,
-            }),
+            Ok(status) if status.success() => Ok(stdout_text),
             // A CLI that is missing, times out, or exits non-zero may not have reached a
             // model, so the next provider in a chain may still answer.
             Ok(status) => Err(DelegateError::transient(format!(
@@ -732,6 +783,53 @@ pub fn openai_reply(provider: &str, reply: &Value) -> Result<ProviderReply, Dele
         input_tokens: reply["usage"]["prompt_tokens"].as_u64(),
         output_tokens: reply["usage"]["completion_tokens"].as_u64(),
     })
+}
+
+/// Passes every line received so far to the caller's callback, without waiting.
+fn drain_lines(rx: &Receiver<String>, on_line: &mut Option<&mut dyn FnMut(&str)>) {
+    while let Ok(line) = rx.try_recv() {
+        if let Some(callback) = on_line.as_mut() {
+            callback(&line);
+        }
+    }
+}
+
+/// Reads one line of `claude -p --output-format stream-json --verbose --include-partial-messages`.
+/// Text deltas go to `on_text` as they arrive. The final `result` line supplies the token counts,
+/// and its text too when no delta came. Lines that are not JSON are ignored.
+fn claude_stream_line(line: &str, reply: &mut ProviderReply, on_text: &mut dyn FnMut(&str)) {
+    let Ok(value) = serde_json::from_str::<Value>(line) else {
+        return;
+    };
+    let event = &value["event"];
+    if value["type"] == "stream_event"
+        && event["type"] == "content_block_delta"
+        && event["delta"]["type"] == "text_delta"
+    {
+        if let Some(text) = event["delta"]["text"].as_str() {
+            reply.text.push_str(text);
+            on_text(text);
+        }
+        return;
+    }
+    if let Some(result) = value.get("result").and_then(Value::as_str) {
+        if reply.text.is_empty() && !result.is_empty() {
+            reply.text = result.to_owned();
+            on_text(result);
+        }
+        if let Some(usage) = value.get("usage") {
+            let input = [
+                "input_tokens",
+                "cache_creation_input_tokens",
+                "cache_read_input_tokens",
+            ]
+            .iter()
+            .filter_map(|key| usage[*key].as_u64())
+            .sum::<u64>();
+            reply.input_tokens = Some(input);
+            reply.output_tokens = usage["output_tokens"].as_u64();
+        }
+    }
 }
 
 fn empty_reply() -> ProviderReply {

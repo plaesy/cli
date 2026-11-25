@@ -431,3 +431,58 @@ fn post_lines_hands_over_each_line_of_a_2xx_reply() {
     server.join().expect("server thread");
     assert_eq!(lines, vec!["{\"a\":1}", "{\"a\":2}"]);
 }
+
+#[test]
+fn claude_stream_passes_each_text_delta_and_counts_tokens_from_the_result() {
+    let lines = [
+        r#"{"type":"system","subtype":"init"}"#,
+        r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Jakar"}}}"#,
+        r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ta."}}}"#,
+        r#"{"type":"result","subtype":"success","result":"Jakarta.","usage":{"input_tokens":2,"cache_creation_input_tokens":10,"cache_read_input_tokens":5,"output_tokens":8}}"#,
+        "not json",
+    ];
+    let mut reply = empty_reply();
+    let mut seen = Vec::new();
+    for line in lines {
+        claude_stream_line(line, &mut reply, &mut |text: &str| {
+            seen.push(text.to_owned())
+        });
+    }
+    assert_eq!(
+        seen,
+        vec!["Jakar", "ta."],
+        "the result does not repeat streamed text"
+    );
+    assert_eq!(reply.text, "Jakarta.");
+    assert_eq!(reply.input_tokens, Some(17));
+    assert_eq!(reply.output_tokens, Some(8));
+}
+
+#[test]
+fn claude_stream_uses_the_result_when_no_delta_came() {
+    let mut reply = empty_reply();
+    let mut seen = Vec::new();
+    claude_stream_line(
+        r#"{"type":"result","result":"halo"}"#,
+        &mut reply,
+        &mut |text: &str| seen.push(text.to_owned()),
+    );
+    assert_eq!(reply.text, "halo");
+    assert_eq!(seen, vec!["halo"]);
+}
+
+#[test]
+fn a_cli_provider_streams_only_when_asked_for_stream_json() {
+    let plain = CliProvider {
+        name: "p".into(),
+        command: "x".into(),
+        args: vec!["-p".into()],
+    };
+    let streaming = CliProvider {
+        name: "p".into(),
+        command: "x".into(),
+        args: vec!["-p".into(), "--output-format".into(), "stream-json".into()],
+    };
+    assert!(!plain.streams_json());
+    assert!(streaming.streams_json());
+}

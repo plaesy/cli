@@ -11,12 +11,12 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use ratatui::Frame;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use ratatui::Frame;
 
 use super::chat::{BLOCK_FENCE, STATE_MARK, TURN_MARK, USAGE_MARK};
 use super::chat_text::Lang;
@@ -478,6 +478,8 @@ struct Screen {
     pending: usize,
     /// When the oldest pending line was sent; shown as elapsed time while a reply is coming.
     sent_at: Option<Instant>,
+    /// True once visible text of the reply in progress has arrived; the log's wait line stops then.
+    reply_started: bool,
     /// How long the last reply took, from sending to its turn-end mark; shown when idle.
     last_took: Option<Duration>,
     /// Input and output tokens summed over the session; only providers that report them count.
@@ -531,6 +533,12 @@ impl Screen {
             } else {
                 self.record_state(&body);
             }
+        }
+        if visible
+            .chars()
+            .any(|c| c != char::from(TURN_MARK) && !c.is_whitespace())
+        {
+            self.reply_started = true;
         }
         for (index, part) in visible.split(char::from(TURN_MARK)).enumerate() {
             if index > 0 {
@@ -679,8 +687,23 @@ impl Screen {
     fn draw_log(&self, frame: &mut Frame<'_>, area: Rect) {
         let height = area.height.saturating_sub(2) as usize;
         let width = area.width.saturating_sub(2) as usize;
+        // Until the first text of a reply arrives, the log shows the wait; a CLI provider sends
+        // its whole reply only at the end, so this line is what the user sees during that time.
+        let mut lines = self.transcript.all_lines();
+        if self.pending > 0 && !self.reply_started {
+            let frame = SPINNER[self.tick % SPINNER.len()];
+            let label = match self.lang {
+                Lang::En => "waiting for the reply",
+                Lang::Id => "menunggu jawaban",
+            };
+            let elapsed = self
+                .sent_at
+                .map(|at| clock(at.elapsed()))
+                .unwrap_or_default();
+            lines.push(format!("{frame} {label}… {elapsed}"));
+        }
         // Rows are already wrapped to the width, so the scroll counts screen rows.
-        let rows = chat_tui_render::render(&self.transcript.all_lines(), width);
+        let rows = chat_tui_render::render(&lines, width);
         let end = rows.len().saturating_sub(self.scroll);
         let start = end.saturating_sub(height);
         let title = format!(" plaesy chat · {} ", self.repo);
@@ -781,6 +804,7 @@ where
         model: String::new(),
         pending: 0,
         sent_at: None,
+        reply_started: false,
         last_took: None,
         tokens_in: 0,
         tokens_out: 0,
@@ -894,6 +918,7 @@ fn poll_key(screen: &mut Screen, line_tx: &mut Option<Sender<String>>) -> io::Re
                     let _ = tx.send(part);
                 }
                 screen.pending += 1;
+                screen.reply_started = false;
                 screen.sent_at.get_or_insert_with(Instant::now);
             }
         }

@@ -84,7 +84,15 @@ impl DelegateConfig {
                     kind: "cli".into(),
                     enabled: true,
                     command: "claude".into(),
-                    args: vec!["-p".into()],
+                    args: [
+                        "-p",
+                        "--output-format",
+                        "stream-json",
+                        "--verbose",
+                        "--include-partial-messages",
+                    ]
+                    .map(String::from)
+                    .to_vec(),
                     ..Default::default()
                 },
                 DelegateProviderConfig {

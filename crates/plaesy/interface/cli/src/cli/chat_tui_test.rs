@@ -2,8 +2,8 @@ use super::*;
 use std::io::Read;
 use std::sync::mpsc;
 
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 
 /// The screen drawn at `width` by `height`, one string per row.
 fn drawn(screen: &Screen, width: u16, height: u16) -> String {
@@ -195,6 +195,7 @@ fn screen_with_history(lines: &[&str]) -> Screen {
         model: String::new(),
         pending: 0,
         sent_at: None,
+        reply_started: false,
         last_took: None,
         tokens_in: 0,
         tokens_out: 0,
@@ -342,11 +343,13 @@ fn turn_marks_close_pending_lines_and_are_not_shown() {
     screen.receive("balasan satu\n");
     screen.receive(&format!("balasan dua\n{}", char::from(TURN_MARK)));
     assert_eq!(screen.pending, 1, "one mark arrived");
-    assert!(!screen
-        .transcript
-        .visible(10, 0)
-        .join("")
-        .contains(char::from(TURN_MARK)));
+    assert!(
+        !screen
+            .transcript
+            .visible(10, 0)
+            .join("")
+            .contains(char::from(TURN_MARK))
+    );
     assert_eq!(
         screen.transcript.visible(10, 0),
         vec!["balasan satu", "balasan dua"]
@@ -355,6 +358,23 @@ fn turn_marks_close_pending_lines_and_are_not_shown() {
     assert_eq!(screen.pending, 0);
     screen.receive(&char::from(TURN_MARK).to_string());
     assert_eq!(screen.pending, 0, "never below zero");
+}
+
+#[test]
+fn the_log_shows_a_waiting_line_until_the_first_text_arrives() {
+    let mut screen = screen_with_history(&[]);
+    screen.pending = 1;
+    screen.sent_at = Some(Instant::now());
+    let before = drawn(&screen, 60, 8);
+    assert!(before.contains("waiting for the reply"), "{before}");
+
+    screen.receive("jawaban\n");
+    let after = drawn(&screen, 60, 8);
+    assert!(
+        !after.contains("waiting for the reply"),
+        "the wait line goes once text arrives: {after}"
+    );
+    assert!(after.contains("jawaban"));
 }
 
 #[test]
