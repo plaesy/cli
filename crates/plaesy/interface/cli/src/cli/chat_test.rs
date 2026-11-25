@@ -166,8 +166,9 @@ fn run_with_store(
             role: "default".to_owned(),
             skills_dir: PathBuf::from("."),
             tools: None,
-        chats_dir: None,
-        resume: None,
+            chats_dir: None,
+            resume: None,
+            learn: false,
             plugins: Vec::new(),
             agent_name: "chat".to_owned(),
             peers: Vec::new(),
@@ -659,6 +660,7 @@ fn role_system_prompt_is_sent_before_the_conversation() {
         tools: None,
         chats_dir: None,
         resume: None,
+        learn: false,
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
         peers: Vec::new(),
@@ -711,6 +713,7 @@ fn role_command_switches_and_refuses_unknown_names() {
         tools: None,
         chats_dir: None,
         resume: None,
+        learn: false,
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
         peers: Vec::new(),
@@ -881,8 +884,9 @@ fn run_with_members(
             role: "default".to_owned(),
             skills_dir: PathBuf::from("."),
             tools: None,
-        chats_dir: None,
-        resume: None,
+            chats_dir: None,
+            resume: None,
+            learn: false,
             plugins: Vec::new(),
             agent_name: "chat".to_owned(),
             peers: Vec::new(),
@@ -1037,8 +1041,9 @@ fn providers_lists_every_registered_one_and_marks_the_active() {
             role: "default".to_owned(),
             skills_dir: PathBuf::from("."),
             tools: None,
-        chats_dir: None,
-        resume: None,
+            chats_dir: None,
+            resume: None,
+            learn: false,
             plugins: Vec::new(),
             agent_name: "chat".to_owned(),
             peers: Vec::new(),
@@ -1117,6 +1122,7 @@ fn every_line_closes_one_turn_mark_even_when_a_handler_skips_the_loop_end() {
         tools: None,
         chats_dir: None,
         resume: None,
+        learn: false,
         plugins: Vec::new(),
         agent_name: "chat".to_owned(),
         peers: Vec::new(),
@@ -1151,12 +1157,64 @@ fn compact_keeps_the_newest_turns_verbatim() {
     let prompts = seen.lock().expect("seen").clone();
     let last = prompts.last().expect("prompt after compact");
     assert!(last.contains("ringkasan lama"), "{last}");
-    assert!(last.contains("tiga") && last.contains("empat"), "tail kept: {last}");
+    assert!(
+        last.contains("tiga") && last.contains("empat"),
+        "tail kept: {last}"
+    );
     assert!(!last.contains("satu"), "old turns are gone: {last}");
 }
 
 #[test]
 fn todo_parses_its_arguments_and_the_bare_command() {
     assert_eq!(parse_input("/todo"), Input::Todo(String::new()));
-    assert_eq!(parse_input("/todo add tulis tes"), Input::Todo("add tulis tes".to_owned()));
+    assert_eq!(
+        parse_input("/todo add tulis tes"),
+        Input::Todo("add tulis tes".to_owned())
+    );
+}
+
+#[test]
+fn learn_saves_the_provider_summary_as_a_decision() {
+    let (provider, _seen) = fake("a", "pakai tes unit untuk parser");
+    let mut transcript = Transcript::default();
+    transcript.push(Role::User, "bagaimana menguji parser?");
+    transcript.push(Role::Assistant, "pakai tes unit");
+    let recorded = std::cell::RefCell::new(Vec::new());
+    let record = |d: &Decision| {
+        recorded.borrow_mut().push(d.clone());
+        Ok("tersimpan".to_owned())
+    };
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles: Vec::new(),
+        role: "default".to_owned(),
+        skills_dir: PathBuf::from("."),
+        tools: None,
+        chats_dir: None,
+        resume: None,
+        learn: true,
+        plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
+        peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
+        lsp_servers: Vec::new(),
+        turn_marks: false,
+        providers: Vec::new(),
+    };
+    let mut out = Vec::new();
+    learn_from_session(&mut out, provider.as_ref(), &transcript, &settings, &record)
+        .expect("learn");
+    let decisions = recorded.borrow();
+    assert_eq!(decisions.len(), 1);
+    assert_eq!(decisions[0].chosen, "pakai tes unit untuk parser");
+    assert_eq!(decisions[0].title, "Ringkasan sesi chat");
+    assert!(String::from_utf8(out).expect("utf8").contains("tersimpan"));
 }

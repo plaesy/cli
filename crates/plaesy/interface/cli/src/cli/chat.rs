@@ -68,6 +68,9 @@ pub struct Args {
     /// Let the model call tools (read_file, list_dir; writes need --allow-writes) under the repository root
     #[arg(long)]
     pub tools: bool,
+    /// At the end, have the provider summarise the session and save the summary as a decision
+    #[arg(long)]
+    pub learn: bool,
     /// Do not save this session to `.plaesy/chats` when it ends
     #[arg(long)]
     pub no_save: bool,
@@ -367,6 +370,8 @@ pub struct ChatSettings {
     pub chats_dir: Option<PathBuf>,
     /// A saved session file to start from.
     pub resume: Option<PathBuf>,
+    /// Save a summary of the session as a decision when it ends (`--learn`).
+    pub learn: bool,
     /// Skill store, where roles find their skills.
     pub skills_dir: PathBuf,
     /// Plugins from the user folder and the repository.
@@ -1464,6 +1469,9 @@ pub fn converse(
         }
         out.flush()?;
     }
+    if settings.learn && !transcript.is_empty() {
+        learn_from_session(out, provider.as_ref(), &transcript, &settings, record)?;
+    }
     if let Some(dir) = &settings.chats_dir {
         if !transcript.is_empty() {
             match chat_history::save(dir, &chat_history::new_name(), &transcript.pairs()) {
@@ -1611,6 +1619,7 @@ pub fn run(args: &Args) -> CliResult {
         }),
         chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),
         resume: args.resume.as_ref().map(|name| chat_history::dir(&args.path).join(name)),
+        learn: args.learn,
         plugins: plugins.clone(),
         agent_name: agent_name.clone(),
         peers: peers.clone(),
@@ -1676,3 +1685,43 @@ pub fn run(args: &Args) -> CliResult {
 #[cfg(test)]
 #[path = "chat_test.rs"]
 mod chat_test;
+
+/// `--learn`: the provider writes a short summary of the session, and it is saved as a decision
+/// through the same recorder `/decision` uses. A failure is reported and does not stop the exit.
+fn learn_from_session(
+    out: &mut impl Write,
+    provider: &dyn Provider,
+    transcript: &Transcript,
+    settings: &ChatSettings,
+    record: &DecisionRecorder<'_>,
+) -> io::Result<()> {
+    let request = Request {
+        prompt: String::new(),
+        max_output_tokens: settings.max_tokens,
+        timeout: settings.timeout,
+        dir: String::new(),
+    };
+    let mut messages = vec![Message::system(
+        "Tulis satu ringkasan pendek, paling banyak tiga kalimat, tentang keputusan atau \
+         pelajaran dari percakapan ini. Jawab dalam bahasa percakapan."
+            .to_owned(),
+    )];
+    messages.extend(transcript.history());
+    messages.push(Message::user("Ringkas percakapan di atas.".to_owned()));
+    let summary = match delegate::run_messages(provider, &messages, &request) {
+        Ok(response) if !response.text.trim().is_empty() => response.text,
+        Ok(_) => return Ok(()),
+        Err(err) => {
+            return writeln!(out, "{}", chat_text::error(settings.lang, &err.to_string()));
+        }
+    };
+    let decision = Decision {
+        title: "Ringkasan sesi chat".to_owned(),
+        chosen: summary.trim().to_owned(),
+        why: "dibuat otomatis oleh plaesy chat --learn".to_owned(),
+    };
+    match record(&decision) {
+        Ok(text) => writeln!(out, "{}", text.trim()),
+        Err(err) => writeln!(out, "{}", chat_text::error(settings.lang, &err)),
+    }
+}
