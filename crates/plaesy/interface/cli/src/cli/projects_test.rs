@@ -3,7 +3,7 @@
 use super::pick_selector;
 
 #[test]
-fn flag_wins_over_environment() {
+fn projects_flag_wins_over_environment() {
     assert_eq!(
         pick_selector(Some("p-flag"), Some("p-env")).as_deref(),
         Some("p-flag")
@@ -11,12 +11,12 @@ fn flag_wins_over_environment() {
 }
 
 #[test]
-fn environment_is_used_when_the_flag_is_absent() {
+fn projects_environment_is_used_when_the_flag_is_absent() {
     assert_eq!(pick_selector(None, Some("p-env")).as_deref(), Some("p-env"));
 }
 
 #[test]
-fn blank_values_are_absent() {
+fn projects_blank_values_are_absent() {
     assert_eq!(
         pick_selector(Some("  "), Some("p-env")).as_deref(),
         Some("p-env")
@@ -25,12 +25,12 @@ fn blank_values_are_absent() {
 }
 
 #[test]
-fn no_selector_falls_through_to_the_working_directory() {
+fn projects_no_selector_falls_through_to_the_working_directory() {
     assert_eq!(pick_selector(None, None), None);
 }
 
 #[test]
-fn values_are_trimmed() {
+fn projects_values_are_trimmed() {
     assert_eq!(
         pick_selector(Some(" p-flag "), None).as_deref(),
         Some("p-flag")

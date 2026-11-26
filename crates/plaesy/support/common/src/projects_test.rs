@@ -67,7 +67,10 @@ fn settings_round_trip_and_unset_drops_empty_projects() {
     set_setting_in(dir.path(), "p-a", "branch", Some("main")).unwrap();
     let (found, settings) = settings_in(dir.path(), "p-a").unwrap();
     assert_eq!(found, project);
-    assert_eq!(settings.get("agent.model").map(String::as_str), Some("fable"));
+    assert_eq!(
+        settings.get("agent.model").map(String::as_str),
+        Some("fable")
+    );
     assert_eq!(settings.len(), 2);
 
     set_setting_in(dir.path(), "p-a", "agent.model", None).unwrap();

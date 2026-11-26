@@ -81,7 +81,11 @@ pub fn run(args: &Args) -> CliResult {
                 println!("{key}={value}");
             }
         }
-        Command::SetConfig { project, key, value } => {
+        Command::SetConfig {
+            project,
+            key,
+            value,
+        } => {
             let selector = project_selector(project.as_deref())?;
             let project = crate::projects::set_setting(&selector, key, value.as_deref())?;
             match value {
