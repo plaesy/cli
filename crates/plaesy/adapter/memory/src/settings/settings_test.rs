@@ -21,7 +21,7 @@ fn empty_env_root_falls_back_to_platform() {
 #[test]
 fn file_lives_under_plaesy_folder() {
     let p = file_in_root(Path::new("/r"));
-    assert!(p.ends_with(Path::new(".plaesy").join("settings.json")));
+    assert!(p.ends_with(Path::new(".plaesy").join("config.toml")));
 }
 
 #[test]
@@ -67,9 +67,9 @@ fn symlinked_settings_path_is_rejected_on_load_and_replaced_on_save() {
     use std::os::unix::fs::symlink;
 
     let dir = tempfile::tempdir().unwrap();
-    let target = dir.path().join("outside.json");
-    std::fs::write(&target, "{\"version\":1}\n").unwrap();
-    let path = dir.path().join("settings.json");
+    let target = dir.path().join("outside.toml");
+    std::fs::write(&target, "version = 1\n").unwrap();
+    let path = dir.path().join("config.toml");
     symlink(&target, &path).unwrap();
 
     assert!(load(&path).is_err());
@@ -80,7 +80,7 @@ fn symlinked_settings_path_is_rejected_on_load_and_replaced_on_save() {
         .is_symlink());
     assert_eq!(
         std::fs::read_to_string(&target).unwrap(),
-        "{\"version\":1}\n"
+        "version = 1\n"
     );
     assert_eq!(load(&path).unwrap(), Some(Settings::default()));
 }

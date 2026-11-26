@@ -1,9 +1,9 @@
-//! User settings written by `plaesy onboard`: `<root>/.plaesy/settings.json`.
+//! User settings written by `plaesy onboard`: `<root>/.plaesy/config.toml`.
 //!
 //! The root defaults to the user's home directory, the same on Windows, Linux, and macOS, like
 //! `~/.claude` and `~/.hermes`. Set `PLAESY_ROOT` to use another root. The file has the same
-//! schema as the project file `.plaesy/settings.json`
-//! (see [`crate::memory::config::MemoryConfig`]). It sits below `.plaesy/settings.json` and
+//! schema as the project file `.plaesy/config.toml`
+//! (see [`crate::memory::config::MemoryConfig`]). It sits below `.plaesy/config.toml` and
 //! `MEMORY_*` variables in the precedence order of [`crate::memory::config::MemoryConfig::load`].
 
 use crate::memory::config::MemoryConfig;
@@ -14,12 +14,12 @@ use std::path::{Path, PathBuf};
 /// Current settings format version.
 pub const SETTINGS_VERSION: u32 = 1;
 
-/// Folder name under the root that holds `settings.json`.
+/// Folder name under the root that holds `config.toml`.
 pub const SETTINGS_DIR: &str = ".plaesy";
 
 /// The fields that onboarding writes. Every field is optional; absent means "use the default".
 ///
-/// On disk these map to the nested keys of `settings.json`: `watch_dir`, `database.db_path`,
+/// On disk these map to the nested keys of `config.toml`: `watch_dir`, `database.db_path`,
 /// `embeddings.model_name`, `search.rerank`, and `search.exclude_dirs`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -139,7 +139,7 @@ impl Settings {
     }
 }
 
-/// Settings file location: `<root>/.plaesy/settings.json`, where `<root>` is `PLAESY_ROOT` or the home directory.
+/// Settings file location: `<root>/.plaesy/config.toml`, where `<root>` is `PLAESY_ROOT` or the home directory.
 pub fn default_path() -> Option<PathBuf> {
     root_from(
         std::env::var_os("PLAESY_ROOT").map(PathBuf::from),
@@ -158,7 +158,7 @@ pub fn default_root() -> Option<PathBuf> {
 
 /// Settings file location for an explicit root.
 pub fn file_in_root(root: &Path) -> PathBuf {
-    root.join(SETTINGS_DIR).join("settings.json")
+    root.join(SETTINGS_DIR).join("config.toml")
 }
 
 fn root_from(env_root: Option<PathBuf>, platform: Option<PathBuf>) -> Option<PathBuf> {
@@ -169,7 +169,7 @@ fn root_from(env_root: Option<PathBuf>, platform: Option<PathBuf>) -> Option<Pat
 ///
 /// # Errors
 ///
-/// - `ConfigError` if the file exists but is not valid settings JSON
+/// - `ConfigError` if the file exists but is not valid TOML
 pub fn load(path: &Path) -> Result<Option<Settings>> {
     let metadata = match std::fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
@@ -189,9 +189,11 @@ pub fn load(path: &Path) -> Result<Option<Settings>> {
     }
     let text = std::fs::read_to_string(path)
         .map_err(|e| MemoryError::ConfigError(format!("cannot read {}: {e}", path.display())))?;
-    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
+    let table: toml::Table = toml::from_str(&text).map_err(|e| {
         MemoryError::ConfigError(format!("invalid settings {}: {e}", path.display()))
     })?;
+    let value = serde_json::to_value(table)
+        .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
     Settings::from_json(&value, path).map(Some)
 }
 
@@ -206,7 +208,7 @@ pub fn save(path: &Path, settings: &Settings) -> Result<()> {
             MemoryError::ConfigError(format!("cannot create {}: {e}", parent.display()))
         })?;
     }
-    let text = serde_json::to_string_pretty(&settings.to_json())
+    let text = toml::to_string_pretty(&settings.to_json())
         .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     let file_name = path

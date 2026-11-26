@@ -1,7 +1,7 @@
 //! Configuration management for the memory system.
 //!
 //! Handles:
-//! - Loading configuration from `settings.json` files
+//! - Loading configuration from `config.toml` files
 //! - Validating configuration
 //! - Providing sensible defaults
 //! - Exposing settings to all subsystems
@@ -9,8 +9,8 @@
 //! # Configuration sources (in order of precedence)
 //!
 //! 1. Environment variables (MEMORY_*)
-//! 2. Project settings (.plaesy/settings.json)
-//! 3. User settings (`<root>/.plaesy/settings.json`, written by `plaesy onboard`)
+//! 2. Project settings (.plaesy/config.toml)
+//! 3. User settings (`<root>/.plaesy/config.toml`, written by `plaesy onboard`)
 //! 4. Default values
 //!
 //! # Example
@@ -52,6 +52,53 @@ pub struct MemoryConfig {
     /// Scheduled jobs (`memory schedule`). Empty means the default: `index` every hour.
     #[serde(default)]
     pub schedule: ScheduleConfig,
+
+    /// MCP server defaults used by `memory serve`.
+    #[serde(default)]
+    pub mcp: McpConfig,
+}
+
+/// MCP server settings. Secrets stay in an environment variable rather than this file.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct McpConfig {
+    /// Transport used when `memory serve` does not receive `--transport`.
+    #[serde(default = "default_mcp_transport")]
+    pub transport: String,
+
+    /// Loopback TCP port used by the HTTP transport.
+    #[serde(default = "default_mcp_port")]
+    pub port: u16,
+
+    /// Environment variable containing the optional HTTP bearer token. Empty disables lookup.
+    #[serde(default = "default_mcp_auth_token_env")]
+    pub auth_token_env: String,
+
+    /// Serve the index without taking the vault daemon lock or syncing it.
+    #[serde(default)]
+    pub read_only: bool,
+}
+
+fn default_mcp_transport() -> String {
+    "stdio".to_owned()
+}
+
+fn default_mcp_port() -> u16 {
+    9123
+}
+
+fn default_mcp_auth_token_env() -> String {
+    "PLAESY_MCP_TOKEN".to_owned()
+}
+
+impl Default for McpConfig {
+    fn default() -> Self {
+        Self {
+            transport: default_mcp_transport(),
+            port: default_mcp_port(),
+            auth_token_env: default_mcp_auth_token_env(),
+            read_only: false,
+        }
+    }
 }
 
 /// Scheduled jobs. Each entry is validated by `memory::schedule::jobs_from_config`.
@@ -206,6 +253,7 @@ impl Default for MemoryConfig {
             search: SearchConfig::default(),
             logging: LoggingConfig::default(),
             schedule: ScheduleConfig::default(),
+            mcp: McpConfig::default(),
         }
     }
 }
@@ -215,8 +263,8 @@ impl MemoryConfig {
     ///
     /// Configuration is loaded in this order (later sources override):
     /// 1. Defaults (hardcoded)
-    /// 2. `<root>/.plaesy/settings.json` written by `plaesy onboard` (see [`crate::memory::settings`])
-    /// 3. `.plaesy/settings.json` (project settings)
+    /// 2. `<root>/.plaesy/config.toml` written by `plaesy onboard`
+    /// 3. `.plaesy/config.toml` (project settings)
     /// 4. Environment variables (MEMORY_*)
     ///
     /// # Errors
@@ -240,7 +288,7 @@ impl MemoryConfig {
     ///
     /// # Errors
     ///
-    /// - `ConfigError` if the file is unreadable, invalid JSON, has mistyped
+    /// - `ConfigError` if the file is unreadable, invalid TOML, has mistyped
     ///   values, or fails validation (unknown keys are ignored)
     pub async fn load_from_file(path: &std::path::Path) -> Result<Self> {
         let mut value = Self::defaults_as_json()?;
@@ -329,6 +377,19 @@ impl MemoryConfig {
     pub fn validate(&self) -> Result<()> {
         // Scheduled jobs: unknown actions, bad intervals and duplicate names fail at load.
         crate::memory::schedule::jobs_from_config(&self.schedule)?;
+        if !matches!(
+            self.mcp.transport.to_ascii_lowercase().as_str(),
+            "stdio" | "http"
+        ) {
+            return Err(crate::memory::error::MemoryError::ConfigError(
+                "mcp.transport must be 'stdio' or 'http'".to_string(),
+            ));
+        }
+        if self.mcp.port == 0 {
+            return Err(crate::memory::error::MemoryError::ConfigError(
+                "mcp.port must be greater than zero".to_string(),
+            ));
+        }
         // Validate search config
         if self.search.default_limit > self.search.max_limit {
             return Err(crate::memory::error::MemoryError::ConfigError(
@@ -375,30 +436,21 @@ impl MemoryConfig {
     }
 }
 
-/// Settings files, lowest precedence first: the user file written by `plaesy onboard`, then the
-/// project file in `.plaesy/`: `config.toml` when it exists, otherwise the older `settings.json`.
+/// Settings files, lowest precedence first: the user file, then the project file in `.plaesy/`.
 /// All use the same schema (see [`MemoryConfig`]).
 pub fn standard_config_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
-    if let Some(folder) = crate::memory::settings::default_path().as_deref().and_then(std::path::Path::parent) {
-        paths.push(config_file_in(folder.to_path_buf()));
+    if let Some(folder) = crate::memory::settings::default_path()
+        .as_deref()
+        .and_then(std::path::Path::parent)
+    {
+        paths.push(folder.join("config.toml"));
     }
-    paths.push(config_file_in(PathBuf::from(".plaesy")));
+    paths.push(PathBuf::from(".plaesy").join("config.toml"));
     paths
 }
 
-/// The file to read in a `.plaesy` folder: `config.toml` when it exists, otherwise `settings.json`.
-fn config_file_in(folder: PathBuf) -> PathBuf {
-    let toml = folder.join("config.toml");
-    if toml.is_file() {
-        toml
-    } else {
-        folder.join("settings.json")
-    }
-}
-
-/// Reads a settings file as a JSON value. A `.toml` file is parsed as TOML and converted; any other
-/// file is JSON.
+/// Reads a TOML settings file as a JSON value for layered merging.
 fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
     let raw = std::fs::read_to_string(path).map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
@@ -406,22 +458,14 @@ fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
             path.display()
         ))
     })?;
-    if path.extension().is_some_and(|ext| ext == "toml") {
-        let table: toml::Table = raw.parse().map_err(|e| {
-            crate::memory::error::MemoryError::ConfigError(format!(
-                "invalid TOML in {}: {e}",
-                path.display()
-            ))
-        })?;
-        return serde_json::to_value(table)
-            .map_err(|e| crate::memory::error::MemoryError::ConfigError(e.to_string()));
-    }
-    serde_json::from_str(&raw).map_err(|e| {
+    let table: toml::Table = raw.parse().map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
-            "invalid JSON in {}: {e}",
+            "invalid TOML in {}: {e}",
             path.display()
         ))
-    })
+    })?;
+    serde_json::to_value(table)
+        .map_err(|e| crate::memory::error::MemoryError::ConfigError(e.to_string()))
 }
 
 /// Recursively merge `over` into `base` (objects merge key-by-key, other values replace).

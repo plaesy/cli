@@ -1,4 +1,4 @@
-//! Secrets file `<root>/.plaesy/.env`, read next to `settings.json`.
+//! Secrets file `<root>/.plaesy/.env`, read next to `config.toml`.
 //!
 //! The format is the same `KEY=VALUE` lines Hermes uses: blank lines and `#` comments are skipped,
 //! an optional `export ` prefix is ignored, and a value may be wrapped in matching quotes. An

@@ -17,6 +17,7 @@ pub mod chat_model;
 pub mod chat_pending;
 pub mod chat_plugins;
 pub mod chat_roles;
+pub mod chat_schedule;
 pub mod chat_subagent;
 pub mod chat_tasks;
 pub mod chat_text;
@@ -131,6 +132,8 @@ pub enum Command {
     Skills(skills::Args),
     /// Interactive multi-turn chat with a configured provider (/provider, /clear, /exit)
     Chat(chat::Args),
+    /// Install and operate OS timers for persisted chat goals
+    ChatSchedule(chat_schedule::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
     /// Durable, acknowledged direct messaging between agents
@@ -184,6 +187,7 @@ impl Command {
             Self::Trim(_) => "trim",
             Self::Skills(_) => "skills",
             Self::Chat(_) => "chat",
+            Self::ChatSchedule(_) => "chat-schedule",
             Self::Images(_) => "images",
             Self::Relay(_) => "relay",
             Self::Files(_) => "files",
@@ -284,6 +288,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Trim(args) => trim::run(&args),
         Command::Skills(args) => skills::run(&args),
         Command::Chat(args) => chat::run(&args),
+        Command::ChatSchedule(args) => chat_schedule::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Relay(args) => relay::run(&args),
         Command::Audit(args) => audit::run(&args),

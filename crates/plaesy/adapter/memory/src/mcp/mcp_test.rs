@@ -78,6 +78,9 @@ async fn handshake_and_tool_listing() {
             "memory_remember",
             "memory_remember_session",
             "memory_resolve_gap",
+            "memory_fingerprint",
+            "memory_update",
+            "memory_archive",
             "memory_stats"
         ]
     );
@@ -379,6 +382,89 @@ async fn remember_creates_indexed_note_and_never_overwrites() {
     .await;
     assert_eq!(escape["result"]["isError"], true);
     assert!(!dir.path().parent().unwrap().join("outside").exists());
+}
+
+#[tokio::test]
+async fn update_and_archive_require_current_fingerprint() {
+    let (e, dir) = engine().await;
+    e.set_watch_root(dir.path().to_path_buf());
+    let call = |id: u64, name: &str, args: Value| json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":name,"arguments":args}});
+    let created = rpc(
+        &e,
+        call(
+            1,
+            "memory_remember",
+            json!({"title":"Deploy steps","body":"Old steps.","folder":"ops"}),
+        ),
+    )
+    .await;
+    assert_eq!(created["result"]["isError"], false);
+    let file = dir.path().join("ops").join("deploy-steps.md");
+    let fp = rpc(
+        &e,
+        call(2, "memory_fingerprint", json!({"path":"ops/deploy-steps.md"})),
+    )
+    .await;
+    let hash = fp["result"]["structuredContent"]["sha256"]
+        .as_str()
+        .expect("fingerprint")
+        .to_string();
+    let new_content = "---\ntitle: Deploy steps\n---\n\nNew steps.\n";
+    // A stale hash is refused and the file is untouched.
+    let stale = rpc(
+        &e,
+        call(
+            3,
+            "memory_update",
+            json!({"path":"ops/deploy-steps.md","expected_sha256":"0".repeat(64),"content":new_content,"reason":"clarification"}),
+        ),
+    )
+    .await;
+    assert_eq!(stale["result"]["isError"], true);
+    assert!(std::fs::read_to_string(&file).expect("read").contains("Old steps."));
+    // The reviewed hash succeeds and the content is replaced.
+    let ok = rpc(
+        &e,
+        call(
+            4,
+            "memory_update",
+            json!({"path":"ops/deploy-steps.md","expected_sha256":hash,"content":new_content,"reason":"clarification"}),
+        ),
+    )
+    .await;
+    assert_eq!(ok["result"]["isError"], false);
+    assert!(std::fs::read_to_string(&file).expect("read").contains("New steps."));
+    // Archiving with the old hash is refused; with the new hash it succeeds.
+    let archive_stale = rpc(
+        &e,
+        call(
+            5,
+            "memory_archive",
+            json!({"path":"ops/deploy-steps.md","expected_sha256":hash,"reason":"obsolete"}),
+        ),
+    )
+    .await;
+    assert_eq!(archive_stale["result"]["isError"], true);
+    let fp2 = rpc(
+        &e,
+        call(6, "memory_fingerprint", json!({"path":"ops/deploy-steps.md"})),
+    )
+    .await;
+    let hash2 = fp2["result"]["structuredContent"]["sha256"]
+        .as_str()
+        .expect("fingerprint")
+        .to_string();
+    let archived = rpc(
+        &e,
+        call(
+            7,
+            "memory_archive",
+            json!({"path":"ops/deploy-steps.md","expected_sha256":hash2,"reason":"obsolete"}),
+        ),
+    )
+    .await;
+    assert_eq!(archived["result"]["isError"], false);
+    assert!(std::fs::read_to_string(&file).expect("read").contains("archived"));
 }
 
 #[tokio::test]

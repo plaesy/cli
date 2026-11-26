@@ -11,10 +11,13 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 /// Most matches `/find` prints.
 pub const MAX_HITS: usize = 20;
+
+/// Turns and optional goal restored from a saved chat.
+pub type SessionState = (Vec<(String, String)>, Option<String>);
 
 /// Folder under the repository where chat sessions are saved.
 #[must_use]
@@ -37,14 +40,55 @@ pub fn new_name() -> String {
 ///
 /// The I/O error from creating the folder or writing the file.
 pub fn save(dir: &Path, name: &str, turns: &[(String, String)]) -> io::Result<PathBuf> {
+    save_with_goal(dir, name, turns, None)
+}
+
+/// Writes a session and its optional active goal. The metadata line is backward-compatible with
+/// older readers because it has no `role`/`text` pair and is therefore ignored by `load`.
+pub fn save_with_goal(
+    dir: &Path,
+    name: &str,
+    turns: &[(String, String)],
+    goal: Option<&str>,
+) -> io::Result<PathBuf> {
     fs::create_dir_all(dir)?;
     let path = dir.join(name);
     let mut file = fs::File::create(&path)?;
+    if let Some(goal) = goal.filter(|goal| !goal.trim().is_empty()) {
+        writeln!(file, "{}", json!({ "kind": "goal", "goal": goal }))?;
+    }
     for (role, text) in turns {
         let line = json!({ "role": role, "text": text });
         writeln!(file, "{line}")?;
     }
     Ok(path)
+}
+
+/// Reads turns and the optional goal of a saved file, oldest first. Unknown lines are skipped.
+///
+/// # Errors
+///
+/// The I/O error from opening or reading the file.
+pub fn load_with_goal(path: &Path) -> io::Result<SessionState> {
+    let reader = BufReader::new(fs::File::open(path)?);
+    let mut turns = Vec::new();
+    let mut goal = None;
+    for line in reader.lines() {
+        let line = line?;
+        let Ok(value) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
+        if value.get("kind").and_then(Value::as_str) == Some("goal") {
+            goal = value.get("goal").and_then(Value::as_str).map(str::to_owned);
+            continue;
+        }
+        let role = value.get("role").and_then(Value::as_str);
+        let text = value.get("text").and_then(Value::as_str);
+        if let (Some(role @ ("user" | "assistant")), Some(text)) = (role, text) {
+            turns.push((role.to_owned(), text.to_owned()));
+        }
+    }
+    Ok((turns, goal))
 }
 
 /// Reads the turns of a saved file, oldest first. Lines that are not turns are skipped.
@@ -53,20 +97,7 @@ pub fn save(dir: &Path, name: &str, turns: &[(String, String)]) -> io::Result<Pa
 ///
 /// The I/O error from opening or reading the file.
 pub fn load(path: &Path) -> io::Result<Vec<(String, String)>> {
-    let reader = BufReader::new(fs::File::open(path)?);
-    let mut turns = Vec::new();
-    for line in reader.lines() {
-        let line = line?;
-        let Ok(value) = serde_json::from_str::<Value>(&line) else {
-            continue;
-        };
-        let role = value.get("role").and_then(Value::as_str);
-        let text = value.get("text").and_then(Value::as_str);
-        if let (Some(role @ ("user" | "assistant")), Some(text)) = (role, text) {
-            turns.push((role.to_owned(), text.to_owned()));
-        }
-    }
-    Ok(turns)
+    Ok(load_with_goal(path)?.0)
 }
 
 /// One line that matched a `/find` search.

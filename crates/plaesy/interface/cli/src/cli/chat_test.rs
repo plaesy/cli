@@ -43,6 +43,35 @@ fn fake(name: &str, reply: &str) -> (Box<dyn Provider>, Arc<Mutex<Vec<String>>>)
     (Box::new(provider), seen)
 }
 
+/// Provider sequence used to simulate a reply, a goal judge, and an automatic continuation.
+struct SequenceFake {
+    replies: Mutex<Vec<String>>,
+    seen: Arc<Mutex<Vec<String>>>,
+}
+
+impl Provider for SequenceFake {
+    fn name(&self) -> &str {
+        "sequence"
+    }
+
+    fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        self.seen.lock().expect("seen lock").push(req.prompt.clone());
+        let text = {
+            let mut replies = self.replies.lock().expect("replies lock");
+            if replies.is_empty() {
+                "COMPLETE".to_owned()
+            } else {
+                replies.remove(0)
+            }
+        };
+        Ok(ProviderReply {
+            text,
+            input_tokens: None,
+            output_tokens: None,
+        })
+    }
+}
+
 fn run_session(first: Box<dyn Provider>, open: &ProviderOpener<'_>, script: &str) -> String {
     run_with_recorder(first, open, &|_| Ok("saved".to_owned()), script)
 }
@@ -791,9 +820,33 @@ fn goal_is_shown_in_every_prompt_until_cleared() {
     assert!(out.contains("goal: tes unit"));
     assert!(out.contains("goal cleared"));
     let prompts = seen.lock().expect("seen").clone();
-    assert_eq!(prompts.len(), 2);
+    assert_eq!(prompts.len(), 3, "message, goal judge, then the next message");
     assert!(prompts[0].contains("Goal sesi ini: tes unit"));
-    assert!(!prompts[1].contains("Goal sesi ini"));
+    assert!(prompts[1].contains("strict goal-completion judge"));
+    assert!(!prompts[2].contains("Goal sesi ini"));
+}
+
+#[test]
+fn an_incomplete_goal_continues_and_stops_when_the_judge_completes() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let provider = SequenceFake {
+        replies: Mutex::new(vec![
+            "first attempt".to_owned(),
+            "CONTINUE".to_owned(),
+            "second attempt".to_owned(),
+            "COMPLETE".to_owned(),
+        ]),
+        seen: Arc::clone(&seen),
+    };
+    let out = run_session(
+        Box::new(provider),
+        &no_open,
+        "/goal selesaikan pekerjaan\nmulai\n",
+    );
+
+    assert!(out.contains("continuing automatically (1/3)"), "{out}");
+    assert!(out.contains("goal complete: selesaikan pekerjaan"), "{out}");
+    assert_eq!(seen.lock().expect("seen lock").len(), 4);
 }
 
 #[test]

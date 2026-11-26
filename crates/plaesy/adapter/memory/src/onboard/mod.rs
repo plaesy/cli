@@ -1,6 +1,6 @@
 //! `plaesy onboard`: first-run setup.
 //!
-//! Asks where the notes are, writes `<root>/.plaesy/settings.json`, downloads the models that are
+//! Asks where the notes are, writes `<root>/.plaesy/config.toml`, downloads the models that are
 //! missing and indexes the notes. Every question has a default, and `--yes` accepts all defaults so
 //! the same steps run unattended (`--vault <DIR>` is then required).
 
@@ -46,7 +46,7 @@ pub struct OnboardOptions {
     pub yes: bool,
     /// Vault: the folder with the notes to index.
     pub vault: Option<PathBuf>,
-    /// Install root that holds `.plaesy/settings.json` (default: your home folder).
+    /// Install root that holds `.plaesy/config.toml` (default: your home folder).
     pub root: Option<PathBuf>,
     /// Skip every model download.
     pub no_model: bool,

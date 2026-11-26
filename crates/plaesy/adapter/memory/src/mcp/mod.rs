@@ -12,7 +12,7 @@
 //!
 //! Transports:
 //! - `stdio` (default): `memory serve --mcp`
-//! - `http`: `memory serve --mcp --transport http --port 8080`
+//! - `http`: `memory serve --mcp --transport http --port 9123`
 
 use crate::memory::error::{MemoryError, Result};
 use crate::memory::hygiene::HygieneOptions;
@@ -40,6 +40,8 @@ fn tools() -> Value {
         json!({ "readOnlyHint": true, "destructiveHint": false, "openWorldHint": false });
     // Creates a file or closes a gap; never overwrites or deletes anything.
     let write_safe = json!({ "readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false });
+    // Replaces a note's content or marks it archived; only after a fingerprint check.
+    let write_replace = json!({ "readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false });
     json!([
         {
             "name": "memory_search",
@@ -188,6 +190,45 @@ fn tools() -> Value {
             "annotations": write_safe
         },
         {
+            "name": "memory_fingerprint",
+            "description": "Return the current SHA-256 of an indexed note. Use it as expected_sha256 before memory_update or memory_archive, after reading the note's current content.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "path": { "type": "string", "description": "Note path relative to the notes root." } },
+                "required": ["path"]
+            },
+            "annotations": read_only
+        },
+        {
+            "name": "memory_update",
+            "description": "Replace an existing note's full content. Requires expected_sha256 from memory_fingerprint; the write is refused if the note changed since. The change is audited without storing note content and reindexed at once. Pass the complete new file content, including front matter.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Note path relative to the notes root." },
+                    "expected_sha256": { "type": "string", "description": "SHA-256 returned by memory_fingerprint for the version you reviewed." },
+                    "content": { "type": "string", "description": "Complete new content of the note." },
+                    "reason": { "type": "string", "enum": ["correction", "new-evidence", "clarification", "other"], "description": "Why the note changes; stored in the audit event." }
+                },
+                "required": ["path", "expected_sha256", "content", "reason"]
+            },
+            "annotations": write_replace
+        },
+        {
+            "name": "memory_archive",
+            "description": "Mark an existing note archived without moving or deleting it. Default retrieval hides archived notes. Requires expected_sha256 from memory_fingerprint and a reason category: completed, obsolete, superseded, consolidated, or other.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Note path relative to the notes root." },
+                    "expected_sha256": { "type": "string", "description": "SHA-256 returned by memory_fingerprint for the version you reviewed." },
+                    "reason": { "type": "string", "enum": ["completed", "obsolete", "superseded", "consolidated", "other"] }
+                },
+                "required": ["path", "expected_sha256", "reason"]
+            },
+            "annotations": write_replace
+        },
+        {
             "name": "memory_stats",
             "description": "Index statistics: documents, chunks, embeddings, and whether semantic search is available.",
             "inputSchema": { "type": "object", "properties": {} },
@@ -241,6 +282,8 @@ const WRITE_TOOLS: &[&str] = &[
     "memory_remember",
     "memory_remember_session",
     "memory_resolve_gap",
+    "memory_update",
+    "memory_archive",
 ];
 
 #[cfg(test)]
@@ -568,6 +611,50 @@ async fn run_tool(
             };
             Ok(tool_text(text, json!({ "resolved": resolved })))
         }
+        "memory_fingerprint" => {
+            let path = args
+                .get("path")
+                .and_then(Value::as_str)
+                .filter(|p| !p.trim().is_empty())
+                .ok_or_else(|| ToolError::Invalid("`path` (string) is required".into()))?;
+            let hash = engine.fingerprint_note(std::path::Path::new(path))?;
+            Ok(tool_text(hash.clone(), json!({ "path": path, "sha256": hash })))
+        }
+        "memory_update" => {
+            let arg = |key: &str| {
+                args.get(key)
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| ToolError::Invalid(format!("`{key}` (string) is required")))
+            };
+            let path = arg("path")?;
+            let expected = arg("expected_sha256")?;
+            let content = arg("content")?;
+            let reason = arg("reason")?;
+            let new_hash = engine
+                .update_note(std::path::Path::new(path), expected, content, reason)
+                .await?;
+            Ok(tool_text(
+                format!("updated {path}"),
+                json!({ "path": path, "sha256": new_hash }),
+            ))
+        }
+        "memory_archive" => {
+            let arg = |key: &str| {
+                args.get(key)
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| ToolError::Invalid(format!("`{key}` (string) is required")))
+            };
+            let path = arg("path")?;
+            let expected = arg("expected_sha256")?;
+            let reason = arg("reason")?;
+            let new_hash = engine
+                .archive_note(std::path::Path::new(path), expected, reason)
+                .await?;
+            Ok(tool_text(
+                format!("archived {path}"),
+                json!({ "path": path, "sha256": new_hash }),
+            ))
+        }
         "memory_stats" => {
             let s = engine.statistics().await?;
             let mut v = serde_json::to_value(&s)
@@ -611,7 +698,7 @@ pub async fn handle_message(engine: &SearchEngine, msg: &Value) -> Option<Value>
                     "protocolVersion": version,
                     "capabilities": { "tools": { "listChanged": false } },
                     "serverInfo": { "name": "plaesy-memory", "version": env!("CARGO_PKG_VERSION") },
-                    "instructions": "Memory over the project's notes. Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap."
+                    "instructions": "Memory over the project's notes. Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes: memory_remember (new notes only, never overwrites), memory_resolve_gap, and memory_update / memory_archive, which need the expected_sha256 from memory_fingerprint."
                 }),
             )
         }
@@ -794,7 +881,7 @@ impl ServerHandler for PlaesyMcpServer {
                 "plaesy-memory",
                 env!("CARGO_PKG_VERSION"),
             ))
-            .with_instructions("Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes are limited to memory_remember (new notes only, never overwrites) and memory_resolve_gap.")
+            .with_instructions("Use memory_search before answering from memory; cite the returned file:lines; treat STALE or INFERRED hits as unverified. memory_curate is a read-only maintenance report. Writes: memory_remember (new notes only, never overwrites), memory_resolve_gap, and memory_update / memory_archive, which need the expected_sha256 from memory_fingerprint.")
     }
 
     fn list_tools(

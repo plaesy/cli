@@ -19,6 +19,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use sha2::{Digest, Sha256};
 use serde_json::Value;
 
 use crate::delegate::{self, DelegateError, Message, Provider, Request, Response};
@@ -42,6 +43,8 @@ pub struct Tools {
     pub root: PathBuf,
     /// True when `write_file` and `run_command` are allowed (`--allow-writes`).
     pub allow_writes: bool,
+    /// True when mutating tool calls also need a matching persisted approval.
+    pub require_approval: bool,
     /// True when `web_fetch` is allowed (`--web`). Off by default: it is the only tool that uses the network.
     pub web: bool,
 }
@@ -65,6 +68,11 @@ pub fn protocol(tools: &Tools) -> String {
         );
     } else {
         text.push_str(" Menulis berkas dan menjalankan perintah tidak diizinkan dalam sesi ini.");
+    }
+    if tools.require_approval {
+        text.push_str(
+            " Aksi mutatif juga memerlukan approval action ID sebelum dijalankan. Jika ditolak, jalankan `plaesy approvals approve <action-id>` lalu ulangi panggilan.",
+        );
     }
     if tools.web {
         text.push_str(" Juga bisa: {\"tool\":\"web_fetch\",\"url\":\"https://...\"} untuk membaca sebuah URL.");
@@ -119,6 +127,18 @@ pub fn execute(tools: &Tools, call: &Value) -> String {
 #[must_use]
 pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> String {
     let name = call.get("tool").and_then(Value::as_str).unwrap_or("");
+    if tools.require_approval && requires_approval(name) {
+        let action_id = approval_id(call);
+        match super::approvals::is_approved_at(&tools.root, &action_id) {
+            Ok(true) => {}
+            Ok(false) => {
+                return format!(
+                    "error: approval required for {name}; action id {action_id}. Approve it with `plaesy approvals approve {action_id}` and retry."
+                );
+            }
+            Err(err) => return format!("error: approval check failed for {action_id}: {err}"),
+        }
+    }
     let text = |key: &str| {
         call.get(key)
             .and_then(Value::as_str)
@@ -187,6 +207,22 @@ pub fn execute_with(tools: &Tools, call: &Value, undo: &mut Vec<Checkpoint>) -> 
         Ok(text) => truncate(&text),
         Err(err) => format!("error: {err}"),
     }
+}
+
+fn requires_approval(name: &str) -> bool {
+    matches!(
+        name,
+        "write_file" | "run_command" | "create_task" | "schedule_once" | "generate_image"
+    )
+}
+
+/// Stable, non-secret identifier for one exact tool request.
+#[must_use]
+pub fn approval_id(call: &Value) -> String {
+    let encoded = serde_json::to_vec(call).unwrap_or_default();
+    let digest = Sha256::digest(encoded);
+    let short: String = digest.iter().take(8).map(|byte| format!("{byte:02x}")).collect();
+    format!("tool-{short}")
 }
 
 /// One-line note shown in the chat when a call runs.

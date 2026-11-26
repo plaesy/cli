@@ -224,12 +224,12 @@ pub(super) enum Command {
         /// Speak the Model Context Protocol instead of the line-delimited JSON service.
         #[arg(long)]
         mcp: bool,
-        /// Transport: `stdio` (default) or `http` (Streamable HTTP for n8n, Dify, Kilo Code, …).
-        #[arg(long, value_enum, default_value_t = Transport::Stdio)]
-        transport: Transport,
-        /// TCP port to listen on when `--transport http` is set (default: 8080).
-        #[arg(long, default_value_t = 8080)]
-        port: u16,
+        /// Transport: `stdio` or `http`; defaults to `[mcp].transport` in config.toml.
+        #[arg(long, value_enum)]
+        transport: Option<Transport>,
+        /// TCP port to listen on when HTTP is selected; defaults to `[mcp].port`.
+        #[arg(long)]
+        port: Option<u16>,
         /// Require this bearer token for MCP HTTP requests. Alternatively set PLAESY_MCP_TOKEN.
         #[arg(long)]
         auth_token: Option<String>,
@@ -238,7 +238,7 @@ pub(super) enum Command {
         #[arg(long)]
         read_only: bool,
     },
-    /// First-run setup: vault folder, settings.json, model download, first index.
+        /// First-run setup: vault folder, config.toml, model download, first index.
     Onboard {
         /// Accept every default (needs --vault unless settings already exist).
         #[arg(short = 'y', long)]
@@ -246,7 +246,7 @@ pub(super) enum Command {
         /// Vault: the folder with the notes to index.
         #[arg(long)]
         vault: Option<PathBuf>,
-        /// Folder that holds .plaesy/settings.json (default: your home folder).
+        /// Folder that holds .plaesy/config.toml (default: your home folder).
         #[arg(long)]
         root: Option<PathBuf>,
         /// Do not download the embedding model.

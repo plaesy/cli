@@ -101,7 +101,7 @@ fn http_config(http_url: &Option<String>) -> Value {
             "headers": {}
         }),
         None => json!({
-            "url": "http://127.0.0.1:8080/mcp",
+            "url": "http://127.0.0.1:9123/mcp",
             "headers": {}
         }),
     }
@@ -131,7 +131,7 @@ fn claude_code(binary: &str, notes_dir: &str, http_url: &Option<String>) -> Stri
 "#,
         pretty_json(&cfg),
         pretty_json(&stdio_cfg),
-        url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp")
+        url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp")
     )
 }
 
@@ -142,7 +142,7 @@ fn pretty_json<T: serde::Serialize>(value: &T) -> String {
 }
 
 fn kilocode(binary: &str, notes_dir: &str, http_url: &Option<String>) -> String {
-    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp");
+    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp");
     let mut local = json!({
         "type": "local",
         "command": [binary, "memory", "serve", "--mcp"],
@@ -203,7 +203,7 @@ fn n8n(binary: &str, _notes_dir: &str, http_url: &Option<String>) -> String {
         r#"# n8n — Plaesy Memory MCP
 # Option A: MCP Server Trigger node (n8n is the MCP server host)
 # In n8n, add "MCP Server Trigger" and configure it to run:
-#   {binary} memory serve --mcp --transport http --port 8080
+#   {binary} memory serve --mcp --transport http --port 9123
 # Then tools "search", "stats", "links" are available in workflows.
 
 # Option B: MCP Client node (n8n calls remote MCP server)
@@ -212,10 +212,10 @@ fn n8n(binary: &str, _notes_dir: &str, http_url: &Option<String>) -> String {
 # Available tools: memory_search, memory_stats, memory_links
 
 # Start the server first:
-#   {binary} memory serve --mcp --transport http --port 8080
+#   {binary} memory serve --mcp --transport http --port 9123
 "#,
         binary = binary,
-        url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp")
+        url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp")
     )
 }
 
@@ -229,10 +229,10 @@ fn dify(binary: &str, _notes_dir: &str, http_url: &Option<String>) -> String {
 # Available tools: memory_search, memory_stats, memory_links
 #
 # Start the server first:
-#   {binary} memory serve --mcp --transport http --port 8080
+#   {binary} memory serve --mcp --transport http --port 9123
 "#,
         binary = binary,
-        url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp")
+        url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp")
     )
 }
 
@@ -275,7 +275,7 @@ export default {{
 }
 
 fn hermes(binary: &str, _notes_dir: &str, http_url: &Option<String>) -> String {
-    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp");
+    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp");
     format!(
         r#"# Hermes: add to ~/.hermes/config.yaml under mcp_servers:
 mcp_servers:
@@ -291,7 +291,7 @@ mcp_servers:
 }
 
 fn codex(binary: &str, _notes_dir: &str, http_url: &Option<String>) -> String {
-    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:8080/mcp");
+    let url = http_url.as_deref().unwrap_or("http://127.0.0.1:9123/mcp");
     format!(
         r#"# Codex: add to ~/.codex/config.toml
 [mcp_servers.plaesy-memory]
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn cursor_http_snippet_uses_url_without_unrecognized_type() {
         let config = http_config(&None);
-        assert_eq!(config["url"], "http://127.0.0.1:8080/mcp");
+        assert_eq!(config["url"], "http://127.0.0.1:9123/mcp");
         assert!(config.get("type").is_none());
     }
 }

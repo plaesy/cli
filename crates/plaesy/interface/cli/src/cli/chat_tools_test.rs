@@ -58,6 +58,7 @@ fn tools(root: &std::path::Path, allow_writes: bool) -> Tools {
     Tools {
         root: root.to_path_buf(),
         allow_writes,
+        require_approval: false,
         web: false,
     }
 }
@@ -224,6 +225,31 @@ fn writes_are_refused_without_allow_writes() {
 }
 
 #[test]
+fn supervised_mutations_need_the_exact_persisted_approval() {
+    let temp = repo();
+    let call = json!({
+        "tool": "write_file",
+        "path": "approved.txt",
+        "content": "aman"
+    });
+    let supervised = Tools {
+        root: temp.path().to_path_buf(),
+        allow_writes: true,
+        require_approval: true,
+        web: false,
+    };
+
+    let out = execute(&supervised, &call);
+    assert!(out.contains("approval required"), "{out}");
+    assert!(!temp.path().join("approved.txt").exists());
+
+    let id = approval_id(&call);
+    crate::cli::approvals::approve_at(temp.path(), &id).expect("approval");
+    assert_eq!(execute(&supervised, &call), "ditulis 4 byte ke approved.txt");
+    assert_eq!(fs::read_to_string(temp.path().join("approved.txt")).unwrap(), "aman");
+}
+
+#[test]
 fn write_file_creates_and_replaces_a_file_under_the_root() {
     let temp = repo();
     let allowed = tools(temp.path(), true);
@@ -352,6 +378,7 @@ fn web_fetch_is_refused_unless_web_is_on_and_the_url_is_allowed() {
     let on = Tools {
         root: temp.path().to_path_buf(),
         allow_writes: false,
+        require_approval: false,
         web: true,
     };
     let out = execute(

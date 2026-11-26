@@ -15,7 +15,7 @@
 //! memory config                   print the effective configuration
 //! memory config mcp [--app X]     integration snippets for MCP clients (Claude Code, n8n, Dify, Kilo Code, …)
 //! memory serve [--mcp]            JSON service on stdin/stdout, or MCP server with --mcp
-//! memory serve --mcp --transport http --port 8080   MCP over Streamable HTTP
+//! memory serve --mcp --transport http --port 9123   MCP over Streamable HTTP
 //! memory remember "title" ["body"] [--template NAME] [--folder PATH]  write a note
 //! memory fingerprint PATH       print the current note SHA-256 before update
 //! memory update PATH --if-match SHA256 --reason correction --yes  replace from stdin
@@ -152,10 +152,20 @@ async fn run(cli: Cli) -> Result<()> {
         read_only,
     } = cli.command
     {
+        let transport = transport.unwrap_or_else(|| {
+            config
+                .mcp
+                .transport
+                .parse()
+                .expect("validated MCP transport")
+        });
+        let port = port.unwrap_or(config.mcp.port);
         let auth_token = match auth_token {
             Some(token) => Some(token),
-            None => crate::memory::settings::env_file::value("PLAESY_MCP_TOKEN")?,
+            None if config.mcp.auth_token_env.is_empty() => None,
+            None => crate::memory::settings::env_file::value(&config.mcp.auth_token_env)?,
         };
+        let read_only = read_only || config.mcp.read_only;
         return serve::run(config, mcp, transport, port, auth_token, read_only).await;
     }
 

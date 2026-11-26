@@ -17,6 +17,23 @@ fn a_saved_session_loads_back_as_the_same_turns() {
 }
 
 #[test]
+fn a_saved_goal_round_trips_without_changing_turn_loading() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let path = save_with_goal(
+        temp.path(),
+        "chat-goal.jsonl",
+        &turns(),
+        Some("Selesaikan pekerjaan sampai tervalidasi"),
+    )
+    .expect("save");
+    assert_eq!(load(&path).expect("load"), turns());
+    assert_eq!(
+        load_with_goal(&path).expect("load with goal").1.as_deref(),
+        Some("Selesaikan pekerjaan sampai tervalidasi")
+    );
+}
+
+#[test]
 fn load_skips_lines_that_are_not_turns() {
     let temp = tempfile::tempdir().expect("tempdir");
     let path = temp.path().join("rusak.jsonl");

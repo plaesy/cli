@@ -46,8 +46,21 @@ Status per slice dicatat di bagian Status. Setiap slice satu commit, lulus `carg
 - Slice 11: selesai. `/subagent <tugas>` (butuh --allow-writes): worktree git terpisah di `.plaesy/subagents`, tanpa merge.
 - Slice 12: sebagian. `web_fetch` dengan `--web`. Web search belum.
 - Slice 13: ditunda. Butuh dukungan multimodal dan I/O audio.
+- Goal automation: slice inti diterapkan. Setelah setiap balasan dengan `/goal` aktif, provider menilai
+  `COMPLETE`/`CONTINUE`; continuation dibatasi tiga putaran, fail-closed untuk hasil judge yang tidak
+  valid, dan continuation masuk FIFO agar tidak mendahului pesan user yang sudah menunggu. Verifikasi
+  `cargo`/test: `cargo test -p plaesy-interface-cli --locked -j 3` lulus (354 test), dan clippy
+  `-D warnings` lulus. Goal kini ikut tersimpan sebagai metadata sesi dan dipulihkan saat resume.
+  Lapisan approval tool opsional juga diterapkan lewat `--supervised`: aksi mutatif memerlukan
+  action ID yang disetujui di `.plaesy/approvals.log` selain `--allow-writes`. Resume menyimpan
+  kembali ke file sesi yang sama, sehingga pemanggilan berkala terhadap sesi goal tidak mengulang
+  snapshot lama sebagai file baru. `plaesy chat-schedule install|run-once|uninstall|list` kini
+  mendaftarkan timer per-user Windows Task Scheduler, systemd user, atau macOS LaunchAgent dengan
+  lock anti-overlap dan recovery lock stale; full CLI suite lulus (358 test) dan clippy lulus.
 - Slice 9: sebagian (`list_tasks` baca-saja untuk model; cron belum)
 - Slice 10: sebagian (`/model` menampilkan provider dan model; mengganti model belum)
 - Slice 11: ditunda (butuh keputusan: worktree git di luar repo utama)
 - Slice 12: ditunda (butuh keputusan: jaringan opt-in, dan entri di docs/platform/decisions.md)
+- MCP memory: konfigurasi `[mcp]` kini dapat dibaca dari `config.toml` untuk transport, port,
+  read-only, dan nama environment bearer token; flag CLI tetap menjadi override.
 - Slice 13: ditunda (butuh dukungan multimodal dan I/O audio)

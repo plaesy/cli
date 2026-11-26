@@ -9,6 +9,20 @@ Both transports sync/watch the notes directory in the background. Six tools are 
 bounded write tools create a new note, save a session summary, or resolve a query gap. `memory_curate` combines health,
 unanswered-query, duplicate, unlinked-note, and topic-index candidates into one bounded review; it
 does not modify vault files. No tool replaces or deletes a note.
+
+The default transport, HTTP port, read-only mode, and bearer-token environment variable can be
+stored in the effective `config.toml` under `[mcp]`:
+
+```toml
+[mcp]
+transport = "http"
+port = 9123
+read_only = false
+auth_token_env = "PLAESY_MCP_TOKEN"
+```
+
+Command-line flags override these values. The token itself should remain in the environment (or
+the adjacent local `.env` file), not in the TOML file.
 The server uses the official [Rust MCP SDK](https://github.com/modelcontextprotocol/rust-sdk). Both
 transports support the current `2026-07-28` protocol; stdio also supports handshake-era protocol
 versions through `2024-11-05`. HTTP supports Streamable HTTP clients, including handshake-era
@@ -28,7 +42,7 @@ Used by any MCP client supporting stdio JSON-RPC 2.0.
 ### `http` (Streamable)
 
 ```bash
-plaesy memory serve --mcp --transport http --port 8080
+plaesy memory serve --mcp --transport http --port 9123
 ```
 
 The server binds to `127.0.0.1`. To require bearer authentication, set `PLAESY_MCP_TOKEN` in the
@@ -36,8 +50,8 @@ server environment or pass `--auth-token`; tokens must be at least 32 bytes. Cli
 `Authorization: Bearer <token>`. Keep the token out of shell history and public configuration.
 Authentication is checked before the MCP route. The SDK validates the request host and rejects
 non-loopback browser origins. For remote access, use a reverse proxy or secure tunnel that runs on
-the same machine and forwards requests to `127.0.0.1:8080/mcp`. Ensure the upstream `Host` header
-is `localhost:8080` and that the `Authorization` header is forwarded. Terminate TLS at the proxy,
+the same machine and forwards requests to `127.0.0.1:9123/mcp`. Ensure the upstream `Host` header
+is `localhost:9123` and that the `Authorization` header is forwarded. Terminate TLS at the proxy,
 and do not expose Plaesy's listener directly to the network.
 
 ## Client configuration
@@ -48,13 +62,13 @@ per client; Plaesy's vault ownership lock prevents multiple writers from serving
 same vault at once. Start the HTTP server with the vault selected explicitly:
 
 ```bash
-plaesy memory --vault /path/to/vault serve --mcp --transport http --port 8080
+plaesy memory --vault /path/to/vault serve --mcp --transport http --port 9123
 ```
 
-Then register `http://127.0.0.1:8080/mcp` in each client. The URL must include `/mcp`.
+Then register `http://127.0.0.1:9123/mcp` in each client. The URL must include `/mcp`.
 For a different port, change both the server command and every client URL.
-For example, use `--port 9123` and `http://127.0.0.1:9123/mcp` when port 8080 is occupied;
-pass `--http-url http://127.0.0.1:9123/mcp` to `plaesy memory config mcp` so its snippets match.
+For example, use `--port 9234` and `http://127.0.0.1:9234/mcp` when port 9123 is occupied;
+pass `--http-url http://127.0.0.1:9234/mcp` to `plaesy memory config mcp` so its snippets match.
 
 ## Process lifecycle
 
@@ -73,7 +87,7 @@ vault endpoint without explicit project access controls.
 ### Codex
 
 ```bash
-codex mcp add plaesy-memory --url http://127.0.0.1:8080/mcp
+codex mcp add plaesy-memory --url http://127.0.0.1:9123/mcp
 ```
 
 Check with `codex mcp get plaesy-memory`. The CLI can print a TOML snippet with
@@ -86,7 +100,7 @@ Add this entry to `~/.hermes/config.yaml` under the existing `mcp_servers` map:
 ```yaml
 mcp_servers:
   plaesy-memory:
-    url: http://127.0.0.1:8080/mcp
+    url: http://127.0.0.1:9123/mcp
 ```
 
 Reload MCP in Hermes and check its connection with `hermes mcp test plaesy-memory`.
@@ -96,7 +110,7 @@ The CLI can print the snippet with `plaesy memory config mcp --app hermes`.
 
 ```bash
 # HTTP transport (shared server)
-claude mcp add --transport http plaesy-memory http://127.0.0.1:8080/mcp
+claude mcp add --transport http plaesy-memory http://127.0.0.1:9123/mcp
 
 # Stdio alternative (single command, no HTTP server)
 claude mcp add plaesy-memory \
@@ -112,7 +126,7 @@ claude mcp add plaesy-memory \
   "mcp": {
     "plaesy-memory": {
       "type": "remote",
-      "url": "http://127.0.0.1:8080/mcp",
+      "url": "http://127.0.0.1:9123/mcp",
       "enabled": true
     }
   }
@@ -125,21 +139,21 @@ Run `plaesy memory config mcp --app kilocode` for the local stdio alternative.
 
 **Option A - MCP Server Trigger (n8n hosts the MCP server):**
 
-1. Start the memory server: `plaesy memory serve --mcp --transport http --port 8080`
+1. Start the memory server: `plaesy memory serve --mcp --transport http --port 9123`
 2. In n8n, add "MCP Server Trigger" node
 3. Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
    `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 **Option B - MCP Client (n8n calls remote MCP server):**
 
-- Set "Server URL" to: `http://127.0.0.1:8080/mcp`
+- Set "Server URL" to: `http://127.0.0.1:9123/mcp`
 - Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
   `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 
 ### Dify
 
 In Dify: Knowledge / MCP Server / Add MCP Server → select "Streamable HTTP".
-Server URL: `http://127.0.0.1:8080/mcp`
+Server URL: `http://127.0.0.1:9123/mcp`
 Available tools: `memory_search`, `memory_backlinks`, `memory_hygiene`, `memory_missing`, `memory_curate`,
 `memory_stats`, `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`
 

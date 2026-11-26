@@ -7,10 +7,10 @@ use std::path::Path;
 #[tokio::test]
 async fn test_load_from_file_merges_over_defaults() {
     let dir = tempfile::tempdir().expect("tmp");
-    let p = dir.path().join("settings.json");
+    let p = dir.path().join("config.toml");
     std::fs::write(
         &p,
-        r#"{"search":{"default_limit":5},"embeddings":{"model_dir":"/models/x"}}"#,
+        "[search]\ndefault_limit = 5\n[embeddings]\nmodel_dir = \"/models/x\"\n",
     )
     .expect("write");
     let cfg = MemoryConfig::load_from_file(&p).await.expect("load");
@@ -22,16 +22,16 @@ async fn test_load_from_file_merges_over_defaults() {
 #[tokio::test]
 async fn test_load_from_file_errors() {
     let dir = tempfile::tempdir().expect("tmp");
-    let missing = dir.path().join("nope.json");
+    let missing = dir.path().join("nope.toml");
     assert!(MemoryConfig::load_from_file(&missing).await.is_err());
-    let bad = dir.path().join("bad.json");
-    std::fs::write(&bad, "{\"search\":").expect("write");
+    let bad = dir.path().join("bad.toml");
+    std::fs::write(&bad, "[search").expect("write");
     assert!(MemoryConfig::load_from_file(&bad).await.is_err());
-    let wrong_type = dir.path().join("t.json");
-    std::fs::write(&wrong_type, r#"{"search":{"default_limit":"ten"}}"#).expect("write");
+    let wrong_type = dir.path().join("t.toml");
+    std::fs::write(&wrong_type, "[search]\ndefault_limit = \"ten\"\n").expect("write");
     assert!(MemoryConfig::load_from_file(&wrong_type).await.is_err());
-    let invalid = dir.path().join("v.json");
-    std::fs::write(&invalid, r#"{"search":{"default_limit":500}}"#).expect("write");
+    let invalid = dir.path().join("v.toml");
+    std::fs::write(&invalid, "[search]\ndefault_limit = 500\n").expect("write");
     assert!(MemoryConfig::load_from_file(&invalid).await.is_err());
 }
 
@@ -46,6 +46,22 @@ async fn test_load_from_file_reads_toml_by_extension() {
     let bad = dir.path().join("bad.toml");
     std::fs::write(&bad, "[search\n").expect("write");
     assert!(MemoryConfig::load_from_file(&bad).await.is_err());
+}
+
+#[tokio::test]
+async fn test_mcp_settings_load_from_toml() {
+    let dir = tempfile::tempdir().expect("tmp");
+    let p = dir.path().join("config.toml");
+    std::fs::write(
+        &p,
+        "[mcp]\ntransport = \"http\"\nport = 9123\nauth_token_env = \"MY_MCP_TOKEN\"\nread_only = true\n",
+    )
+    .expect("write");
+    let cfg = MemoryConfig::load_from_file(&p).await.expect("load");
+    assert_eq!(cfg.mcp.transport, "http");
+    assert_eq!(cfg.mcp.port, 9123);
+    assert_eq!(cfg.mcp.auth_token_env, "MY_MCP_TOKEN");
+    assert!(cfg.mcp.read_only);
 }
 
 #[test]
@@ -91,6 +107,17 @@ fn test_validate_config_invalid_limits() {
     let mut config = MemoryConfig::default();
     config.search.default_limit = 200;
     config.search.max_limit = 100;
+    assert!(config.validate().is_err());
+}
+
+#[test]
+fn test_validate_config_rejects_invalid_mcp_settings() {
+    let mut config = MemoryConfig::default();
+    config.mcp.transport = "websocket".to_owned();
+    assert!(config.validate().is_err());
+
+    config.mcp.transport = "http".to_owned();
+    config.mcp.port = 0;
     assert!(config.validate().is_err());
 }
 

@@ -83,6 +83,9 @@ pub struct Args {
     /// Let tools write files and run commands (`write_file`, `run_command`, `create_task`, `schedule_once`)
     #[arg(long)]
     pub allow_writes: bool,
+    /// Require a persisted approval for each mutating tool request in addition to `--allow-writes`
+    #[arg(long)]
+    pub supervised: bool,
     /// Project id that scopes `/pending` and is set on `/ask` notes
     #[arg(long)]
     pub project: Option<String>,
@@ -306,6 +309,50 @@ impl Transcript {
 
 /// Turns kept verbatim after a compaction.
 const KEEP_TAIL: usize = 4;
+
+/// Maximum number of provider continuations for one user turn. The goal stays active after the
+/// limit so the user can inspect the state and continue manually, but a malformed or over-ambitious
+/// goal can never create an unbounded billable loop.
+const MAX_GOAL_CONTINUATIONS: usize = 3;
+const GOAL_CONTINUATION_PREFIX: &str = "\u{001e}";
+
+/// Ask the provider whether the current goal is complete. Only an exact, first-line `COMPLETE` or
+/// `CONTINUE` is actionable; everything else is treated as an inconclusive judge result and stops
+/// automation. This fail-safe behavior prevents a normal assistant answer or a provider error from
+/// accidentally becoming an autonomous loop.
+fn assess_goal(
+    provider: &dyn Provider,
+    transcript: &Transcript,
+    goal: &str,
+    settings: &ChatSettings,
+) -> Result<bool, String> {
+    let mut messages = vec![Message::system(
+        "You are a strict goal-completion judge. Decide whether the goal is fully satisfied by the\
+         conversation and its evidence. Reply with exactly one word on the first line: COMPLETE\
+         only when the goal is fully done; otherwise CONTINUE. Do not explain your answer."
+            .to_owned(),
+    )];
+    messages.push(Message::user(format!(
+        "Goal:\n{goal}\n\nConversation:\n{}",
+        transcript.render("")
+    )));
+    let request = Request {
+        prompt: String::new(),
+        max_output_tokens: 8,
+        timeout: settings.timeout,
+        dir: String::new(),
+    };
+    let response =
+        delegate::run_messages(provider, &messages, &request).map_err(|err| err.to_string())?;
+    match response.text.lines().next().map(str::trim) {
+        Some("COMPLETE") => Ok(true),
+        Some("CONTINUE") => Ok(false),
+        other => Err(format!(
+            "goal judge returned an invalid result: {:?}",
+            other.unwrap_or_default()
+        )),
+    }
+}
 
 /// Replaces the transcript with one summary the provider writes. Shared by `/compact` and the
 /// automatic compaction before a turn that would overflow the context meter.
@@ -818,17 +865,26 @@ pub fn converse(
         write_state(out, provider.as_ref())?;
     }
     let mut transcript = Transcript::default();
+    // The session goal is persisted with the transcript so a resumed run can continue it.
+    let mut goal: Option<String> = None;
+    let mut goal_complete = false;
+    let mut session_name = settings
+        .resume
+        .as_ref()
+        .and_then(|path| path.file_name())
+        .map(|name| name.to_string_lossy().into_owned());
     if let Some(path) = &settings.resume {
-        match chat_history::load(path) {
-            Ok(turns) => {
+        match chat_history::load_with_goal(path) {
+            Ok((turns, saved_goal)) => {
                 writeln!(out, "resumed {} turns from {}", turns.len(), path.display())?;
                 transcript = Transcript::from_pairs(turns);
+                goal = saved_goal;
             }
             Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
         }
     }
-    // The session goal is kept for this run only; it is never written to disk.
-    let mut goal: Option<String> = None;
+    // Number of automatic continuations spawned by the current user turn.
+    let mut goal_continuations = 0usize;
     // Files the model wrote with --allow-writes, newest last, so /undo can restore them.
     let mut checkpoints: Vec<chat_tools::Checkpoint> = Vec::new();
     let mut todos = chat_todo::Todos::default();
@@ -858,6 +914,11 @@ pub fn converse(
         }
     });
     let mut queue: VecDeque<String> = VecDeque::new();
+    if goal.is_some() {
+        queue.push_back(format!(
+            "{GOAL_CONTINUATION_PREFIX}Resume the active session goal. Inspect the current state, take the next concrete action, and report evidence."
+        ));
+    }
     // Each line taken from the queue ends with one TURN_MARK, written at the top of the next pass.
     // A handler that skips the end of the loop with `continue` still closes its line this way.
     let mut awaiting_mark = false;
@@ -877,7 +938,29 @@ pub fn converse(
             queue.push_back(line?);
         }
         let waiting = queue.len() - 1;
-        let line = take_next(&mut queue);
+        let mut automatic_goal_turn = queue
+            .front()
+            .is_some_and(|line| line.starts_with(GOAL_CONTINUATION_PREFIX))
+            && !queue.iter().any(|line| line.trim_start().starts_with('!'));
+        let mut line = if automatic_goal_turn {
+            // A user message already queued at resume time wins over the synthetic continuation.
+            if let Some(index) = queue
+                .iter()
+                .position(|line| !line.starts_with(GOAL_CONTINUATION_PREFIX))
+            {
+                automatic_goal_turn = false;
+                queue.remove(index).unwrap_or_default()
+            } else {
+                take_next(&mut queue)
+            }
+        } else {
+            take_next(&mut queue)
+        };
+        if automatic_goal_turn {
+            if let Some(stripped) = line.strip_prefix(GOAL_CONTINUATION_PREFIX) {
+                line = stripped.to_owned();
+            }
+        }
         awaiting_mark = true;
         if waiting > 0 {
             writeln!(out, "{}", chat_text::queued(lang, waiting))?;
@@ -1122,10 +1205,14 @@ pub fn converse(
                     writeln!(out, "{text}")?;
                 } else if rest == "clear" {
                     goal = None;
+                    goal_complete = false;
+                    goal_continuations = 0;
                     writeln!(out, "{}", chat_text::goal_cleared(lang))?;
                 } else {
                     writeln!(out, "{}", chat_text::goal_set(lang, &rest))?;
                     goal = Some(rest);
+                    goal_complete = false;
+                    goal_continuations = 0;
                 }
             }
             Input::Compact => {
@@ -1174,6 +1261,7 @@ pub fn converse(
                             let sub = chat_tools::Tools {
                                 root: dest.clone(),
                                 allow_writes: true,
+                                require_approval: tools.require_approval,
                                 web: tools.web,
                             };
                             let messages = vec![
@@ -1245,10 +1333,13 @@ pub fn converse(
                     }
                 } else {
                     match chat_history::check_name(&arg) {
-                        Ok(()) => match chat_history::load(&dir.join(&arg)) {
-                            Ok(turns) => {
+                        Ok(()) => match chat_history::load_with_goal(&dir.join(&arg)) {
+                            Ok((turns, saved_goal)) => {
                                 let count = turns.len();
                                 transcript = Transcript::from_pairs(turns);
+                                goal = saved_goal;
+                                goal_continuations = 0;
+                                session_name = Some(arg.clone());
                                 writeln!(out, "dilanjutkan dari {arg}: {count} giliran")?;
                             }
                             Err(err) => {
@@ -1568,6 +1659,9 @@ pub fn converse(
                 Err(kind) => writeln!(out, "{}", chat_text::usage(lang, kind))?,
             },
             Input::Message(text) => {
+                if !automatic_goal_turn {
+                    goal_continuations = 0;
+                }
                 // Compact before a turn that would fill the window, so the next reply still fits.
                 let limit = CONTEXT_WINDOW_TOKENS * AUTO_COMPACT_PERCENT / 100;
                 if !transcript.is_empty()
@@ -1676,6 +1770,42 @@ pub fn converse(
                         )?;
                         transcript.push(Role::User, text);
                         transcript.push(Role::Assistant, response.text);
+                        if !goal_complete {
+                            if let Some(current_goal) = goal.as_deref() {
+                                match assess_goal(
+                                    provider.as_ref(),
+                                    &transcript,
+                                    current_goal,
+                                    &settings,
+                                ) {
+                                    Ok(true) => {
+                                        writeln!(out, "goal complete: {current_goal}")?;
+                                        goal_complete = true;
+                                        goal_continuations = 0;
+                                    }
+                                    Ok(false) if goal_continuations < MAX_GOAL_CONTINUATIONS => {
+                                        goal_continuations += 1;
+                                        writeln!(
+                                            out,
+                                            "goal incomplete; continuing automatically ({}/{})",
+                                            goal_continuations, MAX_GOAL_CONTINUATIONS
+                                        )?;
+                                        queue.push_back(format!(
+                                            "{GOAL_CONTINUATION_PREFIX}Continue working toward the session goal. Inspect the current state, take the next concrete action, and report evidence."
+                                        ));
+                                    }
+                                    Ok(false) => {
+                                        writeln!(
+                                            out,
+                                            "goal continuation limit reached; waiting for your next instruction"
+                                        )?;
+                                    }
+                                    Err(err) => {
+                                        writeln!(out, "goal automation stopped: {err}")?;
+                                    }
+                                }
+                            }
+                        }
                     }
                     Err(err) => {
                         trace::event(
@@ -1697,7 +1827,13 @@ pub fn converse(
     }
     if let Some(dir) = &settings.chats_dir {
         if !transcript.is_empty() {
-            match chat_history::save(dir, &chat_history::new_name(), &transcript.pairs()) {
+            let name = session_name.unwrap_or_else(chat_history::new_name);
+            match chat_history::save_with_goal(
+                dir,
+                &name,
+                &transcript.pairs(),
+                (!goal_complete).then_some(goal.as_deref()).flatten(),
+            ) {
                 Ok(path) => writeln!(out, "saved chat: {}", path.display())?,
                 Err(err) => writeln!(out, "{}", chat_text::error(lang, &err.to_string()))?,
             }
@@ -1848,6 +1984,7 @@ pub fn run(args: &Args) -> CliResult {
         tools: (!args.no_tools).then(|| chat_tools::Tools {
             root: args.path.clone(),
             allow_writes: args.allow_writes,
+            require_approval: args.supervised,
             web,
         }),
         chats_dir: (!args.no_save).then(|| chat_history::dir(&args.path)),

@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The memory MCP server has `memory_fingerprint`, `memory_update`, and `memory_archive`. An agent reads a note's SHA-256 first; an update or archive is refused unless the hash still matches. Updates need a reason of correction, new-evidence, clarification, or other. Archives need completed, obsolete, superseded, consolidated, or other. The change is audited without note content and reindexed at once.
 - Project settings can live in `.plaesy/config.toml`, which allows comments. `plaesy chat`, the delegate providers, the memory engine, and local telemetry read it first and fall back to `.plaesy/settings.json` while it is absent. The first `/model` save copies `settings.json` into `config.toml` and leaves the JSON file unchanged. Home-level settings (`~/.plaesy/settings.json`) are still JSON.
 - `plaesy chat` `/model` lists the configured providers with their models, and `/model <number>`, `/model <provider>`, or `/model <provider>@<model>` switches and saves the choice to `config.toml`.
 - `plaesy chat` can trace each turn to a local file: set `PLAESY_TRACE=1` (writes `.plaesy/trace.jsonl`) or `PLAESY_TRACE=<path>`. Each line records the send, the reply's provider, size, and duration, or the error a provider returned. Message text is not recorded, and the chat screen is not affected.

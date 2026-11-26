@@ -112,7 +112,8 @@ pub struct OnboardArgs {
     pub args: Vec<String>,
 }
 
-/// `plaesy onboard`: first-run setup for the memory engine. Writes `<root>/.plaesy/settings.json`.
+/// `plaesy onboard`: first-run setup for the memory engine. Selects the user config root;
+/// Configuration is stored in `config.toml`.
 ///
 /// # Errors
 ///
