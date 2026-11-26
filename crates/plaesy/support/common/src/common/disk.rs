@@ -13,7 +13,7 @@ pub fn available_bytes(path: &Path) -> std::io::Result<u64> {
 }
 
 #[cfg(unix)]
-#[allow(clippy::useless_conversion)] // statvfs field widths differ by target (u32 on some, u64 on others).
+#[allow(clippy::useless_conversion, clippy::unnecessary_fallible_conversions)] // statvfs field widths differ by target (u32 on some, u64 on others).
 fn available_bytes_impl(path: &Path) -> std::io::Result<u64> {
     use std::os::unix::ffi::OsStrExt;
 
