@@ -2143,6 +2143,16 @@ pub fn run(args: &Args) -> CliResult {
         let confirm = args.confirm;
         let repo = args.path.display().to_string();
         chat_tui::run(lang, &repo, &name, |input, out| {
+            // Incoming relay messages appear in the log without waiting for /agent inbox.
+            let log = out.sender();
+            chat_agents::spawn_listener(
+                settings.repo.clone(),
+                settings.agent_name.clone(),
+                chat_agents::LISTEN_INTERVAL,
+                move |text| {
+                    let _ = log.send(format!("\n{text}\n"));
+                },
+            );
             let open = |next: &str| open_provider(&cfg, next, confirm, &getenv);
             let record_vault = vault.clone();
             let record =
@@ -2166,6 +2176,7 @@ pub fn run(args: &Args) -> CliResult {
         settings.repo.clone(),
         settings.agent_name.clone(),
         chat_agents::LISTEN_INTERVAL,
+        |text| eprintln!("\n{text}"),
     );
     let stdin = io::stdin();
     let mut stdout = io::stdout();

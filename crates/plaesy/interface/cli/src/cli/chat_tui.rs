@@ -71,6 +71,13 @@ pub struct OutputSink {
     tx: Sender<String>,
 }
 
+impl OutputSink {
+    /// A sender that writes into the screen's log from another thread, such as a listener.
+    pub fn sender(&self) -> Sender<String> {
+        self.tx.clone()
+    }
+}
+
 impl Write for OutputSink {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         // A closed screen channel only means nobody is drawing any more, so output is dropped.

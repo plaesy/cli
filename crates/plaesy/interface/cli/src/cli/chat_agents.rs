@@ -162,11 +162,13 @@ pub fn render_incoming(items: &[Incoming]) -> String {
 /// How often the listener checks the relay for new messages.
 pub const LISTEN_INTERVAL: Duration = Duration::from_secs(5);
 
-/// Starts a background listener for `agent`. It polls the relay and prints each message it has not
-/// shown before, on stderr so the chat's stdout is left alone. Messages are shown, never acted on.
-/// The thread ends with the process; relay errors are ignored, so a missing relay only stops
-/// the listener, not the chat.
-pub fn spawn_listener(repo: PathBuf, agent: String, interval: Duration) {
+/// Starts a background listener for `agent`. It polls the relay and passes each new message to
+/// `show`, once. Messages are shown, never acted on. The thread ends with the process; relay errors
+/// are ignored, so a missing relay only stops the listener, not the chat.
+pub fn spawn_listener<F>(repo: PathBuf, agent: String, interval: Duration, mut show: F)
+where
+    F: FnMut(&str) + Send + 'static,
+{
     thread::spawn(move || {
         let mut seen: HashSet<String> = HashSet::new();
         loop {
@@ -179,7 +181,7 @@ pub fn spawn_listener(repo: PathBuf, agent: String, interval: Duration) {
                     .filter(|item| seen.insert(item.id.clone()))
                     .collect();
                 if !fresh.is_empty() {
-                    eprintln!("\n[pesan baru]\n{}", render_incoming(&fresh));
+                    show(&format!("[pesan baru]\n{}", render_incoming(&fresh)));
                 }
             }
             thread::sleep(interval);
