@@ -1,7 +1,9 @@
 # Desain fitur chat: MCP, hook, bot/roles, agent-to-agent, plugin
 
-Status: desain, belum diimplementasikan. Dokumen ini menjelaskan bentuk yang disarankan untuk lima
-fitur di `plaesy chat`, dengan prinsip yang sama untuk semuanya. Setiap bagian menyebut apa yang
+Status: sebagian besar sudah diimplementasikan di `plaesy chat` (MCP klien, hook, roles, plugin,
+dan pesan agent-to-agent). Dokumen ini menjelaskan bentuk yang dipakai untuk lima fitur di
+`plaesy chat`, dengan prinsip yang sama untuk semuanya. Pesan agent-to-agent antar dua sesi hidup
+belum diuji end-to-end; relay itu sendiri sudah diuji kirim-terima. Setiap bagian menyebut apa yang
 sudah ada di kode, supaya tidak ada klaim kemampuan yang belum terbukti.
 
 ## Prinsip bersama
@@ -27,12 +29,14 @@ Kondisi kode saat ini, sebagai acuan:
 
 - Provider: trait `Provider` di `support/loop`, konfigurasi `delegate.providers` di
   `.plaesy/settings.json`.
-- Skill: `plaesy skills` membaca direktori skill. `chat` belum memuat skill.
+- Skill: `plaesy skills` membaca direktori skill. `chat` memuat skill lewat `/skill <nama>`.
 - Keputusan dan pertanyaan terbuka: `/decision`, `/ask`, `/pending`, `/decisions`, `/pick`.
 - Tugas: `/tasks` membaca `.plaesy/tasks/<status>/<id>/`.
-- `plaesy mcp` sudah ada sebagai **server** MCP untuk folder `.plaesy/`. Chat belum menjadi
-  **klien** MCP.
-- Hook: hanya `loop stop-hook` (untuk loop otomatis). Chat belum punya hook.
+- `plaesy mcp` sudah ada sebagai **server** MCP untuk folder `.plaesy/`. Chat sudah menjadi
+  **klien** MCP lewat `/mcp` dan `/mcp call`.
+- Hook: `loop stop-hook` dan hook peristiwa chat (sesi, pesan, keputusan).
+- Roles: `--role` dan `/role`. Plugin: `/plugins` dan `/plugin run`.
+- Agent-to-agent: `@nama` dan `/agent inbox|reply|ack`, lewat relay lokal.
 
 ---
 

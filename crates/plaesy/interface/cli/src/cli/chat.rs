@@ -134,15 +134,10 @@ pub fn decision_args(decision: &Decision, vault: Option<&Path>, id: &str) -> Vec
         args.push("--vault".to_owned());
         args.push(vault.display().to_string());
     }
-    let body = if decision.why.is_empty() {
-        format!("statement: {}\n", decision.chosen)
-    } else {
-        format!("chosen: {}\n\nwhy: {}\n", decision.chosen, decision.why)
-    };
     args.extend([
         "remember".to_owned(),
         decision.title.clone(),
-        body,
+        decision_body(decision),
         "--folder".to_owned(),
         "decisions".to_owned(),
         "--type".to_owned(),
@@ -168,9 +163,113 @@ pub fn record_decision(decision: &Decision, vault: Option<&Path>) -> Result<Stri
         .output()
         .map_err(|err| err.to_string())?;
     if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+    // A running memory daemon owns this vault and refuses direct writes. Its service API is the
+    // write path, so save through it.
+    if stderr.contains("owns this vault") {
+        return remember_via_daemon(decision, &id);
+    }
+    Err(stderr)
+}
+
+/// Saves a decision through the running memory daemon's MCP endpoint (`memory_remember`).
+/// The URL defaults to `http://127.0.0.1:9123/mcp`; `PLAESY_MCP_URL` and `PLAESY_MCP_TOKEN`
+/// override it.
+fn remember_via_daemon(decision: &Decision, id: &str) -> Result<String, String> {
+    let url = std::env::var("PLAESY_MCP_URL").unwrap_or_else(|_| DAEMON_MCP_URL.to_owned());
+    let token = std::env::var("PLAESY_MCP_TOKEN")
+        .ok()
+        .filter(|value| !value.is_empty());
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(20)))
+        .build()
+        .into();
+    let send = |session: Option<&str>,
+                message: serde_json::Value|
+     -> Result<(Option<String>, Option<serde_json::Value>), String> {
+        let mut request = agent
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json, text/event-stream");
+        if let Some(session) = session {
+            request = request.header("mcp-session-id", session);
+        }
+        if let Some(token) = &token {
+            request = request.header("Authorization", format!("Bearer {token}"));
+        }
+        let mut response = request
+            .send(message.to_string())
+            .map_err(|err| format!("daemon tidak terjangkau di {url}: {err}"))?;
+        let session_id = response
+            .headers()
+            .get("mcp-session-id")
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+            .or_else(|| session.map(str::to_owned));
+        let text = response
+            .body_mut()
+            .read_to_string()
+            .map_err(|err| format!("membaca balasan daemon: {err}"))?;
+        let payload = text
+            .lines()
+            .filter_map(|line| line.strip_prefix("data:"))
+            .map(str::trim)
+            .rfind(|data| !data.is_empty())
+            .map(serde_json::from_str::<serde_json::Value>)
+            .transpose()
+            .map_err(|err| format!("balasan daemon tidak valid: {err}"))?;
+        Ok((session_id, payload))
+    };
+    let (session, _) = send(
+        None,
+        serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-03-26", "capabilities": {},
+            "clientInfo": {"name": "plaesy-chat", "version": env!("CARGO_PKG_VERSION")}}}),
+    )?;
+    let session = session.ok_or("daemon tidak mengembalikan sesi MCP")?;
+    send(
+        Some(&session),
+        serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+    )?;
+    let (_, payload) = send(
+        Some(&session),
+        serde_json::json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "memory_remember",
+            "arguments": {
+                "title": decision.title,
+                "body": decision_body(decision),
+                "folder": "decisions",
+                "note_type": "decision",
+                "status": "active",
+                "id": id,
+            }}}),
+    )?;
+    let result = payload
+        .and_then(|value| value.get("result").cloned())
+        .ok_or("daemon tidak mengembalikan hasil")?;
+    let text = result["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    if result["isError"].as_bool().unwrap_or(false) {
+        Err(text)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_owned())
+        Ok(text)
+    }
+}
+
+/// Default MCP endpoint of the memory daemon started with `memory serve --mcp --port 9123`.
+const DAEMON_MCP_URL: &str = "http://127.0.0.1:9123/mcp";
+
+/// Note body for a decision: the chosen option, and the reason when there is one.
+fn decision_body(decision: &Decision) -> String {
+    if decision.why.is_empty() {
+        format!("statement: {}\n", decision.chosen)
+    } else {
+        format!("chosen: {}\n\nwhy: {}\n", decision.chosen, decision.why)
     }
 }
 

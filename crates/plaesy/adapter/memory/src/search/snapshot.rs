@@ -48,7 +48,9 @@ impl SearchEngine {
             match WriteLock::acquire(root) {
                 Ok(lock) => Some(lock),
                 Err(error) => {
-                    tracing::warn!("snapshot writer lock unavailable: {error}");
+                    // A live daemon owns the vault and writes its own snapshot, so skipping here
+                    // is expected, not a warning.
+                    tracing::debug!("snapshot writer lock unavailable: {error}");
                     return;
                 }
             }

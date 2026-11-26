@@ -31,10 +31,6 @@ fn store_at(root: &std::path::Path) -> Result<ApprovalStore<RunLog>, Box<dyn std
     Ok(ApprovalStore::new(RunLog::open(dir.join("approvals.log"))))
 }
 
-fn store() -> Result<ApprovalStore<RunLog>, Box<dyn std::error::Error>> {
-    store_at(&find_root()?)
-}
-
 /// Records approval for a tool action in the repository's approval log.
 pub fn approve_at(root: &std::path::Path, action_id: &str) -> Result<(), String> {
     store_at(root)
