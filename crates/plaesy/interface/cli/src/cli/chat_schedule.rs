@@ -457,7 +457,6 @@ fn register_macos(schedule: &Path, spec: &ScheduleSpec) -> Result<(), String> {
     let agents = home.join("Library").join("LaunchAgents");
     fs::create_dir_all(&agents).map_err(|error| error.to_string())?;
     let label = format!("com.plaesy.goal-{}", spec.id);
-    let command = scheduled_command(schedule);
     let plist = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict><key>Label</key><string>{label}</string><key>ProgramArguments</key><array><string>{}</string><string>chat-schedule</string><string>run-once</string><string>--schedule</string><string>{}</string></array><key>StartInterval</key><integer>{}</integer></dict></plist>\n",
         xml(&std::env::current_exe().map_err(|error| error.to_string())?.to_string_lossy()),
