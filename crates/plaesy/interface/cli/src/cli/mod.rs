@@ -9,6 +9,7 @@ pub mod agent_task;
 pub mod analyze;
 pub mod approvals;
 pub mod audit;
+pub mod automation;
 pub mod chat;
 pub mod chat_agents;
 pub mod chat_history;
@@ -162,6 +163,8 @@ pub enum Command {
     Onboard(memory::OnboardArgs),
     /// Task lifecycle under .plaesy/tasks/ (backlog/todo/doing/done/blocked)
     Tasks(tasks::Args),
+    /// Scheduled agent prompts under .plaesy/automations/, queued by `automation run-due`
+    Automation(automation::Args),
     /// Export the task list or the delegate run summary as Markdown or CSV
     Export(export::Args),
     /// Validate a constitution, memory, Markdown, local links, or an OOXML document
@@ -203,6 +206,7 @@ impl Command {
             Self::Sessions(_) => "sessions",
             Self::Memory(_) => "memory",
             Self::Tasks(_) => "tasks",
+            Self::Automation(_) => "automation",
             Self::Validate(_) => "validate",
             Self::Approvals(_) => "approvals",
             Self::Dashboard(_) => "dashboard",
@@ -312,6 +316,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Memory(args) => memory::run(&args),
         Command::Onboard(args) => memory::run_onboard(&args),
         Command::Tasks(args) => tasks::run(&args),
+        Command::Automation(args) => automation::run(&args),
         Command::Export(args) => export::run(&args),
         Command::Validate(args) => validate::run(&args),
         Command::Telemetry(args) => telemetry::run(&args),
