@@ -91,7 +91,9 @@ fn ensure_private_model_directories_at(
             use std::os::unix::fs::MetadataExt;
             let metadata = current.metadata().map_err(|e| e.to_string())?;
             let uid = unsafe { libc::geteuid() };
-            let root_sticky = metadata.uid() == 0 && metadata.mode() & libc::S_ISVTX != 0;
+            // S_ISVTX is u16 on macOS and u32 on Linux; cast so `mode()` (u32) can be masked on both.
+            #[allow(clippy::unnecessary_cast)]
+            let root_sticky = metadata.uid() == 0 && metadata.mode() & (libc::S_ISVTX as u32) != 0;
             if metadata.uid() != 0 && metadata.uid() != uid {
                 return Err(format!(
                     "cache ancestor {} is not owned by root or the current user",
