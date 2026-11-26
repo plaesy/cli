@@ -8,6 +8,7 @@ pub mod exclude;
 pub mod expected;
 pub mod export;
 pub mod files;
+pub mod harness;
 pub mod imagegen;
 pub mod installer;
 pub mod mcpserver;

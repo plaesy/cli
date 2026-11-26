@@ -36,6 +36,7 @@ pub mod doctor;
 pub mod export;
 pub mod files;
 pub mod gateway;
+pub mod harness;
 pub mod images;
 pub mod import_cmd;
 pub mod init;
@@ -170,6 +171,8 @@ pub enum Command {
     Telemetry(telemetry::Args),
     /// Voice commands: parse transcribed text into a task command without running it
     Voice(voice::Args),
+    /// List the agent harnesses and check which are installed on PATH
+    Harness(harness::Args),
 }
 
 impl Command {
@@ -220,6 +223,7 @@ impl Command {
             Self::Remote(_) => "remote",
             Self::Gateway(_) => "gateway",
             Self::Agent(_) => "agent",
+            Self::Harness(_) => "harness",
             // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
@@ -316,5 +320,6 @@ fn dispatch(command: Command) -> CliResult {
         Command::Validate(args) => validate::run(&args),
         Command::Telemetry(args) => telemetry::run(&args),
         Command::Voice(args) => voice::run(&args),
+        Command::Harness(args) => harness::run(&args),
     }
 }
