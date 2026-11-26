@@ -402,7 +402,11 @@ async fn update_and_archive_require_current_fingerprint() {
     let file = dir.path().join("ops").join("deploy-steps.md");
     let fp = rpc(
         &e,
-        call(2, "memory_fingerprint", json!({"path":"ops/deploy-steps.md"})),
+        call(
+            2,
+            "memory_fingerprint",
+            json!({"path":"ops/deploy-steps.md"}),
+        ),
     )
     .await;
     let hash = fp["result"]["structuredContent"]["sha256"]
@@ -421,7 +425,9 @@ async fn update_and_archive_require_current_fingerprint() {
     )
     .await;
     assert_eq!(stale["result"]["isError"], true);
-    assert!(std::fs::read_to_string(&file).expect("read").contains("Old steps."));
+    assert!(std::fs::read_to_string(&file)
+        .expect("read")
+        .contains("Old steps."));
     // The reviewed hash succeeds and the content is replaced.
     let ok = rpc(
         &e,
@@ -433,7 +439,9 @@ async fn update_and_archive_require_current_fingerprint() {
     )
     .await;
     assert_eq!(ok["result"]["isError"], false);
-    assert!(std::fs::read_to_string(&file).expect("read").contains("New steps."));
+    assert!(std::fs::read_to_string(&file)
+        .expect("read")
+        .contains("New steps."));
     // Archiving with the old hash is refused; with the new hash it succeeds.
     let archive_stale = rpc(
         &e,
@@ -447,7 +455,11 @@ async fn update_and_archive_require_current_fingerprint() {
     assert_eq!(archive_stale["result"]["isError"], true);
     let fp2 = rpc(
         &e,
-        call(6, "memory_fingerprint", json!({"path":"ops/deploy-steps.md"})),
+        call(
+            6,
+            "memory_fingerprint",
+            json!({"path":"ops/deploy-steps.md"}),
+        ),
     )
     .await;
     let hash2 = fp2["result"]["structuredContent"]["sha256"]
@@ -464,7 +476,9 @@ async fn update_and_archive_require_current_fingerprint() {
     )
     .await;
     assert_eq!(archived["result"]["isError"], false);
-    assert!(std::fs::read_to_string(&file).expect("read").contains("archived"));
+    assert!(std::fs::read_to_string(&file)
+        .expect("read")
+        .contains("archived"));
 }
 
 #[tokio::test]

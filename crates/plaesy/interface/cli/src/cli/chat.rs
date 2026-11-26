@@ -237,15 +237,15 @@ fn remember_via_daemon(decision: &Decision, id: &str) -> Result<String, String> 
     let (_, payload) = send(
         Some(&session),
         serde_json::json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
-            "name": "memory_remember",
-            "arguments": {
-                "title": decision.title,
-                "body": decision_body(decision),
-                "folder": "decisions",
-                "note_type": "decision",
-                "status": "active",
-                "id": id,
-            }}}),
+        "name": "memory_remember",
+        "arguments": {
+            "title": decision.title,
+            "body": decision_body(decision),
+            "folder": "decisions",
+            "note_type": "decision",
+            "status": "active",
+            "id": id,
+        }}}),
     )?;
     let result = payload
         .and_then(|value| value.get("result").cloned())
@@ -1972,10 +1972,7 @@ pub fn run(args: &Args) -> CliResult {
     // Project settings: `.plaesy/config.toml`, or `settings.json` until it is migrated.
     let repo_settings = crate::config::project::read_project_value_or_null(&args.path);
     let lang = chat_text::resolve(args.lang.as_deref(), &user_dir)?;
-    let mut hooks = chat_hooks::parse_hooks(
-        &repo_settings,
-        chat_hooks::Scope::Repo,
-    )?;
+    let mut hooks = chat_hooks::parse_hooks(&repo_settings, chat_hooks::Scope::Repo)?;
     hooks.extend(chat_hooks::parse_hooks(
         &user_settings,
         chat_hooks::Scope::User,
@@ -1993,7 +1990,8 @@ pub fn run(args: &Args) -> CliResult {
         chat_roles::find(&roles, &role_name).ok_or_else(|| format!("unknown role {role_name}"))?;
     let home = dirs::home_dir().ok_or("home directory is not available")?;
     let skills_dir = super::skills::store_dir(&home);
-    let peers: Vec<String> = user_settings.clone()
+    let peers: Vec<String> = user_settings
+        .clone()
         .get("agent")
         .and_then(|agent| agent.get("peers"))
         .and_then(serde_json::Value::as_array)
@@ -2005,7 +2003,8 @@ pub fn run(args: &Args) -> CliResult {
         })
         .unwrap_or_default();
     let agent_name = args.agent.clone().unwrap_or_else(|| {
-        user_settings.clone()
+        user_settings
+            .clone()
             .get("agent")
             .and_then(|agent| agent.get("name"))
             .and_then(serde_json::Value::as_str)
@@ -2025,10 +2024,7 @@ pub fn run(args: &Args) -> CliResult {
     for problem in &problems {
         eprintln!("plugin skipped: {problem}");
     }
-    let mut mcp_servers = chat_mcp::parse_servers(
-        &repo_settings,
-        chat_hooks::Scope::Repo,
-    )?;
+    let mut mcp_servers = chat_mcp::parse_servers(&repo_settings, chat_hooks::Scope::Repo)?;
     mcp_servers.extend(chat_mcp::parse_servers(
         &user_settings,
         chat_hooks::Scope::User,
@@ -2044,10 +2040,7 @@ pub fn run(args: &Args) -> CliResult {
     } else {
         default_provider(&cfg)?
     };
-    let mut lsp_servers = chat_lsp::parse_servers(
-        &repo_settings,
-        chat_hooks::Scope::Repo,
-    )?;
+    let mut lsp_servers = chat_lsp::parse_servers(&repo_settings, chat_hooks::Scope::Repo)?;
     lsp_servers.extend(chat_lsp::parse_servers(
         &user_settings,
         chat_hooks::Scope::User,
@@ -2077,7 +2070,8 @@ pub fn run(args: &Args) -> CliResult {
 
     // Without --vault, the menus and saved decisions use the vault in settings (`watch_dir`).
     let vault = args.vault.clone().or_else(|| {
-        user_settings.clone()
+        user_settings
+            .clone()
             .get("watch_dir")
             .and_then(serde_json::Value::as_str)
             .map(PathBuf::from)

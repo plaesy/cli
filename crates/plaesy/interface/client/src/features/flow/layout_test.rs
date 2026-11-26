@@ -53,7 +53,11 @@ fn diamond_puts_siblings_in_same_column() {
 fn barycenter_removes_crossing_between_two_columns() {
     // Urutan awal kolom 1 adalah [c, d], tetapi a -> d dan b -> c menyilang.
     // Sapuan barycenter harus menaruh d di atas c.
-    let out = layout(&ids(&["a", "b", "c", "d"]), &edges(&[("a", "d"), ("b", "c")])).unwrap();
+    let out = layout(
+        &ids(&["a", "b", "c", "d"]),
+        &edges(&[("a", "d"), ("b", "c")]),
+    )
+    .unwrap();
     assert!(out["d"].y < out["c"].y);
     assert_eq!(out["a"].y, out["d"].y);
     assert_eq!(out["b"].y, out["c"].y);
@@ -75,7 +79,11 @@ fn empty_input_yields_empty_layout() {
 
 #[test]
 fn all_positions_are_non_negative() {
-    let out = layout(&ids(&["a", "b", "c", "d"]), &edges(&[("c", "a"), ("d", "b")])).unwrap();
+    let out = layout(
+        &ids(&["a", "b", "c", "d"]),
+        &edges(&[("c", "a"), ("d", "b")]),
+    )
+    .unwrap();
     for p in out.values() {
         assert!(p.x >= 0 && p.y >= 0, "posisi negatif: {p:?}");
     }

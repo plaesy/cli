@@ -618,7 +618,10 @@ async fn run_tool(
                 .filter(|p| !p.trim().is_empty())
                 .ok_or_else(|| ToolError::Invalid("`path` (string) is required".into()))?;
             let hash = engine.fingerprint_note(std::path::Path::new(path))?;
-            Ok(tool_text(hash.clone(), json!({ "path": path, "sha256": hash })))
+            Ok(tool_text(
+                hash.clone(),
+                json!({ "path": path, "sha256": hash }),
+            ))
         }
         "memory_update" => {
             let arg = |key: &str| {

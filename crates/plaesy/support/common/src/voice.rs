@@ -44,7 +44,14 @@ pub enum VoiceError {
 
 const FILLER: &[&str] = &["tolong", "please", "plaesy"];
 const CREATE_VERBS: &[&str] = &[
-    "buat", "bikin", "tambah", "tambahkan", "create", "add", "new", "make",
+    "buat",
+    "bikin",
+    "tambah",
+    "tambahkan",
+    "create",
+    "add",
+    "new",
+    "make",
 ];
 const CREATE_SKIP: &[&str] = &["baru", "new", "untuk", "to"];
 const LIST_VERBS: &[&str] = &["daftar", "lihat", "tampilkan", "tunjukkan", "list", "show"];
@@ -153,10 +160,7 @@ fn match_create(tokens: &[Token]) -> Option<Result<VoiceCommand, VoiceError>> {
     let rest = strip_one(tokens, CREATE_VERBS)?;
     let rest = strip_one(rest, TASK_NOUNS)?;
     let rest = skip_words(rest, CREATE_SKIP);
-    Some(
-        non_empty_title(rest, "buat tugas")
-            .map(|title| VoiceCommand::CreateTask { title }),
-    )
+    Some(non_empty_title(rest, "buat tugas").map(|title| VoiceCommand::CreateTask { title }))
 }
 
 /// `daftar|lihat|tampilkan|show [semua] tugas|tasks`, with nothing after the noun.
@@ -181,10 +185,7 @@ fn match_complete(tokens: &[Token]) -> Option<Result<VoiceCommand, VoiceError>> 
     let rest = skip_words(rest, TASK_NOUNS);
     let rest = skip_words(rest, DONE_WORDS);
     let rest = trim_trailing(rest, DONE_WORDS);
-    Some(
-        non_empty_title(rest, "tandai selesai")
-            .map(|title| VoiceCommand::CompleteTask { title }),
-    )
+    Some(non_empty_title(rest, "tandai selesai").map(|title| VoiceCommand::CompleteTask { title }))
 }
 
 #[cfg(test)]

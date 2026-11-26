@@ -32,7 +32,12 @@ pub(super) async fn dispatch(
                 }
                 ScheduleMode::List => {
                     for job in &jobs {
-                        println!("{}	every {}s	{:?}", job.name, job.every.num_seconds(), job.action);
+                        println!(
+                            "{}	every {}s	{:?}",
+                            job.name,
+                            job.every.num_seconds(),
+                            job.action
+                        );
                     }
                 }
                 ScheduleMode::Run => {

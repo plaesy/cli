@@ -238,7 +238,7 @@ pub(super) enum Command {
         #[arg(long)]
         read_only: bool,
     },
-        /// First-run setup: vault folder, config.toml, model download, first index.
+    /// First-run setup: vault folder, config.toml, model download, first index.
     Onboard {
         /// Accept every default (needs --vault unless settings already exist).
         #[arg(short = 'y', long)]

@@ -11,8 +11,8 @@ use std::path::Path;
 use serde_json::Value as JsonValue;
 
 use super::chat_text::Lang;
-use crate::config::project::{config_path, legacy_settings_path};
 use crate::config::delegate::DelegateProviderConfig;
+use crate::config::project::{config_path, legacy_settings_path};
 
 /// A parsed `/model` argument.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -154,8 +154,8 @@ pub fn apply(
 
 /// Converts the text of an old `settings.json` into TOML, so the first save keeps every section.
 fn from_legacy_json(text: &str) -> Result<String, String> {
-    let value: JsonValue = serde_json::from_str(text)
-        .map_err(|err| format!("settings.json tidak valid: {err}"))?;
+    let value: JsonValue =
+        serde_json::from_str(text).map_err(|err| format!("settings.json tidak valid: {err}"))?;
     let table = toml::Value::try_from(value).map_err(|err| {
         format!("settings.json tidak bisa diubah ke TOML (mungkin ada null): {err}")
     })?;

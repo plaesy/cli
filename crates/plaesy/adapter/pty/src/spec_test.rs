@@ -55,7 +55,12 @@ fn default_term_size_is_valid() {
 fn term_size_bounds_are_inclusive() {
     let max = MAX_TERMINAL_DIMENSION;
     assert!(TermSize { rows: 1, cols: 1 }.validate().is_ok());
-    assert!(TermSize { rows: max, cols: max }.validate().is_ok());
+    assert!(TermSize {
+        rows: max,
+        cols: max
+    }
+    .validate()
+    .is_ok());
 }
 
 #[test]
@@ -64,8 +69,14 @@ fn zero_or_oversized_term_size_is_rejected() {
     let cases = [
         TermSize { rows: 0, cols: 80 },
         TermSize { rows: 24, cols: 0 },
-        TermSize { rows: max + 1, cols: 80 },
-        TermSize { rows: 24, cols: u16::MAX },
+        TermSize {
+            rows: max + 1,
+            cols: 80,
+        },
+        TermSize {
+            rows: 24,
+            cols: u16::MAX,
+        },
     ];
     for size in cases {
         assert!(
@@ -77,7 +88,11 @@ fn zero_or_oversized_term_size_is_rejected() {
 
 #[test]
 fn to_pty_size_carries_rows_and_cols() {
-    let size = TermSize { rows: 40, cols: 120 }.to_pty_size();
+    let size = TermSize {
+        rows: 40,
+        cols: 120,
+    }
+    .to_pty_size();
     assert_eq!((size.rows, size.cols), (40, 120));
     assert_eq!((size.pixel_width, size.pixel_height), (0, 0));
 }

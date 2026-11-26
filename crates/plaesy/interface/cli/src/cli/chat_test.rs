@@ -55,7 +55,10 @@ impl Provider for SequenceFake {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
-        self.seen.lock().expect("seen lock").push(req.prompt.clone());
+        self.seen
+            .lock()
+            .expect("seen lock")
+            .push(req.prompt.clone());
         let text = {
             let mut replies = self.replies.lock().expect("replies lock");
             if replies.is_empty() {
@@ -820,7 +823,11 @@ fn goal_is_shown_in_every_prompt_until_cleared() {
     assert!(out.contains("goal: tes unit"));
     assert!(out.contains("goal cleared"));
     let prompts = seen.lock().expect("seen").clone();
-    assert_eq!(prompts.len(), 3, "goal turn, goal judge, then the next message");
+    assert_eq!(
+        prompts.len(),
+        3,
+        "goal turn, goal judge, then the next message"
+    );
     assert!(prompts[0].contains("Goal sesi ini: tes unit"));
     assert!(prompts[1].contains("strict goal-completion judge"));
     assert!(!prompts[2].contains("Goal sesi ini"));
@@ -833,7 +840,11 @@ fn goal_with_an_objective_starts_work_on_it_at_once() {
 
     assert!(out.contains("goal: selesaikan pekerjaan"), "{out}");
     let prompts = seen.lock().expect("seen").clone();
-    assert!(prompts[0].contains("User: selesaikan pekerjaan"), "{}", prompts[0]);
+    assert!(
+        prompts[0].contains("User: selesaikan pekerjaan"),
+        "{}",
+        prompts[0]
+    );
     assert!(prompts[0].contains("Goal sesi ini: selesaikan pekerjaan"));
 }
 
@@ -849,11 +860,7 @@ fn an_incomplete_goal_continues_and_stops_when_the_judge_completes() {
         ]),
         seen: Arc::clone(&seen),
     };
-    let out = run_session(
-        Box::new(provider),
-        &no_open,
-        "/goal selesaikan pekerjaan\n",
-    );
+    let out = run_session(Box::new(provider), &no_open, "/goal selesaikan pekerjaan\n");
 
     assert!(out.contains("continuing automatically (1/3)"), "{out}");
     assert!(out.contains("goal complete: selesaikan pekerjaan"), "{out}");
@@ -1293,7 +1300,10 @@ fn split_model_reads_provider_at_model() {
 #[test]
 fn resume_and_learn_parse_their_arguments() {
     assert_eq!(parse_input("/resume"), Input::Resume(String::new()));
-    assert_eq!(parse_input("/resume delete chat-1.jsonl"), Input::Resume("delete chat-1.jsonl".to_owned()));
+    assert_eq!(
+        parse_input("/resume delete chat-1.jsonl"),
+        Input::Resume("delete chat-1.jsonl".to_owned())
+    );
     assert_eq!(parse_input("/learn"), Input::Learn(String::new()));
     assert_eq!(parse_input("/learn save"), Input::Learn("save".to_owned()));
 }

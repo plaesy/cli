@@ -11,12 +11,12 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use ratatui::Frame;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Paragraph};
+use ratatui::Frame;
 
 use super::chat::{BLOCK_FENCE, CONTEXT_WINDOW_TOKENS, STATE_MARK, TURN_MARK, USAGE_MARK};
 use super::chat_text::Lang;
@@ -282,14 +282,38 @@ pub const COMMANDS: &[(&str, &str, &str)] = &[
     ("/goal", "set the session goal", "atur goal sesi"),
     ("/compact", "summarize the history", "ringkas riwayat"),
     ("/context", "show the context size", "lihat ukuran konteks"),
-    ("/undo", "undo the last file write", "batalkan tulisan file terakhir"),
+    (
+        "/undo",
+        "undo the last file write",
+        "batalkan tulisan file terakhir",
+    ),
     ("/todo", "keep a session checklist", "daftar tugas sesi"),
     ("/find", "search the saved chats", "cari di chat tersimpan"),
-    ("/skill", "load a skill into this session", "muat skill ke sesi ini"),
-    ("/model", "show the provider and model in use", "lihat provider dan model yang dipakai"),
-    ("/subagent", "run a task in its own git worktree", "jalankan tugas di worktree git sendiri"),
-    ("/resume", "continue, list or delete saved chats", "lanjutkan, daftar, atau hapus chat tersimpan"),
-    ("/learn", "propose lessons and a skill from this chat", "usulkan pelajaran dan skill dari chat ini"),
+    (
+        "/skill",
+        "load a skill into this session",
+        "muat skill ke sesi ini",
+    ),
+    (
+        "/model",
+        "show the provider and model in use",
+        "lihat provider dan model yang dipakai",
+    ),
+    (
+        "/subagent",
+        "run a task in its own git worktree",
+        "jalankan tugas di worktree git sendiri",
+    ),
+    (
+        "/resume",
+        "continue, list or delete saved chats",
+        "lanjutkan, daftar, atau hapus chat tersimpan",
+    ),
+    (
+        "/learn",
+        "propose lessons and a skill from this chat",
+        "usulkan pelajaran dan skill dari chat ini",
+    ),
     ("/advisor", "ask the advisor", "minta review advisor"),
     ("/council", "ask every provider", "tanya semua provider"),
     (

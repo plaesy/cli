@@ -42,7 +42,10 @@ pub enum ChatWebhookError {
     Config(String),
     /// URL target ditolak. Alasan berupa teks tetap, tanpa isi URL.
     #[error("URL webhook \"{target}\" ditolak: {reason}")]
-    InvalidUrl { target: String, reason: &'static str },
+    InvalidUrl {
+        target: String,
+        reason: &'static str,
+    },
     /// Variabel lingkungan untuk header otentikasi tidak ada atau kosong.
     #[error("variabel lingkungan \"{var}\" untuk target \"{target}\" kosong atau tidak ada")]
     MissingEnv { target: String, var: String },
@@ -177,13 +180,17 @@ impl ChatMessage {
                 b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'.' | b'_' | b'-')
             });
         if !event_ok {
-            return Err(ChatWebhookError::InvalidMessage("event harus huruf kecil, angka, . _ -"));
+            return Err(ChatWebhookError::InvalidMessage(
+                "event harus huruf kecil, angka, . _ -",
+            ));
         }
         if title.trim().is_empty() {
             return Err(ChatWebhookError::InvalidMessage("judul kosong"));
         }
         if title.contains(['\n', '\r']) {
-            return Err(ChatWebhookError::InvalidMessage("judul tidak boleh memuat baris baru"));
+            return Err(ChatWebhookError::InvalidMessage(
+                "judul tidak boleh memuat baris baru",
+            ));
         }
         Ok(Self { event, title, body })
     }
@@ -219,10 +226,7 @@ fn check_url(raw: &str) -> Result<(), &'static str> {
     } else {
         return Err("skema harus https, atau http untuk loopback");
     };
-    let authority = rest
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or("");
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
     if authority.is_empty() || authority.contains('@') {
         return Err("host kosong atau memuat userinfo");
     }
@@ -257,10 +261,8 @@ fn check_url(raw: &str) -> Result<(), &'static str> {
         {
             return Err("nama host tidak valid");
         }
-        let loopback = host == "localhost"
-            || host
-                .parse::<Ipv4Addr>()
-                .is_ok_and(|ip| ip.is_loopback());
+        let loopback =
+            host == "localhost" || host.parse::<Ipv4Addr>().is_ok_and(|ip| ip.is_loopback());
         (host, port, loopback)
     };
 
@@ -295,7 +297,9 @@ fn validate_name(name: &str) -> Result<(), ChatWebhookError> {
 fn validate_header_name(header: &str) -> Result<(), ChatWebhookError> {
     let ok = !header.is_empty()
         && header.len() <= MAX_NAME_BYTES
-        && header.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
+        && header
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-');
     if !ok {
         return Err(ChatWebhookError::Config(
             "nama header hanya boleh huruf, angka, dan '-'".to_string(),
