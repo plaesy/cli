@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -163,6 +164,72 @@ pub struct Issue {
     /// Optional milestone name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub milestone: Option<String>,
+    /// Optional planned start date (`YYYY-MM-DD`). Must not be after `due_date`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<NaiveDate>,
+    /// Optional due date (`YYYY-MM-DD`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub due_date: Option<NaiveDate>,
+    /// Optional planned effort in minutes. Must be above zero when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estimate_minutes: Option<u32>,
+    /// Logged work, in the order it was recorded.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub time_entries: Vec<TimeEntry>,
+}
+
+/// One logged block of work on an issue.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TimeEntry {
+    /// Day the work was done (`YYYY-MM-DD`).
+    pub date: NaiveDate,
+    /// Length of the entry in minutes. Must be above zero.
+    pub minutes: u32,
+    /// Optional note describing the work.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// Parses a duration such as `90m`, `2h`, or `1h30m` into whole minutes.
+///
+/// Only lowercase `h` and `m` units are accepted, in that order, with no spaces. Zero is rejected.
+pub fn parse_duration_minutes(text: &str) -> Result<u32, String> {
+    let invalid = || format!("duration {text:?} must look like 90m, 2h, or 1h30m");
+    // `str::parse` accepts a leading `+`, so reject anything outside digits and the two units first.
+    if !text.bytes().all(|b| b.is_ascii_digit() || b == b'h' || b == b'm') {
+        return Err(invalid());
+    }
+    let mut rest = text;
+    let mut total: u32 = 0;
+    let mut has_unit = false;
+    if let Some(index) = rest.find('h') {
+        let hours: u32 = rest[..index].parse().map_err(|_| invalid())?;
+        total = hours.checked_mul(60).ok_or_else(invalid)?;
+        rest = &rest[index + 1..];
+        has_unit = true;
+    }
+    if let Some(number) = rest.strip_suffix('m') {
+        let minutes: u32 = number.parse().map_err(|_| invalid())?;
+        total = total.checked_add(minutes).ok_or_else(invalid)?;
+        rest = "";
+        has_unit = true;
+    }
+    if !rest.is_empty() || !has_unit {
+        return Err(invalid());
+    }
+    if total == 0 {
+        return Err(format!("duration {text:?} must be longer than zero"));
+    }
+    Ok(total)
+}
+
+/// Formats whole minutes in the same form `parse_duration_minutes` accepts.
+pub fn format_minutes(minutes: u64) -> String {
+    match (minutes / 60, minutes % 60) {
+        (0, m) => format!("{m}m"),
+        (h, 0) => format!("{h}h"),
+        (h, m) => format!("{h}h{m}m"),
+    }
 }
 
 /// Longest accepted label, counted in characters.
@@ -209,6 +276,14 @@ fn default_status() -> Status {
 }
 
 impl Issue {
+    /// Total logged minutes across all time entries.
+    pub fn spent_minutes(&self) -> u64 {
+        self.time_entries
+            .iter()
+            .map(|entry| u64::from(entry.minutes))
+            .sum()
+    }
+
     /// Adds a validated label, keeping insertion order. Returns `false` if it was already present.
     pub fn add_label(&mut self, label: &str) -> Result<bool, LabelError> {
         validate_label(label)?;
@@ -281,6 +356,10 @@ impl Issue {
             labels: Vec::new(),
             assignee: None,
             milestone: None,
+            start_date: None,
+            due_date: None,
+            estimate_minutes: None,
+            time_entries: Vec::new(),
         })
     }
 
@@ -300,6 +379,17 @@ impl Issue {
             if !["issue", "story", "bug", "epic", "task", "subtask"].contains(&issue.kind.as_str())
             {
                 problems.push(format!("{id}: unknown type {:?}", issue.kind));
+            }
+            if let (Some(start), Some(due)) = (issue.start_date, issue.due_date) {
+                if start > due {
+                    problems.push(format!("{id}: start date {start} is after due date {due}"));
+                }
+            }
+            if issue.estimate_minutes == Some(0) {
+                problems.push(format!("{id}: estimate must be longer than zero"));
+            }
+            if issue.time_entries.iter().any(|entry| entry.minutes == 0) {
+                problems.push(format!("{id}: time entry must be longer than zero"));
             }
             let unique_labels: BTreeSet<_> = issue.labels.iter().collect();
             if unique_labels.len() != issue.labels.len() {

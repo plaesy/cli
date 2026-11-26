@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
+use chrono::NaiveDate;
+
 use super::CliResult;
 use crate::tasks::{self, issue::Issue, Status};
 
@@ -72,6 +74,21 @@ pub struct Args {
     /// Show dependency details and derived blocked/ready state
     #[arg(long)]
     pub dependencies: bool,
+    /// Show issues whose due date is on or before this date (YYYY-MM-DD)
+    #[arg(long = "due-before")]
+    pub due_before: Option<String>,
+    /// Show issues past their due date that are not done
+    #[arg(long)]
+    pub overdue: bool,
+    /// Show issues whose ID or title contains this text (ignores case)
+    #[arg(long)]
+    pub search: Option<String>,
+}
+
+/// True when the issue ID or title contains `needle`, ignoring case.
+fn matches_search(id: &str, title: &str, needle: &str) -> bool {
+    let needle = needle.to_lowercase();
+    id.to_lowercase().contains(&needle) || title.to_lowercase().contains(&needle)
 }
 
 #[derive(Debug, clap::Args)]
@@ -107,6 +124,46 @@ pub struct UpdateArgs {
     pub milestone: Option<String>,
     #[arg(long)]
     pub clear_milestone: bool,
+    /// Set start date (YYYY-MM-DD); use --clear-start to remove it
+    #[arg(long, conflicts_with = "clear_start")]
+    pub start: Option<String>,
+    #[arg(long)]
+    pub clear_start: bool,
+    /// Set due date (YYYY-MM-DD); use --clear-due to remove it
+    #[arg(long, conflicts_with = "clear_due")]
+    pub due: Option<String>,
+    #[arg(long)]
+    pub clear_due: bool,
+    /// Set planned effort (e.g. 90m, 2h, 1h30m); use --clear-estimate to remove it
+    #[arg(long, conflicts_with = "clear_estimate")]
+    pub estimate: Option<String>,
+    #[arg(long)]
+    pub clear_estimate: bool,
+}
+
+/// Parses a `YYYY-MM-DD` date argument, naming the flag in the error.
+fn parse_date(field: &str, value: &str) -> Result<NaiveDate, String> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| format!("{field} must be a date in YYYY-MM-DD form: {value:?}"))
+}
+
+/// True when an issue passes the due-date filters. `today` is passed in so tests can fix it.
+fn matches_due(
+    issue: &Issue,
+    status: Status,
+    due_before: Option<NaiveDate>,
+    overdue: bool,
+    today: NaiveDate,
+) -> bool {
+    if let Some(limit) = due_before {
+        if !issue.due_date.is_some_and(|due| due <= limit) {
+            return false;
+        }
+    }
+    if overdue && (status == Status::Done || !issue.due_date.is_some_and(|due| due < today)) {
+        return false;
+    }
+    true
 }
 
 /// Update only explicitly supplied metadata and validate the whole collection atomically.
@@ -127,6 +184,21 @@ pub fn update(args: &UpdateArgs, tasks_dir: &Path) -> CliResult {
         return Err("duplicate labels".into());
     }
 
+    let start = args
+        .start
+        .as_deref()
+        .map(|value| parse_date("start date", value))
+        .transpose()?;
+    let due = args
+        .due
+        .as_deref()
+        .map(|value| parse_date("due date", value))
+        .transpose()?;
+    let estimate = args
+        .estimate
+        .as_deref()
+        .map(|value| tasks::issue::parse_duration_minutes(value).map_err(|error| format!("estimate: {error}")))
+        .transpose()?;
     let graph_lock = tasks::issue::IssueGraphLock::acquire(tasks_dir)?;
     let mut issues = Issue::load_collection(tasks_dir)?;
     let mut issue = issues
@@ -159,6 +231,21 @@ pub fn update(args: &UpdateArgs, tasks_dir: &Path) -> CliResult {
         issue.milestone = None;
     } else if let Some(value) = &args.milestone {
         issue.milestone = Some(value.clone());
+    }
+    if args.clear_start {
+        issue.start_date = None;
+    } else if let Some(value) = start {
+        issue.start_date = Some(value);
+    }
+    if args.clear_due {
+        issue.due_date = None;
+    } else if let Some(value) = due {
+        issue.due_date = Some(value);
+    }
+    if args.clear_estimate {
+        issue.estimate_minutes = None;
+    } else if let Some(value) = estimate {
+        issue.estimate_minutes = Some(value);
     }
     save_validated(&graph_lock, tasks_dir, &issue)?;
     println!("[✓] Updated issue {}", issue.id);
@@ -222,6 +309,19 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
     for label in &args.labels {
         tasks::issue::validate_label(label)?;
     }
+    let due_before = args
+        .due_before
+        .as_deref()
+        .map(|value| parse_date("--due-before", value))
+        .transpose()?;
+    if args
+        .search
+        .as_deref()
+        .is_some_and(|needle| needle.trim().is_empty())
+    {
+        return Err("--search cannot be empty".into());
+    }
+    let today = chrono::Local::now().date_naive();
     let issues = Issue::load_collection(tasks_dir)?;
     let problems = Issue::validate_collection(tasks_dir)?;
     if !problems.is_empty() {
@@ -243,9 +343,19 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
         .filter(|(task, _, _)| task.status == Status::Done)
         .map(|(_, issue, _)| issue.id.clone())
         .collect();
-    println!("TYPE     STATUS     PRIORITY   ASSIGNEE     MILESTONE    LABELS      TITLE");
+    println!("TYPE     STATUS     PRIORITY   ASSIGNEE     MILESTONE    DUE        LABELS      TITLE");
     let mut count = 0;
     for (task, issue, frontmatter) in records {
+        if !matches_due(&issue, task.status, due_before, args.overdue, today) {
+            continue;
+        }
+        if args
+            .search
+            .as_deref()
+            .is_some_and(|needle| !matches_search(&issue.id, &task.title, needle))
+        {
+            continue;
+        }
         if args
             .spec
             .as_ref()
@@ -269,12 +379,13 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
         }
         count += 1;
         println!(
-            "{:<8} {:<10} {:<10} {:<12} {:<12} {:<11} {}",
+            "{:<8} {:<10} {:<10} {:<12} {:<12} {:<10} {:<11} {}",
             issue.kind,
             task.status,
             task.name.split('_').next().unwrap_or(""),
             issue.assignee.as_deref().unwrap_or("-"),
             issue.milestone.as_deref().unwrap_or("-"),
+            issue.due_date.map_or("-".to_owned(), |due| due.to_string()),
             issue.labels.join(","),
             task.title
         );

@@ -3,6 +3,47 @@
 
 use super::*;
 use crate::tasks::tasks_dir;
+use chrono::NaiveDate;
+
+#[test]
+fn metadata_without_date_fields_still_loads_and_writes_no_date_keys() {
+    let legacy = r#"{"id":"a","type":"task","labels":["keep"],"assignee":"owner"}"#;
+    let issue: Issue = serde_json::from_str(legacy).unwrap();
+    assert_eq!(issue.start_date, None);
+    assert_eq!(issue.due_date, None);
+    assert_eq!(issue.labels, vec!["keep"]);
+    let text = serde_json::to_string(&issue).unwrap();
+    assert!(!text.contains("start_date"));
+    assert!(!text.contains("due_date"));
+}
+
+#[test]
+fn duration_accepts_minutes_hours_and_both() {
+    assert_eq!(parse_duration_minutes("90m"), Ok(90));
+    assert_eq!(parse_duration_minutes("2h"), Ok(120));
+    assert_eq!(parse_duration_minutes("1h30m"), Ok(90));
+    assert_eq!(format_minutes(90), "1h30m");
+    assert_eq!(format_minutes(120), "2h");
+    assert_eq!(format_minutes(45), "45m");
+    assert_eq!(format_minutes(0), "0m");
+}
+
+#[test]
+fn duration_rejects_zero_units_order_and_loose_text() {
+    for bad in ["", "0m", "0h", "h", "m", "30", "1h30", "30m1h", "1h 30m", "1.5h", "-1h", "+5m"] {
+        assert!(parse_duration_minutes(bad).is_err(), "accepted {bad:?}");
+    }
+}
+
+#[test]
+fn metadata_round_trips_iso_dates() {
+    let text = r#"{"id":"a","type":"task","start_date":"2026-03-01","due_date":"2026-03-10"}"#;
+    let issue: Issue = serde_json::from_str(text).unwrap();
+    assert_eq!(issue.start_date, NaiveDate::from_ymd_opt(2026, 3, 1));
+    assert_eq!(issue.due_date, NaiveDate::from_ymd_opt(2026, 3, 10));
+    let out = serde_json::to_string(&issue).unwrap();
+    assert!(out.contains("\"due_date\":\"2026-03-10\""));
+}
 
 #[cfg(target_os = "linux")]
 #[test]
@@ -177,6 +218,10 @@ fn issue(id: &str, parent: Option<&str>, depends_on: &[&str]) -> Issue {
         labels: vec![],
         assignee: None,
         milestone: None,
+        start_date: None,
+        due_date: None,
+        estimate_minutes: None,
+        time_entries: Vec::new(),
     }
 }
 
