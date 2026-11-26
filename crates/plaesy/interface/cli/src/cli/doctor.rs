@@ -1,11 +1,14 @@
 //! `plaesy doctor`: health checks for the local install and memory vault, the reach platforms,
 //! and the delegate providers.
 //!
-//! The local checks (binary version, vault, orphaned daemon lock, free disk space) work offline.
-//! Each check is a pure `check_*` function over observed state, so tests need no filesystem; the
-//! `probe_*` functions gather that state.
+//! The local checks (binary version, vault, orphaned daemon lock, free disk space, git, tmux) work
+//! offline. The git and tmux checks only look up and run those tools on `PATH`; tmux is optional
+//! and never fails the run. Each check is a pure `check_*` function over observed state, so tests
+//! need no filesystem; the `probe_*` functions gather that state.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -28,8 +31,8 @@ const ORPHAN_LOCK_AGE: Duration = Duration::from_secs(15);
 const MIN_FREE_BYTES: u64 = 1024 * 1024 * 1024;
 const MIB: u64 = 1024 * 1024;
 
-/// Health checks for the local install and memory vault, the reach platforms, and the delegate
-/// providers. A failed check exits with status 1.
+/// Health checks for the local install and memory vault, git and tmux on `PATH`, the reach
+/// platforms, and the delegate providers. A failed check exits with status 1.
 #[derive(Debug, clap::Args)]
 pub struct Args {
     /// Specific platform to check (web, github, youtube, etc.)
@@ -190,6 +193,95 @@ pub(crate) fn check_disk_space(probe: Result<u64, String>, minimum: u64) -> Chec
     }
 }
 
+/// Whether an external tool was found on `PATH`, and what its version command reported.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ToolState {
+    /// No file with the tool's name is in any `PATH` directory.
+    Missing,
+    /// The file was found, but its version command failed or printed nothing.
+    Broken(String),
+    /// The version command succeeded; the text is its first non-empty output line.
+    Found(String),
+}
+
+/// File names that count as the tool `name` on this platform.
+fn tool_file_names(name: &str) -> Vec<String> {
+    if cfg!(windows) {
+        vec![format!("{name}.exe")]
+    } else {
+        vec![name.to_string()]
+    }
+}
+
+/// Finds the first file for `name` in the directories of `path_var`, which uses the platform's
+/// `PATH` syntax. Empty entries are skipped, so an empty `PATH` never resolves against the
+/// working directory.
+pub(crate) fn find_on_path(name: &str, path_var: &OsStr) -> Option<PathBuf> {
+    let files = tool_file_names(name);
+    std::env::split_paths(path_var)
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .find_map(|dir| {
+            files
+                .iter()
+                .map(|file| dir.join(file))
+                .find(|candidate| candidate.is_file())
+        })
+}
+
+/// Looks up `name` on `path_var` and runs it with `version_arg` to read its version.
+pub(crate) fn probe_tool(name: &str, version_arg: &str, path_var: &OsStr) -> ToolState {
+    let Some(path) = find_on_path(name, path_var) else {
+        return ToolState::Missing;
+    };
+    match Command::new(&path)
+        .arg(version_arg)
+        .stdin(Stdio::null())
+        .output()
+    {
+        Err(e) => ToolState::Broken(e.to_string()),
+        Ok(out) if !out.status.success() => {
+            ToolState::Broken(format!("`{name} {version_arg}` exited with {}", out.status))
+        }
+        Ok(out) => {
+            let text = String::from_utf8_lossy(&out.stdout);
+            match text.lines().map(str::trim).find(|line| !line.is_empty()) {
+                Some(line) => ToolState::Found(line.to_string()),
+                None => ToolState::Broken(format!("`{name} {version_arg}` printed no version")),
+            }
+        }
+    }
+}
+
+/// git is required for the local workflows, so a missing or broken git fails the run.
+pub(crate) fn check_git(state: &ToolState) -> Check {
+    const LABEL: &str = "git";
+    match state {
+        ToolState::Missing => Check::new(LABEL, Status::Fail, "not found on PATH"),
+        ToolState::Broken(e) => {
+            Check::new(LABEL, Status::Fail, format!("found but not runnable: {e}"))
+        }
+        ToolState::Found(version) => Check::new(LABEL, Status::Pass, version.clone()),
+    }
+}
+
+/// tmux is optional and never fails the run: plaesy does not use it, so `supported` is false off
+/// Unix (where it is not applicable), and a missing or broken tmux is reported as a skip.
+pub(crate) fn check_tmux(state: &ToolState, supported: bool) -> Check {
+    const LABEL: &str = "tmux";
+    if !supported {
+        return Check::new(LABEL, Status::Skip, "not applicable on this platform");
+    }
+    match state {
+        ToolState::Missing => Check::new(LABEL, Status::Skip, "not found on PATH (optional)"),
+        ToolState::Broken(e) => Check::new(
+            LABEL,
+            Status::Skip,
+            format!("found but not runnable (optional): {e}"),
+        ),
+        ToolState::Found(version) => Check::new(LABEL, Status::Pass, version.clone()),
+    }
+}
+
 /// Resolves the vault folder from the effective memory configuration (no network, no writes).
 fn load_vault_path() -> Result<PathBuf, String> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -262,6 +354,16 @@ fn local_checks() -> Vec<Check> {
     };
     let free = crate::common::disk::available_bytes(&disk_dir).map_err(|e| e.to_string());
     checks.push(check_disk_space(free, MIN_FREE_BYTES));
+
+    // Only PATH is read here; tmux is probed on Unix alone, so other platforms spawn nothing.
+    let path_var = std::env::var_os("PATH").unwrap_or_default();
+    checks.push(check_git(&probe_tool("git", "--version", &path_var)));
+    let tmux = if cfg!(unix) {
+        probe_tool("tmux", "-V", &path_var)
+    } else {
+        ToolState::Missing
+    };
+    checks.push(check_tmux(&tmux, cfg!(unix)));
 
     checks
 }

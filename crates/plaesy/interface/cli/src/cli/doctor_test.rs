@@ -2,6 +2,7 @@
 //! Each check has a failing case; assertions use the status, not the message text.
 
 use super::*;
+use std::ffi::OsStr;
 use std::path::Path;
 use std::time::Duration;
 
@@ -196,4 +197,86 @@ fn available_bytes_reports_space_for_existing_directory() {
     let dir = tempfile::tempdir().unwrap();
     let free = crate::common::disk::available_bytes(dir.path()).unwrap();
     assert!(free > 0);
+}
+
+// ---- git and tmux on PATH ----
+
+#[test]
+fn git_check_fails_when_missing() {
+    assert_eq!(check_git(&ToolState::Missing).status, Status::Fail);
+}
+
+#[test]
+fn git_check_fails_when_broken() {
+    let state = ToolState::Broken("exec format error".into());
+    assert_eq!(check_git(&state).status, Status::Fail);
+}
+
+#[test]
+fn git_check_passes_with_version() {
+    let state = ToolState::Found("git version 2.45.1".into());
+    let check = check_git(&state);
+    assert_eq!(check.status, Status::Pass);
+    assert_eq!(check.detail, "git version 2.45.1");
+}
+
+#[test]
+fn tmux_check_skips_when_unsupported_even_if_found() {
+    let state = ToolState::Found("tmux 3.4".into());
+    assert_eq!(check_tmux(&state, false).status, Status::Skip);
+    assert_eq!(check_tmux(&ToolState::Missing, false).status, Status::Skip);
+}
+
+#[test]
+fn tmux_check_skips_when_missing_or_broken() {
+    assert_eq!(check_tmux(&ToolState::Missing, true).status, Status::Skip);
+    let broken = ToolState::Broken("exited with 1".into());
+    assert_eq!(check_tmux(&broken, true).status, Status::Skip);
+}
+
+#[test]
+fn tmux_check_passes_with_version() {
+    let state = ToolState::Found("tmux 3.4".into());
+    assert_eq!(check_tmux(&state, true).status, Status::Pass);
+}
+
+#[test]
+fn find_on_path_returns_none_for_empty_path() {
+    assert!(find_on_path("git", OsStr::new("")).is_none());
+}
+
+#[test]
+fn find_on_path_returns_none_when_file_is_absent() {
+    let dir = tempfile::tempdir().unwrap();
+    assert!(find_on_path("git", dir.path().as_os_str()).is_none());
+}
+
+#[test]
+fn find_on_path_finds_platform_file_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = if cfg!(windows) { "git.exe" } else { "git" };
+    std::fs::write(dir.path().join(file), "x").unwrap();
+    let found = find_on_path("git", dir.path().as_os_str());
+    assert_eq!(found, Some(dir.path().join(file)));
+}
+
+#[test]
+fn probe_tool_reports_missing_for_empty_path() {
+    assert_eq!(
+        probe_tool("git", "--version", OsStr::new("")),
+        ToolState::Missing
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn probe_tool_reads_version_from_fake_path() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::tempdir().unwrap();
+    let script = dir.path().join("git");
+    std::fs::write(&script, "#!/bin/sh\necho 'git version 9.9.9'\n").unwrap();
+    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let state = probe_tool("git", "--version", dir.path().as_os_str());
+    assert_eq!(state, ToolState::Found("git version 9.9.9".into()));
 }
