@@ -37,6 +37,7 @@ pub mod import_cmd;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
+pub mod agent_http;
 pub mod agent_task;
 pub mod gateway;
 pub mod mcp;
