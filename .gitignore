@@ -30,6 +30,10 @@ dist
 .plaesy/receipts/
 .plaesy/analysis/
 
+# Chat transcripts and turn traces hold message text: machine-local.
+.plaesy/chats/
+.plaesy/trace.jsonl
+
 # Local tool caches and sync markers (machine-local).
 .pytest_cache/
 .stfolder/

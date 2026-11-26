@@ -83,7 +83,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 ### Fixed
 
 - `plaesy chat --tui` no longer counts a line as still pending when a command such as `/compact` with an empty transcript skips the end of the turn loop.
-- A model chain (`fallback_models`) passes streaming and message calls to each model. Before, only `complete` was forwarded, so chat skipped the chain's models.
+- A model chain (`fallback_models`) passes streaming and message calls to each model. Before, only `complete` was forwarded, so chat fell back to one flattened, non-streamed call per model.
+- `claude-cli` returns the answer text, not the raw `stream-json` lines, for `delegate`, the goal judge, tool turns, `/compact`, and `/advisor`. Before, those callers received the whole JSON stream as the reply.
+- `plaesy chat --tui` counts one turn mark per user line. A `/goal` run that continues automatically no longer closes the line early, so the status stays busy until the goal ends.
 - `plaesy memory serve` now reclaims a daemon lock left behind by a killed process. Before, it waited 30 seconds on that lock and then failed, so MCP clients timed out.
 - `plaesy mcp memory start|stop|status|uninstall` now fail with a clear message instead of a build error; the background memory service is not available in this build, so use `plaesy mcp memory serve` in the foreground.
 

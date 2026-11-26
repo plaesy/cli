@@ -919,14 +919,21 @@ pub fn converse(
             "{GOAL_CONTINUATION_PREFIX}Resume the active session goal. Inspect the current state, take the next concrete action, and report evidence."
         ));
     }
-    // Each line taken from the queue ends with one TURN_MARK, written at the top of the next pass.
-    // A handler that skips the end of the loop with `continue` still closes its line this way.
+    // Each user line ends with one TURN_MARK, written at the top of the next pass, once its goal
+    // continuations (synthetic lines) have all run. A handler that skips the end of the loop with
+    // `continue` still closes its line this way.
     let mut awaiting_mark = false;
     loop {
-        if std::mem::take(&mut awaiting_mark) && settings.turn_marks {
-            write_context(out, transcript.estimated_tokens())?;
-            out.write_all(&[TURN_MARK])?;
-            out.flush()?;
+        let continuation_queued = queue
+            .front()
+            .is_some_and(|line| line.starts_with(GOAL_CONTINUATION_PREFIX));
+        if awaiting_mark && !continuation_queued {
+            awaiting_mark = false;
+            if settings.turn_marks {
+                write_context(out, transcript.estimated_tokens())?;
+                out.write_all(&[TURN_MARK])?;
+                out.flush()?;
+            }
         }
         if queue.is_empty() {
             match receiver.recv() {
@@ -961,7 +968,11 @@ pub fn converse(
                 line = stripped.to_owned();
             }
         }
-        awaiting_mark = true;
+        // A synthetic continuation belongs to the user line that started the chain, so it does not
+        // close one of its own.
+        if !automatic_goal_turn {
+            awaiting_mark = true;
+        }
         if waiting > 0 {
             writeln!(out, "{}", chat_text::queued(lang, waiting))?;
         }

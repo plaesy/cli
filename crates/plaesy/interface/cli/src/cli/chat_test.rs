@@ -1297,3 +1297,57 @@ fn resume_and_learn_parse_their_arguments() {
     assert_eq!(parse_input("/learn"), Input::Learn(String::new()));
     assert_eq!(parse_input("/learn save"), Input::Learn("save".to_owned()));
 }
+
+#[test]
+fn a_goal_chain_closes_its_user_line_with_one_turn_mark() {
+    // The TUI counts one pending line per submit; the continuations must not close it early.
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let provider = SequenceFake {
+        replies: Mutex::new(vec![
+            "first attempt".to_owned(),
+            "CONTINUE".to_owned(),
+            "second attempt".to_owned(),
+            "COMPLETE".to_owned(),
+        ]),
+        seen: Arc::clone(&seen),
+    };
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles: Vec::new(),
+        role: String::new(),
+        skills_dir: PathBuf::from("."),
+        tools: None,
+        chats_dir: None,
+        resume: None,
+        learn: false,
+        plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
+        peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
+        lsp_servers: Vec::new(),
+        turn_marks: true,
+        providers: Vec::new(),
+    };
+    let mut out = Vec::new();
+    converse(
+        Box::new(provider),
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &MemoryStore::default(),
+        settings,
+        Cursor::new("/goal selesaikan pekerjaan\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let marks = out.iter().filter(|byte| **byte == TURN_MARK).count();
+    assert_eq!(marks, 1, "output: {}", String::from_utf8_lossy(&out));
+    assert_eq!(seen.lock().expect("seen lock").len(), 4);
+}
