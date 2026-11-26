@@ -38,6 +38,7 @@ pub mod init;
 pub mod install;
 pub mod loop_cmd;
 pub mod agent_http;
+pub mod agent_serve;
 pub mod agent_task;
 pub mod gateway;
 pub mod mcp;
@@ -101,6 +102,8 @@ pub enum Command {
     Remote(remote::Args),
     /// Local message gateway: poll the relay for one agent and print each new message.
     Gateway(gateway::Args),
+    /// Agent-to-agent protocol on loopback (`plaesy agent serve`).
+    Agent(agent_serve::AgentArgs),
     /// Install the plaesy CLI to a well-known bin directory
     Install,
     /// Remove the installed plaesy binary and PATH entry while preserving user data
@@ -216,6 +219,7 @@ impl Command {
             Self::Voice(_) => "voice",
             Self::Remote(_) => "remote",
             Self::Gateway(_) => "gateway",
+            Self::Agent(_) => "agent",
             // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
@@ -277,6 +281,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Mcp(args) => mcp::run(&args),
         Command::Remote(args) => remote::run(&args),
         Command::Gateway(args) => gateway::run(&args),
+        Command::Agent(args) => agent_serve::run_agent(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
         Command::Repair => install::repair(),
