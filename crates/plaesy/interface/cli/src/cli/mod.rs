@@ -42,6 +42,7 @@ pub mod init;
 pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
+pub mod notify;
 pub mod memory;
 pub mod openapi_cmd;
 pub mod output;
@@ -104,6 +105,8 @@ pub enum Command {
     Gateway(gateway::Args),
     /// Agent-to-agent protocol on loopback (`plaesy agent serve`).
     Agent(agent_serve::AgentArgs),
+    /// Durable local notifications: input needed, ready to merge, merged, closed
+    Notify(notify::Args),
     /// Install the plaesy CLI to a well-known bin directory
     Install,
     /// Remove the installed plaesy binary and PATH entry while preserving user data
@@ -220,6 +223,7 @@ impl Command {
             Self::Remote(_) => "remote",
             Self::Gateway(_) => "gateway",
             Self::Agent(_) => "agent",
+            Self::Notify(_) => "notify",
             // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
@@ -282,6 +286,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Remote(args) => remote::run(&args),
         Command::Gateway(args) => gateway::run(&args),
         Command::Agent(args) => agent_serve::run_agent(&args),
+        Command::Notify(args) => notify::run(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
         Command::Repair => install::repair(),
