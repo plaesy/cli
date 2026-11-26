@@ -188,17 +188,17 @@ Connection: close
     })
     .ok();
     let started = Instant::now();
+    // Compares the whole payload, not only the state, so a new question in the same state is sent.
     let mut last: Option<String> = None;
     loop {
-        let state = match store.lock() {
-            Ok(guard) => guard.task_state(sender, id),
+        let view = match store.lock() {
+            Ok(guard) => guard.task_view(sender, id),
             Err(_) => return Ok(()),
         };
-        match state {
-            Ok(Some(state)) => {
-                let name = state.as_str();
-                if last.as_deref() != Some(name) {
-                    let data = serde_json::json!({ "id": id, "from": sender, "state": name });
+        match view {
+            Ok(Some(view)) => {
+                let data = agent_http::task_json(id, sender, &view).to_string();
+                if last.as_deref() != Some(data.as_str()) {
                     write!(
                         stream,
                         "event: task
@@ -207,9 +207,9 @@ data: {data}
 "
                     )?;
                     stream.flush()?;
-                    last = Some(name.to_owned());
+                    last = Some(data);
                 }
-                if state.is_terminal() {
+                if view.state.is_terminal() {
                     return Ok(());
                 }
             }

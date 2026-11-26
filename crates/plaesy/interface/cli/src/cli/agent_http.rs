@@ -5,12 +5,16 @@
 //! - `POST /message:send` with `{"id","from","to","text"}` opens a task and queues the message.
 //! - `GET /tasks/{from}/{id}` returns the task state.
 //! - `POST /tasks/{from}/{id}:cancel` moves the task to `canceled` when the state allows it.
+//! - `POST /tasks/{from}/{id}:input` with `{"text"}` answers a task that is `input-required`.
 //! - `GET /.well-known/agent.json` returns the Agent Card: name, description, version, capabilities, skills.
+//!
+//! A worker asks for input through the store (`MessageStore::request_input`), which needs the lease
+//! token from a claim. No HTTP route raises `input-required`, because claims are not exposed over HTTP.
 //!
 //! Replies are `(status, json body)`. Nothing here reads files or environment variables; the card's
 //! version comes from the build-time `CARGO_PKG_VERSION`.
 
-use plaesy_adapter_relay::relay::{MessageError, MessageStore};
+use plaesy_adapter_relay::relay::{MessageError, MessageStore, TaskView};
 use plaesy_adapter_relay::task::TaskState;
 use serde_json::{json, Value};
 
@@ -29,10 +33,15 @@ pub fn route(store: &mut MessageStore, method: &str, path: &str, body: &[u8]) ->
             Some((sender, id)) => get_task(store, &sender, &id),
             None => error(404, "not found"),
         },
-        ("POST", _) => match parse_cancel_path(path) {
-            Some((sender, id)) => cancel_task(store, &sender, &id),
-            None => error(404, "not found"),
-        },
+        ("POST", _) => {
+            if let Some((sender, id)) = parse_action_path(path, ":cancel") {
+                cancel_task(store, &sender, &id)
+            } else if let Some((sender, id)) = parse_action_path(path, ":input") {
+                answer_task(store, &sender, &id, body)
+            } else {
+                error(404, "not found")
+            }
+        }
         _ => error(405, "method not allowed"),
     }
 }
@@ -49,7 +58,7 @@ fn agent_card() -> (u16, String) {
             "cancel": true,
             "idempotentSend": true,
             "pushNotifications": false,
-            "inputRequired": false,
+            "inputRequired": true,
             "artifacts": false
         },
         "skills": [
@@ -72,6 +81,13 @@ fn agent_card() -> (u16, String) {
                 "name": "Cancel task",
                 "description": "Move a task to canceled when its state allows it. POST /tasks/{from}/{id}:cancel.",
                 "inputModes": [],
+                "outputModes": ["application/json"]
+            },
+            {
+                "id": "task.input",
+                "name": "Answer input request",
+                "description": "Answer a task that is input-required, which resumes it. POST /tasks/{from}/{id}:input with {\"text\"}.",
+                "inputModes": ["text"],
                 "outputModes": ["application/json"]
             }
         ]
@@ -105,18 +121,45 @@ fn send_message(store: &mut MessageStore, body: &[u8]) -> (u16, String) {
 }
 
 fn get_task(store: &MessageStore, sender: &str, id: &str) -> (u16, String) {
-    match store.task_state(sender, id) {
-        Ok(Some(state)) => (
-            200,
-            json!({ "id": id, "from": sender, "state": state.as_str() }).to_string(),
-        ),
+    match store.task_view(sender, id) {
+        Ok(Some(view)) => (200, task_json(id, sender, &view).to_string()),
         Ok(None) => error(404, "no such task"),
         Err(err) => map_error(err),
     }
 }
 
+/// Task JSON shared by `GET` and the SSE events. `prompt` appears only while the task is
+/// `input-required`, so the sender can read the question.
+pub fn task_json(id: &str, sender: &str, view: &TaskView) -> Value {
+    let mut value = json!({ "id": id, "from": sender, "state": view.state.as_str() });
+    if let Some(prompt) = &view.prompt {
+        value["prompt"] = json!(prompt);
+    }
+    value
+}
+
 fn cancel_task(store: &mut MessageStore, sender: &str, id: &str) -> (u16, String) {
     match store.set_task_state(sender, id, TaskState::Canceled) {
+        Ok(state) => (
+            200,
+            json!({ "id": id, "from": sender, "state": state.as_str() }).to_string(),
+        ),
+        Err(err) => map_error(err),
+    }
+}
+
+/// `:input` with `{"text"}`. Only a task in `input-required` accepts it; any other state is a 409.
+fn answer_task(store: &mut MessageStore, sender: &str, id: &str, body: &[u8]) -> (u16, String) {
+    let Ok(value) = serde_json::from_slice::<Value>(body) else {
+        return error(400, "body must be JSON");
+    };
+    let Some(text) = value.get("text").and_then(Value::as_str) else {
+        return error(400, "text is required");
+    };
+    if text.trim().is_empty() {
+        return error(400, "text must not be empty");
+    }
+    match store.provide_input(sender, id, text) {
         Ok(state) => (
             200,
             json!({ "id": id, "from": sender, "state": state.as_str() }).to_string(),
@@ -133,9 +176,9 @@ fn parse_task_path(path: &str) -> Option<(String, String)> {
         .then(|| (sender.to_owned(), id.to_owned()))
 }
 
-/// `/tasks/{from}/{id}:cancel`.
-fn parse_cancel_path(path: &str) -> Option<(String, String)> {
-    let trimmed = path.strip_suffix(":cancel")?;
+/// `/tasks/{from}/{id}{action}`, for an action such as `:cancel` or `:input`.
+fn parse_action_path(path: &str, action: &str) -> Option<(String, String)> {
+    let trimmed = path.strip_suffix(action)?;
     parse_task_path(trimmed)
 }
 
@@ -144,6 +187,7 @@ fn map_error(err: MessageError) -> (u16, String) {
         MessageError::TaskNotFound(_) => error(404, "no such task"),
         MessageError::TaskTransition(message) => error(409, &message),
         MessageError::IdempotencyConflict => error(409, "id already used with different content"),
+        MessageError::LeaseConflict => error(409, "message is not leased by this owner"),
         MessageError::Invalid(reason) => error(400, reason),
         _ => error(500, "storage error"),
     }

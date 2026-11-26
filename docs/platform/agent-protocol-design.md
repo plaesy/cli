@@ -21,6 +21,8 @@ Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah.
 - **Tugas**: `GET /tasks/{from}/{id}` mengembalikan `{ "id", "from", "state" }`. Tugas diidentifikasi oleh pengirim dan ID, bukan ID saja, karena ID hanya unik per pengirim.
 - **Push**: `GET /tasks/{from}/{id}/events` sebagai SSE, dengan event `task` setiap state berubah. Stream ditutup saat state terminal, dan `event: error` dikirim jika tugas tidak ada.
 - **Batal**: `POST /tasks/{from}/{id}:cancel`. Mengembalikan `409` jika state tidak boleh berpindah ke `canceled`.
+- **Jawaban input**: `POST /tasks/{from}/{id}:input` dengan `{ "text" }`. Hanya tugas `input-required` yang menerimanya; state lain mengembalikan `409`, teks kosong `400`, tugas tidak ada `404`. Balasan `200` berisi `{ "id", "from", "state" }` dengan state `working`.
+- **Pertanyaan**: `GET` dan event SSE menyertakan `prompt` selama tugas `input-required`. Event SSE dikirim ulang bila seluruh isinya berubah, termasuk pertanyaan baru pada state yang sama.
 
 Yang masih desain, belum ada di kode: artefak pada balasan tugas, dan bagian `parts`.
 
@@ -31,7 +33,7 @@ Yang sudah ada dan teruji:
 - Server: `plaesy agent serve` (default port 8765, hanya loopback). Jika `PLAESY_AGENT_TOKEN` diisi, setiap permintaan wajib `Authorization: Bearer <token>`.
 - Tugas disimpan di tabel `relay_tasks` di database relay yang sama dengan pesan. Pesan dan tugas dibuat dalam satu transaksi, sehingga pesan tidak pernah ada tanpa tugasnya.
 - Pengiriman ulang dengan ID dan isi yang sama bersifat idempoten: tidak ada pesan ganda, dan balasannya berisi state tugas saat ini (`201`). Isi yang berbeda untuk ID yang sama ditolak dengan `409`.
-- Agent Card di `GET /.well-known/agent.json` berisi `name`, `description`, `version` (dari `CARGO_PKG_VERSION`), `capabilities`, dan `skills`. Kartu tidak memuat token, path database, atau path repositori. Kartu berada di balik aturan token yang sama dengan route lain: bila `PLAESY_AGENT_TOKEN` diisi, permintaan tanpa token yang benar ditolak `401`. Kapabilitas yang belum ada (`pushNotifications`, `inputRequired`, `artifacts`) dinyatakan `false`.
+- Agent Card di `GET /.well-known/agent.json` berisi `name`, `description`, `version` (dari `CARGO_PKG_VERSION`), `capabilities`, dan `skills`. Kartu tidak memuat token, path database, atau path repositori. Kartu berada di balik aturan token yang sama dengan route lain: bila `PLAESY_AGENT_TOKEN` diisi, permintaan tanpa token yang benar ditolak `401`. `inputRequired` bernilai `true`. Kapabilitas yang belum ada (`pushNotifications`, `artifacts`) dinyatakan `false`.
 
 Lifecycle tugas yang diterapkan oleh relay:
 
@@ -43,6 +45,8 @@ Lifecycle tugas yang diterapkan oleh relay:
 | Klaim dilepas dan masih ada percobaan | tetap `working` |
 | Klaim dilepas pada percobaan terakhir | `failed` |
 | Pengirim membatalkan | `canceled` |
+| Penerima meminta input lewat lease yang masih berlaku | `input-required` |
+| Pengirim menjawab (`:input`) | `working`; pesan bisa diklaim lagi dan jawabannya ikut di klaim berikutnya |
 
 Batasan yang perlu diketahui:
 
@@ -50,7 +54,9 @@ Batasan yang perlu diketahui:
 - Lease terakhir yang kedaluwarsa membuat pesan berstatus `gagal` tanpa menulis ke tabel, sehingga tugasnya tetap `working`. Tugas hanya menjadi `failed` lewat pelepasan klaim eksplisit.
 - Tugas yang sudah `canceled` tetap bisa diklaim dan di-ack. Pembatalan tidak mencegah pengiriman, dan state tetap `canceled`.
 - Listener chat membaca inbox tanpa mengklaim pesan. Akibatnya, tugas yang dikirim dari chat tetap `submitted` sampai pesannya di-ack.
-- `input-required` ada di model state, tetapi belum ada transisi yang memakainya.
+- Selama `input-required`, pesan berstatus `menunggu-input` dan tidak bisa diklaim atau di-ack. Lease dilepas saat meminta input.
+- Ack lewat jalur lama (`acknowledge`) tidak menerima pesan yang sedang menunggu input.
+- Penerima meminta input lewat API store (`request_input`), bukan lewat HTTP, karena klaim tidak tersedia di HTTP.
 - Retensi 30 hari dan perintah `plaesy agent gc` belum diimplementasikan.
 
 ## Penyimpanan dan pengiriman
@@ -82,7 +88,7 @@ Batasan yang perlu diketahui:
 3. Endpoint `message:send`, `tasks/{from}/{id}`, dan SSE: sudah ada, dengan tes pada socket lokal.
 4. `/agent send` dan `@nama`: membuka tugas di database relay yang sama lewat store, bukan lewat HTTP.
 
-Yang masih terbuka: artefak, `input-required`, dan retensi (`plaesy agent gc`).
+Yang masih terbuka: artefak dan retensi (`plaesy agent gc`).
 
 ## Keputusan default (didelegasikan, bisa dicabut pemilik)
 
@@ -90,4 +96,9 @@ Yang masih terbuka: artefak, `input-required`, dan retensi (`plaesy agent gc`).
 2. Pesan dan riwayat tugas disimpan 30 hari, lalu dihapus saat `plaesy agent gc`.
 3. Perintah baru `plaesy agent serve` dibuat, bukan memakai `plaesy remote serve`, karena `remote` hanya read-only.
 
-Implementasi bertahap: model tugas dan transisi state lebih dulu, dengan tes unit. Endpoint HTTP dan SSE setelahnya.
+Keputusan default untuk permintaan input (bisa dicabut pemilik):
+
+1. Lease tidak diperpanjang selama menunggu jawaban. Penerima melepas lease saat meminta input, dan pesan tidak diklaim ulang sampai dijawab. Menunggu manusia tidak menghabiskan percobaan.
+2. Percobaan yang meminta input dikembalikan, sehingga pertanyaan tidak mendorong pesan ke `gagal`.
+3. Membatalkan tugas `input-required` menghapus pertanyaan. Pesan kembali bisa diklaim, sama seperti tugas `canceled` lainnya.
+4. Jawaban disimpan di pesan dan dikirim bersama klaim berikutnya, bukan sebagai pesan relay baru.
