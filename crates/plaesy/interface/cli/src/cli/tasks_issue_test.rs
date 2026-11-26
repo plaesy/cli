@@ -227,7 +227,13 @@ fn due_filters_select_by_limit_and_overdue_without_done_issues() {
     let limit_early = NaiveDate::from_ymd_opt(2026, 3, 4);
     let limit_late = NaiveDate::from_ymd_opt(2026, 3, 6);
 
-    assert!(!matches_due(&issue, Status::Todo, limit_early, false, today));
+    assert!(!matches_due(
+        &issue,
+        Status::Todo,
+        limit_early,
+        false,
+        today
+    ));
     assert!(matches_due(&issue, Status::Todo, limit_late, false, today));
     assert!(matches_due(&issue, Status::Todo, None, true, today));
     assert!(!matches_due(&issue, Status::Done, None, true, today));

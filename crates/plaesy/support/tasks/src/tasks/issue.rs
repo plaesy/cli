@@ -196,7 +196,10 @@ pub struct TimeEntry {
 pub fn parse_duration_minutes(text: &str) -> Result<u32, String> {
     let invalid = || format!("duration {text:?} must look like 90m, 2h, or 1h30m");
     // `str::parse` accepts a leading `+`, so reject anything outside digits and the two units first.
-    if !text.bytes().all(|b| b.is_ascii_digit() || b == b'h' || b == b'm') {
+    if !text
+        .bytes()
+        .all(|b| b.is_ascii_digit() || b == b'h' || b == b'm')
+    {
         return Err(invalid());
     }
     let mut rest = text;

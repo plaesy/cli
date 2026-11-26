@@ -30,7 +30,9 @@ fn duration_accepts_minutes_hours_and_both() {
 
 #[test]
 fn duration_rejects_zero_units_order_and_loose_text() {
-    for bad in ["", "0m", "0h", "h", "m", "30", "1h30", "30m1h", "1h 30m", "1.5h", "-1h", "+5m"] {
+    for bad in [
+        "", "0m", "0h", "h", "m", "30", "1h30", "30m1h", "1h 30m", "1.5h", "-1h", "+5m",
+    ] {
         assert!(parse_duration_minutes(bad).is_err(), "accepted {bad:?}");
     }
 }

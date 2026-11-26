@@ -48,13 +48,7 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
             duration,
             date,
             note,
-        } => log(
-            issue,
-            duration,
-            date.as_deref(),
-            note.as_deref(),
-            tasks_dir,
-        ),
+        } => log(issue, duration, date.as_deref(), note.as_deref(), tasks_dir),
         TimeCommand::Show { issue } => show(issue, tasks_dir),
     }
 }
