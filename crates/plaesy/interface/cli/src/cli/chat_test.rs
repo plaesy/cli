@@ -1351,3 +1351,48 @@ fn a_goal_chain_closes_its_user_line_with_one_turn_mark() {
     assert_eq!(marks, 1, "output: {}", String::from_utf8_lossy(&out));
     assert_eq!(seen.lock().expect("seen lock").len(), 4);
 }
+
+#[test]
+fn a_session_that_saves_says_where_it_is_saved() {
+    let (provider, seen) = fake("a", "ok");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let settings = ChatSettings {
+        timeout: Duration::from_secs(5),
+        max_tokens: 0,
+        lang: Lang::En,
+        repo: PathBuf::from("."),
+        interactive: false,
+        hooks: Vec::new(),
+        approved: Vec::new(),
+        mcp_servers: Vec::new(),
+        roles: Vec::new(),
+        role: String::new(),
+        skills_dir: PathBuf::from("."),
+        tools: None,
+        chats_dir: Some(dir.path().to_path_buf()),
+        resume: None,
+        learn: false,
+        plugins: Vec::new(),
+        agent_name: "chat".to_owned(),
+        peers: Vec::new(),
+        advisor: None,
+        council: Vec::new(),
+        lsp_servers: Vec::new(),
+        turn_marks: false,
+        providers: Vec::new(),
+    };
+    let mut out = Vec::new();
+    converse(
+        provider,
+        &no_open,
+        &|_| Ok("saved".to_owned()),
+        &MemoryStore::default(),
+        settings,
+        Cursor::new("halo\n/exit\n".to_owned()),
+        &mut out,
+    )
+    .expect("converse");
+    let prompts = seen.lock().expect("seen").clone();
+    assert!(prompts[0].contains("disimpan ke"), "{}", prompts[0]);
+    assert!(prompts[0].contains("/resume"));
+}

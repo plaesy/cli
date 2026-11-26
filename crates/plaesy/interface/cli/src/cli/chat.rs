@@ -1710,6 +1710,13 @@ pub fn converse(
                 if let Some(goal) = &goal {
                     messages.push(Message::system(format!("Goal sesi ini: {goal}")));
                 }
+                // Stated as fact, so the model does not claim the chat is only in memory.
+                if let Some(dir) = &settings.chats_dir {
+                    messages.push(Message::system(format!(
+                        "Percakapan ini disimpan ke {} saat sesi berakhir, dan bisa dilanjutkan dengan /resume.",
+                        dir.display()
+                    )));
+                }
                 for (_, text) in &session_skills {
                     messages.push(Message::system(text.clone()));
                 }
