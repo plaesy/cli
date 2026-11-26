@@ -813,17 +813,28 @@ fn goal_is_shown_in_every_prompt_until_cleared() {
     let out = run_session(
         provider,
         &no_open,
-        "/goal\n/goal tes unit\nsatu\n/goal clear\ndua\n/exit\n",
+        "/goal\n/goal tes unit\n/goal clear\ndua\n/exit\n",
     );
 
     assert!(out.contains("no goal set"));
     assert!(out.contains("goal: tes unit"));
     assert!(out.contains("goal cleared"));
     let prompts = seen.lock().expect("seen").clone();
-    assert_eq!(prompts.len(), 3, "message, goal judge, then the next message");
+    assert_eq!(prompts.len(), 3, "goal turn, goal judge, then the next message");
     assert!(prompts[0].contains("Goal sesi ini: tes unit"));
     assert!(prompts[1].contains("strict goal-completion judge"));
     assert!(!prompts[2].contains("Goal sesi ini"));
+}
+
+#[test]
+fn goal_with_an_objective_starts_work_on_it_at_once() {
+    let (provider, seen) = fake("a", "ok");
+    let out = run_session(provider, &no_open, "/goal selesaikan pekerjaan\n/exit\n");
+
+    assert!(out.contains("goal: selesaikan pekerjaan"), "{out}");
+    let prompts = seen.lock().expect("seen").clone();
+    assert!(prompts[0].contains("User: selesaikan pekerjaan"), "{}", prompts[0]);
+    assert!(prompts[0].contains("Goal sesi ini: selesaikan pekerjaan"));
 }
 
 #[test]
@@ -841,7 +852,7 @@ fn an_incomplete_goal_continues_and_stops_when_the_judge_completes() {
     let out = run_session(
         Box::new(provider),
         &no_open,
-        "/goal selesaikan pekerjaan\nmulai\n",
+        "/goal selesaikan pekerjaan\n",
     );
 
     assert!(out.contains("continuing automatically (1/3)"), "{out}");

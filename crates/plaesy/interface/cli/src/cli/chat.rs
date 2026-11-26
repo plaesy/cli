@@ -965,7 +965,19 @@ pub fn converse(
         if waiting > 0 {
             writeln!(out, "{}", chat_text::queued(lang, waiting))?;
         }
-        match parse_input(&line) {
+        // `/goal <objective>` starts work on the objective at once, as Claude Code, Codex, and Hermes
+        // do: the objective is sent as this turn, and the judge after the turn decides on more work.
+        let input = match parse_input(&line) {
+            Input::Goal(objective) if !objective.is_empty() && objective != "clear" => {
+                writeln!(out, "{}", chat_text::goal_set(lang, &objective))?;
+                goal = Some(objective.clone());
+                goal_complete = false;
+                goal_continuations = 0;
+                Input::Message(objective)
+            }
+            other => other,
+        };
+        match input {
             Input::Empty => {}
             Input::Exit => break,
             Input::Clear => {
@@ -1208,11 +1220,6 @@ pub fn converse(
                     goal_complete = false;
                     goal_continuations = 0;
                     writeln!(out, "{}", chat_text::goal_cleared(lang))?;
-                } else {
-                    writeln!(out, "{}", chat_text::goal_set(lang, &rest))?;
-                    goal = Some(rest);
-                    goal_complete = false;
-                    goal_continuations = 0;
                 }
             }
             Input::Compact => {

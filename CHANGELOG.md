@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
 - The memory MCP server has `memory_fingerprint`, `memory_update`, and `memory_archive`. An agent reads a note's SHA-256 first; an update or archive is refused unless the hash still matches. Updates need a reason of correction, new-evidence, clarification, or other. Archives need completed, obsolete, superseded, consolidated, or other. The change is audited without note content and reindexed at once.
 - Project settings can live in `.plaesy/config.toml`, which allows comments. `plaesy chat`, the delegate providers, the memory engine, and local telemetry read it first and fall back to `.plaesy/settings.json` while it is absent. The first `/model` save copies `settings.json` into `config.toml` and leaves the JSON file unchanged. Home-level settings (`~/.plaesy/settings.json`) are still JSON.
 - `plaesy chat` `/model` lists the configured providers with their models, and `/model <number>`, `/model <provider>`, or `/model <provider>@<model>` switches and saves the choice to `config.toml`.
