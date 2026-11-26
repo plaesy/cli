@@ -5393,6 +5393,7 @@ dependencies = [
  "clap",
  "dialoguer",
  "dirs 5.0.1",
+ "notify",
  "plaesy-adapter-codegen-go",
  "plaesy-adapter-codegen-js",
  "plaesy-adapter-import-code-python",

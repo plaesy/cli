@@ -10,9 +10,11 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use notify::Watcher;
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -170,23 +172,53 @@ where
     F: FnMut(&str) + Send + 'static,
 {
     thread::spawn(move || {
+        let (wake_tx, wake_rx) = mpsc::channel::<()>();
+        // Wake on any write to the repository's `.plaesy` folder, where the relay database lives.
+        // If the watcher cannot start (for example the folder does not exist yet), the loop falls
+        // back to checking every `interval`.
+        let watch_dir = repo.join(".plaesy");
+        let _watcher = notify::recommended_watcher(move |_event: notify::Result<notify::Event>| {
+            let _ = wake_tx.send(());
+        })
+        .and_then(|mut watcher| {
+            watcher.watch(&watch_dir, notify::RecursiveMode::NonRecursive)?;
+            Ok(watcher)
+        })
+        .ok();
         let mut seen: HashSet<String> = HashSet::new();
+        show_new(&repo, &agent, &mut seen, &mut show);
         loop {
-            let fetched = run_relay(&repo, &inbox_args(&agent))
-                .ok()
-                .and_then(|raw| parse_inbox(&raw).ok());
-            if let Some(items) = fetched {
-                let fresh: Vec<Incoming> = items
-                    .into_iter()
-                    .filter(|item| seen.insert(item.id.clone()))
-                    .collect();
-                if !fresh.is_empty() {
-                    show(&format!("[pesan baru]\n{}", render_incoming(&fresh)));
+            match wake_rx.recv_timeout(interval) {
+                Ok(()) => {
+                    // A burst of writes means one check; drain the rest before reading the inbox.
+                    while wake_rx.try_recv().is_ok() {}
                 }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                // The watcher is gone; keep checking on the interval instead of spinning.
+                Err(mpsc::RecvTimeoutError::Disconnected) => thread::sleep(interval),
             }
-            thread::sleep(interval);
+            show_new(&repo, &agent, &mut seen, &mut show);
         }
     });
+}
+
+/// Reads the inbox once and passes the messages not seen before to `show`.
+fn show_new<F>(repo: &Path, agent: &str, seen: &mut HashSet<String>, show: &mut F)
+where
+    F: FnMut(&str),
+{
+    let fetched = run_relay(repo, &inbox_args(agent))
+        .ok()
+        .and_then(|raw| parse_inbox(&raw).ok());
+    if let Some(items) = fetched {
+        let fresh: Vec<Incoming> = items
+            .into_iter()
+            .filter(|item| seen.insert(item.id.clone()))
+            .collect();
+        if !fresh.is_empty() {
+            show(&format!("[pesan baru]\n{}", render_incoming(&fresh)));
+        }
+    }
 }
 
 #[cfg(test)]

@@ -18,6 +18,7 @@ plaesy-adapter-import-code-rust = { path = "../../adapter/import-code-rust" }
 plaesy-adapter-import-code-python = { path = "../../adapter/import-code-python" }
 plaesy-domain-api = { path = "../../domain/api" }
 rusqlite = { workspace = true }
+notify = { workspace = true }
 plaesy-interface-acp = { path = "../acp" }
 plaesy-adapter-model-ollama = { path = "../../adapter/model-ollama" }
 plaesy-adapter-model-openai-tools = { path = "../../adapter/model-openai-tools" }
