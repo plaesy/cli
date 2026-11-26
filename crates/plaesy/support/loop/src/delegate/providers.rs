@@ -245,12 +245,21 @@ impl Provider for CliProvider {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
-        let text = self.run_cli(req, None)?;
-        Ok(ProviderReply {
-            text: text.trim().to_owned(),
-            input_tokens: None,
-            output_tokens: None,
-        })
+        if !self.streams_json() {
+            let text = self.run_cli(req, None)?;
+            return Ok(ProviderReply {
+                text: text.trim().to_owned(),
+                input_tokens: None,
+                output_tokens: None,
+            });
+        }
+        // stream-json output is not the answer itself: read the text deltas and the result line.
+        let mut reply = empty_reply();
+        {
+            let mut feed = |line: &str| claude_stream_line(line, &mut reply, &mut |_: &str| {});
+            self.run_cli(req, Some(&mut feed))?;
+        }
+        Ok(reply)
     }
 
     fn complete_messages_streaming(

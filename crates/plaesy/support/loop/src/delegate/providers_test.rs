@@ -529,3 +529,22 @@ fn model_fallback_streams_through_the_models_it_wraps() {
     assert_eq!(reply.text, "streamed");
     assert_eq!(seen, "streamed");
 }
+
+#[test]
+fn claude_stream_lines_give_only_the_answer_text() {
+    let lines = [
+        r#"{"type":"system","subtype":"hook_started","hook_name":"SessionStart:startup"}"#,
+        r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Halo"}}}"#,
+        r#"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"!"}}}"#,
+        r#"{"type":"assistant","message":{"content":[{"type":"text","text":"Halo!"}]}}"#,
+        r#"{"type":"result","result":"Halo!","usage":{"input_tokens":2,"output_tokens":3}}"#,
+    ];
+    let mut reply = empty_reply();
+    let mut streamed = String::new();
+    for line in lines {
+        claude_stream_line(line, &mut reply, &mut |chunk: &str| streamed.push_str(chunk));
+    }
+    assert_eq!(reply.text, "Halo!");
+    assert_eq!(streamed, "Halo!");
+    assert_eq!(reply.output_tokens, Some(3));
+}
