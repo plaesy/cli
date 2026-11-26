@@ -4,6 +4,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::Duration;
+
+use crate::task::{self, TaskState};
 use thiserror::Error;
 
 pub mod auth;
@@ -81,6 +83,10 @@ pub enum MessageError {
     Io(#[from] std::io::Error),
     #[error("database or its parent directory permissions expose it to group/other users")]
     InsecurePermissions,
+    #[error("no task with id {0}")]
+    TaskNotFound(String),
+    #[error("{0}")]
+    TaskTransition(String),
 }
 
 /// SQLite-backed durable queue; at-least-once retrieval ends only on explicit ack or failure.
@@ -149,10 +155,71 @@ impl MessageStore {
                UNIQUE(sender, id)
              );
              CREATE INDEX IF NOT EXISTS relay_messages_inbox
-               ON relay_messages(recipient, acknowledged_at, created_at);",
+               ON relay_messages(recipient, acknowledged_at, created_at);
+             CREATE TABLE IF NOT EXISTS relay_tasks (
+               id TEXT NOT NULL,
+               sender TEXT NOT NULL,
+               recipient TEXT NOT NULL,
+               state TEXT NOT NULL,
+               created_at TEXT NOT NULL,
+               updated_at TEXT NOT NULL,
+               PRIMARY KEY(sender, id)
+             );",
         )?;
         migrate_columns(&mut connection)?;
         Ok(Self { connection })
+    }
+
+    /// Opens a task in `submitted` state from `sender` to `recipient`.
+    /// Reusing an existing `(sender, id)` is an error, so a task id cannot be re-opened.
+    pub fn create_task(
+        &mut self,
+        id: &str,
+        sender: &str,
+        recipient: &str,
+    ) -> Result<TaskState, MessageError> {
+        validate_id(id)?;
+        validate_agent(sender)?;
+        validate_agent(recipient)?;
+        let now = chrono::Utc::now().to_rfc3339();
+        self.connection.execute(
+            "INSERT INTO relay_tasks (id, sender, recipient, state, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'submitted', ?4, ?4)",
+            rusqlite::params![id, sender, recipient, now],
+        )?;
+        Ok(TaskState::Submitted)
+    }
+
+    /// Current state of a task, or `None` when no task has that sender and id.
+    pub fn task_state(&self, sender: &str, id: &str) -> Result<Option<TaskState>, MessageError> {
+        let text: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT state FROM relay_tasks WHERE sender = ?1 AND id = ?2",
+                rusqlite::params![sender, id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(text.and_then(|value| TaskState::parse(&value)))
+    }
+
+    /// Moves a task to `next` when the transition is allowed; the rules are in `task.rs`.
+    pub fn set_task_state(
+        &mut self,
+        sender: &str,
+        id: &str,
+        next: TaskState,
+    ) -> Result<TaskState, MessageError> {
+        let current = self
+            .task_state(sender, id)?
+            .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
+        let target = task::transition(current, next).map_err(MessageError::TaskTransition)?;
+        let now = chrono::Utc::now().to_rfc3339();
+        self.connection.execute(
+            "UPDATE relay_tasks SET state = ?1, updated_at = ?2 WHERE sender = ?3 AND id = ?4",
+            rusqlite::params![target.as_str(), now, sender, id],
+        )?;
+        Ok(target)
     }
 
     /// Enqueues a message; reusing `id` with identical content is idempotent.

@@ -410,3 +410,45 @@ fn opening_database_with_lease_schema_migrates_attempts_and_ack_times() {
     assert!(store.find("old-acked").unwrap().is_none());
     assert!(store.find("old-leased").unwrap().is_some());
 }
+
+#[test]
+fn task_moves_only_along_allowed_transitions() {
+    let mut store = MessageStore::in_memory().expect("store");
+    assert_eq!(
+        store.create_task("t-1", "alpha", "beta").expect("create"),
+        TaskState::Submitted
+    );
+    assert_eq!(
+        store
+            .set_task_state("alpha", "t-1", TaskState::Working)
+            .expect("start"),
+        TaskState::Working
+    );
+    assert!(matches!(
+        store.set_task_state("alpha", "t-1", TaskState::Submitted),
+        Err(MessageError::TaskTransition(_))
+    ));
+    store
+        .set_task_state("alpha", "t-1", TaskState::Completed)
+        .expect("finish");
+    assert!(matches!(
+        store.set_task_state("alpha", "t-1", TaskState::Working),
+        Err(MessageError::TaskTransition(_))
+    ));
+    assert_eq!(
+        store.task_state("alpha", "t-1").expect("read"),
+        Some(TaskState::Completed)
+    );
+}
+
+#[test]
+fn task_ids_are_scoped_to_sender_and_cannot_be_reopened() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.create_task("t-2", "alpha", "beta").expect("create");
+    assert!(store.create_task("t-2", "alpha", "beta").is_err());
+    assert_eq!(store.task_state("gamma", "t-2").expect("read"), None);
+    assert!(matches!(
+        store.set_task_state("gamma", "t-2", TaskState::Working),
+        Err(MessageError::TaskNotFound(_))
+    ));
+}
