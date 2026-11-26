@@ -5,8 +5,10 @@
 //! - `POST /message:send` with `{"id","from","to","text"}` opens a task and queues the message.
 //! - `GET /tasks/{from}/{id}` returns the task state.
 //! - `POST /tasks/{from}/{id}:cancel` moves the task to `canceled` when the state allows it.
+//! - `GET /.well-known/agent.json` returns the Agent Card: name, description, version, capabilities, skills.
 //!
-//! Replies are `(status, json body)`. Nothing here reads files or environment variables.
+//! Replies are `(status, json body)`. Nothing here reads files or environment variables; the card's
+//! version comes from the build-time `CARGO_PKG_VERSION`.
 
 use plaesy_adapter_relay::relay::{MessageError, MessageStore};
 use plaesy_adapter_relay::task::TaskState;
@@ -22,6 +24,7 @@ pub fn route(store: &mut MessageStore, method: &str, path: &str, body: &[u8]) ->
     }
     match (method, path) {
         ("POST", "/message:send") => send_message(store, body),
+        ("GET", "/.well-known/agent.json") => agent_card(),
         ("GET", _) => match parse_task_path(path) {
             Some((sender, id)) => get_task(store, &sender, &id),
             None => error(404, "not found"),
@@ -32,6 +35,48 @@ pub fn route(store: &mut MessageStore, method: &str, path: &str, body: &[u8]) ->
         },
         _ => error(405, "method not allowed"),
     }
+}
+
+/// The Agent Card. Static except for the version. It names only what the protocol does today, and
+/// it never includes the bearer token, the database path, or the repository path.
+fn agent_card() -> (u16, String) {
+    let card = json!({
+        "name": "plaesy",
+        "description": "Agent-to-agent task protocol of a local Plaesy repository. Messages are queued in a local relay.",
+        "version": env!("CARGO_PKG_VERSION"),
+        "capabilities": {
+            "streaming": true,
+            "cancel": true,
+            "idempotentSend": true,
+            "pushNotifications": false,
+            "inputRequired": false,
+            "artifacts": false
+        },
+        "skills": [
+            {
+                "id": "message.send",
+                "name": "Send message",
+                "description": "Open a task and queue a text message for another agent. POST /message:send.",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            },
+            {
+                "id": "task.status",
+                "name": "Read task state",
+                "description": "Read a task's state, or stream state changes as SSE. GET /tasks/{from}/{id} and /tasks/{from}/{id}/events.",
+                "inputModes": [],
+                "outputModes": ["application/json", "text/event-stream"]
+            },
+            {
+                "id": "task.cancel",
+                "name": "Cancel task",
+                "description": "Move a task to canceled when its state allows it. POST /tasks/{from}/{id}:cancel.",
+                "inputModes": [],
+                "outputModes": ["application/json"]
+            }
+        ]
+    });
+    (200, card.to_string())
 }
 
 fn send_message(store: &mut MessageStore, body: &[u8]) -> (u16, String) {

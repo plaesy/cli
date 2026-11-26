@@ -22,7 +22,7 @@ Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah.
 - **Push**: `GET /tasks/{from}/{id}/events` sebagai SSE, dengan event `task` setiap state berubah. Stream ditutup saat state terminal, dan `event: error` dikirim jika tugas tidak ada.
 - **Batal**: `POST /tasks/{from}/{id}:cancel`. Mengembalikan `409` jika state tidak boleh berpindah ke `canceled`.
 
-Yang masih desain, belum ada di kode: `GET /.well-known/agent.json` (Agent Card), artefak pada balasan tugas, dan bagian `parts`.
+Yang masih desain, belum ada di kode: artefak pada balasan tugas, dan bagian `parts`.
 
 ## Status implementasi
 
@@ -31,6 +31,7 @@ Yang sudah ada dan teruji:
 - Server: `plaesy agent serve` (default port 8765, hanya loopback). Jika `PLAESY_AGENT_TOKEN` diisi, setiap permintaan wajib `Authorization: Bearer <token>`.
 - Tugas disimpan di tabel `relay_tasks` di database relay yang sama dengan pesan. Pesan dan tugas dibuat dalam satu transaksi, sehingga pesan tidak pernah ada tanpa tugasnya.
 - Pengiriman ulang dengan ID dan isi yang sama bersifat idempoten: tidak ada pesan ganda, dan balasannya berisi state tugas saat ini (`201`). Isi yang berbeda untuk ID yang sama ditolak dengan `409`.
+- Agent Card di `GET /.well-known/agent.json` berisi `name`, `description`, `version` (dari `CARGO_PKG_VERSION`), `capabilities`, dan `skills`. Kartu tidak memuat token, path database, atau path repositori. Kartu berada di balik aturan token yang sama dengan route lain: bila `PLAESY_AGENT_TOKEN` diisi, permintaan tanpa token yang benar ditolak `401`. Kapabilitas yang belum ada (`pushNotifications`, `inputRequired`, `artifacts`) dinyatakan `false`.
 
 Lifecycle tugas yang diterapkan oleh relay:
 
@@ -81,7 +82,7 @@ Batasan yang perlu diketahui:
 3. Endpoint `message:send`, `tasks/{from}/{id}`, dan SSE: sudah ada, dengan tes pada socket lokal.
 4. `/agent send` dan `@nama`: membuka tugas di database relay yang sama lewat store, bukan lewat HTTP.
 
-Yang masih terbuka: Agent Card, artefak, `input-required`, dan retensi (`plaesy agent gc`).
+Yang masih terbuka: artefak, `input-required`, dan retensi (`plaesy agent gc`).
 
 ## Keputusan default (didelegasikan, bisa dicabut pemilik)
 

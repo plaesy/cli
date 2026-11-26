@@ -91,6 +91,46 @@ fn repeated_send_returns_the_current_state_and_conflicting_content_is_409() {
 }
 
 #[test]
+fn agent_card_lists_required_fields_with_the_package_version() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let (status, body) = route(&mut store, "GET", "/.well-known/agent.json", b"");
+    assert_eq!(status, 200);
+    let card = json(&body);
+    assert_eq!(card["name"], "plaesy");
+    assert!(card["description"]
+        .as_str()
+        .is_some_and(|text| !text.is_empty()));
+    assert_eq!(card["version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(card["capabilities"]["cancel"], true);
+    assert_eq!(card["capabilities"]["pushNotifications"], false);
+    let skills = card["skills"].as_array().expect("skills array");
+    assert!(skills.iter().any(|skill| skill["id"] == "message.send"));
+    assert!(skills
+        .iter()
+        .all(|skill| skill["id"].is_string() && skill["name"].is_string()));
+}
+
+#[test]
+fn agent_card_omits_secrets_and_local_paths() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let (_, body) = route(&mut store, "GET", "/.well-known/agent.json", b"");
+    assert!(!body.contains("relay.sqlite"));
+    assert!(!body.contains(".plaesy"));
+    assert!(!body.contains("PLAESY_AGENT_TOKEN"));
+    assert!(!body.contains("Bearer"));
+    assert!(!body.contains("C:\\"));
+    assert!(!body.contains("/Users/"));
+    assert!(!body.contains("/home/"));
+}
+
+#[test]
+fn agent_card_is_get_only() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let (status, _) = route(&mut store, "POST", "/.well-known/agent.json", b"");
+    assert_eq!(status, 404);
+}
+
+#[test]
 fn send_claim_get_ack_get_walks_the_task_to_completed() {
     let mut store = MessageStore::in_memory().expect("store");
     send(&mut store, "t-5");

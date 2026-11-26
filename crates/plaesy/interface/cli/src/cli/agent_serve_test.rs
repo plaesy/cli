@@ -68,6 +68,42 @@ fn a_token_is_required_when_configured() {
 }
 
 #[test]
+fn agent_card_is_served_over_a_real_socket() {
+    let addr = start(None);
+    let reply = request(
+        addr,
+        "GET /.well-known/agent.json HTTP/1.1\r\nHost: localhost\r\n\r\n",
+    );
+    assert_eq!(status_of(&reply), 200);
+    assert!(reply.contains("Content-Type: application/json"), "{reply}");
+    let body = reply.split("\r\n\r\n").nth(1).expect("body");
+    let card: serde_json::Value = serde_json::from_str(body).expect("card json");
+    assert_eq!(card["name"], "plaesy");
+    assert_eq!(card["version"], env!("CARGO_PKG_VERSION"));
+    assert!(card["skills"].is_array());
+}
+
+#[test]
+fn agent_card_follows_the_token_boundary() {
+    let addr = start(Some("secret-token"));
+    let card = "GET /.well-known/agent.json HTTP/1.1\r\nHost: localhost\r\n";
+    assert_eq!(status_of(&request(addr, &format!("{card}\r\n"))), 401);
+    assert_eq!(
+        status_of(&request(
+            addr,
+            &format!("{card}Authorization: Bearer wrong\r\n\r\n")
+        )),
+        401
+    );
+    let ok = request(
+        addr,
+        &format!("{card}Authorization: Bearer secret-token\r\n\r\n"),
+    );
+    assert_eq!(status_of(&ok), 200);
+    assert!(ok.contains(r#""name":"plaesy""#), "{ok}");
+}
+
+#[test]
 fn malformed_request_line_is_rejected() {
     let addr = start(None);
     let reply = request(addr, "\r\n\r\n");
