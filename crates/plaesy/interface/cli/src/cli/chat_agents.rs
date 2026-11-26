@@ -100,6 +100,19 @@ pub fn parse_inbox(raw: &str) -> Result<Vec<Incoming>, String> {
     serde_json::from_str(raw).map_err(|err| format!("relay inbox: {err}"))
 }
 
+/// Sends a message as a protocol task: opens the task in `submitted` state and queues the message
+/// in the same relay database, so the task can be read or cancelled over the agent server.
+pub fn send_task(repo: &Path, from: &str, to: &str, id: &str, body: &str) -> Result<(), String> {
+    let db = repo.join(".plaesy").join("relay.sqlite");
+    let mut store = plaesy_adapter_relay::relay::MessageStore::open(&db)
+        .map_err(|err| err.to_string())?;
+    store.create_task(id, from, to).map_err(|err| err.to_string())?;
+    store
+        .send(id, from, to, body)
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
 /// Runs `plaesy relay <args>` in the repository, so the relay database is the repository's.
 pub fn run_relay(repo: &Path, args: &[String]) -> Result<String, String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;

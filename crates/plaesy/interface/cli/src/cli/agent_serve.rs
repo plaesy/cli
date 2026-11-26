@@ -6,7 +6,9 @@
 
 use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+use std::time::Instant;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -21,6 +23,10 @@ pub const TOKEN_ENV: &str = "PLAESY_AGENT_TOKEN";
 /// Largest request head accepted, in bytes.
 const MAX_HEAD_BYTES: usize = 8 * 1024;
 const IO_TIMEOUT: Duration = Duration::from_secs(10);
+/// Longest a single event stream stays open before the server closes it.
+const STREAM_LIMIT: Duration = Duration::from_secs(600);
+/// Re-check interval for a stream when no file change arrives, in case an event was missed.
+const STREAM_FALLBACK: Duration = Duration::from_secs(1);
 
 #[derive(Debug, clap::Args)]
 pub struct Args {
@@ -61,18 +67,24 @@ pub fn run(args: &Args) -> CliResult {
         args.port,
         if token.is_some() { "required" } else { "not set" }
     );
-    serve(listener, Arc::new(Mutex::new(store)), token);
+    serve(listener, Arc::new(Mutex::new(store)), token, args.path.join(".plaesy"));
     Ok(())
 }
 
 /// Accepts connections forever, one thread each.
-pub fn serve(listener: TcpListener, store: Arc<Mutex<MessageStore>>, token: Option<String>) {
+pub fn serve(
+    listener: TcpListener,
+    store: Arc<Mutex<MessageStore>>,
+    token: Option<String>,
+    watch_dir: PathBuf,
+) {
     let token = token.map(Arc::new);
     for stream in listener.incoming().flatten() {
         let store = Arc::clone(&store);
         let token = token.clone();
+        let watch_dir = watch_dir.clone();
         thread::spawn(move || {
-            let _ = handle(stream, &store, token.as_deref().map(String::as_str));
+            let _ = handle(stream, &store, token.as_deref().map(String::as_str), &watch_dir);
         });
     }
 }
@@ -81,6 +93,7 @@ fn handle(
     mut stream: TcpStream,
     store: &Mutex<MessageStore>,
     token: Option<&str>,
+    watch_dir: &Path,
 ) -> io::Result<()> {
     stream.set_read_timeout(Some(IO_TIMEOUT))?;
     stream.set_write_timeout(Some(IO_TIMEOUT))?;
@@ -95,6 +108,11 @@ fn handle(
     if let Some(expected) = token {
         if request.authorization.as_deref() != Some(&format!("Bearer {expected}")) {
             return write_reply(&mut stream, 401, r#"{"error":"missing or wrong token"}"#);
+        }
+    }
+    if request.method == "GET" {
+        if let Some((sender, id)) = parse_events_path(&request.path) {
+            return stream_task(&mut stream, store, &sender, &id, watch_dir);
         }
     }
     if request.content_length > MAX_BODY_BYTES {
@@ -115,6 +133,84 @@ fn handle(
         Err(_) => (500, r#"{"error":"store unavailable"}"#.to_owned()),
     };
     write_reply(&mut stream, status, &reply)
+}
+
+/// `/tasks/{from}/{id}/events`.
+fn parse_events_path(path: &str) -> Option<(String, String)> {
+    let trimmed = path.strip_suffix("/events")?;
+    let rest = trimmed.strip_prefix("/tasks/")?;
+    let (sender, id) = rest.split_once('/')?;
+    (!sender.is_empty() && !id.is_empty() && !id.contains('/'))
+        .then(|| (sender.to_owned(), id.to_owned()))
+}
+
+/// Server-sent events for one task. Sends the state when it changes and closes at a terminal
+/// state, when the task disappears, or after `STREAM_LIMIT`. A file change in `.plaesy` wakes it at
+/// once; `STREAM_FALLBACK` covers a watcher that cannot start.
+fn stream_task(
+    stream: &mut TcpStream,
+    store: &Mutex<MessageStore>,
+    sender: &str,
+    id: &str,
+    watch_dir: &Path,
+) -> io::Result<()> {
+    stream.write_all(
+        b"HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: close
+
+",
+    )?;
+    let (wake_tx, wake_rx) = mpsc::channel::<()>();
+    let _watcher = notify::recommended_watcher(move |_event: notify::Result<notify::Event>| {
+        let _ = wake_tx.send(());
+    })
+    .and_then(|mut watcher| {
+        notify::Watcher::watch(&mut watcher, watch_dir, notify::RecursiveMode::NonRecursive)?;
+        Ok(watcher)
+    })
+    .ok();
+    let started = Instant::now();
+    let mut last: Option<String> = None;
+    loop {
+        let state = match store.lock() {
+            Ok(guard) => guard.task_state(sender, id),
+            Err(_) => return Ok(()),
+        };
+        match state {
+            Ok(Some(state)) => {
+                let name = state.as_str();
+                if last.as_deref() != Some(name) {
+                    let data = serde_json::json!({ "id": id, "from": sender, "state": name });
+                    write!(stream, "event: task
+data: {data}
+
+")?;
+                    stream.flush()?;
+                    last = Some(name.to_owned());
+                }
+                if state.is_terminal() {
+                    return Ok(());
+                }
+            }
+            _ => {
+                write!(stream, "event: error
+data: {{\"error\":\"no such task\"}}
+
+")?;
+                return stream.flush();
+            }
+        }
+        if started.elapsed() >= STREAM_LIMIT {
+            return Ok(());
+        }
+        // If the watcher could not start, the sender is gone: sleep instead of spinning.
+        if let Err(mpsc::RecvTimeoutError::Disconnected) = wake_rx.recv_timeout(STREAM_FALLBACK) {
+            thread::sleep(STREAM_FALLBACK);
+        }
+        while wake_rx.try_recv().is_ok() {}
+    }
 }
 
 struct Head {

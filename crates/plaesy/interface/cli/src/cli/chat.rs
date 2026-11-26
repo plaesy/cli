@@ -807,10 +807,7 @@ fn agent_command(repo: &Path, from: &str, rest: &str) -> Result<String, String> 
         let (to, text) = split_word(send).ok_or_else(usage)?;
         chat_agents::check_outgoing(text, 1)?;
         let id = chat_agents::new_id(from, to, text, chat_agents::nanos_now());
-        chat_agents::run_relay(
-            repo,
-            &chat_agents::send_args(from, to, &id, &chat_agents::encode(1, text)),
-        )?;
+        chat_agents::send_task(repo, from, to, &id, &chat_agents::encode(1, text))?;
         return Ok(format!("sent {id} to {to}"));
     }
     if let Some(reply) = rest.strip_prefix("reply ") {
@@ -822,14 +819,12 @@ fn agent_command(repo: &Path, from: &str, rest: &str) -> Result<String, String> 
         let depth = chat_agents::decode(&incoming.body).depth + 1;
         chat_agents::check_outgoing(text, depth)?;
         let new_id = chat_agents::new_id(from, &incoming.sender, text, chat_agents::nanos_now());
-        chat_agents::run_relay(
+        chat_agents::send_task(
             repo,
-            &chat_agents::send_args(
-                from,
-                &incoming.sender,
-                &new_id,
-                &chat_agents::encode(depth, text),
-            ),
+            from,
+            &incoming.sender,
+            &new_id,
+            &chat_agents::encode(depth, text),
         )?;
         return Ok(format!("replied {new_id} to {}", incoming.sender));
     }

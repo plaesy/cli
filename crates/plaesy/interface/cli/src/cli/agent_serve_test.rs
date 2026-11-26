@@ -12,7 +12,8 @@ fn start(token: Option<&str>) -> std::net::SocketAddr {
     let addr = listener.local_addr().expect("addr");
     let store = Arc::new(Mutex::new(MessageStore::in_memory().expect("store")));
     let token = token.map(str::to_owned);
-    thread::spawn(move || serve(listener, store, token));
+    let watch_dir = std::path::PathBuf::from("no-such-dir-for-tests");
+    thread::spawn(move || serve(listener, store, token, watch_dir));
     addr
 }
 
@@ -71,4 +72,22 @@ fn malformed_request_line_is_rejected() {
     let addr = start(None);
     let reply = request(addr, "\r\n\r\n");
     assert_eq!(status_of(&reply), 400);
+}
+
+#[test]
+fn events_stream_reports_changes_and_closes_at_a_terminal_state() {
+    let addr = start(None);
+    let body = r#"{"id":"e-1","from":"alpha","to":"beta","text":"halo"}"#;
+    assert_eq!(status_of(&request(addr, &post("/message:send", body, None))), 201);
+    let mut stream = TcpStream::connect(addr).expect("connect");
+    stream
+        .write_all(b"GET /tasks/alpha/e-1/events HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        .expect("write");
+    thread::sleep(std::time::Duration::from_millis(300));
+    assert_eq!(status_of(&request(addr, &post("/tasks/alpha/e-1:cancel", "", None))), 200);
+    let mut events = String::new();
+    stream.read_to_string(&mut events).expect("stream closes at terminal state");
+    assert!(events.contains("text/event-stream"), "{events:?}");
+    assert!(events.contains(r#""state":"submitted""#), "{events}");
+    assert!(events.contains(r#""state":"canceled""#), "{events}");
 }
