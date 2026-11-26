@@ -224,8 +224,15 @@ fn read_config_vault_defaults(
 ) -> Result<ConfigVaultDefaults, Box<dyn std::error::Error>> {
     let source = std::fs::read_to_string(path)
         .map_err(|error| format!("cannot read settings {}: {error}", path.display()))?;
-    let config: serde_json::Value = serde_json::from_str(&source)
-        .map_err(|error| format!("invalid settings {}: {error}", path.display()))?;
+    // config.toml is the current format; a legacy settings.json is still read as JSON.
+    let config: serde_json::Value = if path.extension().is_some_and(|ext| ext == "toml") {
+        let table: toml::Table = toml::from_str(&source)
+            .map_err(|error| format!("invalid settings {}: {error}", path.display()))?;
+        serde_json::to_value(table)?
+    } else {
+        serde_json::from_str(&source)
+            .map_err(|error| format!("invalid settings {}: {error}", path.display()))?
+    };
     let configured_watch_dir = config
         .get("watch_dir")
         .and_then(serde_json::Value::as_str)
