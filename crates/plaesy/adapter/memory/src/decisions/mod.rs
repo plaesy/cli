@@ -301,7 +301,8 @@ fn open_or_create_directory_path(
     Ok(handle)
 }
 
-// Only the Linux symlink and atomic-publish tests call this helper.
+// Only the Linux-gated tests in decisions_test.rs call this, so it must match their cfg;
+// otherwise macOS test builds fail with `dead_code` under `-D warnings`.
 #[cfg(all(test, target_os = "linux"))]
 fn save_config_at(config: &DecisionsConfig, path: &Path) -> Result<(), String> {
     save_config_with_path(config, path)
