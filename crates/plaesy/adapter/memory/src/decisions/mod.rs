@@ -403,7 +403,8 @@ static TEMP_FILE_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::Atom
 
 fn sha256_file(mut file: fs::File, path: &Path) -> Result<String, String> {
     let mut hasher = Sha256::new();
-    let mut buffer = [0; 1024 * 1024];
+    // Heap buffer: a stack array of this size overflows the Windows main thread (1 MiB).
+    let mut buffer = vec![0_u8; 1024 * 1024];
     loop {
         let n = file
             .read(&mut buffer)

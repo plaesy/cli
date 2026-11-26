@@ -526,7 +526,9 @@ impl DirHandle {
 
     #[cfg(not(target_os = "linux"))]
     pub fn create_new_file(&self, name: &Path) -> io::Result<std::fs::File> {
+        // Read access too: model pull hashes the same handle after writing it.
         std::fs::OpenOptions::new()
+            .read(true)
             .write(true)
             .create_new(true)
             .open(self.child_path_fallback(name)?)

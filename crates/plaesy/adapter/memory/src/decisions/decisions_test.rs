@@ -126,3 +126,26 @@ fn save_config_creates_directories_and_publishes_atomically() {
     let saved: DecisionsConfig = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
     assert_eq!(saved, DecisionsConfig::default());
 }
+
+#[test]
+fn sha256_file_does_not_overflow_a_small_stack() {
+    // Regression: the 1 MiB read buffer lived on the stack and overflowed the
+    // Windows main thread (1 MiB reserve), aborting `model pull` after download.
+    let path = std::env::temp_dir().join(format!("plaesy-sha256-stack-{}.bin", std::process::id()));
+    let payload = vec![0xA5_u8; 2 * 1024 * 1024];
+    fs::write(&path, &payload).expect("write temp payload");
+    let expected = format!("{:x}", Sha256::digest(&payload));
+    let file_path = path.clone();
+    let actual = std::thread::Builder::new()
+        .stack_size(256 * 1024)
+        .spawn(move || {
+            let file = fs::File::open(&file_path).expect("open temp payload");
+            sha256_file(file, &file_path)
+        })
+        .expect("spawn small-stack thread")
+        .join()
+        .expect("hashing thread must not abort")
+        .expect("hash temp payload");
+    let _ = fs::remove_file(&path);
+    assert_eq!(actual, expected);
+}
