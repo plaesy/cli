@@ -486,3 +486,46 @@ fn a_cli_provider_streams_only_when_asked_for_stream_json() {
     assert!(!plain.streams_json());
     assert!(streaming.streams_json());
 }
+
+/// A provider that streams its own reply, as the CLI provider does, and fails when `fail` is set.
+struct StreamingStub {
+    fail: bool,
+    text: &'static str,
+}
+
+impl Provider for StreamingStub {
+    fn name(&self) -> &str {
+        "streaming"
+    }
+    fn complete(&self, _req: &Request) -> Result<ProviderReply, DelegateError> {
+        Err(DelegateError::terminal("complete is not used by the chat stream"))
+    }
+    fn complete_messages_streaming(
+        &self,
+        _messages: &[Message],
+        _req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        if self.fail {
+            return Err(DelegateError::transient("HTTP 503"));
+        }
+        on_text(self.text);
+        Ok(answer(self.text))
+    }
+}
+
+#[test]
+fn model_fallback_streams_through_the_models_it_wraps() {
+    let chain = model_fallback(vec![
+        Box::new(StreamingStub { fail: true, text: "" }),
+        Box::new(StreamingStub { fail: false, text: "streamed" }),
+    ]);
+    let mut seen = String::new();
+    let reply = chain
+        .complete_messages_streaming(&[Message::user("halo")], &Request::default(), &mut |chunk| {
+            seen.push_str(chunk)
+        })
+        .unwrap();
+    assert_eq!(reply.text, "streamed");
+    assert_eq!(seen, "streamed");
+}

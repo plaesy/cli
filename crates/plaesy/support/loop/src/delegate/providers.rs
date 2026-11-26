@@ -73,10 +73,39 @@ impl Provider for ModelFallback {
     }
 
     fn complete(&self, req: &Request) -> Result<ProviderReply, DelegateError> {
+        self.try_each(|provider| provider.complete(req))
+    }
+
+    // Every entry point must reach the models. A provider that only overrode `complete` would
+    // otherwise be bypassed by chat, which calls `complete_messages_streaming`.
+    fn complete_messages(
+        &self,
+        messages: &[Message],
+        req: &Request,
+    ) -> Result<ProviderReply, DelegateError> {
+        self.try_each(|provider| provider.complete_messages(messages, req))
+    }
+
+    fn complete_messages_streaming(
+        &self,
+        messages: &[Message],
+        req: &Request,
+        on_text: &mut dyn FnMut(&str),
+    ) -> Result<ProviderReply, DelegateError> {
+        self.try_each(|provider| provider.complete_messages_streaming(messages, req, on_text))
+    }
+}
+
+impl ModelFallback {
+    /// Runs `call` on each model in order, stopping at the first success or terminal error.
+    fn try_each<T>(
+        &self,
+        mut call: impl FnMut(&dyn Provider) -> Result<T, DelegateError>,
+    ) -> Result<T, DelegateError> {
         let mut earlier: Vec<String> = Vec::new();
         let mut last: Option<DelegateError> = None;
         for provider in &self.models {
-            match provider.complete(req) {
+            match call(provider.as_ref()) {
                 Ok(reply) => return Ok(reply),
                 Err(e) if e.class == Class::Terminal => return Err(e),
                 Err(e) => {
