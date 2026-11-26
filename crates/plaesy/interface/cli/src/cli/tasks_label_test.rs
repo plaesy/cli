@@ -27,6 +27,10 @@ fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
             labels: vec!["keep".into()],
             assignee: None,
             milestone: None,
+            start_date: None,
+            due_date: None,
+            estimate_minutes: None,
+            time_entries: Vec::new(),
         },
     )
     .unwrap();

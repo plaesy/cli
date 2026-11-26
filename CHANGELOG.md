@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy tasks update-issue` takes `--start`, `--due`, and `--estimate`, each with a `--clear-*` flag. Dates are `YYYY-MM-DD`; estimates are `90m`, `2h`, or `1h30m`. A start date after the due date is refused. `plaesy tasks issues` gains `--due-before`, `--overdue`, and `--search` (ID or title, ignoring case), and shows a DUE column. Issue files without these fields still load.
+- `plaesy tasks time log <task-id> <duration> [--date YYYY-MM-DD] [--note TEXT]` appends a time entry to an issue, and `plaesy tasks time show <task-id>` prints the estimate, the logged total, and the remaining or overrun effort. Entries are stored in the issue's `issue.json`.
 - The memory MCP HTTP server accepts one bearer token per client: `plaesy memory token add|rotate|revoke|list` manages named tokens stored as salted hashes in `~/.config/plaesy/mcp-tokens.toml`. Changes take effect without a restart, a rotated token keeps working for a grace period, and `PLAESY_MCP_TOKEN` still works as before.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.
 - `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
