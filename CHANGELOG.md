@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy sessions list` shows each session's git branch (the branch checked out at its project root) and its age since first report, as `branch=` and `age=`. Records written before this change show `age=-` until they are reported again. Session status is still self-reported.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.
 - `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
 - The memory MCP server has `memory_fingerprint`, `memory_update`, and `memory_archive`. An agent reads a note's SHA-256 first; an update or archive is refused unless the hash still matches. Updates need a reason of correction, new-evidence, clarification, or other. Archives need completed, obsolete, superseded, consolidated, or other. The change is audited without note content and reindexed at once.
