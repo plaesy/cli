@@ -142,6 +142,8 @@ pub enum Command {
     Chat(chat::Args),
     /// Install and operate OS timers for persisted chat goals
     ChatSchedule(chat_schedule::Args),
+    /// List saved chat sessions one page at a time, newest first
+    ChatHistory(chat_history::Args),
     /// Generated image assets through a provider API
     Images(images::Args),
     /// Durable, acknowledged direct messaging between agents
@@ -196,6 +198,7 @@ impl Command {
             Self::Skills(_) => "skills",
             Self::Chat(_) => "chat",
             Self::ChatSchedule(_) => "chat-schedule",
+            Self::ChatHistory(_) => "chat-history",
             Self::Images(_) => "images",
             Self::Relay(_) => "relay",
             Self::Files(_) => "files",
@@ -301,6 +304,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Skills(args) => skills::run(&args),
         Command::Chat(args) => chat::run(&args),
         Command::ChatSchedule(args) => chat_schedule::run(&args),
+        Command::ChatHistory(args) => chat_history::run(&args),
         Command::Images(args) => images::run(&args),
         Command::Relay(args) => relay::run(&args),
         Command::Audit(args) => audit::run(&args),

@@ -11,7 +11,10 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use clap::Args as ClapArgs;
 use serde_json::{json, Value};
+
+use super::CliResult;
 
 /// Most matches `/find` prints.
 pub const MAX_HITS: usize = 20;
@@ -242,4 +245,78 @@ pub fn clear(dir: &Path) -> Result<usize, String> {
         }
     }
     Ok(removed)
+}
+
+/// Most sessions one page holds.
+pub const MAX_PAGE_SIZE: usize = 100;
+
+/// One page of saved sessions, newest first.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Page {
+    /// 1-based page number.
+    pub page: usize,
+    /// Sessions per page.
+    pub size: usize,
+    /// Saved sessions in the whole folder.
+    pub total: usize,
+    /// Sessions on this page, newest first.
+    pub items: Vec<Saved>,
+}
+
+/// One page of saved sessions, newest first. `page` starts at 1.
+///
+/// # Errors
+///
+/// A message when `page` is 0, or `size` is 0 or above [`MAX_PAGE_SIZE`].
+pub fn page(dir: &Path, page: usize, size: usize) -> Result<Page, String> {
+    if page == 0 {
+        return Err("--page mulai dari 1".to_owned());
+    }
+    if size == 0 || size > MAX_PAGE_SIZE {
+        return Err(format!("--size harus antara 1 dan {MAX_PAGE_SIZE}"));
+    }
+    let all = list(dir);
+    let total = all.len();
+    let items = all
+        .into_iter()
+        .skip((page - 1).saturating_mul(size))
+        .take(size)
+        .collect();
+    Ok(Page {
+        page,
+        size,
+        total,
+        items,
+    })
+}
+
+/// Lists saved chat sessions one page at a time, newest first.
+#[derive(Debug, ClapArgs)]
+pub struct Args {
+    /// Page to show, starting at 1.
+    #[arg(long, default_value_t = 1)]
+    pub page: usize,
+    /// Sessions per page, from 1 to 100.
+    #[arg(long, default_value_t = 20)]
+    pub size: usize,
+    /// Repository whose `.plaesy/chats/` folder is read.
+    #[arg(long, default_value = ".")]
+    pub path: PathBuf,
+}
+
+/// Prints one page as `name<TAB>turns<TAB>first line`, with a header line for the page count.
+///
+/// # Errors
+///
+/// An invalid `--page` or `--size`, or the I/O error from resolving `--path`.
+pub fn run(args: &Args) -> CliResult {
+    let root = fs::canonicalize(&args.path)?;
+    let shown = page(&dir(&root), args.page, args.size)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+    let pages = shown.total.div_ceil(shown.size);
+    println!("halaman {} dari {} ({} sesi)", shown.page, pages, shown.total);
+    for saved in &shown.items {
+        println!("{}\t{}\t{}", saved.name, saved.turns, saved.first);
+    }
+    Ok(())
 }
