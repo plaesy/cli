@@ -192,8 +192,8 @@ pub fn load(path: &Path) -> Result<Option<Settings>> {
     let table: toml::Table = toml::from_str(&text).map_err(|e| {
         MemoryError::ConfigError(format!("invalid settings {}: {e}", path.display()))
     })?;
-    let value = serde_json::to_value(table)
-        .map_err(|e| MemoryError::SerializationError(e.to_string()))?;
+    let value =
+        serde_json::to_value(table).map_err(|e| MemoryError::SerializationError(e.to_string()))?;
     Settings::from_json(&value, path).map(Some)
 }
 

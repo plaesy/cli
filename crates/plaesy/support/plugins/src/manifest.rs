@@ -75,7 +75,11 @@ impl FromStr for Version {
         let parts: Vec<&str> = s.split('.').collect();
         match parts.as_slice() {
             [major, minor, patch] => {
-                match (parse_number(major), parse_number(minor), parse_number(patch)) {
+                match (
+                    parse_number(major),
+                    parse_number(minor),
+                    parse_number(patch),
+                ) {
                     (Some(major), Some(minor), Some(patch)) => Ok(Self {
                         major,
                         minor,

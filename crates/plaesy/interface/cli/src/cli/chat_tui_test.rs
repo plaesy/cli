@@ -2,8 +2,8 @@ use super::*;
 use std::io::Read;
 use std::sync::mpsc;
 
-use ratatui::Terminal;
 use ratatui::backend::TestBackend;
+use ratatui::Terminal;
 
 /// The screen drawn at `width` by `height`, one string per row.
 fn drawn(screen: &Screen, width: u16, height: u16) -> String {
@@ -344,13 +344,11 @@ fn turn_marks_close_pending_lines_and_are_not_shown() {
     screen.receive("balasan satu\n");
     screen.receive(&format!("balasan dua\n{}", char::from(TURN_MARK)));
     assert_eq!(screen.pending, 1, "one mark arrived");
-    assert!(
-        !screen
-            .transcript
-            .visible(10, 0)
-            .join("")
-            .contains(char::from(TURN_MARK))
-    );
+    assert!(!screen
+        .transcript
+        .visible(10, 0)
+        .join("")
+        .contains(char::from(TURN_MARK)));
     assert_eq!(
         screen.transcript.visible(10, 0),
         vec!["balasan satu", "balasan dua"]

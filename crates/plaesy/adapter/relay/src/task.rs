@@ -73,5 +73,3 @@ pub fn transition(from: TaskState, to: TaskState) -> Result<TaskState, String> {
         Err(format!("task cannot move from {from} to {to}"))
     }
 }
-
-

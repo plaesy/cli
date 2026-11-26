@@ -34,7 +34,9 @@ fn status_of(reply: &str) -> u16 {
 }
 
 fn post(path: &str, body: &str, auth: Option<&str>) -> String {
-    let auth = auth.map_or(String::new(), |token| format!("Authorization: Bearer {token}\r\n"));
+    let auth = auth.map_or(String::new(), |token| {
+        format!("Authorization: Bearer {token}\r\n")
+    });
     format!(
         "POST {path} HTTP/1.1\r\nHost: localhost\r\n{auth}Content-Length: {}\r\n\r\n{body}",
         body.len()
@@ -47,7 +49,10 @@ fn send_then_read_over_a_real_socket() {
     let body = r#"{"id":"s-1","from":"alpha","to":"beta","text":"halo"}"#;
     let sent = request(addr, &post("/message:send", body, None));
     assert_eq!(status_of(&sent), 201);
-    let read = request(addr, "GET /tasks/alpha/s-1 HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    let read = request(
+        addr,
+        "GET /tasks/alpha/s-1 HTTP/1.1\r\nHost: localhost\r\n\r\n",
+    );
     assert_eq!(status_of(&read), 200);
     assert!(read.contains(r#""state":"submitted""#));
 }
@@ -56,13 +61,19 @@ fn send_then_read_over_a_real_socket() {
 fn a_token_is_required_when_configured() {
     let addr = start(Some("secret-token"));
     let body = r#"{"id":"s-2","from":"alpha","to":"beta","text":"halo"}"#;
-    assert_eq!(status_of(&request(addr, &post("/message:send", body, None))), 401);
+    assert_eq!(
+        status_of(&request(addr, &post("/message:send", body, None))),
+        401
+    );
     assert_eq!(
         status_of(&request(addr, &post("/message:send", body, Some("wrong")))),
         401
     );
     assert_eq!(
-        status_of(&request(addr, &post("/message:send", body, Some("secret-token")))),
+        status_of(&request(
+            addr,
+            &post("/message:send", body, Some("secret-token"))
+        )),
         201
     );
 }
@@ -114,15 +125,23 @@ fn malformed_request_line_is_rejected() {
 fn events_stream_reports_changes_and_closes_at_a_terminal_state() {
     let addr = start(None);
     let body = r#"{"id":"e-1","from":"alpha","to":"beta","text":"halo"}"#;
-    assert_eq!(status_of(&request(addr, &post("/message:send", body, None))), 201);
+    assert_eq!(
+        status_of(&request(addr, &post("/message:send", body, None))),
+        201
+    );
     let mut stream = TcpStream::connect(addr).expect("connect");
     stream
         .write_all(b"GET /tasks/alpha/e-1/events HTTP/1.1\r\nHost: localhost\r\n\r\n")
         .expect("write");
     thread::sleep(std::time::Duration::from_millis(300));
-    assert_eq!(status_of(&request(addr, &post("/tasks/alpha/e-1:cancel", "", None))), 200);
+    assert_eq!(
+        status_of(&request(addr, &post("/tasks/alpha/e-1:cancel", "", None))),
+        200
+    );
     let mut events = String::new();
-    stream.read_to_string(&mut events).expect("stream closes at terminal state");
+    stream
+        .read_to_string(&mut events)
+        .expect("stream closes at terminal state");
     assert!(events.contains("text/event-stream"), "{events:?}");
     assert!(events.contains(r#""state":"submitted""#), "{events}");
     assert!(events.contains(r#""state":"canceled""#), "{events}");

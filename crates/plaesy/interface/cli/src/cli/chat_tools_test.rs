@@ -147,13 +147,11 @@ fn unknown_tools_and_missing_files_come_back_as_text() {
         execute(&tools(temp.path(), false), &json!({"tool":"hapus_semua"})),
         "error: alat tidak dikenal: hapus_semua"
     );
-    assert!(
-        execute(
-            &tools(temp.path(), false),
-            &json!({"tool":"read_file","path":"tidak_ada.txt"})
-        )
-        .starts_with("error:")
-    );
+    assert!(execute(
+        &tools(temp.path(), false),
+        &json!({"tool":"read_file","path":"tidak_ada.txt"})
+    )
+    .starts_with("error:"));
 }
 
 #[test]
@@ -245,8 +243,14 @@ fn supervised_mutations_need_the_exact_persisted_approval() {
 
     let id = approval_id(&call);
     crate::cli::approvals::approve_at(temp.path(), &id).expect("approval");
-    assert_eq!(execute(&supervised, &call), "ditulis 4 byte ke approved.txt");
-    assert_eq!(fs::read_to_string(temp.path().join("approved.txt")).unwrap(), "aman");
+    assert_eq!(
+        execute(&supervised, &call),
+        "ditulis 4 byte ke approved.txt"
+    );
+    assert_eq!(
+        fs::read_to_string(temp.path().join("approved.txt")).unwrap(),
+        "aman"
+    );
 }
 
 #[test]
@@ -333,11 +337,9 @@ fn undo_restores_the_previous_bytes_or_removes_a_new_file() {
         &mut undo,
     );
     assert_eq!(undo.len(), 2);
-    assert!(
-        undo_last(&mut undo)
-            .expect("undo")
-            .starts_with("dibatalkan")
-    );
+    assert!(undo_last(&mut undo)
+        .expect("undo")
+        .starts_with("dibatalkan"));
     assert!(!temp.path().join("baru.txt").exists());
     undo_last(&mut undo).expect("undo");
     assert_eq!(

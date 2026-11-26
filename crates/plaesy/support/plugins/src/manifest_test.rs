@@ -46,9 +46,15 @@ fn capabilities_default_to_empty() {
 
 #[test]
 fn rejects_malformed_json_and_unknown_fields() {
-    assert!(matches!(Manifest::parse("{not json"), Err(PluginError::Manifest(_))));
+    assert!(matches!(
+        Manifest::parse("{not json"),
+        Err(PluginError::Manifest(_))
+    ));
     let extra = r#"{"name":"a","version":"1.0.0","abi":"1.0","permisi":[]}"#;
-    assert!(matches!(Manifest::parse(extra), Err(PluginError::Manifest(_))));
+    assert!(matches!(
+        Manifest::parse(extra),
+        Err(PluginError::Manifest(_))
+    ));
     let unknown_kind = manifest_json("a", "1.0.0", "1.0", r#"[{"kind":"exec"}]"#);
     assert!(matches!(
         Manifest::parse(&unknown_kind),
@@ -94,7 +100,12 @@ fn validates_version_and_abi() {
 
 #[test]
 fn rejects_duplicate_capability_after_normalization() {
-    let clocks = manifest_json("a", "1.0.0", "1.0", r#"[{"kind":"clock"},{"kind":"clock"}]"#);
+    let clocks = manifest_json(
+        "a",
+        "1.0.0",
+        "1.0",
+        r#"[{"kind":"clock"},{"kind":"clock"}]"#,
+    );
     assert_eq!(
         Manifest::parse(&clocks),
         Err(PluginError::DuplicateCapability("clock".to_owned()))

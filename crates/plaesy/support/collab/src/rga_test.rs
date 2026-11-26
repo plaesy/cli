@@ -187,5 +187,8 @@ fn malformed_operations_are_rejected() {
         target: id,
         lamport: 0,
     };
-    assert!(matches!(a.apply(zero_clock), Err(CollabError::InvalidOp(_))));
+    assert!(matches!(
+        a.apply(zero_clock),
+        Err(CollabError::InvalidOp(_))
+    ));
 }

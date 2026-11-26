@@ -19,8 +19,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use sha2::{Digest, Sha256};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::delegate::{self, DelegateError, Message, Provider, Request, Response};
 
@@ -221,7 +221,11 @@ fn requires_approval(name: &str) -> bool {
 pub fn approval_id(call: &Value) -> String {
     let encoded = serde_json::to_vec(call).unwrap_or_default();
     let digest = Sha256::digest(encoded);
-    let short: String = digest.iter().take(8).map(|byte| format!("{byte:02x}")).collect();
+    let short: String = digest
+        .iter()
+        .take(8)
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
     format!("tool-{short}")
 }
 

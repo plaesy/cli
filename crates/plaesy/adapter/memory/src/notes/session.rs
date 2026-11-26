@@ -101,7 +101,10 @@ fn validate_link(link: &SessionLink) -> Result<()> {
             "session link label must not be empty".into(),
         ));
     }
-    if label.chars().any(|c| c.is_control() || c == '[' || c == ']') {
+    if label
+        .chars()
+        .any(|c| c.is_control() || c == '[' || c == ']')
+    {
         return Err(MemoryError::ConfigError(format!(
             "session link label has brackets or control characters: {label}"
         )));

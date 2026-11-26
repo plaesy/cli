@@ -39,7 +39,14 @@ fn a_task_follows_the_normal_path() {
 #[test]
 fn terminal_states_accept_no_transition() {
     for end in [Completed, Failed, Canceled] {
-        for next in [Submitted, Working, InputRequired, Completed, Failed, Canceled] {
+        for next in [
+            Submitted,
+            Working,
+            InputRequired,
+            Completed,
+            Failed,
+            Canceled,
+        ] {
             assert!(transition(end, next).is_err(), "{end} -> {next}");
         }
     }

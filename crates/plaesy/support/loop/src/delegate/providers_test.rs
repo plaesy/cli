@@ -518,7 +518,9 @@ impl Provider for StreamingStub {
         "streaming"
     }
     fn complete(&self, _req: &Request) -> Result<ProviderReply, DelegateError> {
-        Err(DelegateError::terminal("complete is not used by the chat stream"))
+        Err(DelegateError::terminal(
+            "complete is not used by the chat stream",
+        ))
     }
     fn complete_messages_streaming(
         &self,
@@ -537,14 +539,22 @@ impl Provider for StreamingStub {
 #[test]
 fn model_fallback_streams_through_the_models_it_wraps() {
     let chain = model_fallback(vec![
-        Box::new(StreamingStub { fail: true, text: "" }),
-        Box::new(StreamingStub { fail: false, text: "streamed" }),
+        Box::new(StreamingStub {
+            fail: true,
+            text: "",
+        }),
+        Box::new(StreamingStub {
+            fail: false,
+            text: "streamed",
+        }),
     ]);
     let mut seen = String::new();
     let reply = chain
-        .complete_messages_streaming(&[Message::user("halo")], &Request::default(), &mut |chunk| {
-            seen.push_str(chunk)
-        })
+        .complete_messages_streaming(
+            &[Message::user("halo")],
+            &Request::default(),
+            &mut |chunk| seen.push_str(chunk),
+        )
         .unwrap();
     assert_eq!(reply.text, "streamed");
     assert_eq!(seen, "streamed");
@@ -562,7 +572,9 @@ fn claude_stream_lines_give_only_the_answer_text() {
     let mut reply = empty_reply();
     let mut streamed = String::new();
     for line in lines {
-        claude_stream_line(line, &mut reply, &mut |chunk: &str| streamed.push_str(chunk));
+        claude_stream_line(line, &mut reply, &mut |chunk: &str| {
+            streamed.push_str(chunk)
+        });
     }
     assert_eq!(reply.text, "Halo!");
     assert_eq!(streamed, "Halo!");

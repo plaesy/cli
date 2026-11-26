@@ -59,7 +59,9 @@ pub fn run(args: &Args) -> CliResult {
             };
             let log = match log {
                 Some(path) => path.clone(),
-                None => super::common::find_root()?.join(".plaesy").join("audit.log"),
+                None => super::common::find_root()?
+                    .join(".plaesy")
+                    .join("audit.log"),
             };
             let listing = AuditTrail::new(RunLog::open(log)).list(&query)?;
             if listing.torn_tail {

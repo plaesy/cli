@@ -25,7 +25,9 @@ fn normalizes_separators_and_trailing_slash() {
 
 #[test]
 fn rejects_unsafe_paths() {
-    for raw in ["", "a/../b", "./a", "a/./b", "a//b", "a\nb", "C:x:y", "/C:/x", "a:b"] {
+    for raw in [
+        "", "a/../b", "./a", "a/./b", "a//b", "a\nb", "C:x:y", "/C:/x", "a:b",
+    ] {
         assert!(
             matches!(normalize_path(raw), Err(PluginError::InvalidCapability(_))),
             "{raw:?}"
@@ -45,7 +47,10 @@ fn path_covers_by_whole_component() {
 
 #[test]
 fn normalizes_host_and_rejects_wildcards_and_ports() {
-    assert_eq!(normalize_host("API.Example.COM").unwrap(), "api.example.com");
+    assert_eq!(
+        normalize_host("API.Example.COM").unwrap(),
+        "api.example.com"
+    );
     assert_eq!(normalize_host("127.0.0.1").unwrap(), "127.0.0.1");
     for raw in [
         "*.example.com",

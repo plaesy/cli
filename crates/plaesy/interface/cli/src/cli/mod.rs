@@ -3,6 +3,9 @@
 
 pub mod acp;
 pub mod advisor;
+pub mod agent_http;
+pub mod agent_serve;
+pub mod agent_task;
 pub mod analyze;
 pub mod approvals;
 pub mod audit;
@@ -32,15 +35,12 @@ pub mod delegate;
 pub mod doctor;
 pub mod export;
 pub mod files;
+pub mod gateway;
 pub mod images;
 pub mod import_cmd;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
-pub mod agent_http;
-pub mod agent_serve;
-pub mod agent_task;
-pub mod gateway;
 pub mod mcp;
 pub mod memory;
 pub mod openapi_cmd;

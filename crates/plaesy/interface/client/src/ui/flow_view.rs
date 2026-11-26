@@ -50,7 +50,9 @@ pub fn render_flow(name: &str, modules: &[ModuleView]) -> String {
     }
     body.push_str("</ul></section>\n");
 
-    body.push_str("<section><h2>Alur data</h2>\n<ul role=\"list\" aria-label=\"Daftar alur data\">\n");
+    body.push_str(
+        "<section><h2>Alur data</h2>\n<ul role=\"list\" aria-label=\"Daftar alur data\">\n",
+    );
     for edge in edges(modules) {
         body.push_str(&format!(
             "<li>{} &rarr; {}</li>\n",

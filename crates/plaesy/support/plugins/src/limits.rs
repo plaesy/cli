@@ -37,10 +37,7 @@ impl ResourceLimits {
     ///
     /// Mengembalikan `PluginError::InvalidLimits` jika nilai di luar rentang yang diizinkan.
     pub fn new(fuel: u64, memory_bytes: u64) -> Result<Self, PluginError> {
-        let limits = Self {
-            fuel,
-            memory_bytes,
-        };
+        let limits = Self { fuel, memory_bytes };
         limits.validate()?;
         Ok(limits)
     }
