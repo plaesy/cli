@@ -197,7 +197,10 @@ pub fn update(args: &UpdateArgs, tasks_dir: &Path) -> CliResult {
     let estimate = args
         .estimate
         .as_deref()
-        .map(|value| tasks::issue::parse_duration_minutes(value).map_err(|error| format!("estimate: {error}")))
+        .map(|value| {
+            tasks::issue::parse_duration_minutes(value)
+                .map_err(|error| format!("estimate: {error}"))
+        })
         .transpose()?;
     let graph_lock = tasks::issue::IssueGraphLock::acquire(tasks_dir)?;
     let mut issues = Issue::load_collection(tasks_dir)?;
@@ -343,7 +346,9 @@ pub fn run(args: &Args, tasks_dir: &Path) -> CliResult {
         .filter(|(task, _, _)| task.status == Status::Done)
         .map(|(_, issue, _)| issue.id.clone())
         .collect();
-    println!("TYPE     STATUS     PRIORITY   ASSIGNEE     MILESTONE    DUE        LABELS      TITLE");
+    println!(
+        "TYPE     STATUS     PRIORITY   ASSIGNEE     MILESTONE    DUE        LABELS      TITLE"
+    );
     let mut count = 0;
     for (task, issue, frontmatter) in records {
         if !matches_due(&issue, task.status, due_before, args.overdue, today) {

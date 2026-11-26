@@ -42,7 +42,14 @@ fn load_a(tasks: &std::path::Path) -> Issue {
 #[test]
 fn log_appends_entries_in_order_and_trims_notes() {
     let (_root, tasks) = fixture();
-    log("a", "1h30m", Some("2026-03-02"), Some("  wrote parser  "), &tasks).unwrap();
+    log(
+        "a",
+        "1h30m",
+        Some("2026-03-02"),
+        Some("  wrote parser  "),
+        &tasks,
+    )
+    .unwrap();
     log("a", "45m", Some("2026-03-03"), None, &tasks).unwrap();
 
     let issue = load_a(&tasks);
