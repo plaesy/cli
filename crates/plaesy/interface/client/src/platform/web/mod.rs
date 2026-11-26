@@ -40,7 +40,7 @@ fn FlowEditor(props: FlowEditorProps) -> Element {
         .map(|e| (e.from.clone(), e.to.clone()))
         .collect();
     let positions = layout(&ids, &edge_pairs).unwrap_or_else(|_| fallback_positions(&ids));
-    let mut selected = use_signal(|| Some("m3".to_owned()));
+    let selected = use_signal(|| Some("m3".to_owned()));
     let mut zoom = use_signal(|| 0.8_f64);
     let mut status = use_signal(|| "Draft changes are local to this editor".to_owned());
     let selected_module = selected()
@@ -49,13 +49,13 @@ fn FlowEditor(props: FlowEditorProps) -> Element {
 
     rsx! { div { class: "app-shell",
         header { class: "topbar",
-            div { class: "brand-lockup", span { class: "brand-mark", aria_hidden: "true" }, strong { "Plaesy" } }
-            span { class: "topbar-divider", aria_hidden: "true" }
+            div { class: "brand-lockup", span { class: "brand-mark", "aria-hidden": "true" }, strong { "Plaesy" } }
+            span { class: "topbar-divider", "aria-hidden": "true" }
             span { class: "breadcrumb", "Flows  /  {props.name}" }
             span { class: "version", "flow-ir/1 · version 3" }
             div { class: "top-actions",
-                button { class: "button button-validate", onclick: move |_| status.set(if issues.is_empty() { "Validation passed · no local issues" } else { "Validation found local issues" }), "Validate" }
-                button { class: "button button-save", onclick: move |_| status.set("Draft saved locally · ready for review"), "Save draft" }
+                button { class: "button button-validate", onclick: move |_| status.set(if issues.is_empty() { "Validation passed · no local issues" } else { "Validation found local issues" }.to_owned()), "Validate" }
+                button { class: "button button-save", onclick: move |_| status.set("Draft saved locally · ready for review".to_owned()), "Save draft" }
                 span { class: "concept-badge", "CONCEPT" }
             }
         }
@@ -78,7 +78,7 @@ fn FlowEditor(props: FlowEditorProps) -> Element {
                 }
                 div { class: "canvas-viewport",
                     div { class: "canvas-stage", style: "transform:scale({zoom()}); transform-origin:top left;",
-                        svg { class: "edge-layer", width: "760", height: "620", view_box: "0 0 760 620", aria_hidden: "true",
+                        svg { class: "edge-layer", width: "760", height: "620", view_box: "0 0 760 620", "aria-hidden": "true",
                             defs { marker { id: "arrow", marker_width: "8", marker_height: "8", ref_x: "6", ref_y: "3", orient: "auto", marker_units: "strokeWidth", path { d: "M0,0 L0,6 L6,3 z", fill: "#718CA0" } } }
                             for edge in edge_list.iter() { if let (Some(from), Some(to)) = (positions.get(&edge.from), positions.get(&edge.to)) {
                                 line { x1: "{node_x(from) + 176}", y1: "{node_y(from) + 44}", x2: "{node_x(to)}", y2: "{node_y(to) + 44}", stroke: "#718CA0", stroke_width: "2", marker_end: "url(#arrow)" }
