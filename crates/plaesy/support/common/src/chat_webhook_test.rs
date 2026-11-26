@@ -153,9 +153,17 @@ fn config_rejects_duplicate_names_bad_urls_and_bad_auth_fields() {
         ("Authorization", "BAD-NAME"),
     ] {
         let config = ChatWebhookConfig {
-            targets: vec![target("a", "https://x.example/1", true, Some((header, env)))],
+            targets: vec![target(
+                "a",
+                "https://x.example/1",
+                true,
+                Some((header, env)),
+            )],
         };
-        assert!(config.validate().is_err(), "seharusnya ditolak: {header} {env}");
+        assert!(
+            config.validate().is_err(),
+            "seharusnya ditolak: {header} {env}"
+        );
     }
 }
 
@@ -215,16 +223,29 @@ fn truncation_never_splits_a_multibyte_character() {
 
 #[test]
 fn headers_read_env_and_never_echo_the_value() {
-    let t = target("a", "https://x.example/1", true, Some(("Authorization", "TOKEN_A")));
+    let t = target(
+        "a",
+        "https://x.example/1",
+        true,
+        Some(("Authorization", "TOKEN_A")),
+    );
     let env = |k: &str| (k == "TOKEN_A").then(|| "Bearer s3cret".to_string());
     let headers = resolve_headers(&t, &env).expect("headers");
     assert_eq!(headers[0].0, "Content-Type");
-    assert_eq!(headers[1], ("Authorization".to_string(), "Bearer s3cret".to_string()));
+    assert_eq!(
+        headers[1],
+        ("Authorization".to_string(), "Bearer s3cret".to_string())
+    );
 }
 
 #[test]
 fn missing_or_invalid_env_value_is_a_typed_error_without_the_secret() {
-    let t = target("a", "https://x.example/1", true, Some(("Authorization", "TOKEN_A")));
+    let t = target(
+        "a",
+        "https://x.example/1",
+        true,
+        Some(("Authorization", "TOKEN_A")),
+    );
     assert_eq!(
         resolve_headers(&t, &no_env),
         Err(ChatWebhookError::MissingEnv {
@@ -241,14 +262,21 @@ fn missing_or_invalid_env_value_is_a_typed_error_without_the_secret() {
 
 #[test]
 fn deliver_posts_json_with_auth_header_and_accepts_2xx() {
-    let t = target("a", "https://x.example/hook", true, Some(("Authorization", "TOKEN_A")));
+    let t = target(
+        "a",
+        "https://x.example/hook",
+        true,
+        Some(("Authorization", "TOKEN_A")),
+    );
     let env = |k: &str| (k == "TOKEN_A").then(|| "Bearer s3cret".to_string());
     let poster = FakePoster::ok(204);
     deliver(&poster, &t, &message(), &env).expect("delivered");
     let calls = poster.calls.borrow();
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].0, "https://x.example/hook");
-    assert!(calls[0].1.contains(&("Authorization".to_string(), "Bearer s3cret".to_string())));
+    assert!(calls[0]
+        .1
+        .contains(&("Authorization".to_string(), "Bearer s3cret".to_string())));
     let body: serde_json::Value = serde_json::from_slice(&calls[0].2).expect("json");
     assert_eq!(body["schema"], SCHEMA);
 }

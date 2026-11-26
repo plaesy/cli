@@ -6,15 +6,15 @@
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};
-use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use chrono::DateTime;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
-use super::{Class, DelegateError, Message, Provider, ProviderReply, Request, flatten};
+use super::{flatten, Class, DelegateError, Message, Provider, ProviderReply, Request};
 use crate::config::delegate::DelegateProviderConfig;
 
 /// Output-token allowance when a request sets none.

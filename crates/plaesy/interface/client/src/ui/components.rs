@@ -14,9 +14,7 @@ use dioxus_shadcn::{
     input::Input,
     label::Label,
     scroll_area::ScrollArea,
-    sidebar::{
-        Sidebar as ShadcnSidebar, SidebarFooter, SidebarGroup, SidebarHeader, SidebarItem,
-    },
+    sidebar::{Sidebar as ShadcnSidebar, SidebarFooter, SidebarGroup, SidebarHeader, SidebarItem},
 };
 
 /// NavigationItem — mirror komponen NavigationItem di FigCraft (ID 4340).

@@ -17,7 +17,10 @@ fn complete(title: &str) -> VoiceCommand {
 #[test]
 fn create_task_indonesian_and_english() {
     assert_eq!(parse("buat tugas beli susu"), Ok(create("beli susu")));
-    assert_eq!(parse("tambahkan tugas kirim laporan"), Ok(create("kirim laporan")));
+    assert_eq!(
+        parse("tambahkan tugas kirim laporan"),
+        Ok(create("kirim laporan"))
+    );
     assert_eq!(parse("add task buy milk"), Ok(create("buy milk")));
     assert_eq!(parse("new task write tests"), Ok(create("write tests")));
 }
@@ -33,24 +36,42 @@ fn create_task_keeps_case_and_inner_punctuation() {
 
 #[test]
 fn create_task_skips_filler_and_connectors() {
-    assert_eq!(parse("tolong buat tugas beli roti"), Ok(create("beli roti")));
-    assert_eq!(parse("Plaesy, buat tugas beli roti"), Ok(create("beli roti")));
-    assert_eq!(parse("buat tugas untuk membeli susu"), Ok(create("membeli susu")));
+    assert_eq!(
+        parse("tolong buat tugas beli roti"),
+        Ok(create("beli roti"))
+    );
+    assert_eq!(
+        parse("Plaesy, buat tugas beli roti"),
+        Ok(create("beli roti"))
+    );
+    assert_eq!(
+        parse("buat tugas untuk membeli susu"),
+        Ok(create("membeli susu"))
+    );
     assert_eq!(parse("add task to buy milk"), Ok(create("buy milk")));
     assert_eq!(parse("buat tugas baru beli kopi"), Ok(create("beli kopi")));
 }
 
 #[test]
 fn create_task_title_may_contain_command_words() {
-    assert_eq!(parse("buat tugas tandai selesai"), Ok(create("tandai selesai")));
+    assert_eq!(
+        parse("buat tugas tandai selesai"),
+        Ok(create("tandai selesai"))
+    );
 }
 
 #[test]
 fn complete_task_prefix_forms() {
-    assert_eq!(parse("selesaikan tugas beli susu"), Ok(complete("beli susu")));
+    assert_eq!(
+        parse("selesaikan tugas beli susu"),
+        Ok(complete("beli susu"))
+    );
     assert_eq!(parse("tandai selesai beli susu"), Ok(complete("beli susu")));
     assert_eq!(parse("complete task buy milk"), Ok(complete("buy milk")));
-    assert_eq!(parse("finish task write tests"), Ok(complete("write tests")));
+    assert_eq!(
+        parse("finish task write tests"),
+        Ok(complete("write tests"))
+    );
 }
 
 #[test]
@@ -60,7 +81,10 @@ fn complete_task_suffix_forms() {
         Ok(complete("beli susu"))
     );
     assert_eq!(parse("tandai beli susu selesai"), Ok(complete("beli susu")));
-    assert_eq!(parse("mark task buy milk as done"), Ok(complete("buy milk")));
+    assert_eq!(
+        parse("mark task buy milk as done"),
+        Ok(complete("buy milk"))
+    );
     assert_eq!(parse("mark buy milk done"), Ok(complete("buy milk")));
 }
 

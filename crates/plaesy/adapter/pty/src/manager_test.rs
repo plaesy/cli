@@ -51,11 +51,11 @@ fn open_rejects_invalid_command_before_spawning() {
 #[test]
 fn open_rejects_invalid_size_before_spawning() {
     let manager = PtyManager::new(PtyConfig::default()).unwrap();
-    let result = manager.open(
-        &CommandSpec::new("sh"),
-        TermSize { rows: 0, cols: 80 },
-    );
-    assert!(matches!(result, Err(PtyError::InvalidSize { rows: 0, cols: 80 })));
+    let result = manager.open(&CommandSpec::new("sh"), TermSize { rows: 0, cols: 80 });
+    assert!(matches!(
+        result,
+        Err(PtyError::InvalidSize { rows: 0, cols: 80 })
+    ));
 }
 
 #[test]

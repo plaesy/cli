@@ -8,10 +8,10 @@ use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
-use std::time::Instant;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 
 use plaesy_adapter_relay::relay::MessageStore;
 
@@ -61,13 +61,24 @@ pub fn run(args: &Args) -> CliResult {
     let db = args.path.join(".plaesy").join("relay.sqlite");
     let store = MessageStore::open(&db)?;
     let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, args.port)))?;
-    let token = std::env::var(TOKEN_ENV).ok().filter(|value| !value.is_empty());
+    let token = std::env::var(TOKEN_ENV)
+        .ok()
+        .filter(|value| !value.is_empty());
     eprintln!(
         "agent: listening on 127.0.0.1:{} (token {})",
         args.port,
-        if token.is_some() { "required" } else { "not set" }
+        if token.is_some() {
+            "required"
+        } else {
+            "not set"
+        }
     );
-    serve(listener, Arc::new(Mutex::new(store)), token, args.path.join(".plaesy"));
+    serve(
+        listener,
+        Arc::new(Mutex::new(store)),
+        token,
+        args.path.join(".plaesy"),
+    );
     Ok(())
 }
 
@@ -84,7 +95,12 @@ pub fn serve(
         let token = token.clone();
         let watch_dir = watch_dir.clone();
         thread::spawn(move || {
-            let _ = handle(stream, &store, token.as_deref().map(String::as_str), &watch_dir);
+            let _ = handle(
+                stream,
+                &store,
+                token.as_deref().map(String::as_str),
+                &watch_dir,
+            );
         });
     }
 }
@@ -183,10 +199,13 @@ Connection: close
                 let name = state.as_str();
                 if last.as_deref() != Some(name) {
                     let data = serde_json::json!({ "id": id, "from": sender, "state": name });
-                    write!(stream, "event: task
+                    write!(
+                        stream,
+                        "event: task
 data: {data}
 
-")?;
+"
+                    )?;
                     stream.flush()?;
                     last = Some(name.to_owned());
                 }
@@ -195,10 +214,13 @@ data: {data}
                 }
             }
             _ => {
-                write!(stream, "event: error
+                write!(
+                    stream,
+                    "event: error
 data: {{\"error\":\"no such task\"}}
 
-")?;
+"
+                )?;
                 return stream.flush();
             }
         }

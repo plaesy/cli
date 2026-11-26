@@ -29,7 +29,10 @@ fn valid_expressions_parse() {
 #[test]
 fn bitmasks_follow_the_expression() {
     let s = CronSpec::parse("5-20/5 0,12 * * 7").expect("parse");
-    assert_eq!(s.minutes, (1u64 << 5) | (1u64 << 10) | (1u64 << 15) | (1u64 << 20));
+    assert_eq!(
+        s.minutes,
+        (1u64 << 5) | (1u64 << 10) | (1u64 << 15) | (1u64 << 20)
+    );
     assert_eq!(s.hours, (1u64 << 0) | (1u64 << 12));
     // Day-of-month `*` covers 1-31.
     assert_eq!(s.days, ((1u64 << 32) - 1) & !1);

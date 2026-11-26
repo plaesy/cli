@@ -79,10 +79,7 @@ fn audit_at(
 }
 
 /// Runs an approval command against `root`, writing the audit entry first.
-fn apply_at(
-    root: &std::path::Path,
-    command: &Command,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn apply_at(root: &std::path::Path, command: &Command) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Command::Approve { action_id } => {
             audit_at(root, "approval:approve", true, "approved")?;

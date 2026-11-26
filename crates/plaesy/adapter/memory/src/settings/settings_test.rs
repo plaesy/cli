@@ -78,9 +78,6 @@ fn symlinked_settings_path_is_rejected_on_load_and_replaced_on_save() {
         .unwrap()
         .file_type()
         .is_symlink());
-    assert_eq!(
-        std::fs::read_to_string(&target).unwrap(),
-        "version = 1\n"
-    );
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), "version = 1\n");
     assert_eq!(load(&path).unwrap(), Some(Settings::default()));
 }

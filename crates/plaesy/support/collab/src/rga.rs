@@ -233,9 +233,9 @@ impl Replica {
     /// Dependensi operasi sudah ada di replika.
     fn is_ready(&self, op: &Op) -> bool {
         match op {
-            Op::Insert { after, .. } => after
-                .as_ref()
-                .is_none_or(|a| self.position_of(a).is_some()),
+            Op::Insert { after, .. } => {
+                after.as_ref().is_none_or(|a| self.position_of(a).is_some())
+            }
             Op::Delete { target, .. } => self.position_of(target).is_some(),
         }
     }
