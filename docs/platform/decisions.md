@@ -229,3 +229,9 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Pembacaan: `config.toml` didahulukan. `settings.json` dibaca hanya bila `config.toml` belum ada. Helper `delegate::config_path` dan `delegate::settings_path` adalah satu-satunya tempat path ini dibentuk.
 - Penulisan pertama (`/model`) menyalin `settings.json` ke `config.toml`, dan `settings.json` tidak diubah. Nilai `null` tidak bisa dikonversi dan ditolak dengan pesan jelas.
 - Status: baru `chat` dan `delegate` yang memakai helper ini. Crate lain (memory, skills, telemetry, reach, schedule, dan sebagainya) masih membaca `settings.json`. Sampai migrasi itu selesai, mengedit `settings.json` tidak memengaruhi `delegate` setelah `config.toml` ada.
+
+## Agent-to-agent transport default (2026-11-26, didelegasikan, bisa dicabut pemilik)
+
+- Default: pesan antar agent tetap lewat relay lokal (`plaesy relay`) dengan listener di `plaesy chat` (mode line dan `--tui`). Relay dan listener sudah diuji dengan dua sesi chat dan dengan pseudo-terminal.
+- Plaesy tidak menjadi server A2A untuk sekarang. A2A (Agent Card, JSON-RPC/REST, task streaming) dicatat sebagai opsi untuk jalur antar-mesin. Belum ada keputusan untuk mengadopsinya.
+- Pemilik dapat mencabut default ini. Pembukaan A2A mengubah endpoint, autentikasi, dan Agent Card, jadi perlu keputusan terpisah.
