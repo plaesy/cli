@@ -174,3 +174,21 @@ fn create_subtask_under_a_task_in_another_status_is_accepted() {
         .count();
     assert_eq!(children, 1);
 }
+
+#[test]
+fn created_task_has_a_saved_first_version() {
+    let root = tempfile::tempdir().unwrap();
+    let tasks = tasks::tasks_dir(root.path());
+    run(&args(), &tasks, "spec").unwrap();
+    let task_name = tasks::list_tasks(&tasks, tasks::Status::Backlog)
+        .unwrap()
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+
+    let versions =
+        tasks::history::list_versions(&tasks::project_root_of(&tasks), &task_name).unwrap();
+    assert_eq!(versions.len(), 1);
+    assert_eq!(versions[0].label, "create");
+}

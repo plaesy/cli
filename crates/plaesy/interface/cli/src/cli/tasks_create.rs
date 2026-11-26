@@ -144,6 +144,8 @@ pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
         }
         return Err(error.into());
     }
+    // Record the first version so `tasks history` shows the task from its creation.
+    tasks::history::snapshot_task(&tasks::project_root_of(tasks_dir), &name, "create")?;
     println!("[✓] Created {name} for spec {spec}");
     Ok(())
 }

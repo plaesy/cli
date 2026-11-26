@@ -18,9 +18,10 @@ pub struct Args {
 enum Action {
     /// Print the newest audit entries as JSON lines, one per entry
     List {
-        /// Audit log file. Protect it as private project data.
-        #[arg(long, default_value = ".plaesy/audit.log")]
-        log: PathBuf,
+        /// Audit log file. Defaults to `.plaesy/audit.log` in the project root. Protect it as
+        /// private project data.
+        #[arg(long)]
+        log: Option<PathBuf>,
         /// Maximum number of entries to print.
         #[arg(long, default_value_t = 20)]
         limit: usize,
@@ -56,7 +57,11 @@ pub fn run(args: &Args) -> CliResult {
                 until: until.as_deref().map(parse_instant).transpose()?,
                 limit: Some(*limit),
             };
-            let listing = AuditTrail::new(RunLog::open(log.clone())).list(&query)?;
+            let log = match log {
+                Some(path) => path.clone(),
+                None => super::common::find_root()?.join(".plaesy").join("audit.log"),
+            };
+            let listing = AuditTrail::new(RunLog::open(log)).list(&query)?;
             if listing.torn_tail {
                 eprintln!("warning: audit log ends in an incomplete line; it was ignored");
             }
