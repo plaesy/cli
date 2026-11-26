@@ -50,3 +50,11 @@ Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah.
 2. Tabel tugas di relay SQLite, dengan migrasi.
 3. Endpoint `message:send`, `tasks/{id}`, dan SSE, dengan tes pada socket lokal.
 4. Hubungkan `/agent send` ke `message:send`.
+
+## Keputusan default (didelegasikan, bisa dicabut pemilik)
+
+1. Server berjalan satu per repo, bukan per sesi chat.
+2. Pesan dan riwayat tugas disimpan 30 hari, lalu dihapus saat `plaesy agent gc`.
+3. Perintah baru `plaesy agent serve` dibuat, bukan memakai `plaesy remote serve`, karena `remote` hanya read-only.
+
+Implementasi bertahap: model tugas dan transisi state lebih dulu, dengan tes unit. Endpoint HTTP dan SSE setelahnya.
