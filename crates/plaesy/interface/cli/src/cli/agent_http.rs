@@ -48,14 +48,12 @@ fn send_message(store: &mut MessageStore, body: &[u8]) -> (u16, String) {
         return error(400, "text must not be empty");
     }
     let body_json = json!({ "depth": 0, "text": text }).to_string();
-    if let Err(err) = store.create_task(&id, &from, &to) {
-        return map_error(err);
-    }
-    match store.send(&id, &from, &to, &body_json) {
-        Ok(_) => (
+    // One transaction opens the task and queues the message. A repeat with the same content returns
+    // the task's current state, not an error.
+    match store.send_task(&id, &from, &to, &body_json) {
+        Ok(state) => (
             201,
-            json!({ "id": id, "from": from, "to": to, "state": TaskState::Submitted.as_str() })
-                .to_string(),
+            json!({ "id": id, "from": from, "to": to, "state": state.as_str() }).to_string(),
         ),
         Err(err) => map_error(err),
     }

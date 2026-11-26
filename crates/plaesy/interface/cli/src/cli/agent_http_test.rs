@@ -66,8 +66,42 @@ fn malformed_or_oversized_requests_are_rejected() {
 }
 
 #[test]
-fn a_task_id_cannot_be_sent_twice_from_the_same_sender() {
+fn an_identical_resend_is_idempotent_and_changed_content_is_refused() {
     let mut store = MessageStore::in_memory().expect("store");
     assert_eq!(send(&mut store, "t-4").0, 201);
-    assert_ne!(send(&mut store, "t-4").0, 201);
+    let (resent, body) = send(&mut store, "t-4");
+    assert_eq!(resent, 201);
+    assert_eq!(json(&body)["state"], "submitted");
+    assert_eq!(store.inbox("beta", 10).expect("inbox").len(), 1);
+    let changed = br#"{"id":"t-4","from":"alpha","to":"beta","text":"other"}"#;
+    let (conflict, _) = route(&mut store, "POST", "/message:send", changed);
+    assert_eq!(conflict, 409);
+}
+
+#[test]
+fn repeated_send_returns_the_current_state_and_conflicting_content_is_409() {
+    let mut store = MessageStore::in_memory().expect("store");
+    assert_eq!(send(&mut store, "t-4").0, 201);
+    let (status, body) = send(&mut store, "t-4");
+    assert_eq!(status, 201);
+    assert_eq!(json(&body)["state"], "submitted");
+    let changed = br#"{"id":"t-4","from":"alpha","to":"beta","text":"other"}"#;
+    let (conflict, _) = route(&mut store, "POST", "/message:send", changed);
+    assert_eq!(conflict, 409);
+}
+
+#[test]
+fn send_claim_get_ack_get_walks_the_task_to_completed() {
+    let mut store = MessageStore::in_memory().expect("store");
+    send(&mut store, "t-5");
+    let claimed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    let (_, working) = route(&mut store, "GET", "/tasks/alpha/t-5", b"");
+    assert_eq!(json(&working)["state"], "working");
+    let token = claimed.lease_owner.expect("lease");
+    assert!(store.acknowledge_claim("t-5", "beta", &token).expect("ack"));
+    let (_, completed) = route(&mut store, "GET", "/tasks/alpha/t-5", b"");
+    assert_eq!(json(&completed)["state"], "completed");
 }

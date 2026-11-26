@@ -192,15 +192,69 @@ impl MessageStore {
 
     /// Current state of a task, or `None` when no task has that sender and id.
     pub fn task_state(&self, sender: &str, id: &str) -> Result<Option<TaskState>, MessageError> {
-        let text: Option<String> = self
+        Ok(task_state_in(&self.connection, sender, id)?)
+    }
+
+    /// Queues a message and opens its task in one transaction, so a message never exists without
+    /// its task. Repeating the same send changes nothing and returns the task's current state.
+    /// Reusing the id with different content is `IdempotencyConflict`. The task state reflects
+    /// later deliveries: see [`advance_task`] for which relay events move it.
+    pub fn send_task(
+        &mut self,
+        id: &str,
+        sender: &str,
+        recipient: &str,
+        body: &str,
+    ) -> Result<TaskState, MessageError> {
+        validate_message(id, sender, recipient, body)?;
+        let now = chrono::Utc::now();
+        let now_text = now.to_rfc3339();
+        let tx = self
             .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let existing: Option<(String, String, String)> = tx
             .query_row(
-                "SELECT state FROM relay_tasks WHERE sender = ?1 AND id = ?2",
-                rusqlite::params![sender, id],
-                |row| row.get(0),
+                "SELECT sender, recipient, body FROM relay_messages WHERE id=?1",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .optional()?;
-        Ok(text.and_then(|value| TaskState::parse(&value)))
+        if let Some((old_sender, old_recipient, old_body)) = existing {
+            if old_sender != sender || old_recipient != recipient || old_body != body {
+                return Err(MessageError::IdempotencyConflict);
+            }
+            // A message sent without a task (through `send`) has no task to report.
+            let state = task_state_in(&tx, sender, id)?.ok_or(MessageError::IdempotencyConflict)?;
+            tx.commit()?;
+            return Ok(state);
+        }
+        // A task row with no message is left by an older send that failed between its two
+        // writes. It is reused only while it is still `submitted` to the same recipient.
+        let orphan: Option<(String, String)> = tx
+            .query_row(
+                "SELECT recipient, state FROM relay_tasks WHERE sender=?1 AND id=?2",
+                params![sender, id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        match orphan {
+            Some((orphan_recipient, state))
+                if orphan_recipient == recipient && state == "submitted" => {}
+            Some(_) => return Err(MessageError::IdempotencyConflict),
+            None => {
+                tx.execute(
+                    "INSERT INTO relay_tasks (id, sender, recipient, state, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, 'submitted', ?4, ?4)",
+                    params![id, sender, recipient, now_text],
+                )?;
+            }
+        }
+        tx.execute(
+            "INSERT INTO relay_messages(id,sender,recipient,body,created_at) VALUES (?1,?2,?3,?4,?5)",
+            params![id, sender, recipient, body, now_text],
+        )?;
+        tx.commit()?;
+        Ok(TaskState::Submitted)
     }
 
     /// Moves a task to `next` when the transition is allowed; the rules are in `task.rs`.
@@ -230,12 +284,7 @@ impl MessageStore {
         recipient: &str,
         body: &str,
     ) -> Result<Message, MessageError> {
-        validate_id(id)?;
-        validate_agent(sender)?;
-        validate_agent(recipient)?;
-        if body.is_empty() || body.len() > MAX_BODY_BYTES {
-            return Err(MessageError::Invalid("body must be 1..=65536 UTF-8 bytes"));
-        }
+        validate_message(id, sender, recipient, body)?;
         let now = chrono::Utc::now();
         let created_at = now.to_rfc3339();
         let now_ms = now.timestamp_millis();
@@ -353,6 +402,13 @@ impl MessageStore {
             [&id],
             row_to_message,
         )?;
+        advance_task(
+            &tx,
+            &message.sender,
+            &id,
+            TaskState::Working,
+            &chrono::Utc::now().to_rfc3339(),
+        )?;
         tx.commit()?;
         Ok(Some(message))
     }
@@ -370,10 +426,17 @@ impl MessageStore {
         let now = chrono::Utc::now();
         let now_text = now.to_rfc3339();
         let now_ms = now.timestamp_millis();
-        let changed = self.connection.execute(
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let changed = tx.execute(
             "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2,lease_owner=NULL,lease_expiry_epoch_ms=NULL WHERE id=?3 AND recipient=?4 AND lease_owner=?5 AND lease_expiry_epoch_ms>?6 AND acknowledged_at IS NULL",
             params![now_text, now_ms, id, recipient, owner, now_ms],
         )?;
+        if changed == 1 {
+            complete_task(&tx, id, &now_text)?;
+        }
+        tx.commit()?;
         Ok(changed == 1)
     }
 
@@ -409,11 +472,20 @@ impl MessageStore {
             tx.commit()?;
             return Ok(None);
         }
-        let failed: bool = tx.query_row(
-            "SELECT failed_at_epoch_ms IS NOT NULL FROM relay_messages WHERE id=?1",
+        let (sender, failed): (String, bool) = tx.query_row(
+            "SELECT sender, failed_at_epoch_ms IS NOT NULL FROM relay_messages WHERE id=?1",
             [id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
+        if failed {
+            advance_task(
+                &tx,
+                &sender,
+                id,
+                TaskState::Failed,
+                &chrono::Utc::now().to_rfc3339(),
+            )?;
+        }
         tx.commit()?;
         Ok(Some(if failed {
             MessageStatus::Failed
@@ -428,10 +500,17 @@ impl MessageStore {
         validate_agent(recipient)?;
         let now = chrono::Utc::now();
         let now_text = now.to_rfc3339();
-        let changed = self.connection.execute(
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let changed = tx.execute(
             "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND attempts=0",
             params![now_text, now.timestamp_millis(), id, recipient],
         )?;
+        if changed == 1 {
+            complete_task(&tx, id, &now_text)?;
+        }
+        tx.commit()?;
         Ok(changed == 1)
     }
 
@@ -535,6 +614,77 @@ fn live_filter(now_ms: i64) -> String {
     format!(
         "acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND (attempts<{MAX_ATTEMPTS} OR lease_expiry_epoch_ms>{now_ms})"
     )
+}
+
+fn validate_message(
+    id: &str,
+    sender: &str,
+    recipient: &str,
+    body: &str,
+) -> Result<(), MessageError> {
+    validate_id(id)?;
+    validate_agent(sender)?;
+    validate_agent(recipient)?;
+    if body.is_empty() || body.len() > MAX_BODY_BYTES {
+        return Err(MessageError::Invalid("body must be 1..=65536 UTF-8 bytes"));
+    }
+    Ok(())
+}
+
+/// Reads the state of task `(sender, id)` through `conn`, which may be a transaction.
+fn task_state_in(
+    conn: &Connection,
+    sender: &str,
+    id: &str,
+) -> Result<Option<TaskState>, rusqlite::Error> {
+    let text: Option<String> = conn
+        .query_row(
+            "SELECT state FROM relay_tasks WHERE sender = ?1 AND id = ?2",
+            params![sender, id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    Ok(text.and_then(|value| TaskState::parse(&value)))
+}
+
+/// Moves task `(sender, id)` to `next` when the state machine allows it, inside the caller's
+/// transaction. A missing task, or a move the machine refuses (already past it, or canceled), leaves
+/// the task as it is. The message is the authority for delivery, so a task move never fails or
+/// undoes a message operation.
+///
+/// Events: a claim moves the task to `working`; a leased or legacy ack moves it to `completed` (via
+/// `working` when it was still `submitted`); the final failed release moves it to `failed`. A
+/// non-final release keeps `working`, because the state machine has no way back to `submitted`.
+fn advance_task(
+    conn: &Connection,
+    sender: &str,
+    id: &str,
+    next: TaskState,
+    now: &str,
+) -> Result<(), rusqlite::Error> {
+    let Some(current) = task_state_in(conn, sender, id)? else {
+        return Ok(());
+    };
+    let Ok(target) = task::transition(current, next) else {
+        return Ok(());
+    };
+    conn.execute(
+        "UPDATE relay_tasks SET state=?1, updated_at=?2 WHERE sender=?3 AND id=?4",
+        params![target.as_str(), now, sender, id],
+    )?;
+    Ok(())
+}
+
+/// Completes the task of an acknowledged message. Acknowledging implies delivery, so a task that is
+/// still `submitted` passes through `working` first.
+fn complete_task(conn: &Connection, id: &str, now: &str) -> Result<(), rusqlite::Error> {
+    let sender: String = conn.query_row(
+        "SELECT sender FROM relay_messages WHERE id=?1",
+        [id],
+        |row| row.get(0),
+    )?;
+    advance_task(conn, &sender, id, TaskState::Working, now)?;
+    advance_task(conn, &sender, id, TaskState::Completed, now)
 }
 
 fn validate_id(id: &str) -> Result<(), MessageError> {

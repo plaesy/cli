@@ -1,6 +1,6 @@
-# Protokol agent internal: desain (belum diimplementasikan)
+# Protokol agent internal: desain dan status implementasi
 
-Status: desain untuk ditinjau. Tidak ada kode yang mengikuti dokumen ini sampai pemilik menyetujuinya.
+Status: sebagian sudah diimplementasikan (lihat "Status implementasi"). Bagian yang belum ada ditandai secara eksplisit sebagai desain.
 
 ## Tujuan
 
@@ -17,10 +17,40 @@ Agent di Plaesy mengirim pesan dan menerima hasil secara realtime, tanpa menungg
 Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah. Ini bukan klaim kepatuhan terhadap A2A.
 
 - **Agent Card**: `GET /.well-known/agent.json`, berisi `name`, `description`, `version`, `capabilities`, dan daftar `skills`.
-- **Pesan**: `POST /message:send` dengan `{ "to": "<agent>", "parts": [{ "type": "text", "text": "..." }] }`. Balasannya berupa ID tugas.
-- **Tugas**: `GET /tasks/{id}` mengembalikan `state` dan artefak. State: `submitted`, `working`, `input-required`, `completed`, `failed`, `canceled`.
-- **Push**: `GET /tasks/{id}/events` sebagai SSE. Klien tetap tersambung, dan setiap perubahan state dikirim seketika.
-- **Batal**: `POST /tasks/{id}:cancel`.
+- **Pesan**: `POST /message:send`. Bentuk yang diimplementasikan: `{ "id", "from", "to", "text" }`, bukan `parts` seperti rancangan awal. Balasan `201` berisi `{ "id", "from", "to", "state" }`.
+- **Tugas**: `GET /tasks/{from}/{id}` mengembalikan `{ "id", "from", "state" }`. Tugas diidentifikasi oleh pengirim dan ID, bukan ID saja, karena ID hanya unik per pengirim.
+- **Push**: `GET /tasks/{from}/{id}/events` sebagai SSE, dengan event `task` setiap state berubah. Stream ditutup saat state terminal, dan `event: error` dikirim jika tugas tidak ada.
+- **Batal**: `POST /tasks/{from}/{id}:cancel`. Mengembalikan `409` jika state tidak boleh berpindah ke `canceled`.
+
+Yang masih desain, belum ada di kode: `GET /.well-known/agent.json` (Agent Card), artefak pada balasan tugas, dan bagian `parts`.
+
+## Status implementasi
+
+Yang sudah ada dan teruji:
+
+- Server: `plaesy agent serve` (default port 8765, hanya loopback). Jika `PLAESY_AGENT_TOKEN` diisi, setiap permintaan wajib `Authorization: Bearer <token>`.
+- Tugas disimpan di tabel `relay_tasks` di database relay yang sama dengan pesan. Pesan dan tugas dibuat dalam satu transaksi, sehingga pesan tidak pernah ada tanpa tugasnya.
+- Pengiriman ulang dengan ID dan isi yang sama bersifat idempoten: tidak ada pesan ganda, dan balasannya berisi state tugas saat ini (`201`). Isi yang berbeda untuk ID yang sama ditolak dengan `409`.
+
+Lifecycle tugas yang diterapkan oleh relay:
+
+| Peristiwa di relay | Tugas |
+| --- | --- |
+| Pesan dikirim | `submitted` |
+| Penerima mengklaim pesan (lease) | `working` |
+| Penerima mengakui pesan (ack) | `completed`; lewat `working` bila masih `submitted` |
+| Klaim dilepas dan masih ada percobaan | tetap `working` |
+| Klaim dilepas pada percobaan terakhir | `failed` |
+| Pengirim membatalkan | `canceled` |
+
+Batasan yang perlu diketahui:
+
+- Ack berarti penerima sudah menerima dan menangani pesan. Ack tidak berarti pekerjaan yang diminta berhasil.
+- Lease terakhir yang kedaluwarsa membuat pesan berstatus `gagal` tanpa menulis ke tabel, sehingga tugasnya tetap `working`. Tugas hanya menjadi `failed` lewat pelepasan klaim eksplisit.
+- Tugas yang sudah `canceled` tetap bisa diklaim dan di-ack. Pembatalan tidak mencegah pengiriman, dan state tetap `canceled`.
+- Listener chat membaca inbox tanpa mengklaim pesan. Akibatnya, tugas yang dikirim dari chat tetap `submitted` sampai pesannya di-ack.
+- `input-required` ada di model state, tetapi belum ada transisi yang memakainya.
+- Retensi 30 hari dan perintah `plaesy agent gc` belum diimplementasikan.
 
 ## Penyimpanan dan pengiriman
 
@@ -46,10 +76,12 @@ Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah.
 
 ## Langkah berikutnya setelah disetujui
 
-1. Tipe tugas dan state di `plaesy-interface-cli`, dengan tes unit.
-2. Tabel tugas di relay SQLite, dengan migrasi.
-3. Endpoint `message:send`, `tasks/{id}`, dan SSE, dengan tes pada socket lokal.
-4. Hubungkan `/agent send` ke `message:send`.
+1. Tipe tugas dan state: sudah ada (`plaesy-adapter-relay::task`), dengan tes unit.
+2. Tabel tugas di relay SQLite: sudah ada (`relay_tasks`, dibuat dengan `CREATE TABLE IF NOT EXISTS`). Belum ada migrasi versi.
+3. Endpoint `message:send`, `tasks/{from}/{id}`, dan SSE: sudah ada, dengan tes pada socket lokal.
+4. `/agent send` dan `@nama`: membuka tugas di database relay yang sama lewat store, bukan lewat HTTP.
+
+Yang masih terbuka: Agent Card, artefak, `input-required`, dan retensi (`plaesy agent gc`).
 
 ## Keputusan default (didelegasikan, bisa dicabut pemilik)
 

@@ -452,3 +452,136 @@ fn task_ids_are_scoped_to_sender_and_cannot_be_reopened() {
         Err(MessageError::TaskNotFound(_))
     ));
 }
+
+#[test]
+fn send_task_claim_and_ack_walk_submitted_working_completed() {
+    let mut store = MessageStore::in_memory().expect("store");
+    assert_eq!(
+        store.send_task("k-1", "alpha", "beta", "hi").expect("send"),
+        TaskState::Submitted
+    );
+    let claimed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    assert_eq!(
+        store.task_state("alpha", "k-1").expect("read"),
+        Some(TaskState::Working)
+    );
+    let token = claimed.lease_owner.clone().expect("lease");
+    assert!(store.acknowledge_claim("k-1", "beta", &token).expect("ack"));
+    assert_eq!(
+        store.task_state("alpha", "k-1").expect("read"),
+        Some(TaskState::Completed)
+    );
+}
+
+#[test]
+fn legacy_ack_of_never_claimed_task_completes_it_through_working() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("k-2", "alpha", "beta", "hi").expect("send");
+    assert!(store.acknowledge("k-2", "beta").expect("ack"));
+    assert_eq!(
+        store.task_state("alpha", "k-2").expect("read"),
+        Some(TaskState::Completed)
+    );
+}
+
+#[test]
+fn non_final_release_keeps_working_and_final_release_fails_the_task() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("k-3", "alpha", "beta", "hi").expect("send");
+    let mut status = None;
+    for _ in 0..MAX_ATTEMPTS {
+        let claimed = store
+            .claim_next("beta", 60)
+            .expect("claim")
+            .expect("message");
+        let token = claimed.lease_owner.clone().expect("lease");
+        status = store
+            .release_claim("k-3", "beta", &token, "boom")
+            .expect("release");
+        if status == Some(MessageStatus::Pending) {
+            assert_eq!(
+                store.task_state("alpha", "k-3").expect("read"),
+                Some(TaskState::Working)
+            );
+        }
+    }
+    assert_eq!(status, Some(MessageStatus::Failed));
+    assert_eq!(
+        store.task_state("alpha", "k-3").expect("read"),
+        Some(TaskState::Failed)
+    );
+}
+
+#[test]
+fn canceled_task_stays_canceled_when_its_message_is_claimed_and_acked() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("k-4", "alpha", "beta", "hi").expect("send");
+    store
+        .set_task_state("alpha", "k-4", TaskState::Canceled)
+        .expect("cancel");
+    let claimed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    let token = claimed.lease_owner.clone().expect("lease");
+    assert!(store.acknowledge_claim("k-4", "beta", &token).expect("ack"));
+    assert_eq!(
+        store.task_state("alpha", "k-4").expect("read"),
+        Some(TaskState::Canceled)
+    );
+}
+
+#[test]
+fn message_without_task_still_claims_and_acks() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send("k-5", "alpha", "beta", "plain").expect("send");
+    let claimed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    let token = claimed.lease_owner.clone().expect("lease");
+    assert!(store.acknowledge_claim("k-5", "beta", &token).expect("ack"));
+    assert_eq!(store.task_state("alpha", "k-5").expect("read"), None);
+}
+
+#[test]
+fn send_task_replay_is_idempotent_and_conflicting_content_is_rejected() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("k-6", "alpha", "beta", "hi").expect("send");
+    assert_eq!(
+        store
+            .send_task("k-6", "alpha", "beta", "hi")
+            .expect("replay"),
+        TaskState::Submitted
+    );
+    assert_eq!(store.inbox("beta", 10).expect("inbox").len(), 1);
+    assert!(matches!(
+        store.send_task("k-6", "alpha", "beta", "changed"),
+        Err(MessageError::IdempotencyConflict)
+    ));
+    assert!(matches!(
+        store.send_task("k-6", "alpha", "gamma", "hi"),
+        Err(MessageError::IdempotencyConflict)
+    ));
+}
+
+#[test]
+fn send_task_reuses_an_orphan_task_row_only_when_it_is_still_submitted_to_the_same_recipient() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.create_task("k-7", "alpha", "beta").expect("orphan");
+    assert_eq!(
+        store.send_task("k-7", "alpha", "beta", "hi").expect("send"),
+        TaskState::Submitted
+    );
+    assert_eq!(store.inbox("beta", 10).expect("inbox").len(), 1);
+
+    store.create_task("k-8", "alpha", "beta").expect("orphan");
+    assert!(matches!(
+        store.send_task("k-8", "alpha", "gamma", "hi"),
+        Err(MessageError::IdempotencyConflict)
+    ));
+    assert!(store.inbox("gamma", 10).expect("inbox").is_empty());
+}

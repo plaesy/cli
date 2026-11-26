@@ -79,6 +79,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 - Add `plaesy remote serve --port <n>`, a read-only HTTP API for the project's task board: `GET /health`, `GET /tasks` (JSON summary), and `GET /events` (Server-Sent Events). It binds to loopback by default; a non-loopback `--bind` requires a bearer token (`--auth-token` or `PLAESY_REMOTE_TOKEN`, at least 32 bytes).
 - Add a global `--plain` flag (place it before the subcommand) and honor `NO_COLOR`: log lines then
   carry no ANSI color. `--plain` also turns off decorative glyphs for the call sites that use them.
+- Agent protocol tasks move through `submitted`, `working`, `completed`, `failed`, and `canceled` as the recipient claims, acknowledges, or fails a message. `plaesy agent serve` reports the state over HTTP and SSE. Repeating a send with the same id returns the task's current state; a different body for the same id is refused with 409. An ack means the message was handled, not that the work succeeded. See the limits in `docs/platform/agent-protocol-design.md`.
 
 ### Fixed
 
