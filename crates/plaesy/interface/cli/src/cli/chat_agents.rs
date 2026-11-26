@@ -7,9 +7,11 @@
 //! Incoming messages are shown, never acted on. Acting on another agent's text is a decision for
 //! the person, not for the chat.
 
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
 use serde_json::json;
@@ -155,6 +157,34 @@ pub fn render_incoming(items: &[Incoming]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// How often the listener checks the relay for new messages.
+pub const LISTEN_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Starts a background listener for `agent`. It polls the relay and prints each message it has not
+/// shown before, on stderr so the chat's stdout is left alone. Messages are shown, never acted on.
+/// The thread ends with the process; relay errors are ignored, so a missing relay only stops
+/// the listener, not the chat.
+pub fn spawn_listener(repo: PathBuf, agent: String, interval: Duration) {
+    thread::spawn(move || {
+        let mut seen: HashSet<String> = HashSet::new();
+        loop {
+            let fetched = run_relay(&repo, &inbox_args(&agent))
+                .ok()
+                .and_then(|raw| parse_inbox(&raw).ok());
+            if let Some(items) = fetched {
+                let fresh: Vec<Incoming> = items
+                    .into_iter()
+                    .filter(|item| seen.insert(item.id.clone()))
+                    .collect();
+                if !fresh.is_empty() {
+                    eprintln!("\n[pesan baru]\n{}", render_incoming(&fresh));
+                }
+            }
+            thread::sleep(interval);
+        }
+    });
 }
 
 #[cfg(test)]

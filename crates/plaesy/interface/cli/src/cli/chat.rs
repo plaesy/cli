@@ -2161,6 +2161,12 @@ pub fn run(args: &Args) -> CliResult {
         return Ok(());
     }
     println!("{}", chat_text::banner(lang, &name));
+    // Messages to this session arrive while the person types; show them without waiting for /agent inbox.
+    chat_agents::spawn_listener(
+        settings.repo.clone(),
+        settings.agent_name.clone(),
+        chat_agents::LISTEN_INTERVAL,
+    );
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     converse(
