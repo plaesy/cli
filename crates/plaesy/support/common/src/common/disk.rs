@@ -27,7 +27,7 @@ fn available_bytes_impl(path: &Path) -> std::io::Result<u64> {
     if rc != 0 {
         return Err(std::io::Error::last_os_error());
     }
-    let blocks = u64::try_from(stats.f_bavail).unwrap_or(u64::MAX);
+    let blocks = u64::from(stats.f_bavail);
     let block_size = u64::try_from(stats.f_frsize).unwrap_or(u64::MAX);
     Ok(blocks.saturating_mul(block_size))
 }
