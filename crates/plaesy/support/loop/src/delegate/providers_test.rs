@@ -406,8 +406,28 @@ fn post_lines_hands_over_each_line_of_a_2xx_reply() {
     let addr = listener.local_addr().expect("address");
     let server = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept");
-        let mut request = [0u8; 4096];
-        let _ = stream.read(&mut request);
+        // Read the whole request first: closing with unread bytes resets the connection.
+        let mut request = Vec::new();
+        let mut chunk = [0u8; 1024];
+        let body_start = loop {
+            if let Some(at) = request.windows(4).position(|w| w == b"\r\n\r\n") {
+                break at + 4;
+            }
+            let n = stream.read(&mut chunk).expect("read headers");
+            assert!(n > 0, "client closed before the headers ended");
+            request.extend_from_slice(&chunk[..n]);
+        };
+        let head = String::from_utf8_lossy(&request[..body_start]).to_ascii_lowercase();
+        let length: usize = head
+            .lines()
+            .find_map(|line| line.strip_prefix("content-length:"))
+            .and_then(|value| value.trim().parse().ok())
+            .unwrap_or(0);
+        while request.len() < body_start + length {
+            let n = stream.read(&mut chunk).expect("read body");
+            assert!(n > 0, "client closed before the body ended");
+            request.extend_from_slice(&chunk[..n]);
+        }
         let body = "{\"a\":1}\n{\"a\":2}\n";
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: application/x-ndjson\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
