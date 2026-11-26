@@ -204,6 +204,9 @@ impl SearchEngine {
             // is never set in production, so this has zero effect outside tests.
             #[cfg(debug_assertions)]
             if std::env::var_os("PLAESY_MEMORY_TEST_SLOW_PUBLISH").is_some() {
+                // Readiness signal for crash_recovery_test: the temp file is complete and the
+                // crash window is open. Diagnostics go to stderr; stdout is protocol in JSON mode.
+                eprintln!("plaesy-test: publish window open");
                 std::thread::sleep(std::time::Duration::from_secs(2));
             }
             handle.link_within(Path::new(&tmp_name), Path::new(&dest_name))?;

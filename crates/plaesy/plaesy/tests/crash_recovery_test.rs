@@ -13,6 +13,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+/// Stderr line printed by the CLI's test-only publish hook (`notes/engine.rs`, debug builds with
+/// `PLAESY_MEMORY_TEST_SLOW_PUBLISH` set). Keep the two strings in sync.
+const PUBLISH_WINDOW_MARKER: &str = "plaesy-test: publish window open";
+
 fn plaesy_bin() -> PathBuf {
     // Cargo builds the configured CLI binary for integration tests and exports its path.
     let path = PathBuf::from(env!("CARGO_BIN_EXE_plaesy"));
@@ -152,32 +156,39 @@ fn killing_remember_mid_write_leaves_no_partial_note_and_is_reconciled() {
     // `remember`; on a cold machine that startup can exceed the old 15-second window.
     // Wait for the observable publication boundary rather than failing before the
     // fault-injection path is reached.
+    // Readiness: the CLI prints `PUBLISH_WINDOW_MARKER` to stderr once its temp file is complete
+    // and the publish window is open (test-only hook in notes/engine.rs). Waiting on that signal
+    // is more direct than polling the directory for the file.
     let read_stderr = || std::fs::read_to_string(&stderr_path).unwrap_or_default();
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
-    let mut seen_tmp = false;
+    let mut ready = false;
     while std::time::Instant::now() < deadline {
-        if !find_tmp_files(&watch_dir).is_empty() {
-            seen_tmp = true;
+        if read_stderr().contains(PUBLISH_WINDOW_MARKER) {
+            ready = true;
             break;
         }
-        // A child that exits before publishing will never create the temp file, so fail now
-        // with its status and stderr rather than waiting out the whole deadline.
+        // A child that exits before reaching the publish window will never signal readiness, so
+        // fail now with its status and stderr rather than waiting out the whole deadline.
         if let Some(status) = child.try_wait().expect("poll memory CLI") {
             panic!(
-                "memory remember exited ({status}) before its temp file appeared; stderr:\n{}",
+                "memory remember exited ({status}) before the publish window opened; stderr:\n{}",
                 read_stderr()
             );
         }
-        std::thread::sleep(Duration::from_millis(5));
+        std::thread::sleep(Duration::from_millis(10));
     }
-    if !seen_tmp {
+    if !ready {
         let _ = child.kill();
         let _ = child.wait();
         panic!(
-            "never observed the temp file appear within the deadline; stderr:\n{}",
+            "publish window never opened within the deadline; stderr:\n{}",
             read_stderr()
         );
     }
+    assert!(
+        !find_tmp_files(&watch_dir).is_empty(),
+        "publish window opened but no temp file is visible in {watch_dir:?}"
+    );
 
     // `Child::kill` force-terminates the process on both Unix and Windows, leaving its files as
     // a power-loss would. The process is reaped immediately after.
