@@ -37,6 +37,7 @@ pub mod import_cmd;
 pub mod init;
 pub mod install;
 pub mod loop_cmd;
+pub mod gateway;
 pub mod mcp;
 pub mod memory;
 pub mod openapi_cmd;
@@ -96,6 +97,8 @@ pub enum Command {
     Mcp(mcp::Args),
     /// Read-only HTTP status and task API (/health, /tasks, /events), loopback by default
     Remote(remote::Args),
+    /// Local message gateway: poll the relay for one agent and print each new message.
+    Gateway(gateway::Args),
     /// Install the plaesy CLI to a well-known bin directory
     Install,
     /// Remove the installed plaesy binary and PATH entry while preserving user data
@@ -210,6 +213,7 @@ impl Command {
             Self::Export(_) => "export",
             Self::Voice(_) => "voice",
             Self::Remote(_) => "remote",
+            Self::Gateway(_) => "gateway",
             // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
@@ -270,6 +274,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Init(args) => init::run(&args),
         Command::Mcp(args) => mcp::run(&args),
         Command::Remote(args) => remote::run(&args),
+        Command::Gateway(args) => gateway::run(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
         Command::Repair => install::repair(),
