@@ -10,11 +10,14 @@ use crate::adapter::http::web::{
     exchange_pairing, load_document, save_document, validate_document,
 };
 use crate::features::data::document::{
-    document_name, load_request as data_load_request, save_request as data_save_request,
-    tables_from_document, DATA_KIND,
+    document_name, load_request as data_load_request, patch_tables,
+    save_request as data_save_request, tables_from_document, DATA_KIND,
 };
 use crate::features::data::model::{
-    validate as validate_data, LocalIssue as DataIssue, RelationView, TableView,
+    validate as validate_data, ColumnView, LocalIssue as DataIssue, RelationView, TableView,
+};
+use crate::features::data::reducer::{
+    apply as apply_data, Action as DataAction, ActionError as DataActionError,
 };
 use crate::features::flow::changes::{describe_change, document_changes};
 use crate::features::flow::document::patch_document;
@@ -92,7 +95,7 @@ fn App() -> Element {
             Page::DataEditor(id) => {
                 let key_text = id.clone();
                 rsx! {
-                    DataEditor { key: "{key_text}", store: store.clone(), doc_id: id }
+                    DataEditor { key: "{key_text}", store: store.clone(), doc_id: id, remote: remote() }
                 }
             }
             Page::Document { .. } | Page::NotFound => rsx! {
@@ -310,23 +313,25 @@ fn DataList(store: Rc<MemoryStore>, on_open: EventHandler<String>) -> Element {
 }
 
 #[component]
-fn DataEditor(store: Rc<MemoryStore>, doc_id: String) -> Element {
+fn DataEditor(store: Rc<MemoryStore>, doc_id: String, remote: Option<ClientConfig>) -> Element {
     let loaded = use_hook(|| load_data(&store, &doc_id));
     match loaded {
-        Ok(view) => rsx! { DataDocumentView { view } },
+        Ok(data) => rsx! {
+            DataWorkspace { store: store.clone(), doc_id: doc_id.clone(), data, remote }
+        },
         Err(message) => rsx! {
             main { class: "error-page", h1 { "Gagal memuat data" }, p { "{message}" } }
         },
     }
 }
 
-/// Dokumen data yang sudah dibaca: tabel, relasi, dan masalah validasi lokal.
+/// Dokumen data yang sudah dibaca: tabel, relasi, dan dokumen asli (untuk menjaga field lain).
 #[derive(Debug, Clone, PartialEq)]
 struct LoadedData {
     name: String,
     tables: Vec<TableView>,
     relations: Vec<RelationView>,
-    issues: Vec<String>,
+    original: Value,
 }
 
 fn load_data(store: &MemoryStore, doc_id: &str) -> Result<LoadedData, String> {
@@ -334,33 +339,209 @@ fn load_data(store: &MemoryStore, doc_id: &str) -> Result<LoadedData, String> {
     let doc: Value = serde_json::from_str(&text).map_err(|error| error.to_string())?;
     let (tables, relations) = tables_from_document(&doc)?;
     let name = document_name(&doc).map_or_else(|| doc_id.to_owned(), |(_, name)| name);
-    let issues = validate_data(&tables, &relations)
-        .iter()
-        .map(describe_data_issue)
-        .collect();
     Ok(LoadedData {
         name,
         tables,
         relations,
-        issues,
+        original: doc,
     })
 }
 
+/// Keadaan editor data. Field adalah signal, sehingga struct ini bisa disalin ke handler.
+#[derive(Clone, Copy)]
+struct DataState {
+    tables: Signal<Vec<TableView>>,
+    relations: Signal<Vec<RelationView>>,
+    original: Signal<Value>,
+    etag: Signal<Option<String>>,
+    status: Signal<String>,
+}
+
+impl DataState {
+    fn apply(mut self, action: DataAction) {
+        match apply_data(&(self.tables)(), &(self.relations)(), &action) {
+            Ok((tables, relations)) => {
+                self.tables.set(tables);
+                self.relations.set(relations);
+                self.status.set("Perubahan belum disimpan".to_owned());
+            }
+            Err(error) => self.status.set(data_error_message(&error)),
+        }
+    }
+
+    fn add_table(mut self, name: String) {
+        let name = name.trim().to_owned();
+        if name.is_empty() {
+            self.status.set("Isi nama tabel".to_owned());
+            return;
+        }
+        self.apply(DataAction::AddTable(TableView {
+            name,
+            columns: Vec::new(),
+            primary_key: Vec::new(),
+        }));
+    }
+
+    /// Kolom baru bertipe `text` dan tidak nullable. Tipe lain bisa ditambah lewat dokumen.
+    fn add_column(mut self, table: String, column: String) {
+        let column = column.trim().to_owned();
+        if column.is_empty() {
+            self.status.set("Isi nama kolom".to_owned());
+            return;
+        }
+        self.apply(DataAction::AddColumn {
+            table,
+            column: ColumnView {
+                name: column,
+                data_type: "text".to_owned(),
+                nullable: false,
+            },
+        });
+    }
+
+    fn save(mut self, store: &MemoryStore, doc_id: &str, remote: Option<ClientConfig>) {
+        let document = patch_tables(&(self.original)(), &(self.tables)());
+        match remote {
+            Some(config) => {
+                let Some(etag) = (self.etag)() else {
+                    self.status
+                        .set("Muat dari server dulu sebelum menyimpan ke server".to_owned());
+                    return;
+                };
+                let id = doc_id.to_owned();
+                self.status.set("Menyimpan ke server…".to_owned());
+                spawn(async move {
+                    let result =
+                        save_document(&config, DATA_KIND, &id, &document, Some(etag.as_str()))
+                            .await;
+                    match result {
+                        Ok(next) => {
+                            self.etag.set(next);
+                            self.original.set(document);
+                            self.status.set("Tersimpan di server".to_owned());
+                        }
+                        Err(error) => self.status.set(error.to_string()),
+                    }
+                });
+            }
+            None => {
+                let body = document.to_string();
+                match store.send(data_save_request(doc_id, &body)) {
+                    Ok(_) => {
+                        self.original.set(document);
+                        self.status.set(
+                            "Tersimpan di penyimpanan sesi (hilang saat halaman dimuat ulang)"
+                                .to_owned(),
+                        );
+                    }
+                    Err(error) => self.status.set(format!("Gagal menyimpan: {error}")),
+                }
+            }
+        }
+    }
+
+    /// Memuat dokumen dari server dan menggantikan tabel, relasi, dan ETag.
+    fn load_remote(mut self, config: ClientConfig, doc_id: String) {
+        self.status.set("Memuat dari server…".to_owned());
+        spawn(async move {
+            let result = load_document(&config, DATA_KIND, &doc_id).await;
+            match result {
+                Ok(loaded) => match tables_from_document(&loaded.document) {
+                    Ok((tables, relations)) => {
+                        self.tables.set(tables);
+                        self.relations.set(relations);
+                        self.original.set(loaded.document);
+                        self.etag.set(loaded.etag);
+                        self.status.set("Dimuat dari server".to_owned());
+                    }
+                    Err(message) => self.status.set(message),
+                },
+                Err(error) => self.status.set(error.to_string()),
+            }
+        });
+    }
+}
+
+fn data_error_message(error: &DataActionError) -> String {
+    match error {
+        DataActionError::NotFound(name) => format!("Tabel {name} tidak ada"),
+        DataActionError::AlreadyExists(name) => format!("{name} sudah ada"),
+    }
+}
+
 #[component]
-fn DataDocumentView(view: LoadedData) -> Element {
-    let table_count = view.tables.len();
-    let relation_count = view.relations.len();
-    let relation_lines: Vec<String> = view.relations.iter().map(relation_line).collect();
+fn DataWorkspace(
+    store: Rc<MemoryStore>,
+    doc_id: String,
+    data: LoadedData,
+    remote: Option<ClientConfig>,
+) -> Element {
+    let state = DataState {
+        tables: use_signal(|| data.tables.clone()),
+        relations: use_signal(|| data.relations.clone()),
+        original: use_signal(|| data.original.clone()),
+        etag: use_signal(|| None),
+        status: use_signal(|| "Perubahan belum disimpan".to_owned()),
+    };
+    let mut new_table = use_signal(String::new);
+    let mut column_table = use_signal(String::new);
+    let mut column_name = use_signal(String::new);
+
+    let tables_now = (state.tables)();
+    let relations_now = (state.relations)();
+    let status = (state.status)();
+    let issues: Vec<String> = validate_data(&tables_now, &relations_now)
+        .iter()
+        .map(describe_data_issue)
+        .collect();
+    let relation_lines: Vec<String> = relations_now.iter().map(relation_line).collect();
+    let table_names: Vec<String> = tables_now.iter().map(|table| table.name.clone()).collect();
+    let chosen_table = if column_table().is_empty() {
+        table_names.first().cloned().unwrap_or_default()
+    } else {
+        column_table()
+    };
+    let table_count = tables_now.len();
+    let relation_count = relations_now.len();
+    let title = data.name.clone();
+    let save_store = store.clone();
+    let save_id = doc_id.clone();
+    let save_config = remote.clone();
+    let load_id = doc_id.clone();
+    let load_config = remote.clone();
+
     rsx! {
         main { class: "canvas-panel data-page",
             div { class: "canvas-header",
-                div { h1 { "{view.name}" }, p { "{table_count} tabel · {relation_count} relasi · baca saja" } }
+                div { h1 { "{title}" }, p { "{table_count} tabel · {relation_count} relasi · {status}" } }
+                div { class: "top-actions",
+                    if let Some(config) = load_config {
+                        button { class: "button button-save", onclick: move |_| state.load_remote(config.clone(), load_id.clone()), "Muat dari server" }
+                    }
+                    button { class: "button button-save", onclick: move |_| state.save(&save_store, &save_id, save_config.clone()), "Save draft" }
+                }
             }
             div { class: "list-body data-body",
-                for table in view.tables.iter() {
+                for table in tables_now.iter() {
                     {table_card(table)}
                 }
                 div { class: "data-side",
+                    h3 { "Tambah tabel" }
+                    input { id: "new-table", class: "field-input", placeholder: "nama tabel", "aria-label": "Nama tabel baru", value: "{new_table()}",
+                        oninput: move |event| new_table.set(event.value()),
+                    }
+                    button { class: "button button-save", onclick: move |_| state.add_table(new_table()), "Tambah tabel" }
+                    h3 { "Tambah kolom" }
+                    select { id: "column-table", class: "field-input", "aria-label": "Tabel tujuan",
+                        onchange: move |event| column_table.set(event.value()),
+                        for name in table_names.iter() {
+                            option { value: "{name}", "{name}" }
+                        }
+                    }
+                    input { id: "column-name", class: "field-input", placeholder: "nama kolom", "aria-label": "Nama kolom", value: "{column_name()}",
+                        oninput: move |event| column_name.set(event.value()),
+                    }
+                    button { class: "button button-save", onclick: move |_| state.add_column(chosen_table.clone(), column_name()), "Tambah kolom" }
                     h3 { "Relasi" }
                     if relation_lines.is_empty() {
                         p { class: "empty-inspector", "Tidak ada relasi." }
@@ -372,11 +553,11 @@ fn DataDocumentView(view: LoadedData) -> Element {
                         }
                     }
                     h3 { "Masalah" }
-                    if view.issues.is_empty() {
+                    if issues.is_empty() {
                         p { class: "empty-inspector", "Tidak ada masalah lokal." }
                     } else {
                         ul { class: "edge-list",
-                            for issue in view.issues.iter() {
+                            for issue in issues.iter() {
                                 li { "{issue}" }
                             }
                         }

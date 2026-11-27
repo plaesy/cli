@@ -5,7 +5,7 @@
 use super::model::{ColumnView, RelationView, TableView};
 use crate::adapter::http::document_path;
 use crate::features::ApiRequest;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 /// Kind dokumen data di server.
 pub const DATA_KIND: &str = "data-ir/1";
@@ -43,6 +43,57 @@ pub fn document_name(doc: &Value) -> Option<(String, String)> {
         .unwrap_or(&id)
         .to_owned();
     Some((id, name))
+}
+
+/// Menulis ulang `tables` dari `original` sesuai tabel hasil edit. Objek kolom yang sudah ada
+/// dipertahankan apa adanya (termasuk tipe `enum` atau `decimal`). Kolom baru bertipe `text`.
+/// Field lain di setiap tabel (mis. `indexes`) dan seluruh dokumen dipertahankan.
+#[must_use]
+pub fn patch_tables(original: &Value, tables: &[TableView]) -> Value {
+    let mut doc = original.clone();
+    let existing: Vec<Value> = original
+        .get("tables")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let patched: Vec<Value> = tables
+        .iter()
+        .map(|table| {
+            let previous = existing
+                .iter()
+                .find(|t| t.get("name").and_then(Value::as_str) == Some(table.name.as_str()))
+                .and_then(Value::as_object)
+                .cloned();
+            let old_columns: Vec<Value> = previous
+                .as_ref()
+                .and_then(|object| object.get("columns"))
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let columns: Vec<Value> = table
+                .columns
+                .iter()
+                .map(|column| {
+                    old_columns
+                        .iter()
+                        .find(|c| c.get("name").and_then(Value::as_str) == Some(column.name.as_str()))
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            json!({ "name": column.name, "type": "text", "nullable": column.nullable })
+                        })
+                })
+                .collect();
+            let mut object = previous.unwrap_or_default();
+            object.insert("name".to_owned(), json!(table.name));
+            object.insert("columns".to_owned(), Value::Array(columns));
+            object.insert("primary_key".to_owned(), json!(table.primary_key));
+            Value::Object(object)
+        })
+        .collect();
+    if let Some(fields) = doc.as_object_mut() {
+        fields.insert("tables".to_owned(), Value::Array(patched));
+    }
+    doc
 }
 
 /// Permintaan untuk memuat dokumen data dengan id tertentu.
