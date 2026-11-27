@@ -716,12 +716,6 @@ fn symlink_above_project_root_is_accepted_but_inside_project_is_rejected() {
     let via_alias = alias_root.join("proj/.plaesy/tasks");
     assert!(!path_has_symlink_component(&via_alias));
 
-    // A standalone tasks collection has the same boundary behavior as `.plaesy/tasks`.
-    fs::create_dir_all(project.join("tasks/doing/regular")).unwrap();
-    assert!(!path_has_symlink_component(
-        &alias_root.join("proj/tasks/doing/regular")
-    ));
-
     // `.plaesy` itself is a symlink to outside the project: rejected.
     let outside = real.path().join("outside");
     fs::create_dir_all(outside.join("tasks")).unwrap();

@@ -58,7 +58,7 @@ fn load_claimed_task_rejects_symlinked_contracts_file() {
 #[test]
 fn load_claimed_task_reads_regular_doing_task() {
     let root = tempfile::tempdir().unwrap();
-    let tasks = root.path().join("tasks");
+    let tasks = root.path().join(".plaesy/tasks");
     let task_dir = tasks.join("doing/low_normal");
     fs::create_dir_all(&task_dir).unwrap();
     fs::write(task_dir.join(crate::tasks::TASK_FILE), "task body").unwrap();

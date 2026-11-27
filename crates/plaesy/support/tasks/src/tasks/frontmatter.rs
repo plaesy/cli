@@ -97,9 +97,7 @@ pub fn topic_of(tasks_dir: &Path, status: Status, task: &str) -> Option<String> 
 /// project root. The root is the part before the last `.plaesy` component, canonicalized, so a
 /// symlink above the project (macOS `/var` and `/tmp`, a home directory behind a link) is the
 /// user's choice and is not checked. Everything from `.plaesy` down is checked. A path without a
-/// usable project root (no `.plaesy`) uses the last `tasks` component as the collection boundary.
-/// Its ancestors are outside the collection's trust boundary, just like ancestors above a known
-/// project root.
+/// usable root (no `.plaesy`, or relative) is checked in full, as before.
 ///
 /// Returns an empty list when the root does not exist yet, because nothing below it can exist.
 pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
@@ -117,11 +115,6 @@ pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
     let Some(index) = components
         .iter()
         .rposition(|component| component.as_os_str() == ".plaesy")
-        .or_else(|| {
-            components
-                .iter()
-                .rposition(|component| component.as_os_str() == "tasks")
-        })
     else {
         return Ok(all_prefixes());
     };

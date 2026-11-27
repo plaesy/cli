@@ -70,7 +70,7 @@ fn triage_reads_existing_task_and_does_not_mutate_it() {
 #[test]
 fn resolves_unique_title_and_rejects_ambiguous_title() {
     let temp = tempfile::tempdir().unwrap();
-    let tasks_dir = temp.path().join("tasks");
+    let tasks_dir = temp.path().join(".plaesy/tasks");
     let first = tasks_dir.join("todo/low_first");
     let second = tasks_dir.join("doing/medium_second");
     fs::create_dir_all(&first).unwrap();
