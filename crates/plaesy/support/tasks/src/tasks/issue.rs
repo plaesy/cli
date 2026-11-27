@@ -108,9 +108,9 @@ fn strip_verbatim_prefix(path: PathBuf) -> PathBuf {
 }
 
 fn reject_symlink_or_non_directory_components(path: &Path) -> Result<(), String> {
-    let mut current = PathBuf::new();
-    for component in path.components() {
-        current.push(component.as_os_str());
+    let prefixes = super::frontmatter::checked_prefixes(path)
+        .map_err(|error| format!("checking path {}: {error}", path.display()))?;
+    for current in prefixes {
         match fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 return Err(format!(
@@ -423,15 +423,9 @@ pub fn read_metadata_bytes(task_dir: &Path) -> Result<Option<Vec<u8>>, String> {
 impl IssueGraphLock {
     /// Writes metadata only within the collection protected by this guard.
     pub fn write_metadata(&self, task_dir: &Path, issue: &Issue) -> Result<(), String> {
+        // Compare canonical forms only. A lexical `starts_with` fails when the same folder is
+        // spelled with a Windows 8.3 short name (`RUNNER~1`) in one path and its long name in another.
         let task_dir = absolute_path(task_dir)?;
-        let lexical_root = absolute_path(&self.tasks_root)?;
-        if !task_dir.starts_with(&lexical_root) || task_dir == lexical_root {
-            return Err(format!(
-                "task directory {} is outside the locked collection {}",
-                task_dir.display(),
-                lexical_root.display()
-            ));
-        }
         let canonical_root = fs::canonicalize(&self.tasks_root).map_err(|error| {
             format!(
                 "resolving collection {}: {error}",

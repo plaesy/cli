@@ -112,7 +112,7 @@ fn sentence_expectation_names_the_accepted_values() {
 fn handle_load_and_save_stay_in_pinned_directory_after_path_replacement() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = temp.path().join("task");
     std::fs::create_dir(&task).unwrap();
     let contract = task.join("contracts.json");
@@ -144,7 +144,7 @@ fn handle_load_and_save_stay_in_pinned_directory_after_path_replacement() {
 #[cfg(unix)]
 #[test]
 fn failed_handle_save_removes_temporary_file_and_preserves_destination() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = temp.path().join("task");
     std::fs::create_dir(&task).unwrap();
     std::fs::create_dir(task.join("contracts.json")).unwrap();
@@ -165,7 +165,7 @@ fn failed_handle_save_removes_temporary_file_and_preserves_destination() {
 
 #[test]
 fn load_rejects_unknown_fields_and_incomplete_items() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let typo = dir.path().join("typo.json");
     fs::write(
             &typo,
@@ -188,7 +188,7 @@ fn load_rejects_unknown_fields_and_incomplete_items() {
 
 #[test]
 fn load_rejects_path_like_item_ids() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     for id in ["../outside", "../../outside", ".", "..", "a/b", "a\\\\b"] {
         let path = dir.path().join("contracts.json");
         let json = format!(
@@ -212,7 +212,7 @@ fn load_rejects_path_like_item_ids() {
 
 #[test]
 fn save_then_load_round_trips() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("contracts.json");
     let list = Checklist {
         id: "t".into(),
@@ -224,7 +224,7 @@ fn save_then_load_round_trips() {
 
 #[test]
 fn contract_document_loads_without_external_assets() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("contracts.json");
     fs::write(
             &path,

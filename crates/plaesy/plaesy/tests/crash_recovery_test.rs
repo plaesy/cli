@@ -13,6 +13,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+/// Stderr line printed by the CLI's test-only publish hook (`notes/engine.rs`, debug builds with
+/// `PLAESY_MEMORY_TEST_SLOW_PUBLISH` set). Keep the two strings in sync.
+const PUBLISH_WINDOW_MARKER: &str = "plaesy-test: publish window open";
+
 fn plaesy_bin() -> PathBuf {
     // Cargo builds the configured CLI binary for integration tests and exports its path.
     let path = PathBuf::from(env!("CARGO_BIN_EXE_plaesy"));
@@ -47,21 +51,38 @@ fn memory_command(bin: &Path, config: &Path) -> Command {
     command
 }
 
+/// Write the config in the TOML format that `MemoryConfig::load_from_file` reads (config moved
+/// from `settings.json` to `config.toml`). Paths use TOML literal strings, so Windows
+/// backslashes need no escaping; temp dir paths never contain a single quote.
 fn write_minimal_config(dir: &Path, watch_dir: &Path, db: &Path) -> PathBuf {
-    let cfg = dir.join("settings.json");
-    let settings = serde_json::json!({
-        "watch_dir": watch_dir,
-        "database": { "db_path": db },
-        "search": {
-            "default_limit": 10,
-            "max_limit": 100,
-            "timeout_secs": 5,
-            "enable_vector_search": false,
-            "enable_keyword_search": true
-        },
-        "logging": { "level": "error" }
-    });
-    std::fs::write(&cfg, settings.to_string()).expect("write config");
+    let literal = |path: &Path| {
+        let text = path.display().to_string();
+        assert!(
+            !text.contains('\''),
+            "temp path must not contain a quote: {text}"
+        );
+        format!("'{text}'")
+    };
+    let cfg = dir.join("config.toml");
+    let settings = format!(
+        "watch_dir = {watch}\n\
+         \n\
+         [database]\n\
+         db_path = {db}\n\
+         \n\
+         [search]\n\
+         default_limit = 10\n\
+         max_limit = 100\n\
+         timeout_secs = 5\n\
+         enable_vector_search = false\n\
+         enable_keyword_search = true\n\
+         \n\
+         [logging]\n\
+         level = \"error\"\n",
+        watch = literal(watch_dir),
+        db = literal(db),
+    );
+    std::fs::write(&cfg, settings).expect("write config");
     cfg
 }
 
@@ -106,19 +127,23 @@ fn killing_remember_mid_write_leaves_no_partial_note_and_is_reconciled() {
     let bin = plaesy_bin();
 
     let body = "Crash test note body.\n".to_string();
+    // Child stderr goes to a file so a startup failure (for example a config parse error) can be
+    // reported with its message instead of a bare timeout.
+    let stderr_path = tmp.path().join("remember.stderr");
+    let stderr_file = std::fs::File::create(&stderr_path).expect("create stderr log");
 
     let mut child = memory_command(&bin, &cfg)
         .arg("--db")
         .arg(&db)
         .arg("remember")
         .arg("Crash Test Note")
-        // Test-only fault injection (see `write_note` in notes/mod.rs): sleeps for 2s between
+        // Test-only fault injection (see `write_note` in notes/engine.rs): sleeps for 2s between
         // the temp file becoming visible on disk and its publication, widening the race window
         // enough that polling below reliably observes it before the kill.
         .env("PLAESY_MEMORY_TEST_SLOW_PUBLISH", "1")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::from(stderr_file))
         .spawn()
         .expect("spawn memory remember");
 
@@ -134,19 +159,38 @@ fn killing_remember_mid_write_leaves_no_partial_note_and_is_reconciled() {
     // `remember`; on a cold machine that startup can exceed the old 15-second window.
     // Wait for the observable publication boundary rather than failing before the
     // fault-injection path is reached.
+    // Readiness: the CLI prints `PUBLISH_WINDOW_MARKER` to stderr once its temp file is complete
+    // and the publish window is open (test-only hook in notes/engine.rs). Waiting on that signal
+    // is more direct than polling the directory for the file.
+    let read_stderr = || std::fs::read_to_string(&stderr_path).unwrap_or_default();
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
-    let mut seen_tmp = false;
+    let mut ready = false;
     while std::time::Instant::now() < deadline {
-        if !find_tmp_files(&watch_dir).is_empty() {
-            seen_tmp = true;
+        if read_stderr().contains(PUBLISH_WINDOW_MARKER) {
+            ready = true;
             break;
         }
-        std::thread::sleep(Duration::from_millis(5));
+        // A child that exits before reaching the publish window will never signal readiness, so
+        // fail now with its status and stderr rather than waiting out the whole deadline.
+        if let Some(status) = child.try_wait().expect("poll memory CLI") {
+            panic!(
+                "memory remember exited ({status}) before the publish window opened; stderr:\n{}",
+                read_stderr()
+            );
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    if !ready {
+        let _ = child.kill();
+        let _ = child.wait();
+        panic!(
+            "publish window never opened within the deadline; stderr:\n{}",
+            read_stderr()
+        );
     }
     assert!(
-        seen_tmp,
-        "never observed the temp file appear within the deadline; \
-         the write path or polling loop may need adjustment"
+        !find_tmp_files(&watch_dir).is_empty(),
+        "publish window opened but no temp file is visible in {watch_dir:?}"
     );
 
     // `Child::kill` force-terminates the process on both Unix and Windows, leaving its files as
