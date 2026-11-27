@@ -43,6 +43,7 @@ pub mod install;
 pub mod loop_cmd;
 pub mod mcp;
 pub mod memory;
+pub mod server;
 pub mod openapi_cmd;
 pub mod output;
 pub mod projects;
@@ -104,6 +105,8 @@ pub enum Command {
     Gateway(gateway::Args),
     /// Agent-to-agent protocol on loopback (`plaesy agent serve`).
     Agent(agent_serve::AgentArgs),
+    /// Document API over HTTP for the web client; loopback by default (`plaesy server --help`).
+    Server(server::Args),
     /// Install the plaesy CLI to a well-known bin directory
     Install,
     /// Remove the installed plaesy binary and PATH entry while preserving user data
@@ -220,6 +223,7 @@ impl Command {
             Self::Remote(_) => "remote",
             Self::Gateway(_) => "gateway",
             Self::Agent(_) => "agent",
+            Self::Server(_) => "server",
             // Reading the telemetry summary is not itself recorded.
             Self::Telemetry(_) => return None,
         })
@@ -282,6 +286,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Remote(args) => remote::run(&args),
         Command::Gateway(args) => gateway::run(&args),
         Command::Agent(args) => agent_serve::run_agent(&args),
+        Command::Server(args) => server::run(&args),
         Command::Install => install::install(),
         Command::Uninstall => install::uninstall(),
         Command::Repair => install::repair(),

@@ -244,9 +244,17 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Tanpa penguncian global, karena server berada di belakang tunnel loopback dan semua klien terlihat dari alamat yang sama.
 - Pilihan yang dapat dibalik: perintah berada di `plaesy memory token`, bukan `plaesy mcp token`, karena `plaesy mcp` sudah dipakai server proyek.
 
-## Backend server: jalur jaringan (usulan, menunggu persetujuan pemilik)
+## Backend server: jalur jaringan (didelegasikan, bisa dicabut pemilik, 2026-11-27)
 
-Status: usulan. Rencana dan threat model ada di `.plaesy/plan/plaesy-backend-server/`. Belum ada kode yang membuka listener.
+Status: keputusan default teknis yang didelegasikan user ("keputusan enterprise-grade"), dicatat oleh orchestrator pada 2026-11-27. Setiap butir bisa dicabut pemilik. Rencana dan threat model ada di `.plaesy/plan/plaesy-backend-server/`. Slice 1 (listener) sudah mulai.
+
+- D1 (disetujui): rute tenant aditif `/v1/projects/{project}/documents/...`. Rute lama `/v1/documents/...` mati saat autentikasi aktif (slice 4). Dikoordinasikan dengan cli-125.
+- D2 (disetujui, keputusan user): token per perangkat. Hash SHA-256 di DB. OIDC ditunda.
+- D3 (disetujui): TLS dihentikan di Caddy yang sudah aktif di host (mendengarkan :80 dan :443). Caddy tidak diubah oleh repo ini tanpa persetujuan user. HSTS dikirim Caddy.
+- D4 (disetujui): cli-113 meregenerasi `Cargo.lock` per slice atas permintaan; satu commit lock per slice.
+- D5 (disetujui): WebSocket ditunda setelah slice 7.
+- D6 (disetujui): bind default `127.0.0.1:8790`. Port 8787 dipakai layanan lain di loopback; 8790 bebas (dicek read-only).
+- Aturan bind (lebih ketat dari usulan awal): non-loopback ditolak sampai autentikasi aktif (slice 4). Dua opt-in `allow_non_loopback` dan `tls_terminated_upstream` diperlukan dan dicek, tetapi tidak cukup tanpa autentikasi.
 
 - Default bind `127.0.0.1:8790` (D6). Bind non-loopback hanya bila config memuat `allow_non_loopback = true` DAN `tls_terminated_upstream = true`. Tanpa keduanya, server menolak start. Pola ini sama dengan relay.
 - TLS dihentikan di Caddy (D3). Caddy juga mengirim HSTS. Rustls di dalam proses ditunda.
