@@ -470,7 +470,7 @@ impl DirHandle {
                     | libc::O_CLOEXEC
                     | libc::O_NONBLOCK
                     | libc::O_NOCTTY,
-                mode as libc::mode_t,
+                mode as libc::mode_t as libc::c_uint,
             )
         };
         if fd < 0 {
