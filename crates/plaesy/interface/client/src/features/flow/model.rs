@@ -5,6 +5,8 @@
 pub struct ModuleView {
     pub id: String,
     pub kind: String,
+    /// Nama operasi dari dokumen (mis. `billing.get_invoice`). Kosong bila tidak ada.
+    pub operation: String,
     /// Pasangan (nama input, ekspresi sumber).
     pub inputs: Vec<(String, String)>,
 }
@@ -108,6 +110,11 @@ pub fn modules_from_flow_json(text: &str) -> Result<(String, Vec<ModuleView>), S
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("")
                 .to_owned();
+            let operation = m
+                .get("operation")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("")
+                .to_owned();
             let inputs = m
                 .get("inputs")
                 .and_then(serde_json::Value::as_object)
@@ -117,7 +124,12 @@ pub fn modules_from_flow_json(text: &str) -> Result<(String, Vec<ModuleView>), S
                         .collect()
                 })
                 .unwrap_or_default();
-            ModuleView { id, kind, inputs }
+            ModuleView {
+                id,
+                kind,
+                operation,
+                inputs,
+            }
         })
         .collect();
     Ok((name, views))
@@ -149,6 +161,7 @@ mod tests {
         ModuleView {
             id: id.to_owned(),
             kind: "action".to_owned(),
+            operation: String::new(),
             inputs: inputs
                 .iter()
                 .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
