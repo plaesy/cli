@@ -80,6 +80,36 @@ fn rate_limit_reads_retry_after_seconds_and_ignores_dates() {
 }
 
 #[test]
+fn classify_reads_the_error_code_and_the_conflict_body() {
+    assert_eq!(classify(200, None, None, "{}"), None);
+    assert_eq!(
+        classify(401, None, None, r#"{"error":"token_expired"}"#),
+        Some(ContractError::TokenExpired)
+    );
+    assert_eq!(
+        classify(401, None, None, "bukan json"),
+        Some(ContractError::Unauthorized)
+    );
+    assert_eq!(
+        classify(
+            412,
+            Some("\"rev-2\""),
+            None,
+            r#"{"error":"revision_conflict","current":{"etag":"\"rev-4\"","document":{}}}"#
+        ),
+        Some(ContractError::Conflict {
+            current_etag: Some("\"rev-4\"".to_owned())
+        })
+    );
+    assert_eq!(
+        classify(412, Some("\"rev-2\""), None, "bukan json"),
+        Some(ContractError::Conflict {
+            current_etag: Some("\"rev-2\"".to_owned())
+        })
+    );
+}
+
+#[test]
 fn token_expired_is_told_apart_from_a_wrong_token() {
     assert_eq!(
         map_unauthorized(Some("token_expired")),

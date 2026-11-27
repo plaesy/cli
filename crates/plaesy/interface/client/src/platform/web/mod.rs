@@ -4,7 +4,9 @@
 //! editor. Aturan editor ada di `features::flow` (reducer, validasi, dokumen, inspect) dan
 //! penyimpanan sesi di `features::store`.
 
+use crate::adapter::http::contract::{valid_project_id, ClientConfig};
 use crate::adapter::http::document_path;
+use crate::adapter::http::web::{exchange_pairing, load_document, save_document};
 use crate::features::data::document::{
     document_name, load_request as data_load_request, save_request as data_save_request,
     tables_from_document, DATA_KIND,
@@ -60,6 +62,11 @@ fn App() -> Element {
     let locale_value = current_prefs.locale.clone();
     let theme_value = theme_class(current_prefs.theme);
     let layout_value = layout_class(current_prefs.layout);
+    let mut server_url = use_signal(|| "http://127.0.0.1:8790".to_owned());
+    let mut project_id = use_signal(String::new);
+    let mut pair_code = use_signal(String::new);
+    let mut remote = use_signal(|| None::<ClientConfig>);
+    let mut server_message = use_signal(String::new);
     let content = if guard.allows(&current) {
         match current {
             Page::FlowList => rsx! {
@@ -71,7 +78,7 @@ fn App() -> Element {
             Page::FlowEditor(id) => {
                 let key_text = id.clone();
                 rsx! {
-                    FlowEditor { key: "{key_text}", store: store.clone(), flow_id: id }
+                    FlowEditor { key: "{key_text}", store: store.clone(), flow_id: id, remote: remote() }
                 }
             }
             Page::DataList => rsx! {
@@ -139,6 +146,44 @@ fn App() -> Element {
                             Ok(next) => { prefs.set(next); prefs_error.set(String::new()); }
                             Err(_) => prefs_error.set("Locale: 2 sampai 35 karakter huruf, angka, atau tanda hubung".to_owned()),
                         },
+                    }
+                    h3 { "Server" }
+                    label { class: "field-label", "for": "server-url", "Alamat server" }
+                    input { id: "server-url", class: "field-input", value: "{server_url()}",
+                        oninput: move |event| server_url.set(event.value()),
+                    }
+                    label { class: "field-label", "for": "server-project", "Project" }
+                    input { id: "server-project", class: "field-input", placeholder: "prj_...", value: "{project_id()}",
+                        oninput: move |event| project_id.set(event.value()),
+                    }
+                    label { class: "field-label", "for": "server-code", "Kode pairing" }
+                    input { id: "server-code", class: "field-input", placeholder: "PAIR-...", value: "{pair_code()}",
+                        oninput: move |event| pair_code.set(event.value()),
+                    }
+                    button { class: "button button-save",
+                        onclick: move |_| {
+                            let base = server_url();
+                            let project = project_id();
+                            let code = pair_code();
+                            if !valid_project_id(&project) {
+                                server_message.set("Project harus prj_ lalu huruf kecil atau angka".to_owned());
+                                return;
+                            }
+                            server_message.set("Memasangkan…".to_owned());
+                            spawn(async move {
+                                match exchange_pairing(&base, &code).await {
+                                    Ok(pairing) => {
+                                        remote.set(Some(ClientConfig::new(&base, &project).with_token(&pairing.token)));
+                                        server_message.set(format!("Terpasang, berlaku sampai {}", pairing.expires_at));
+                                    }
+                                    Err(error) => server_message.set(error.to_string()),
+                                }
+                            });
+                        },
+                        "Pasangkan"
+                    }
+                    if !server_message().is_empty() {
+                        p { class: "empty-inspector", "{server_message()}" }
                     }
                     if !prefs_error().is_empty() {
                         p { class: "empty-inspector", "{prefs_error()}" }
@@ -210,11 +255,11 @@ fn FlowList(store: Rc<MemoryStore>, on_open: EventHandler<String>) -> Element {
 }
 
 #[component]
-fn FlowEditor(store: Rc<MemoryStore>, flow_id: String) -> Element {
+fn FlowEditor(store: Rc<MemoryStore>, flow_id: String, remote: Option<ClientConfig>) -> Element {
     let loaded = use_hook(|| load_flow(&store, &flow_id));
     match loaded {
         Ok(flow) => rsx! {
-            FlowWorkspace { store: store.clone(), flow_id: flow_id.clone(), flow }
+            FlowWorkspace { store: store.clone(), flow_id: flow_id.clone(), flow, remote }
         },
         Err(message) => rsx! {
             main { class: "error-page", h1 { "Gagal memuat flow" }, p { "{message}" } }
@@ -427,6 +472,8 @@ struct Editor {
     connect_module: Signal<String>,
     connect_path: Signal<String>,
     notes: Signal<Queue>,
+    /// ETag dokumen terakhir dari server. `None` bila belum pernah dimuat dari server.
+    etag: Signal<Option<String>>,
 }
 
 impl Editor {
@@ -552,7 +599,71 @@ impl Editor {
         self.status.set(message.to_owned());
     }
 
-    fn save(mut self, store: &MemoryStore, flow_id: &str) {
+    /// Memuat dokumen dari server dan menggantikan keadaan editor.
+    fn load_remote(mut self, config: ClientConfig, flow_id: String) {
+        self.status.set("Memuat dari server…".to_owned());
+        spawn(async move {
+            let result = load_document(&config, FLOW_KIND, &flow_id).await;
+            match result {
+                Ok(loaded) => match modules_from_flow_json(&loaded.document.to_string()) {
+                    Ok((_, modules)) => {
+                        self.selected.set(modules.first().map(|m| m.id.clone()));
+                        self.modules.set(modules);
+                        self.original.set(loaded.document);
+                        self.etag.set(loaded.etag);
+                        self.history.write().clear();
+                        self.redo.write().clear();
+                        self.note(Level::Info, "Dimuat dari server");
+                        self.status.set("Dimuat dari server".to_owned());
+                    }
+                    Err(message) => {
+                        self.note(Level::Error, &message);
+                        self.status.set(message);
+                    }
+                },
+                Err(error) => {
+                    let message = error.to_string();
+                    self.note(Level::Error, &message);
+                    self.status.set(message);
+                }
+            }
+        });
+    }
+
+    /// Menyimpan ke server dengan If-Match dari ETag terakhir. Tanpa ETag, muat dulu.
+    fn save_remote(mut self, config: ClientConfig, flow_id: String) {
+        let Some(etag) = (self.etag)() else {
+            let message = "Muat dari server dulu sebelum menyimpan ke server";
+            self.note(Level::Warning, message);
+            self.status.set(message.to_owned());
+            return;
+        };
+        let document = patch_document(&(self.original)(), &(self.modules)());
+        self.status.set("Menyimpan ke server…".to_owned());
+        spawn(async move {
+            let result =
+                save_document(&config, FLOW_KIND, &flow_id, &document, Some(etag.as_str())).await;
+            match result {
+                Ok(next_etag) => {
+                    self.etag.set(next_etag);
+                    self.original.set(document);
+                    self.note(Level::Info, "Tersimpan di server");
+                    self.status.set("Tersimpan di server".to_owned());
+                }
+                Err(error) => {
+                    let message = error.to_string();
+                    self.note(Level::Error, &message);
+                    self.status.set(message);
+                }
+            }
+        });
+    }
+
+    fn save(mut self, store: &MemoryStore, flow_id: &str, remote: Option<ClientConfig>) {
+        if let Some(config) = remote {
+            self.save_remote(config, flow_id.to_owned());
+            return;
+        }
         let document = patch_document(&(self.original)(), &(self.modules)());
         let body = document.to_string();
         match services::save(store, flow_id, &body) {
@@ -573,7 +684,12 @@ impl Editor {
 }
 
 #[component]
-fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> Element {
+fn FlowWorkspace(
+    store: Rc<MemoryStore>,
+    flow_id: String,
+    flow: LoadedFlow,
+    remote: Option<ClientConfig>,
+) -> Element {
     let editor = Editor {
         modules: use_signal(|| flow.modules.clone()),
         original: use_signal(|| flow.original.clone()),
@@ -586,6 +702,7 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
         connect_module: use_signal(String::new),
         connect_path: use_signal(String::new),
         notes: use_signal(|| Queue::new(5)),
+        etag: use_signal(|| None),
     };
 
     let modules = (editor.modules)();
@@ -627,6 +744,8 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
     let title = flow.name.clone();
     let save_store = store.clone();
     let save_id = flow_id.clone();
+    let load_id = flow_id.clone();
+    let load_config = remote.clone();
 
     rsx! { div { class: "workspace",
         aside { class: "palette",
@@ -660,7 +779,10 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
                     button { class: "button button-save", onclick: move |_| editor.undo_step(), "Undo" }
                     button { class: "button button-save", onclick: move |_| editor.redo_step(), "Redo" }
                     button { class: "button button-validate", onclick: move |_| editor.check(), "Validate" }
-                    button { class: "button button-save", onclick: move |_| editor.save(&save_store, &save_id), "Save draft" }
+                    if let Some(config) = load_config {
+                        button { class: "button button-save", onclick: move |_| editor.load_remote(config.clone(), load_id.clone()), "Muat dari server" }
+                    }
+                    button { class: "button button-save", onclick: move |_| editor.save(&save_store, &save_id, remote.clone()), "Save draft" }
                 }
             }
             section { class: "canvas-section", "aria-label": "Modul",

@@ -10,7 +10,8 @@ default = []
 # Komponen rsx! yang dipakai semua platform (ADR 0011). Tanpa renderer tertentu.
 ui = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
 # Renderer web: fitur `ui` plus peluncuran dan logger browser.
-web = ["ui", "dioxus/web", "dioxus/launch", "dioxus/logger"]
+# Transport fetch di browser (S2b): web-sys langsung, tanpa lapisan gloo-net.
+web = ["ui", "dioxus/web", "dioxus/launch", "dioxus/logger", "dep:web-sys", "dep:wasm-bindgen", "dep:wasm-bindgen-futures"]
 desktop = []
 mobile = []
 
@@ -22,6 +23,10 @@ dioxus = { version = "0.7", optional = true, default-features = false, features 
 dioxus-signals = { version = "0.7", optional = true }
 # shadcn/ui-style components for Dioxus (diaktifkan dengan fitur `web`).
 dioxus-shadcn = { workspace = true, optional = true }
+# Transport fetch (fitur `web`). Ketiganya sudah ada di Cargo.lock lewat Dioxus web.
+web-sys = { version = "0.3", optional = true, features = ["Window", "Request", "RequestInit", "Response", "Headers"] }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
 
 [[example]]
 name = "web"

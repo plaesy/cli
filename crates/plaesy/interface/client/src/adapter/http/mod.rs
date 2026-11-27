@@ -180,3 +180,7 @@ pub fn execute(transport: &mut dyn Transport, request: &Request) -> Result<Value
 mod http_test;
 
 pub mod contract;
+
+/// Transport `fetch` di browser. Hanya ada di fitur `web`.
+#[cfg(feature = "web")]
+pub mod web;
