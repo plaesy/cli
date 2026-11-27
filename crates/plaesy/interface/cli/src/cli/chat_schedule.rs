@@ -383,6 +383,7 @@ fn minutes(seconds: u64) -> String {
     seconds.div_ceil(60).max(1).to_string()
 }
 
+#[cfg(any(windows, target_os = "linux"))]
 fn quote_arg(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\\\""))
 }
