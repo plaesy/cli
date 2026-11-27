@@ -50,6 +50,7 @@ Ini perubahan perilaku yang disengaja. Lihat keputusan default 7 di §11.
 **(b) Klaim menolak task non-aktif.** `claim_next` melewati pesan yang task-nya berstate `canceled`, `failed`, `completed`, atau `input-required`. Pemeriksaan memakai **LEFT JOIN** ke `relay_tasks` (bukan inner join). Pesan tanpa baris task (dari `relay send`) tetap bisa diklaim. Ini penjagaan untuk baris lama yang tidak ditutup oleh (a).
 
 Tes:
+
 - Pesan tanpa baris task tetap bisa diklaim.
 - Pembatalan menandai pesan `gagal` dan melepas lease.
 - Pesan dari task `canceled` tidak bisa diklaim dan tidak muncul di inbox.
