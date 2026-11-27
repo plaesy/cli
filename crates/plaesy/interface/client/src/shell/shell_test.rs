@@ -1,6 +1,55 @@
 use super::*;
 
 #[test]
+fn ids_with_reserved_characters_round_trip() {
+    for id in ["a/b", "x y", "100%", "ü-ß", "q?r#s", "%2F"] {
+        let flow = Page::FlowEditor(id.to_owned());
+        assert_eq!(route(&path_for(&flow)), flow, "flow {id}");
+        let data = Page::DataEditor(id.to_owned());
+        assert_eq!(route(&path_for(&data)), data, "data {id}");
+        let doc = Page::Document {
+            kind: "flow-ir/1".to_owned(),
+            id: id.to_owned(),
+        };
+        assert_eq!(route(&path_for(&doc)), doc, "document {id}");
+    }
+}
+
+#[test]
+fn encoded_slash_in_an_id_stays_one_segment() {
+    assert_eq!(route("/flows/a%2Fb"), Page::FlowEditor("a/b".to_owned()));
+    assert_eq!(
+        path_for(&Page::FlowEditor("a/b".to_owned())),
+        "/flows/a%2Fb"
+    );
+}
+
+#[test]
+fn decode_keeps_malformed_escapes_as_they_are() {
+    assert_eq!(decode_part("100%"), "100%");
+    assert_eq!(decode_part("%zz"), "%zz");
+    assert_eq!(decode_part("a%2fb"), "a/b");
+}
+
+#[test]
+fn path_for_round_trips_through_route() {
+    let pages = [
+        Page::FlowList,
+        Page::FlowEditor("flw_1".to_owned()),
+        Page::DataList,
+        Page::DataEditor("dat_1".to_owned()),
+        Page::Document {
+            kind: "flow-ir/1".to_owned(),
+            id: "x".to_owned(),
+        },
+    ];
+    for page in pages {
+        assert_eq!(route(&path_for(&page)), page);
+    }
+    assert_eq!(path_for(&Page::FlowList), "/flows");
+}
+
+#[test]
 fn breadcrumb_names_the_section_then_the_item() {
     assert_eq!(breadcrumb(&Page::FlowList), vec!["Flow".to_owned()]);
     assert_eq!(

@@ -105,4 +105,7 @@ Dugaan (tidak diverifikasi di kode): editor kanvas belum punya interaksi drag da
 - S4a: kode selesai (breadcrumb di topbar, `shell::breadcrumb`). Commit `f90c6ef`, `424763a`. Sidebar belum dibuat; navigasi memakai tab di topbar.
 - S7: kode selesai (panel Pengaturan lewat `state::preferences`; toast dari `state::notifications` di editor). Belum ada: layar pairing (menunggu S2b) dan toast di halaman data. Belum diverifikasi.
 - S2b: kode selesai (transport fetch di `adapter/http/web.rs`, pairing, muat dan simpan dengan If-Match di editor, fallback sesi). Commit `cc623b2`, `9c221b7`, `b332314`, `8f50b3a`. Cargo.lock diperbarui oleh cli-113 (belum di-commit di sini). Menunggu verifikasi.
-- S3, S4b, S5b, S6, S9, S10, S11: menunggu. S3 dan S5b bergantung pada S2b yang sudah ada. S6 menunggu WS cli-137 setelah slice 7.
+- S3: kode selesai (`validate_document` ke `POST /v1/validate`, fallback lokal). Commit `3a57e18`. Rute `/v1/validate` tanpa project dikonfirmasi cli-137 (butuh Bearer setelah autentikasi aktif; tanpa token, klien tidak memanggil server).
+- S5b: kode selesai (edit tabel dan kolom lewat reducer, simpan dengan If-Match). Commit `660666e`. Relasi belum bisa diedit.
+- S4b: kode selesai (`shell::path_for`, sinkron alamat, halaman awal dari alamat). Commit `67206b5`. Tombol Back belum ditangani.
+- S6, S9, S10, S11: menunggu (sesuai instruksi orkestrator: hentikan dulu, tunggu cek gabungan S2b/S3/S5b/S4b). S3 dan S5b bergantung pada S2b yang sudah ada. S6 menunggu WS cli-137 setelah slice 7.

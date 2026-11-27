@@ -31,7 +31,7 @@ use crate::features::flow::services::{self, load_request, FLOW_KIND};
 use crate::features::store::MemoryStore;
 use crate::features::ApiClient;
 use crate::shared::canvas::viewport::Viewport;
-use crate::shell::{breadcrumb, Guard, Page};
+use crate::shell::{breadcrumb, path_for, route, Guard, Page};
 use crate::state::notifications::{Level, Queue};
 use crate::state::preferences::{
     reduce as reduce_prefs, Action as PrefAction, Layout, Preferences, Theme,
@@ -40,6 +40,7 @@ use dioxus::prelude::*;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::rc::Rc;
+use wasm_bindgen::JsValue;
 
 const FIXTURE: &str = include_str!("kirim-faktur.json");
 
@@ -51,7 +52,7 @@ pub fn run() {
 fn App() -> Element {
     // Penyimpanan sesi diisi dengan dokumen contoh sekali saat aplikasi dimuat.
     let store = use_hook(|| Rc::new(seeded_store()));
-    let mut page = use_signal(|| Page::FlowEditor(seed_flow_id()));
+    let page = use_signal(|| initial_page().unwrap_or_else(|| Page::FlowEditor(seed_flow_id())));
     let guard = Guard::new(&["flow:read", "data:read", "documents:read"]);
     let current = page();
     let crumbs = breadcrumb(&current);
@@ -77,7 +78,7 @@ fn App() -> Element {
             Page::FlowList => rsx! {
                 FlowList {
                     store: store.clone(),
-                    on_open: move |id: String| page.set(Page::FlowEditor(id)),
+                    on_open: move |id: String| navigate(page, Page::FlowEditor(id)),
                 }
             },
             Page::FlowEditor(id) => {
@@ -89,7 +90,7 @@ fn App() -> Element {
             Page::DataList => rsx! {
                 DataList {
                     store: store.clone(),
-                    on_open: move |id: String| page.set(Page::DataEditor(id)),
+                    on_open: move |id: String| navigate(page, Page::DataEditor(id)),
                 }
             },
             Page::DataEditor(id) => {
@@ -117,8 +118,8 @@ fn App() -> Element {
                     }
                 }
                 nav { class: "nav-tabs", "aria-label": "Navigasi utama",
-                    button { class: "nav-tab", onclick: move |_| page.set(Page::FlowList), "Flow" }
-                    button { class: "nav-tab", onclick: move |_| page.set(Page::DataList), "Data" }
+                    button { class: "nav-tab", onclick: move |_| navigate(page, Page::FlowList), "Flow" }
+                    button { class: "nav-tab", onclick: move |_| navigate(page, Page::DataList), "Data" }
                     button { class: "nav-tab", "aria-expanded": "{show_settings()}", onclick: move |_| show_settings.set(!show_settings()), "Pengaturan" }
                 }
             }
@@ -197,6 +198,32 @@ fn App() -> Element {
             }
         }
     }
+}
+
+/// Halaman dari alamat browser saat aplikasi dimuat. `None` untuk `/` dan alamat yang tidak
+/// dikenal, sehingga halaman contoh yang dibuka.
+fn initial_page() -> Option<Page> {
+    let path = web_sys::window()?.location().pathname().ok()?;
+    if path.trim_matches('/').is_empty() {
+        return None;
+    }
+    match route(&path) {
+        Page::NotFound => None,
+        page => Some(page),
+    }
+}
+
+/// Mendorong alamat baru ke riwayat browser. Galat diabaikan: halaman tetap berpindah.
+fn push_url(path: &str) {
+    if let Some(history) = web_sys::window().and_then(|window| window.history().ok()) {
+        let _ = history.push_state_with_url(&JsValue::NULL, "", Some(path));
+    }
+}
+
+/// Berpindah halaman sambil menulis alamatnya. Tombol Back browser belum ditangani.
+fn navigate(mut page: Signal<Page>, target: Page) {
+    push_url(&path_for(&target));
+    page.set(target);
 }
 
 /// Id flow dari dokumen contoh. Dipakai sebagai halaman pertama.
