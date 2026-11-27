@@ -1,11 +1,12 @@
 //! Renderer web untuk klien Plaesy.
 //!
 //! Di sini hanya glue browser dan state Dioxus: shell (navigasi dan guard), daftar flow, dan
-//! editor. Aturan editor ada di `features::flow` (reducer, validasi, dokumen) dan penyimpanan
-//! sesi di `features::store`.
+//! editor. Aturan editor ada di `features::flow` (reducer, validasi, dokumen, inspect) dan
+//! penyimpanan sesi di `features::store`.
 
 use crate::adapter::http::document_path;
 use crate::features::flow::document::patch_document;
+use crate::features::flow::inspect::{connect_candidates, flagged_modules, source_expression};
 use crate::features::flow::layout::{layout, Position};
 use crate::features::flow::model::{
     edges, modules_from_flow_json, next_module_id, validate, LocalIssue, ModuleView,
@@ -167,6 +168,9 @@ struct Editor {
     history: Signal<Vec<Vec<ModuleView>>>,
     redo: Signal<Vec<Vec<ModuleView>>>,
     status: Signal<String>,
+    connect_input: Signal<String>,
+    connect_module: Signal<String>,
+    connect_path: Signal<String>,
 }
 
 impl Editor {
@@ -198,6 +202,39 @@ impl Editor {
     fn select(mut self, id: String) {
         self.status.set(format!("Dipilih {id}"));
         self.selected.set(Some(id));
+    }
+
+    fn set_connect_input(mut self, value: String) {
+        self.connect_input.set(value);
+    }
+
+    fn set_connect_module(mut self, value: String) {
+        self.connect_module.set(value);
+    }
+
+    fn set_connect_path(mut self, value: String) {
+        self.connect_path.set(value);
+    }
+
+    /// Menyambung input `to` ke `mSUMBER.path`. Memakai isian dari inspector.
+    fn connect(mut self, to: &str) {
+        let input = (self.connect_input)().trim().to_owned();
+        if input.is_empty() {
+            self.status
+                .set("Isi nama input yang akan disambung".to_owned());
+            return;
+        }
+        let Some(source) = source_expression(&(self.connect_module)(), &(self.connect_path)())
+        else {
+            self.status
+                .set("Pilih modul sumber dan isi path-nya".to_owned());
+            return;
+        };
+        self.apply(Action::Connect {
+            to: to.to_owned(),
+            input,
+            source,
+        });
     }
 
     fn undo_step(mut self) {
@@ -268,6 +305,9 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
         history: use_signal(Vec::new),
         redo: use_signal(Vec::new),
         status: use_signal(|| "Perubahan baru tersimpan setelah Save draft".to_owned()),
+        connect_input: use_signal(String::new),
+        connect_module: use_signal(String::new),
+        connect_path: use_signal(String::new),
     };
 
     let modules = (editor.modules)();
@@ -276,6 +316,7 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
     let status = (editor.status)();
     let edge_list = edges(&modules);
     let issues = validate(&modules);
+    let flagged = flagged_modules(&issues);
     let ids: Vec<String> = modules.iter().map(|m| m.id.clone()).collect();
     let edge_pairs: Vec<(String, String)> = edge_list
         .iter()
@@ -285,6 +326,10 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
     let selected_module = selected
         .as_deref()
         .and_then(|id| modules.iter().find(|m| m.id == id));
+    let candidates = selected
+        .as_deref()
+        .map(|id| connect_candidates(&modules, id))
+        .unwrap_or_default();
     let zoom_percent = (viewport.zoom * 100.0).round() as i64;
     let stage_style = format!(
         "transform:translate({}px,{}px) scale({});transform-origin:top left;",
@@ -341,7 +386,7 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
                                 line { x1: "{node_x(from) + 176}", y1: "{node_y(from) + 44}", x2: "{node_x(to)}", y2: "{node_y(to) + 44}", stroke: "#718CA0", stroke_width: "2", marker_end: "url(#arrow)" }
                             } }
                         }
-                        for module in modules.iter() { {module_card(module, positions.get(&module.id), editor, selected.as_deref())} }
+                        for module in modules.iter() { {module_card(module, positions.get(&module.id), editor, selected.as_deref(), flagged.contains(&module.id))} }
                     }
                 }
             }
@@ -364,7 +409,7 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
             div { class: "inspector-divider" }
             div { class: "eyebrow", "SELECTED MODULE" }
             if let Some(module) = selected_module {
-                {inspector(module, editor)}
+                {inspector(module, editor, &candidates)}
             } else {
                 p { class: "empty-inspector", "Pilih modul untuk melihat operasi dan input." }
             }
@@ -385,10 +430,17 @@ fn module_card(
     position: Option<&Position>,
     editor: Editor,
     selected: Option<&str>,
+    flagged: bool,
 ) -> Element {
     let position = position.copied().unwrap_or(Position { x: 0, y: 0 });
     let module_id = module.id.clone();
     let is_selected = selected == Some(module.id.as_str());
+    let class = match (is_selected, flagged) {
+        (true, true) => "module-card selected flagged",
+        (true, false) => "module-card selected",
+        (false, true) => "module-card flagged",
+        (false, false) => "module-card",
+    };
     let style = format!(
         "left:{}px;top:{}px;border-top-color:{}",
         node_x(&position),
@@ -397,19 +449,22 @@ fn module_card(
     );
     let title = operation_label(module);
     let detail = input_summary(module);
-    rsx! { button { class: if is_selected { "module-card selected" } else { "module-card" }, style: "{style}", onclick: move |_| editor.select(module_id.clone()),
+    rsx! { button { class: class, style: "{style}", onclick: move |_| editor.select(module_id.clone()),
         span { class: "module-kind", style: "color:{kind_color(&module.kind)}", "{module.id} · {module.kind}" }
         strong { "{title}" }
         small { "{detail}" }
     } }
 }
 
-fn inspector(module: &ModuleView, editor: Editor) -> Element {
+fn inspector(module: &ModuleView, editor: Editor, candidates: &[String]) -> Element {
     let module_id = module.id.clone();
     let rename_from = module_id.clone();
     let remove_id = module_id.clone();
+    let connect_to = module_id.clone();
     let operation = operation_label(module);
     let inputs = input_summary(module);
+    let connect_input = (editor.connect_input)();
+    let connect_path = (editor.connect_path)();
     rsx! {
         div { class: "selected-module",
             span { class: "selected-dot", style: "background:{kind_color(&module.kind)}" }
@@ -423,6 +478,23 @@ fn inspector(module: &ModuleView, editor: Editor) -> Element {
         }
         Field { label: "Operasi", value: operation }
         Field { label: "Input", value: inputs }
+        div { class: "connect-form",
+            span { class: "field-label", "Hubungkan input" }
+            input { id: "connect-input", class: "field-input", placeholder: "nama input", "aria-label": "Nama input", value: "{connect_input}",
+                oninput: move |event| editor.set_connect_input(event.value()),
+            }
+            select { id: "connect-module", class: "field-input", "aria-label": "Modul sumber",
+                onchange: move |event| editor.set_connect_module(event.value()),
+                option { value: "", "Pilih modul sumber" }
+                for candidate in candidates.iter() {
+                    option { value: "{candidate}", "{candidate}" }
+                }
+            }
+            input { id: "connect-path", class: "field-input", placeholder: "path, mis. invoice.id", "aria-label": "Path sumber", value: "{connect_path}",
+                oninput: move |event| editor.set_connect_path(event.value()),
+            }
+            button { class: "button button-save", onclick: move |_| editor.connect(&connect_to), "Sambungkan" }
+        }
         button { class: "button button-danger", onclick: move |_| editor.apply(Action::RemoveModule(remove_id.clone())), "Hapus modul" }
     }
 }
@@ -516,6 +588,8 @@ const EXTRA_STYLE: &str = r#"
 .button-danger{background:#4A2A2F;color:#F6C9CE;margin-top:8px}
 .field-input{width:100%;height:42px;padding:0 15px;border-radius:6px;background:#233247;color:#E9EEF7;border:1px solid #344254;font:inherit;font-size:13px}
 .validation-card h2{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#A9E2D2;font-weight:600}
+.module-card.flagged{outline:2px solid #F26D6D;outline-offset:2px}
+.connect-form{display:grid;gap:8px;margin:18px 0}
 "#;
 
 const STYLE: &str = r#"

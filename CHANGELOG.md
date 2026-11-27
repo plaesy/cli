@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The web client's flow inspector connects an input to another module's output (`mID.path`), and a module with a duplicate id or an unknown source is outlined on the canvas.
 - The web client's flow editor (`plaesy-interface-client`, feature `web`) works on the loaded flow: add, remove, and rename modules through the flow reducer, undo and redo, validate, and save the draft to the in-memory session store. Saving keeps the fields the editor does not show (retry, timeout, branch). Changes are lost when the page reloads, and connecting inputs from the inspector is not built yet.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.
 - `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
