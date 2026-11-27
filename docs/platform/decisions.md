@@ -245,3 +245,10 @@ Keputusan ini diambil pemilik lewat orkestrator. Ini keputusan pemilik, bukan de
 - **Autentikasi: token per perangkat.** Klien mengirim `Authorization: Bearer <token>`. Token datang dari pairing dan disimpan sebagai konfigurasi, tidak di-hard-code. Base URL juga dapat diatur.
 - **Kontrak API.** Klien mengikuti kontrak `/v1` (OpenAPI di `/v1/spec`), termasuk rute tenant `/v1/projects/{project}/documents/...`, ETag dan If-Match, dan kode galat 401, 403, 412, 413, 422, 429, serta `/v1/ready`. Kontrak masih usulan sampai disetujui pemilik.
 - **Urutan kerja.** Desktop dan mobile dikerjakan setelah slice web S1 sampai S5 dan kontrak backend final.
+
+## Jalur jaringan klien web (2026-11-27, didelegasikan, bisa dicabut pemilik)
+
+- Transport: `fetch` lewat web-sys langsung (fitur `web` di `plaesy-interface-client`). Dependensi: web-sys, wasm-bindgen, dan wasm-bindgen-futures, yang sudah ada di Cargo.lock lewat Dioxus web. gloo-net tidak dipakai karena hanya menambah satu lapisan di atas crate yang sama.
+- Autentikasi: token per perangkat dari pairing (`POST /v1/pairing/exchange`), dikirim sebagai `Authorization: Bearer`. Token hanya di memori halaman; tidak disimpan di browser pada slice ini.
+- Konsistensi: `GET` dan `PUT` dokumen memakai ETag dan If-Match. Tanpa server, editor tetap menyimpan ke penyimpanan sesi.
+- Base URL dan project adalah isian di panel Pengaturan, bukan konstanta.

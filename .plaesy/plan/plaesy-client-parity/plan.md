@@ -104,4 +104,5 @@ Dugaan (tidak diverifikasi di kode): editor kanvas belum punya interaksi drag da
 - S2c: kode selesai, sudah sesuai jawaban cli-137 (pairing, rotasi, token_expired, revision_conflict). Commit `39e57a3`, `1cbb703`. Menunggu verifikasi cli-113.
 - S4a: kode selesai (breadcrumb di topbar, `shell::breadcrumb`). Commit `f90c6ef`, `424763a`. Sidebar belum dibuat; navigasi memakai tab di topbar.
 - S7: kode selesai (panel Pengaturan lewat `state::preferences`; toast dari `state::notifications` di editor). Belum ada: layar pairing (menunggu S2b) dan toast di halaman data. Belum diverifikasi.
-- S2b, S3, S4b, S5b, S6, S9, S10, S11: menunggu kontrak final dan server cli-137.
+- S2b: kode selesai (transport fetch di `adapter/http/web.rs`, pairing, muat dan simpan dengan If-Match di editor, fallback sesi). Commit `cc623b2`, `9c221b7`, `b332314`, `8f50b3a`. Cargo.lock diperbarui oleh cli-113 (belum di-commit di sini). Menunggu verifikasi.
+- S3, S4b, S5b, S6, S9, S10, S11: menunggu. S3 dan S5b bergantung pada S2b yang sudah ada. S6 menunggu WS cli-137 setelah slice 7.
