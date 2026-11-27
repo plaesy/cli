@@ -1,6 +1,6 @@
 # Spesifikasi: klaim dan permintaan input lewat HTTP, dengan identitas per klien
 
-Status: **draf revisi 5, menunggu review Opus 5.5 lalu persetujuan pemilik.** Belum ada kode.
+Status: **draf revisi 6, menunggu review Opus 5.5 lalu persetujuan pemilik.** Belum ada kode.
 
 Urutan kerja (bagian 13): prasyarat store P1 sampai P3 boleh dikerjakan setelah revisi ini disetujui, karena tidak bergantung pada PR #30. Kode autentikasi dan token menunggu merge PR #30.
 
@@ -20,17 +20,17 @@ Di luar cakupan: jaringan non-loopback, perpanjangan lease, ACL yang bisa dikonf
 - Rute `GET /tasks/{from}/{id}/events` (SSE) **tidak** lewat `route()`. Ia ditangani di `agent_serve.rs` `handle()` (`:129-133`) dan `stream_task` (`:166`), dan tidak memeriksa label. Setelah autentikasi token, siapa pun yang punya token bisa membaca state dan prompt task pengirim mana pun.
 - Autentikasi: satu token `PLAESY_AGENT_TOKEN` (`agent_serve.rs`, `TOKEN_ENV`). Tidak ada identitas. `from` dan `to` dideklarasikan sendiri.
 - `send_task` (`relay.rs:221`) memeriksa duplikat dengan `WHERE id=?1` (`:236`).
-- `claim_next(recipient, lease_seconds)` (`relay.rs:510-561`) tidak menerima owner. Store membuat UUID v4 sendiri (`:520`) dan menyimpannya di `lease_owner`, lalu mengembalikannya dalam `Message`. `Message` memuat `sender`.
+- `claim_next(recipient, lease_seconds)` (`relay.rs:510-561`) tidak menerima owner. Store membuat UUID v4 sendiri (`:521`) dan menyimpannya di `lease_owner`, lalu mengembalikannya dalam `Message`. `Message` memuat `sender`.
 - `acknowledge_claim(id, recipient, owner)` (`:564`) mengembalikan `Ok(false)` bila lease tidak cocok, bukan error. `release_claim(id, recipient, owner, error)` (`:593`) mengembalikan `Ok(None)` untuk kondisi yang sama. Tidak ada `LeaseConflict` dari kedua fungsi ini.
-- `request_input(id, recipient, owner, question)` (`:319`) mengembalikan `LeaseConflict` bila UPDATE tidak mengenai baris (`:338-343`). Cek transisi task (`:353`) baru berjalan setelah itu.
+- `request_input(id, recipient, owner, question)` (`:319`) mengembalikan `LeaseConflict` bila UPDATE tidak mengenai baris (`:338-343`). Cek transisi task (`:353`) baru berjalan setelah itu. Bila baris task tidak ada, fungsi mengembalikan `TaskNotFound` (`:352`).
 - `provide_input(sender, id, reply)` (`:366`) mengembalikan `TaskNotFound` untuk `(sender, id)` yang tidak ada (`:380-381`).
-- `set_task_state(sender, id, next)` (`:282`) menulis state task tanpa menyentuh pesan. Pembatalan tidak menyentuh lease atau status pesan.
+- `set_task_state(sender, id, next)` (`:282`) menulis state task tanpa menyentuh pesan. Pembatalan tidak menyentuh lease atau status pesan. `set_task_state` mengizinkan transisi manual ke `completed` (`task.rs:56`).
 - `acknowledge(id, recipient)` (legacy, `:645`) hanya menerima pesan dengan `attempts=0` dan `awaiting_input=0`. **Tidak** memeriksa `failed_at_epoch_ms` (`:654`).
 - Batas: body HTTP 64 KiB (`agent_http.rs`), `question` dan `reply` 1..=65536 byte (`relay.rs:329`, `374`), `error` maksimal 1024 byte (`relay.rs:603`), `id` 1..=128 byte tercetak (`relay.rs:838`), lease 1..=86400 detik (`relay.rs:516`), `MAX_ATTEMPTS = 5` (`relay.rs:21`).
 - Skema: `relay_messages.id TEXT PRIMARY KEY` global, dengan `UNIQUE(sender, id)` (`relay.rs:167-174`). `relay_tasks` berkunci `(sender, id)` (`:178-185`). `CREATE TABLE IF NOT EXISTS` (`:167`) tidak mengubah tabel yang sudah ada, dan `migrate_columns` hanya menambah kolom.
 - Status pesan diturunkan di SQL (`relay.rs:741-750`): `selesai`, `gagal`, `menunggu-input`, `diambil`, `menunggu`. Inbox (`:763`) menyaring pesan yang `failed_at` terisi.
 - `agent-protocol-design.md` baris 54 (lease terakhir yang kedaluwarsa, dipertahankan) dan baris 55 (tugas `canceled` tetap bisa diklaim dan di-ack, dibalik oleh §3).
-- CLI lokal (`plaesy relay`, `cli/relay.rs`) punya perintah `Send`, `Inbox`, `Wait`, `Claim`, dan `Ack` (`:18-65`). Pemanggil store: `claim_next` (`:120`), `acknowledge_claim` (`:129`), dan `acknowledge` (`:131`). CLI tidak punya perintah `release`. Output klaim mencetak `lease_owner` (`plaesy/tests/relay_cli.rs:44`, `124`), dan inbox serta pending menghapusnya (`cli/relay.rs:76-99`).
+- CLI lokal (`plaesy relay`, `cli/relay.rs`) punya perintah `Send`, `Inbox`, `Wait`, `Claim`, dan `Ack` (`:18-65`). Pemanggil store: `claim_next` (`:120`), `acknowledge_claim` (`:129`), dan `acknowledge` (`:131`). CLI tidak punya perintah `release`. Output klaim mencetak seluruh `Message`, termasuk `sender` dan `lease_owner` (`plaesy/tests/relay_cli.rs:44`, `124`). Inbox dan pending menghapus `lease_owner` (`cli/relay.rs:76-99`).
 - PR #30 (`tokens.rs`): `TokenSet::authorize` memberi `Allowed(label)` untuk token env (label `default`) dan token berkas. `validate_label` hanya dipanggil dari `add` (`:216`), tidak dari `load` (`:310-327`). `TokenAuth::new` mengembalikan `Ok(None)` bila tidak ada sumber (`:430-432`). `check_at` mengembalikan `Verdict::Open` bila `required` belum pernah aktif (`:464-466`).
 
 ## 3. Prasyarat perubahan store
@@ -43,6 +43,7 @@ Empat perbaikan ini harus selesai sebelum rute klaim dibuka. Setiap perbaikan pu
 
 - `failed_at_epoch_ms` diisi, `last_error` = `"task canceled"` atau `"task failed"`, dan `lease_owner` serta `lease_expiry_epoch_ms` dikosongkan.
 - Hasilnya: status pesan `gagal`, tidak bisa diklaim, dan tidak muncul di inbox (filter `failed_at` di `:763`).
+- Hook ini hanya di `set_task_state`. Jalur final release (`:627-641`) memakai `advance_task` dan tidak memicu penutupan. Jalur itu sudah menandai pesan gagal sendiri lewat UPDATE `:614`.
 
 Pemicu `failed` ikut karena alasan yang sama: task yang sudah gagal tidak boleh meninggalkan pesan hidup di inbox dan di `relay wait`. Ini perluasan dari keputusan default 7 di §11.
 
@@ -52,18 +53,23 @@ Tes: pesan tanpa baris task tetap bisa diklaim; pembatalan dan kegagalan menanda
 
 ### P2. Selesai, lepas, dan minta input hanya pada task `working`
 
-Aturan yang berlaku untuk tiga fungsi store `acknowledge_claim`, `release_claim`, dan `request_input`:
+Urutan cek untuk tiga fungsi store `acknowledge_claim`, `release_claim`, dan `request_input`, dalam satu transaksi:
 
-- Sebelum UPDATE lease, fungsi memeriksa state task dalam transaksi yang sama. **Bila task ada dan state-nya bukan `working`, fungsi mengembalikan `TaskTransition`** dan pesan tidak berubah. Pemeriksaan ini mendahului pemeriksaan lease, jadi task yang sudah dibatalkan selalu menghasilkan `TaskTransition`, bukan `LeaseConflict`.
-- Pesan tanpa baris task tetap diizinkan (tidak ada state yang diperiksa).
-- `request_input` juga memeriksa `working` sebelum UPDATE. Cek transisi `input-required` yang ada (`:353`) tetap berlaku sesudahnya.
+1. **Pesan dicocokkan dulu** dengan `(sender, id, recipient)`. Bila tidak ada, kembalikan `LeaseConflict` (lalu dipetakan ke `404` atau `409` di §8). Cek state tidak pernah dijalankan untuk pesan milik penerima lain, sehingga penerima lain tidak bisa membaca state task.
+2. **State task dicek.** Bila baris task ada dan state-nya bukan `working`, kembalikan `TaskTransition`. Pesan tidak berubah. Pesan tanpa baris task dilewati langkah ini.
+3. **Lease dicek dan UPDATE dijalankan** seperti sekarang.
 
-Jalur legacy `acknowledge(sender, id, recipient)` (`:645`): tambahkan `AND failed_at_epoch_ms IS NULL` di `:654`. Tanpa ini, pesan yang gagal karena pembatalan dan belum pernah diklaim (`attempts=0`) bisa di-ack tanpa token, dan statusnya berubah menjadi `selesai` sementara task tetap `canceled`. Tes wajib: `acknowledge` pada pesan gagal mengembalikan `false`.
+Akibat: replay setelah sukses mendapat `task_transition`, bukan `lease_conflict`, karena task sudah tidak `working` (lihat §8 dan keputusan 10).
 
-Tes yang sudah ada yang berubah karena perilaku ini (disengaja):
+Pengecualian: `request_input` pada pesan tanpa baris task tetap mengembalikan `TaskNotFound` (`:352`), seperti sekarang. Ini tidak diubah.
 
-- `relay_test.rs:519` `canceled_task_stays_canceled_when_its_message_is_claimed_and_acked`: klaim setelah batal sekarang `None`. Assertion diubah.
-- `relay_test.rs:698` `request_input_is_refused_for_a_canceled_task_and_keeps_the_lease`: sekarang `TaskTransition`, dan ack setelahnya `false`.
+Jalur legacy `acknowledge(sender, id, recipient)` (`:645`): tambahkan `AND failed_at_epoch_ms IS NULL` di `:654`. Tanpa ini, pesan yang gagal karena pembatalan dan belum pernah diklaim (`attempts=0`) bisa di-ack tanpa token. Tes wajib: `acknowledge` pada pesan gagal mengembalikan `false`.
+
+Tes yang sudah ada dan berubah karena perilaku ini (disengaja):
+
+- `relay_test.rs:519` `canceled_task_stays_canceled_when_its_message_is_claimed_and_acked`: klaim setelah batal sekarang `None`. Tes diubah untuk memeriksa `gagal` dan `last_error = "task canceled"`, dan namanya diganti.
+- `relay_test.rs:600` `request_input_parks_the_message_until_the_sender_answers`: `acknowledge_claim` pada task `input-required` (`:628-630`) sekarang mengembalikan `TaskTransition`, bukan `Ok(false)`. Assertion diubah.
+- `relay_test.rs:698` `request_input_is_refused_for_a_canceled_task_and_keeps_the_lease`: `request_input` mengembalikan `TaskTransition`. `acknowledge_claim` setelah batal mengembalikan `Err(TaskTransition)`, bukan `false`. Nama tes diganti karena lease sudah dilepas oleh penutupan (P1(a)).
 - `relay_test.rs:747` `canceling_an_input_required_task_drops_the_question_...`: klaim setelah batal sekarang `None`.
 
 ### P3. Id per pengirim
@@ -76,7 +82,7 @@ Tes yang sudah ada yang berubah karena perilaku ini (disengaja):
 
 | Fungsi | Signature baru |
 |---|---|
-| `find(sender, id)` | pengganti `find(id)` (`:494`). Dipakai untuk tes dan tampilan lokal. |
+| `find(sender, id)` | pengganti `find(id)` (`:500`). Dipakai untuk tes dan tampilan lokal. |
 | `find_for_recipient(recipient, sender, id)` | baru. Mengembalikan pesan hanya bila penerima dan pengirim cocok. Dipakai rute HTTP. |
 | `acknowledge_claim(sender, id, recipient, owner)` | `:564` |
 | `release_claim(sender, id, recipient, owner, error)` | `:593` |
@@ -106,10 +112,12 @@ Tes yang sudah ada yang berubah karena perilaku ini (disengaja):
 **Dampak ke CLI.** Perubahan signature ini memengaruhi pemanggil CLI berikut:
 
 - `relay ack`: `acknowledge_claim` (`:129`) dan `acknowledge` (`:131`) sekarang butuh `sender`. Perintah `ack` menerima `--from <sender>` yang wajib.
-- `relay claim`: tidak berubah. Output tetap menyertakan `sender` dan `lease_owner`, jadi pengguna punya nilai `--from` yang dibutuhkan `ack`.
-- CLI tidak punya perintah `release`. Pemanggil `release_claim` hanya ada di store dan HTTP (§6). Tidak ada perubahan CLI untuk `release`.
+- `relay claim`: tidak berubah. Output sudah memuat `sender` dan `lease_owner`, jadi pengguna punya nilai `--from` yang dibutuhkan `ack`.
+- CLI tidak punya perintah `release`. Pemanggil `release_claim` hanya ada di store dan HTTP (§6).
 
 Perubahan ini terlihat pengguna. Dicatat di CHANGELOG.
+
+**Pemanggil di tes.** Signature baru memengaruhi semua pemanggil di `relay_test.rs` (sekitar 40 titik) dan `agent_http_test.rs` di `:144`, `:159`, dan `:224`. Setiap pemanggil diperbarui mengikuti signature.
 
 ### P4. Validasi label di loader token (di luar store)
 
@@ -200,22 +208,19 @@ Semua rute memerlukan token pada mode `token`. Penerima selalu label. Pengirim w
 | `401` | `unauthorized` | Token hilang atau salah pada mode `token`. |
 | `403` | `forbidden` | Hanya pada `send` ketika `from` bukan label. |
 | `404` | `not_found` | Id tidak ada, bukan milik label, pengirim tidak cocok, atau `/claims` pada mode `open`. Body identik untuk semua kasus ini. |
-| `409` | `lease_conflict` | Lease tidak dipegang, habis, atau token salah. Hanya bila pesan milik label dan task-nya `working`. |
-| `409` | `task_transition` | Task bukan `working` (misalnya setelah pembatalan atau kegagalan, atau `:input` pada task yang bukan `input-required`). Berlaku untuk `:complete`, `:release`, dan `:request-input`. |
+| `409` | `lease_conflict` | Pesan milik label dan task `working`, tetapi lease tidak dipegang, habis, atau token salah. |
+| `409` | `task_transition` | Task bukan `working`. Berlaku untuk `:complete`, `:release`, dan `:request-input`, termasuk replay setelah sukses (task sudah `completed`, `input-required`, atau `failed`), setelah pembatalan, dan `:input` pada task yang bukan `input-required`. |
 | `409` | `idempotency_conflict` | Id yang sama dengan isi berbeda, dari pengirim yang sama. |
 | `413` | `body_too_large` | Body di atas 64 KiB. Dicek sebelum parse. |
-
-Setelah pembatalan atau kegagalan, `:complete`, `:release`, dan `:request-input` selalu membalas `409 task_transition`. Tidak ada `404` untuk kasus ini, karena pesan itu masih milik label (pengirim dan penerima tidak berubah). Kode ini konsisten dengan P2.
 
 `write_reply` (`agent_serve.rs:292-303`) perlu ditambah 204 (tanpa body) dan 403. Saat ini belum ada.
 
 ### Pemetaan dari store
 
-- `acknowledge_claim` mengembalikan `Ok(false)` (lease tidak cocok, pesan sudah selesai atau tidak dimiliki): `409 lease_conflict` bila `find_for_recipient` menemukan pesan, `404` bila tidak.
-- `release_claim` mengembalikan `Ok(None)`: sama seperti di atas.
-- `request_input` mengembalikan `LeaseConflict`: sama seperti di atas.
-- `TaskTransition`: `409 task_transition`. Dipetakan sebelum cek lease (P2).
-- `TaskNotFound`: `404 not_found`.
+- `acknowledge_claim`, `release_claim`, dan `request_input` mengikuti urutan cek di §3 P2. `LeaseConflict` dari langkah 1 (pesan tidak milik penerima) dipetakan ke `404`. `LeaseConflict` dari langkah 3 (lease tidak cocok) dipetakan ke `409 lease_conflict`.
+- `acknowledge_claim` dan `release_claim` yang mengembalikan `Ok(false)` atau `Ok(None)` (lease tidak cocok) dipetakan sama dengan `LeaseConflict` langkah 3.
+- `TaskTransition`: `409 task_transition`.
+- `TaskNotFound`: `404 not_found`. Pada `request_input`, ini terjadi untuk pesan tanpa baris task.
 - `IdempotencyConflict`: `409 idempotency_conflict`.
 - `InvalidLease`: `400 invalid_lease`.
 - `Invalid(msg)`: `400 invalid_*` sesuai field.
@@ -228,15 +233,19 @@ Body error tetap memuat `error` (teks) untuk kompatibilitas. `code` adalah tamba
 
 - **Send:** replay dengan id dan isi yang sama mengembalikan state task saat ini. Isi berbeda: `409 idempotency_conflict`.
 - **Klaim (`:next`):** tidak idempoten. Setiap klaim yang berhasil menambah satu percobaan. Respons klaim yang hilang di jalan membuat lease tak diketahui, yang habis dan memakan satu percobaan. Ini didokumentasikan.
-- **`:complete`, `:release`, `:request-input` yang diulang setelah berhasil:** lease sudah dilepas, jadi balasan kedua `409 lease_conflict`. Klien memeriksa hasilnya lewat `GET /claims/{from}/{id}`. Replay tidak dibuat sukses, karena store tidak menyimpan riwayat lease.
+- **`:complete`, `:request-input` yang diulang setelah sukses:** task sudah tidak `working`, jadi balasan kedua `409 task_transition`. Klien memeriksa hasilnya lewat `GET /claims/{from}/{id}`, lalu membaca `status` dan `state`.
+- **`:release` yang diulang setelah release non-final:** task masih `working`, lease sudah dilepas, jadi balasan kedua `409 lease_conflict`. Setelah release final, balasan kedua `409 task_transition`.
 - **Lease habis sebelum selesai:** pesan kembali ke `menunggu`, atau `gagal` bila percobaan sudah `MAX_ATTEMPTS`. Lihat §9.
+
+Replay tidak dibuat sukses, karena store tidak menyimpan riwayat lease.
 
 ## 9. Lease habis dan task tertahan
 
 - Lease habis tanpa `:release` tidak mengubah state task. Task tetap `working`.
 - Setiap klaim memakan satu percobaan (`relay.rs:540`), termasuk klaim yang lease-nya habis. Ada 5 percobaan.
 - Setelah percobaan kelima habis tanpa `:release`, status pesan menjadi `gagal` (dari SQL status) tetapi task tetap `working`. Tidak ada yang mengubah state task. Ini celah yang sudah ada dan tercatat di `agent-protocol-design.md` sebagai butir lease terakhir yang kedaluwarsa. Perbaikannya adalah pekerjaan terpisah (penyapu yang memindahkan task ke `failed`).
-- `:release` pada percobaan terakhir mengubah pesan ke `gagal` dan task ke `failed` (`relay.rs:632-638`). Pada percobaan lain, task tetap `working`.
+- `:release` pada percobaan terakhir mengubah pesan ke `gagal` dan task ke `failed` (`relay.rs:627-641`). Pada percobaan lain, task tetap `working`.
+- Celah lain: transisi manual ke `completed` lewat `set_task_state` tidak menutup pesan (P1(a) hanya untuk `canceled` dan `failed`). Pesan itu tetap tidak bisa diklaim (P1(b)), tetapi masih muncul di inbox. Ini dicatat, tidak diperbaiki di spec ini.
 
 ## 10. Kompatibilitas `POST /tasks/{from}/{id}:input`
 
@@ -254,7 +263,7 @@ Body error tetap memuat `error` (teks) untuk kompatibilitas. `code` adalah tamba
 3. `docs/platform/agent-protocol-design.md`, butir "Tugas yang sudah `canceled` tetap bisa diklaim dan di-ack...": dibalik oleh P1 dan P2. Butir lease terakhir yang kedaluwarsa (yang menyebut `gagal` tanpa menulis ke tabel) dipertahankan sebagai celah (§9), dan tidak dibalik.
 4. `agent_serve.rs` `handle()`: pemeriksaan label ditambahkan untuk SSE. `TOKEN_ENV` memakai loader agen (§4).
 5. CLI `plaesy relay ack` menerima `--from` yang wajib (§3 P3). CHANGELOG mencatat perubahan ini.
-6. Tiga tes di `relay_test.rs` (`:519`, `:698`, `:747`) berubah perilakunya (§3 P2).
+6. Tes di `relay_test.rs` (`:519`, `:600`, `:698`, `:747`) dan `agent_http_test.rs` (`:144`, `:159`, `:224`) berubah sesuai P2 dan P3 (§3).
 
 ### Keputusan default (didelegasikan, bisa dicabut pemilik)
 
@@ -265,9 +274,9 @@ Body error tetap memuat `error` (teks) untuk kompatibilitas. `code` adalah tamba
 5. Lease default 300 detik, maksimum 86400, tanpa perpanjangan.
 6. Token lease adalah UUID v4 dari store, dikembalikan sekali, dan tidak diubah formatnya.
 7. **Pembatalan atau kegagalan task menutup pesan (P1(a)).** Pesan yang belum di-ack ditandai `gagal` dengan `last_error` yang sesuai, lease-nya dilepas, dan pesan keluar dari inbox. Alternatifnya, pesan tetap `menunggu` selamanya dan tetap muncul di inbox.
-8. **Kode error setelah penutupan: `409 task_transition`** untuk `:complete`, `:release`, dan `:request-input` (opsi A di review). Alternatif `404` ditolak karena pesan masih milik label.
+8. **Kode error setelah task tidak `working`: `409 task_transition`** untuk `:complete`, `:release`, dan `:request-input`. Alternatif `404` ditolak karena pesan masih milik label.
 9. Error `404` seragam untuk id yang bukan milik label atau bukan dari pengirim yang disebut di jalur.
-10. Replay `:complete`, `:release`, dan `:request-input` yang sudah sukses dibalas `409 lease_conflict`. Pemulihan lewat `GET /claims/{from}/{id}`.
+10. **Replay setelah sukses dibalas sesuai state task.** `:complete` dan `:request-input` yang diulang mendapat `409 task_transition`. `:release` yang diulang setelah release non-final mendapat `409 lease_conflict`. Pemulihan lewat `GET /claims/{from}/{id}`. Alternatif (cek lease dulu untuk state `completed` dan `input-required`) ditolak, karena membuat urutan cek P2 tidak konsisten.
 11. Rute klaim memuat `{from}` karena id unik per pengirim setelah P3.
 12. CLI `relay ack` menerima `--from` (wajib). CLI tidak punya perintah `release`, dan tidak ditambah dalam spec ini.
 
@@ -276,6 +285,7 @@ Body error tetap memuat `error` (teks) untuk kompatibilitas. `code` adalah tamba
 1. CLI lokal `plaesy relay claim` tetap mencetak token lease. Perlu redaksi?
 2. Penyapu task yang tertahan (§9): dikerjakan di langkah ini atau terpisah? Default: terpisah.
 3. Apakah `tokens.rs` dipindah ke crate bersama sekarang? Default: nanti.
+4. Celah `set_task_state(completed)` yang tidak menutup pesan (§9): perlu ditutup di langkah ini? Default: tidak.
 
 ## 12. Uji yang diharapkan
 
@@ -284,13 +294,14 @@ Store (P1 sampai P3, boleh dikerjakan sebelum PR #30 merge), `-p plaesy-adapter-
 - P1(a): pembatalan dan kegagalan menandai pesan yang belum di-ack sebagai `gagal`, melepas lease, dan pesan hilang dari inbox.
 - P1(b): `claim_next` tidak mengembalikan pesan dari task `canceled`, `failed`, `completed`, atau `input-required`.
 - P1(b): pesan tanpa baris task (dari `relay send`) tetap bisa diklaim.
-- P2: `acknowledge_claim`, `release_claim`, dan `request_input` pada task yang bukan `working` mengembalikan `TaskTransition`, dan pesan tidak berubah. Ini termasuk kasus yang sebelumnya `LeaseConflict`.
-- P2: pesan tanpa baris task tetap bisa di-ack dan di-release.
+- P2: `acknowledge_claim`, `release_claim`, dan `request_input` pada task yang bukan `working` mengembalikan `TaskTransition`, dan pesan tidak berubah.
+- P2: urutan cek: pesan milik penerima lain mendapat `LeaseConflict` tanpa membaca state task.
+- P2: pesan tanpa baris task tetap bisa di-ack dan di-release. `request_input` pada pesan itu tetap `TaskNotFound`.
 - P2: `acknowledge` (legacy) pada pesan yang gagal mengembalikan `false`.
 - P3: dua pengirim boleh memakai id yang sama ke penerima yang sama, dan klaim memilih pesan dengan `sender` yang benar.
 - P3: basis data versi sebelumnya dibuka dan dimigrasikan (rebuild tabel), dan semua baris tersalin.
 - P3: setiap query id-only di tabel §3 sudah memakai `sender` atau `recipient`.
-- Tiga tes di `relay_test.rs` (`:519`, `:698`, `:747`) diperbarui sesuai P2, dan tesnya tetap bermakna.
+- Tes `relay_test.rs` (`:519`, `:600`, `:698`, `:747`) diperbarui sesuai P2 dan tetap bermakna.
 
 CLI, `-p plaesy-interface-cli --locked`:
 
@@ -298,7 +309,7 @@ CLI, `-p plaesy-interface-cli --locked`:
 - `relay_claim_is_exclusive_and_ack_requires_owner_token` (`relay_cli.rs`): ack yang berhasil diberi `--from`. Tes negatif (token salah) tetap menguji token, bukan kelengkapan flag.
 - `relay_wait_returns_pending_message_without_acknowledging_it` tidak berubah, karena `claim` tidak memakai `--from`.
 - `relay_wait_exits_after_timeout_when_inbox_is_empty` tidak terdampak.
-- Pemanggil di `agent_http_test.rs:144` dan `:224` menyesuaikan signature baru.
+- Pemanggil di `agent_http_test.rs` (`:144`, `:159`, `:224`) menyesuaikan signature baru.
 
 HTTP (setelah PR #30 merge), `-p plaesy-interface-cli --locked`:
 
@@ -307,7 +318,8 @@ HTTP (setelah PR #30 merge), `-p plaesy-interface-cli --locked`:
 - SSE: label lain mendapat `404`, dan tidak ada byte event yang dikirim.
 - Token lease label A tidak bisa dipakai label B: `404` bila pesan milik B.
 - Id milik pengirim lain: `404` dengan body identik dengan id yang tidak ada.
-- Replay `:complete` setelah sukses: `409 lease_conflict`, lalu `GET /claims/{from}/{id}` menunjukkan `completed`.
+- Replay `:complete` setelah sukses: `409 task_transition`, lalu `GET /claims/{from}/{id}` menunjukkan `completed`.
+- Replay `:release` setelah release non-final: `409 lease_conflict`.
 - `:complete`, `:release`, dan `:request-input` setelah pembatalan: `409 task_transition`.
 - `:release` pada percobaan terakhir: pesan `gagal`, task `failed`.
 - `:request-input` lalu `:input` lalu klaim: `input_reply` muncul dan percobaan tidak bertambah.
@@ -322,7 +334,7 @@ HTTP (setelah PR #30 merge), `-p plaesy-interface-cli --locked`:
 
 Keputusan: **implementasi boleh dimulai sebelum PR #30 merge, tetapi hanya untuk P1 sampai P3 di `relay` dan CLI `relay ack`.** P1 sampai P3 tidak menyentuh `tokens.rs`. Semua kode autentikasi, loader berkas, pemeriksaan label, dan rute HTTP menunggu merge PR #30, karena memakai `TokenSet` dan `load` dari sana.
 
-1. Opus 5.5 menyetujui revisi 5.
+1. Opus 5.5 menyetujui revisi 6.
 2. P1 sampai P3 di `main` terbaru, dengan tes `-p plaesy-adapter-relay --locked` dan `-p plaesy-interface-cli --locked`. Migrasi P3 diuji dengan basis data versi sebelumnya.
 3. Merge PR #30.
 4. Loader token agen, validasi label saat load, pemeriksaan label untuk SSE dan rute, dan rute `/claims`, dengan tes `-p plaesy-interface-cli --locked`.
