@@ -15,6 +15,9 @@ pub struct Session {
     pub files: Vec<String>,
     pub updated_at: u64,
     pub expires_at: u64,
+    /// Unix seconds when this session was first reported. Records written before this field existed have none.
+    #[serde(default)]
+    pub created_at: Option<u64>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -98,7 +101,13 @@ pub fn report(
         ));
     }
     locked(root, |dir| {
-        let mut sessions: Vec<_> = read(dir)?
+        let existing = read(dir)?;
+        // A live record keeps its first-seen time; a legacy live record without one falls back to its last update.
+        let created_at = existing
+            .iter()
+            .find(|s| s.id == id && s.expires_at > now())
+            .map_or_else(now, |s| s.created_at.unwrap_or(s.updated_at));
+        let mut sessions: Vec<_> = existing
             .into_iter()
             .filter(|s| s.expires_at > now() && s.id != id)
             .collect();
@@ -110,6 +119,7 @@ pub fn report(
             files: files.to_vec(),
             updated_at: now(),
             expires_at: now() + ttl,
+            created_at: Some(created_at),
         };
         sessions.push(item.clone());
         write(dir, &sessions)?;
@@ -167,6 +177,42 @@ pub fn list_global(
     }
     out.sort_by(|a, b| (&a.0.id, &a.1.id).cmp(&(&b.0.id, &b.1.id)));
     Ok(out)
+}
+
+/// Current branch of a registered project root, from git's own ref list.
+///
+/// Returns `None` unless `root` has its own `.git` entry (a repository or a linked worktree),
+/// so a plain folder inside another repository does not inherit that repository's branch.
+/// Detached HEAD and unborn branches also give `None`. Reads git only.
+#[must_use]
+pub fn branch(root: &Path) -> Option<String> {
+    if !root.join(".git").exists() {
+        return None;
+    }
+    crate::common::git::list_branches(root)
+        .ok()?
+        .into_iter()
+        .find(|b| b.current)
+        .map(|b| b.name)
+}
+
+/// Seconds since the session was first reported, or `None` for records that predate `created_at`.
+#[must_use]
+pub fn age_secs(session: &Session) -> Option<u64> {
+    session
+        .created_at
+        .map(|created| now().saturating_sub(created))
+}
+
+/// Compact age for display: `45s`, `12m`, `3h`, or `2d`.
+#[must_use]
+pub fn format_age(secs: u64) -> String {
+    match secs {
+        0..60 => format!("{secs}s"),
+        60..3_600 => format!("{}m", secs / 60),
+        3_600..86_400 => format!("{}h", secs / 3_600),
+        _ => format!("{}d", secs / 86_400),
+    }
 }
 
 /// Stop a session's record explicitly.

@@ -1,6 +1,7 @@
 //! `plaesy sessions`: project-local self-reported session status.
 use super::{common::find_root, CliResult};
 use clap::{Args as ClapArgs, Subcommand};
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, ClapArgs)]
 pub struct Args {
@@ -52,28 +53,35 @@ pub fn run(args: &Args) -> CliResult {
     match command {
         Command::List { all, project } => {
             let list = crate::sessions::list_global(project.as_deref(), *all)?;
-            let mut list: Vec<_> = list
+            // (project id, project root, session, stale)
+            let mut list: Vec<(String, PathBuf, crate::sessions::Session, bool)> = list
                 .into_iter()
-                .map(|(project, session, stale)| (project.id, session, stale))
+                .map(|(project, session, stale)| (project.id, project.path, session, stale))
                 .collect();
             if project.is_none() {
                 if let Ok(root) = find_root() {
                     if !crate::projects::list()?.iter().any(|p| p.path == root) {
-                        list.extend(
-                            crate::sessions::list(&root, *all)?
-                                .into_iter()
-                                .map(|(session, stale)| ("current".to_owned(), session, stale)),
-                        );
+                        list.extend(crate::sessions::list(&root, *all)?.into_iter().map(
+                            |(session, stale)| ("current".to_owned(), root.clone(), session, stale),
+                        ));
                     }
                 }
             }
-            list.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.id.cmp(&b.1.id)));
+            list.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.2.id.cmp(&b.2.id)));
             if list.is_empty() {
                 println!("No {}session records.", if *all { "" } else { "active " });
             }
-            for (project_id, s, stale) in list {
+            // Each project root is asked for its branch once, however many sessions it has.
+            let mut branches: HashMap<PathBuf, Option<String>> = HashMap::new();
+            for (project_id, path, s, stale) in list {
+                let branch = branches
+                    .entry(path.clone())
+                    .or_insert_with(|| crate::sessions::branch(&path))
+                    .clone();
+                let age = crate::sessions::age_secs(&s)
+                    .map_or_else(|| "-".to_owned(), crate::sessions::format_age);
                 println!(
-                    "{} project={} [{}] agent={} state={} task={} files={} updated={} expires={}",
+                    "{} project={} [{}] agent={} state={} task={} files={} branch={} age={} updated={} expires={}",
                     s.id,
                     project_id,
                     if stale { "stale" } else { "active" },
@@ -85,6 +93,8 @@ pub fn run(args: &Args) -> CliResult {
                     } else {
                         s.files.join(",")
                     },
+                    branch.as_deref().unwrap_or("-"),
+                    age,
                     s.updated_at,
                     s.expires_at
                 );
