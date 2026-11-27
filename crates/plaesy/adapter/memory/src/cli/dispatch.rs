@@ -10,6 +10,7 @@ pub(super) async fn dispatch(
     match command {
         Command::Config { sub: _ }
         | Command::Serve { .. }
+        | Command::Token { .. }
         | Command::Onboard { .. }
         | Command::CodeFind { .. }
         | Command::CodeAudit { .. } => {
