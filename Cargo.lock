@@ -5437,6 +5437,9 @@ dependencies = [
  "playwright-rs",
  "serde_json",
  "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
