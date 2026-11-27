@@ -33,7 +33,7 @@ fn new_marker_excludes_planned_files_in_plan_only() {
 
 #[test]
 fn references_must_resolve_inside_project_root() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     std::fs::create_dir_all(dir.path().join("src")).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy/spec/chk/docs")).unwrap();
@@ -74,7 +74,7 @@ fn references_must_resolve_inside_project_root() {
 fn symlinked_spec_is_rejected_without_reporting_external_contents() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     let name = add_task(&tasks, "s", "low", "check", "Check").unwrap();
     std::fs::write(
@@ -104,7 +104,7 @@ fn symlinked_spec_is_rejected_without_reporting_external_contents() {
 fn symlinked_plan_topic_directory_is_rejected() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     let name = add_task(&tasks, "s", "low", "check", "Check").unwrap();
     std::fs::write(
@@ -138,7 +138,7 @@ fn symlinked_plan_topic_directory_is_rejected() {
 
 #[test]
 fn task_without_topic_is_rejected() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     let name = add_task(&tasks, "s", "low", "bare", "Bare").unwrap();
@@ -157,7 +157,7 @@ fn task_without_topic_is_rejected() {
 
 #[test]
 fn check_reports_missing_and_passes_when_present() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     std::fs::create_dir_all(dir.path().join("src")).unwrap();
     std::fs::write(dir.path().join("src/real.rs"), "").unwrap();

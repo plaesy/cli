@@ -84,6 +84,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Fixed
 
+- Memory settings files are read again in JSON as well as TOML. Commit `5d2986d` made the memory loader accept only `config.toml`, so an existing `settings.json` (for `--config` or in `.plaesy/`) failed with `invalid TOML`. The loader reads `config.toml` when it exists, falls back to `settings.json`, and still fails on a broken file. This restores the behavior from before `5d2986d`; it is a regression fix, not a new format.
 - `plaesy chat --tui` no longer counts a line as still pending when a command such as `/compact` with an empty transcript skips the end of the turn loop.
 - A model chain (`fallback_models`) passes streaming and message calls to each model. Before, only `complete` was forwarded, so chat fell back to one flattened, non-streamed call per model.
 - `claude-cli` returns the answer text, not the raw `stream-json` lines, for `delegate`, the goal judge, tool turns, `/compact`, and `/advisor`. Before, those callers received the whole JSON stream as the reply.
