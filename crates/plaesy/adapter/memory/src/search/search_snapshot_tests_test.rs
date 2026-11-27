@@ -46,7 +46,13 @@ async fn snapshot_is_written_reused_and_invalidated_by_changes() {
     let e2 = open(&db_path).await;
     assert_eq!(
         e2.snapshot_generation.load(Ordering::Relaxed),
-        gen_after_index
+        gen_after_index,
+        "valid snapshot is reused on reopen; startup must not rebuild HNSW"
+    );
+    assert_eq!(
+        e2.hnsw.read().len(),
+        1,
+        "reused HNSW retains indexed vector"
     );
     assert_eq!(
         e2.semantic_search("alpha snapshot", 3)

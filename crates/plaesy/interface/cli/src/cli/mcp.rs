@@ -3,7 +3,7 @@
 use std::io;
 use std::path::PathBuf;
 
-use super::{memory, CliResult};
+use super::{CliResult, mcp_service, memory};
 use crate::mcpserver::Server;
 
 /// Without a subcommand, keep the original project-scoped stdio behavior.
@@ -91,12 +91,10 @@ pub fn run(args: &Args) -> CliResult {
                         port.to_string(),
                     ],
                 }),
-                MemoryCommand::Start { .. }
-                | MemoryCommand::Stop
-                | MemoryCommand::Status
-                | MemoryCommand::Uninstall => Err(
-                    "background memory MCP service is not available in this build; run `plaesy mcp memory serve` in the foreground".into(),
-                ),
+                MemoryCommand::Start { vault, port } => mcp_service::start(vault.as_deref(), *port),
+                MemoryCommand::Stop => mcp_service::stop(),
+                MemoryCommand::Status => mcp_service::status(),
+                MemoryCommand::Uninstall => mcp_service::uninstall(),
             }
         }
     }

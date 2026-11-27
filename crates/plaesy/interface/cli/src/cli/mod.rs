@@ -42,6 +42,7 @@ pub mod agent_serve;
 pub mod agent_task;
 pub mod gateway;
 pub mod mcp;
+pub mod mcp_service;
 pub mod memory;
 pub mod openapi_cmd;
 pub mod output;
