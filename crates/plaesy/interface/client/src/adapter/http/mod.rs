@@ -178,3 +178,5 @@ pub fn execute(transport: &mut dyn Transport, request: &Request) -> Result<Value
 #[cfg(test)]
 #[path = "http_test.rs"]
 mod http_test;
+
+pub mod contract;
