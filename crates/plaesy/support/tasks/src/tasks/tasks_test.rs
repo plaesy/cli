@@ -696,3 +696,37 @@ fn invalid_slug_and_duplicate_are_rejected() {
         Err(TasksError::Duplicate(_))
     ));
 }
+
+// Symlink guard scope: only components at and below `.plaesy` are checked. A symlink above the
+// project root (macOS `/var` -> `/private/var`, a home directory behind a link) is the user's
+// choice, so it must not block the project. A symlink inside the project still must.
+#[cfg(unix)]
+#[test]
+fn symlink_above_project_root_is_accepted_but_inside_project_is_rejected() {
+    use std::os::unix::fs::symlink;
+
+    let real = tempfile::tempdir().unwrap();
+    let alias = tempfile::tempdir().unwrap();
+    let alias_root = alias.path().join("link-to-real");
+    symlink(real.path(), &alias_root).unwrap();
+
+    // Project reached through a symlinked prefix: accepted.
+    let project = real.path().join("proj");
+    fs::create_dir_all(project.join(".plaesy/tasks")).unwrap();
+    let via_alias = alias_root.join("proj/.plaesy/tasks");
+    assert!(!path_has_symlink_component(&via_alias));
+
+    // `.plaesy` itself is a symlink to outside the project: rejected.
+    let outside = real.path().join("outside");
+    fs::create_dir_all(outside.join("tasks")).unwrap();
+    let hostile = real.path().join("hostile");
+    fs::create_dir_all(&hostile).unwrap();
+    symlink(&outside, hostile.join(".plaesy")).unwrap();
+    assert!(path_has_symlink_component(&hostile.join(".plaesy/tasks")));
+
+    // A symlink to the tasks folder inside a real project: rejected.
+    let linked = real.path().join("linked");
+    fs::create_dir_all(linked.join(".plaesy")).unwrap();
+    symlink(&outside, linked.join(".plaesy/tasks")).unwrap();
+    assert!(path_has_symlink_component(&linked.join(".plaesy/tasks")));
+}

@@ -372,6 +372,22 @@ impl DirHandle {
             ));
         }
         let full = self.child_path_fallback(path)?;
+        // Check every component below the canonical directory, not only the last one:
+        // `symlink_metadata` on the full path follows an intermediate symlink, which would let a
+        // link like `.plaesy/spec/topic -> /elsewhere` read files outside the directory.
+        let mut current = self.path.clone();
+        for part in path.components() {
+            current.push(part.as_os_str());
+            if std::fs::symlink_metadata(&current)?
+                .file_type()
+                .is_symlink()
+            {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "symlink in path component",
+                ));
+            }
+        }
         let metadata = std::fs::symlink_metadata(&full)?;
         if !metadata.is_file() {
             return Err(io::Error::new(
