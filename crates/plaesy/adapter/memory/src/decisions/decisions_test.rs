@@ -29,7 +29,10 @@ fn config_defaults_to_supported_model_and_rejects_unknown() {
 fn model_directories_are_created_private_and_existing_modes_restricted() {
     use std::os::unix::fs::{symlink, PermissionsExt};
 
-    let temp = tempfile::tempdir_in("/tmp").unwrap();
+    // Canonicalize first: on macOS /tmp is a symlink to /private/tmp, and the cache-path walk
+    // rejects symlinked components by design.
+    let base = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+    let temp = tempfile::tempdir_in(&base).unwrap();
     fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700)).unwrap();
     let cache = temp.path().join("cache");
     fs::create_dir(&cache).unwrap();
