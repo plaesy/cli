@@ -104,5 +104,6 @@ Dugaan (tidak diverifikasi di kode): fitur mobile dan remote butuh keputusan ars
 
 - S0: menunggu hasil cli-113 untuk `3ffa70e` (`235a789` dan `a1e2d80` adalah perbaikan format).
 - S1: kode selesai (Connect di inspector, tanda modul di kanvas lewat `features/flow/inspect.rs`, tes di `inspect_test.rs`). Menunggu verifikasi cli-113.
+- S5 (baca-saja): kode selesai. `features/data/document.rs` membaca dokumen `data-ir/1` jadi tabel dan relasi, dengan tes di `document_test.rs`. Platform web menambah halaman daftar data dan editor baca-saja, dengan `crm.json` sebagai seed. Penyuntingan data lewat reducer dan penyimpanan dokumen data belum ada (S5b). Menunggu verifikasi cli-113.
 - S8 (dimajukan, tanpa server): kode selesai (`features/flow/changes.rs`, tes di `changes_test.rs`, panel "Perubahan belum disimpan" di inspector). Dibatasi pada perubahan lokal terhadap dokumen yang dimuat. Menunggu verifikasi cli-113.
 - S2a–S11: belum dimulai. S10 dan S11 menunggu keputusan pemilik.
