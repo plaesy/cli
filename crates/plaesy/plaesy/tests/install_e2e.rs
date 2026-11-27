@@ -320,10 +320,10 @@ fn release_bundle_installs_repairs_upgrades_and_uninstalls_with_the_real_os_path
         "---\nid: install-e2e-note\nstatus: active\n---\n\nE2EArchiveNeedle.\n",
     )
     .expect("write lifecycle test note");
-    let config_path = vault.path().join("settings.json");
+    let config_path = vault.path().join("config.toml");
     fs::write(
         &config_path,
-        r#"{"search":{"enable_vector_search":false,"enable_keyword_search":true}}"#,
+        "[search]\nenable_vector_search = false\nenable_keyword_search = true\n",
     )
     .expect("write keyword-only memory config");
     let vault_arg = vault.path().to_string_lossy().into_owned();
