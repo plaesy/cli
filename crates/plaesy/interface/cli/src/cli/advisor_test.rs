@@ -10,7 +10,7 @@ use std::fs;
 fn resolve_task_directory_ignores_symlinked_task_title() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks_dir = temp.path().join("tasks");
     let task_dir = tasks_dir.join("todo/low_linked");
     fs::create_dir_all(&task_dir).unwrap();
@@ -26,7 +26,7 @@ fn resolve_task_directory_ignores_symlinked_task_title() {
 fn read_task_body_rejects_symlinked_task_file() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks_dir = temp.path().join("tasks");
     let task_dir = tasks_dir.join("todo/low_linked");
     fs::create_dir_all(&task_dir).unwrap();
@@ -43,7 +43,7 @@ fn read_task_body_rejects_symlinked_task_file() {
 
 #[test]
 fn triage_reads_existing_task_and_does_not_mutate_it() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let marker = temp.path().join(".plaesy");
     let task_dir = marker.join("tasks/todo/low_task-example");
     fs::create_dir_all(&task_dir).unwrap();
@@ -69,7 +69,7 @@ fn triage_reads_existing_task_and_does_not_mutate_it() {
 
 #[test]
 fn resolves_unique_title_and_rejects_ambiguous_title() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks_dir = temp.path().join(".plaesy/tasks");
     let first = tasks_dir.join("todo/low_first");
     let second = tasks_dir.join("doing/medium_second");

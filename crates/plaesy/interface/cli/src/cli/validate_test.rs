@@ -9,7 +9,7 @@ use super::*;
 fn contracts_check_reader_rejects_replaced_task_directory() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let project = temp.path();
     let plaesy_dir = project.join(".plaesy");
     let tasks_dir = plaesy_dir.join("tasks");
