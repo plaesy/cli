@@ -12,7 +12,10 @@ ui = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
 # Renderer web: fitur `ui` plus peluncuran dan logger browser.
 # Transport fetch di browser (S2b): web-sys langsung, tanpa lapisan gloo-net.
 web = ["ui", "dioxus/web", "dioxus/launch", "dioxus/logger", "dep:web-sys", "dep:wasm-bindgen", "dep:wasm-bindgen-futures"]
-desktop = []
+# Renderer desktop (S10): fitur `ui` plus peluncuran Dioxus desktop, penyimpanan token di keychain
+# OS (keyring), dan HTTP native sinkron (ureq) untuk pairing.
+desktop = ["ui", "dioxus/desktop", "dioxus/launch", "dep:keyring", "dep:ureq"]
+# Renderer mobile (S11): scaffolding saja, belum ada fitur yang dibuat.
 mobile = []
 
 [dependencies]
@@ -27,10 +30,18 @@ dioxus-shadcn = { workspace = true, optional = true }
 web-sys = { version = "0.3", optional = true, features = ["Window", "Request", "RequestInit", "Response", "Headers", "Location", "History"] }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
+# Penyimpanan token per perangkat di keychain OS (Windows Credential Manager di Windows). Fitur `desktop`.
+keyring = { version = "3", optional = true }
+# HTTP native sinkron untuk pairing di desktop. Fitur `desktop`.
+ureq = { version = "2", optional = true }
 
 [[example]]
 name = "web"
 required-features = ["web"]
+
+[[example]]
+name = "desktop"
+required-features = ["desktop"]
 
 [lints]
 workspace = true
