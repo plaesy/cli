@@ -172,7 +172,10 @@ async fn test_load_from_file_rejects_broken_json_with_config_error() {
         .expect_err("broken JSON must fail");
     match err {
         crate::memory::error::MemoryError::ConfigError(message) => {
-            assert!(message.contains("invalid JSON"), "unexpected message: {message}");
+            assert!(
+                message.contains("invalid JSON"),
+                "unexpected message: {message}"
+            );
         }
         other => panic!("expected ConfigError, got {other:?}"),
     }
