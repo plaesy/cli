@@ -64,16 +64,12 @@ fn claim_excludes_other_consumers_and_ack_requires_current_token() {
     assert!(first.lease_expiry_epoch_ms.is_some());
     assert!(store.claim_next("b", 60).unwrap().is_none());
     assert!(!store.acknowledge("lease-1", "b").unwrap());
-    assert!(
-        !store
-            .acknowledge_claim("lease-1", "b", "stale-token")
-            .unwrap()
-    );
-    assert!(
-        store
-            .acknowledge_claim("lease-1", "b", &first_token)
-            .unwrap()
-    );
+    assert!(!store
+        .acknowledge_claim("lease-1", "b", "stale-token")
+        .unwrap());
+    assert!(store
+        .acknowledge_claim("lease-1", "b", &first_token)
+        .unwrap());
     assert!(store.inbox("b", 10).unwrap().is_empty());
 }
 
@@ -89,11 +85,9 @@ fn expired_claim_is_reclaimed_with_a_new_token() {
             params![chrono::Utc::now().timestamp_millis() - 1, "lease-expire"],
         )
         .unwrap();
-    assert!(
-        !store
-            .acknowledge_claim("lease-expire", "b", first.lease_owner.as_deref().unwrap())
-            .unwrap()
-    );
+    assert!(!store
+        .acknowledge_claim("lease-expire", "b", first.lease_owner.as_deref().unwrap())
+        .unwrap());
     assert!(!store.acknowledge("lease-expire", "b").unwrap());
     let next = store.claim_next("b", 60).unwrap().unwrap();
     assert_ne!(first.lease_owner, next.lease_owner);
@@ -123,13 +117,11 @@ fn concurrent_acknowledgments_have_exactly_one_winner() {
     barrier.wait();
     let acknowledgments: Vec<_> = workers.into_iter().map(|w| w.join().unwrap()).collect();
     assert_eq!(acknowledgments.iter().filter(|ack| **ack).count(), 1);
-    assert!(
-        MessageStore::open(&path)
-            .unwrap()
-            .inbox("b", 10)
-            .unwrap()
-            .is_empty()
-    );
+    assert!(MessageStore::open(&path)
+        .unwrap()
+        .inbox("b", 10)
+        .unwrap()
+        .is_empty());
 }
 
 #[test]
@@ -405,11 +397,9 @@ fn opening_database_with_lease_schema_migrates_attempts_and_ack_times() {
     let leased = store.find("old-leased").unwrap().unwrap();
     assert_eq!(leased.status, MessageStatus::Claimed);
     assert_eq!(leased.attempts, 1);
-    assert!(
-        store
-            .acknowledge_claim("old-leased", "b", "old-token")
-            .unwrap()
-    );
+    assert!(store
+        .acknowledge_claim("old-leased", "b", "old-token")
+        .unwrap());
     // The legacy RFC 3339 acknowledgment time was converted, so only the old row is purged.
     assert_eq!(
         store
@@ -635,11 +625,9 @@ fn request_input_parks_the_message_until_the_sender_answers() {
     // A parked message is not claimable, and neither ack path accepts it.
     assert!(store.claim_next("beta", 60).expect("claim").is_none());
     assert!(!store.acknowledge("q-1", "beta").expect("legacy ack"));
-    assert!(
-        !store
-            .acknowledge_claim("q-1", "beta", &token)
-            .expect("stale ack")
-    );
+    assert!(!store
+        .acknowledge_claim("q-1", "beta", &token)
+        .expect("stale ack"));
 }
 
 #[test]
@@ -663,14 +651,12 @@ fn provide_input_resumes_the_task_and_the_answer_arrives_with_the_next_claim() {
         store.task_state("alpha", "q-2").expect("read"),
         Some(TaskState::Working)
     );
-    assert!(
-        store
-            .task_view("alpha", "q-2")
-            .expect("view")
-            .expect("task")
-            .prompt
-            .is_none()
-    );
+    assert!(store
+        .task_view("alpha", "q-2")
+        .expect("view")
+        .expect("task")
+        .prompt
+        .is_none());
 
     let resumed = store
         .claim_next("beta", 60)
@@ -856,9 +842,7 @@ fn legacy_schema_message_without_a_task_refuses_input_and_keeps_its_lease() {
         store.request_input("old-leased", "b", "old-token", "why?"),
         Err(MessageError::TaskNotFound(_))
     ));
-    assert!(
-        store
-            .acknowledge_claim("old-leased", "b", "old-token")
-            .expect("ack")
-    );
+    assert!(store
+        .acknowledge_claim("old-leased", "b", "old-token")
+        .expect("ack"));
 }
