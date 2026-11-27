@@ -143,3 +143,57 @@ fn test_diagnostic_string() {
     assert!(diag.contains("DB Path"));
     assert!(diag.contains("Memory Config"));
 }
+
+// Regression guard for `5d2986d`, which dropped JSON settings. Pre-migration behavior is restored:
+// `.toml` is parsed as TOML, any other extension as JSON, and `config.toml` wins over `settings.json`.
+
+#[tokio::test]
+async fn test_load_from_file_reads_json_settings_file() {
+    let dir = tempfile::tempdir().expect("tmp");
+    let p = dir.path().join("settings.json");
+    std::fs::write(
+        &p,
+        r#"{"search":{"enable_vector_search":false,"enable_keyword_search":true,"default_limit":4}}"#,
+    )
+    .expect("write");
+    let cfg = MemoryConfig::load_from_file(&p).await.expect("load json");
+    assert_eq!(cfg.search.default_limit, 4);
+    assert!(!cfg.search.enable_vector_search);
+    assert!(cfg.search.enable_keyword_search);
+}
+
+#[tokio::test]
+async fn test_load_from_file_rejects_broken_json_with_config_error() {
+    let dir = tempfile::tempdir().expect("tmp");
+    let p = dir.path().join("settings.json");
+    std::fs::write(&p, r#"{"search":"#).expect("write");
+    let err = MemoryConfig::load_from_file(&p)
+        .await
+        .expect_err("broken JSON must fail");
+    match err {
+        crate::memory::error::MemoryError::ConfigError(message) => {
+            assert!(
+                message.contains("invalid JSON"),
+                "unexpected message: {message}"
+            );
+        }
+        other => panic!("expected ConfigError, got {other:?}"),
+    }
+}
+
+#[test]
+fn config_file_in_prefers_config_toml_over_settings_json() {
+    let dir = tempfile::tempdir().expect("tmp");
+    let folder = dir.path().to_path_buf();
+
+    // Neither file: falls back to settings.json.
+    assert_eq!(config_file_in(folder.clone()), folder.join("settings.json"));
+
+    // Only settings.json present: still settings.json.
+    std::fs::write(folder.join("settings.json"), "{}").expect("write json");
+    assert_eq!(config_file_in(folder.clone()), folder.join("settings.json"));
+
+    // Both present: config.toml wins.
+    std::fs::write(folder.join("config.toml"), "").expect("write toml");
+    assert_eq!(config_file_in(folder.clone()), folder.join("config.toml"));
+}

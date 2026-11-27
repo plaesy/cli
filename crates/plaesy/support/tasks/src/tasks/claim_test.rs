@@ -5,7 +5,7 @@ use super::*;
 use crate::tasks::{add_task, find_task, tasks_dir};
 
 fn assert_workers_claim_one_task_only_once() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "low", "only", "Only task").unwrap();
@@ -40,7 +40,7 @@ fn concurrent_workers_claim_a_task_once_across_repeated_runs() {
 
 #[test]
 fn claim_promotes_then_moves_one_task_to_doing() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "high", "a", "A").unwrap();
@@ -60,7 +60,7 @@ fn claim_promotes_then_moves_one_task_to_doing() {
 
 #[test]
 fn a_live_lock_blocks_the_claim_and_is_released_when_handle_closes() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "low", "c", "C").unwrap();
@@ -91,7 +91,7 @@ fn a_live_lock_blocks_the_claim_and_is_released_when_handle_closes() {
 fn claim_rejects_a_symlink_claims_directory() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "low", "claims-dir", "Claims dir").unwrap();
@@ -116,7 +116,7 @@ fn claim_rejects_a_symlink_claims_directory() {
 fn claim_does_not_follow_a_lock_symlink_outside_claim_directory() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "low", "symlink", "Symlink").unwrap();
