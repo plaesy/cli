@@ -254,6 +254,7 @@ Status: keputusan default teknis yang didelegasikan user ("keputusan enterprise-
 - D4 (disetujui): cli-113 meregenerasi `Cargo.lock` per slice atas permintaan; satu commit lock per slice.
 - D5 (disetujui): WebSocket ditunda setelah slice 7.
 - D6 (disetujui): bind default `127.0.0.1:8790`. Port 8787 dipakai layanan lain di loopback; 8790 bebas (dicek read-only).
+- Kontrak klien (didelegasikan, 2026-11-27, bisa dicabut): id project `prj_` plus `[a-z0-9]`; `GET /v1/projects` hanya project yang diberikan, dan project lain 404; pairing `POST /v1/pairing/exchange` dengan kode 5 menit sekali pakai; token 90 hari, rotasi lewat `POST /v1/devices/self/rotate` dengan grace window 5 menit; ETag `"rev-N"`; PUT ke dokumen yang ada wajib `If-Match` (428 bila hilang, 412 bila tidak cocok, body 412 menyertakan dokumen terbaru). Rincian di `plan.md`, bagian "Kontrak klien".
 - Aturan bind (lebih ketat dari usulan awal): non-loopback ditolak sampai autentikasi aktif (slice 4). Dua opt-in `allow_non_loopback` dan `tls_terminated_upstream` diperlukan dan dicek, tetapi tidak cukup tanpa autentikasi.
 
 - Default bind `127.0.0.1:8790` (D6). Bind non-loopback hanya bila config memuat `allow_non_loopback = true` DAN `tls_terminated_upstream = true`. Tanpa keduanya, server menolak start. Pola ini sama dengan relay.

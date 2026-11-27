@@ -73,6 +73,20 @@ Urutan boleh digeser hanya bila dependensi memaksa. Slice 4 bergantung pada 3, s
 
 Semua perubahan kontrak harus aditif atau disepakati dulu. Pesan ke cli-125 memakai prefiks `[from cli-137@windows to cli-125@windows id=...]`. Isinya: header `Authorization: Bearer` (slice 3 ke atas), header `ETag` dan `If-Match` (slice 5), rute tenant (D1), kode galat 401, 403, 412, 413, 422, dan 429, serta `/v1/ready`.
 
+## Kontrak klien (disepakati dengan cli-125, 2026-11-27)
+
+Keputusan ini didelegasikan user dan bisa dicabut. Bentuk final berlaku untuk slice 3 sampai 5.
+
+- **Project.** Id berbentuk `prj_` diikuti 1 sampai 58 karakter `[a-z0-9]`. Id dipakai sebagai segmen path. `GET /v1/projects` (slice 4) mengembalikan `{"projects": ["prj_..."]}`, yaitu project yang diberikan ke perangkat, bukan semua project. Project yang tidak diberikan dijawab 404, sama dengan project yang tidak ada, supaya tidak ada penghitungan keberadaan.
+- **Pairing.** `POST /v1/pairing/exchange` tanpa autentikasi, body `{"code": "..."}`. Balasan `200 {"token": "plt_...", "expires_at": "<RFC 3339 UTC>"}`. Kode berbentuk `PAIR-` diikuti 12 karakter base32 (sekitar 60 bit), berlaku 5 menit, dan sekali pakai. Kode dibuat dari CLI server (`plaesy device pair`). Kode salah, kedaluwarsa, atau sudah dipakai semuanya 401 `{"error": "invalid_code"}`.
+- **Masa berlaku token.** Token berlaku 90 hari secara default (`device_token_ttl` di config). Token kedaluwarsa dijawab 401 `{"error": "token_expired"}`. Refresh lewat `POST /v1/devices/self/rotate` dengan token yang masih berlaku. Balasannya token baru dan `expires_at`. Token lama tetap berlaku 5 menit (grace window), lalu ditolak.
+- **ETag.** Format kuat dengan tanda kutip, `"rev-N"`, dengan N mulai dari 1 dan bertambah tiap PUT yang berhasil. GET dan PUT mengembalikan header `ETag` yang sama bentuknya.
+- **If-Match.** PUT ke dokumen yang sudah ada wajib `If-Match`. Tanpa header itu 428. Jika tidak cocok, 412. Dokumen baru boleh dibuat tanpa `If-Match` dan dijawab 201. DELETE menerima `If-Match` opsional, dengan aturan yang sama bila dikirim.
+- **Body 412.** `{"error": "revision_conflict", "current": {"etag": "\"rev-4\"", "document": {...}}}`. Body menyertakan dokumen terbaru supaya klien bisa menggabungkan perubahan tanpa GET tambahan.
+- **Galat lain.** 401 `{"error": "unauthorized"}` dengan `WWW-Authenticate: Bearer`. 403 `{"error": "forbidden"}` untuk aksi yang tidak diizinkan pada project yang diberikan. 413 body terlalu besar. 422 `{"errors": [...]}` untuk IR tidak valid. 429 dengan `Retry-After`.
+- **Rute lama.** `/v1/documents/...` tanpa project dimatikan begitu autentikasi aktif (slice 4). Sebelum itu tetap ada untuk pengujian lokal.
+- **Config klien.** Base URL dan token dikonfigurasi di klien, tidak di-hard-code. Nama provisional S2c di sisi klien boleh dipakai sampai nama final ditetapkan di sini.
+
 ## Cek lintas slice
 
 - `plaesy validate markdown` untuk setiap `.md` yang diubah.
