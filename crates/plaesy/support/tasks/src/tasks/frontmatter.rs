@@ -96,8 +96,9 @@ pub fn topic_of(tasks_dir: &Path, status: Status, task: &str) -> Option<String> 
 /// The paths whose symlink status matters for `path`, each one a prefix of the path below its
 /// project root. The root is the part before the last `.plaesy` component, canonicalized, so a
 /// symlink above the project (macOS `/var` and `/tmp`, a home directory behind a link) is the
-/// user's choice and is not checked. Everything from `.plaesy` down is checked. A path without a
-/// usable root (no `.plaesy`, or relative) is checked in full, as before.
+/// user's choice and is not checked. Everything from `.plaesy` down is checked. A path without
+/// `.plaesy` checks only its final component, below its canonical parent. A relative path or a
+/// path with no parent is checked in full, as before.
 ///
 /// Returns an empty list when the root does not exist yet, because nothing below it can exist.
 pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
@@ -116,7 +117,22 @@ pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
         .iter()
         .rposition(|component| component.as_os_str() == ".plaesy")
     else {
-        return Ok(all_prefixes());
+        // No project root to anchor on (for example a bare collection directory). Check only the
+        // final component, below its canonical parent, so OS-level ancestors such as macOS `/var`
+        // are not refused. A path with no parent is checked in full, as before.
+        let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) else {
+            return Ok(all_prefixes());
+        };
+        let Some(name) = path.file_name() else {
+            return Ok(all_prefixes());
+        };
+        let mut current = match fs::canonicalize(parent) {
+            Ok(canonical) => canonical,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(error),
+        };
+        current.push(name);
+        return Ok(vec![current]);
     };
     if index == 0 {
         return Ok(all_prefixes());

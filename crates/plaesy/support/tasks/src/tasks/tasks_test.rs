@@ -731,3 +731,24 @@ fn symlink_above_project_root_is_accepted_but_inside_project_is_rejected() {
     symlink(&outside, linked.join(".plaesy/tasks")).unwrap();
     assert!(path_has_symlink_component(&linked.join(".plaesy/tasks")));
 }
+
+// A collection without `.plaesy` (tests and bare task folders) checks only its final component,
+// so a symlinked ancestor above it (macOS `/var`) is accepted while a symlinked collection is not.
+#[cfg(unix)]
+#[test]
+fn bare_collection_checks_only_its_final_component() {
+    use std::os::unix::fs::symlink;
+
+    let real = tempfile::tempdir().unwrap();
+    let alias = tempfile::tempdir().unwrap();
+    let alias_root = alias.path().join("link-to-real");
+    symlink(real.path(), &alias_root).unwrap();
+
+    fs::create_dir_all(real.path().join("tasks/doing/low_normal")).unwrap();
+    assert!(!path_has_symlink_component(&alias_root.join("tasks")));
+
+    let outside = real.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    symlink(&outside, real.path().join("linked-tasks")).unwrap();
+    assert!(path_has_symlink_component(&real.path().join("linked-tasks")));
+}
