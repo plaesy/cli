@@ -314,7 +314,10 @@ pub fn run(args: &Args) -> CliResult {
     let shown = page(&dir(&root), args.page, args.size)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
     let pages = shown.total.div_ceil(shown.size);
-    println!("halaman {} dari {} ({} sesi)", shown.page, pages, shown.total);
+    println!(
+        "halaman {} dari {} ({} sesi)",
+        shown.page, pages, shown.total
+    );
     for saved in &shown.items {
         println!("{}\t{}\t{}", saved.name, saved.turns, saved.first);
     }
