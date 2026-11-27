@@ -100,5 +100,5 @@ Keputusan default untuk permintaan input (bisa dicabut pemilik):
 
 1. Lease tidak diperpanjang selama menunggu jawaban. Penerima melepas lease saat meminta input, dan pesan tidak diklaim ulang sampai dijawab. Menunggu manusia tidak menghabiskan percobaan.
 2. Percobaan yang meminta input dikembalikan, sehingga pertanyaan tidak mendorong pesan ke `gagal`.
-3. Membatalkan tugas `input-required` menghapus pertanyaan. Pesan kembali bisa diklaim, sama seperti tugas `canceled` lainnya.
+3. Membatalkan atau menggagalkan tugas `input-required` membuat pesannya tetap tertahan (`menunggu-input`): tidak bisa diklaim atau di-ack. Tugas `canceled` yang pesannya sudah dikirim tetap bisa diklaim seperti sebelumnya; aturan itu tidak berubah.
 4. Jawaban disimpan di pesan dan dikirim bersama klaim berikutnya, bukan sebagai pesan relay baru.

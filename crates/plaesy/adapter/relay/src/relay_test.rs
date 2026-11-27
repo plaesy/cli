@@ -744,30 +744,44 @@ fn provide_input_is_refused_unless_the_task_is_input_required() {
 }
 
 #[test]
-fn canceling_an_input_required_task_drops_the_question_and_blocks_working_by_hand() {
+fn canceled_task_after_input_required_is_never_claimed_or_acked() {
     let mut store = MessageStore::in_memory().expect("store");
     store.send_task("q-6", "alpha", "beta", "hi").expect("send");
     let token = claim_for_beta(&mut store);
-    store
-        .request_input("q-6", "beta", &token, "ok?")
-        .expect("ask");
+    store.request_input("q-6", "beta", &token, "ok?").expect("ask");
     assert!(matches!(
         store.set_task_state("alpha", "q-6", TaskState::Working),
         Err(MessageError::TaskTransition(_))
     ));
-    store
-        .set_task_state("alpha", "q-6", TaskState::Canceled)
-        .expect("cancel");
-    // Like any canceled task, its message is still delivered; the question is dropped.
-    let released = store
-        .claim_next("beta", 60)
-        .expect("claim")
-        .expect("message");
-    assert_eq!(released.input_prompt, None);
-    assert_eq!(released.input_reply, None);
+    store.set_task_state("alpha", "q-6", TaskState::Canceled).expect("cancel");
+    // The parked message stays parked: no claim, and the legacy ack is refused.
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert!(!store.acknowledge("q-6", "beta").expect("legacy ack"));
+    assert_eq!(
+        store.find("q-6").expect("find").expect("message").status,
+        MessageStatus::AwaitingInput
+    );
     assert_eq!(
         store.task_state("alpha", "q-6").expect("read"),
         Some(TaskState::Canceled)
+    );
+}
+
+#[test]
+fn failed_task_after_input_required_is_never_claimed() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-8", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store.request_input("q-8", "beta", &token, "ok?").expect("ask");
+    store.set_task_state("alpha", "q-8", TaskState::Failed).expect("fail");
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert_eq!(
+        store.task_state("alpha", "q-8").expect("read"),
+        Some(TaskState::Failed)
+    );
+    assert_eq!(
+        store.find("q-8").expect("find").expect("message").status,
+        MessageStatus::AwaitingInput
     );
 }
 

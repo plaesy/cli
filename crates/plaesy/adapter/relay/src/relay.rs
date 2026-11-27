@@ -277,8 +277,9 @@ impl MessageStore {
     }
 
     /// Moves a task to `next` when the transition is allowed; the rules are in `task.rs`.
-    /// Leaving `input-required` for `canceled` or `failed` also drops the question, so the message
-    /// is not stuck waiting for an answer. Resuming needs [`provide_input`], not this method.
+    /// A message waiting for input stays parked when its task is canceled or failed: it is not
+    /// claimable, so the question cannot reach a worker after the task has ended. Resuming needs
+    /// [`provide_input`], not this method.
     pub fn set_task_state(
         &mut self,
         sender: &str,
@@ -301,12 +302,6 @@ impl MessageStore {
             "UPDATE relay_tasks SET state = ?1, updated_at = ?2 WHERE sender = ?3 AND id = ?4",
             rusqlite::params![target.as_str(), now, sender, id],
         )?;
-        if current == TaskState::InputRequired {
-            tx.execute(
-                "UPDATE relay_messages SET awaiting_input = 0, input_prompt = NULL WHERE sender = ?1 AND id = ?2",
-                params![sender, id],
-            )?;
-        }
         tx.commit()?;
         Ok(target)
     }
