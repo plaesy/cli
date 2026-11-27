@@ -9,7 +9,9 @@ fn fixture() -> Value {
 }
 
 fn modules() -> Vec<ModuleView> {
-    modules_from_flow_json(FIXTURE).expect("fixture dapat dibaca").1
+    modules_from_flow_json(FIXTURE)
+        .expect("fixture dapat dibaca")
+        .1
 }
 
 fn patched_module<'a>(doc: &'a Value, id: &str) -> &'a Value {
@@ -45,7 +47,10 @@ fn edited_input_replaces_the_text_value() {
     let m1 = edited.iter_mut().find(|m| m.id == "m1").expect("m1 ada");
     m1.inputs = vec![("id".to_owned(), "flow.input.approver".to_owned())];
     let doc = patch_document(&original, &edited);
-    assert_eq!(patched_module(&doc, "m1")["inputs"]["id"], "flow.input.approver");
+    assert_eq!(
+        patched_module(&doc, "m1")["inputs"]["id"],
+        "flow.input.approver"
+    );
 }
 
 #[test]
