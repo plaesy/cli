@@ -19,7 +19,7 @@ fn args() -> Args {
 
 #[test]
 fn invalid_metadata_is_rejected_before_task_creation() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let mut invalid = args();
     invalid.kind = "invalid".into();
@@ -34,7 +34,7 @@ fn invalid_metadata_is_rejected_before_task_creation() {
 
 #[test]
 fn valid_create_is_not_blocked_by_unrelated_existing_relationship_errors() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let existing = args();
     run(&existing, &tasks, "spec").unwrap();
@@ -68,7 +68,7 @@ fn valid_create_is_not_blocked_by_unrelated_existing_relationship_errors() {
 
 #[test]
 fn duplicate_name_does_not_remove_or_overwrite_existing_task() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let original = args();
     run(&original, &tasks, "spec").unwrap();
@@ -115,7 +115,7 @@ fn subtask_args(parent: &str, title: &str) -> SubtaskArgs {
 
 #[test]
 fn create_subtask_records_parent_and_subtask_type() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let parent = parent_task(&tasks);
 
@@ -134,7 +134,7 @@ fn create_subtask_records_parent_and_subtask_type() {
 
 #[test]
 fn create_subtask_rejects_missing_parent_without_creating_task() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
 
     let error = run_subtask(&subtask_args("missing-parent", "Orphan"), &tasks, "spec").unwrap_err();
@@ -147,7 +147,7 @@ fn create_subtask_rejects_missing_parent_without_creating_task() {
 
 #[test]
 fn create_rejects_blank_parent_before_touching_the_task_tree() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let mut blank = args();
     blank.parent = Some("  ".into());
@@ -160,7 +160,7 @@ fn create_rejects_blank_parent_before_touching_the_task_tree() {
 
 #[test]
 fn create_subtask_under_a_task_in_another_status_is_accepted() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     let parent = parent_task(&tasks);
     tasks::move_task(&tasks, &parent, tasks::Status::Backlog, tasks::Status::Todo).unwrap();
@@ -177,7 +177,7 @@ fn create_subtask_under_a_task_in_another_status_is_accepted() {
 
 #[test]
 fn created_task_has_a_saved_first_version() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks::tasks_dir(root.path());
     run(&args(), &tasks, "spec").unwrap();
     let task_name = tasks::list_tasks(&tasks, tasks::Status::Backlog)

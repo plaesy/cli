@@ -5,7 +5,7 @@ use crate::tasks::{tasks_dir, TASK_FILE};
 use std::fs;
 
 fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(root.path());
     let folder = tasks.join("todo").join("task-a");
     fs::create_dir_all(&folder).unwrap();

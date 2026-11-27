@@ -8,6 +8,7 @@ publish = false
 description = "Antarmuka baris perintah (ADR 0003: interface/cli)."
 
 [dependencies]
+libc = { workspace = true }
 plaesy-adapter-sqlite = { path = "../../adapter/sqlite" }
 plaesy-adapter-runstore = { path = "../../adapter/runstore" }
 plaesy-domain-workflow = { path = "../../domain/workflow" }
