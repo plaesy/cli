@@ -101,5 +101,7 @@ Dugaan (tidak diverifikasi di kode): editor kanvas belum punya interaksi drag da
 - S1: kode selesai, menunggu verifikasi.
 - S5 (baca-saja): kode selesai, menunggu verifikasi.
 - S8 (perubahan lokal): kode selesai, menunggu verifikasi.
-- S2c, S4a, S7: belum dimulai.
+- S2c: kode selesai, sudah sesuai jawaban cli-137 (pairing, rotasi, token_expired, revision_conflict). Commit `39e57a3`, `1cbb703`. Menunggu verifikasi cli-113.
+- S4a: kode selesai (breadcrumb di topbar, `shell::breadcrumb`). Commit `f90c6ef`, `424763a`. Sidebar belum dibuat; navigasi memakai tab di topbar.
+- S7: kode selesai (panel Pengaturan lewat `state::preferences`; toast dari `state::notifications` di editor). Belum ada: layar pairing (menunggu S2b) dan toast di halaman data. Belum diverifikasi.
 - S2b, S3, S4b, S5b, S6, S9, S10, S11: menunggu kontrak final dan server cli-137.
