@@ -49,6 +49,7 @@ Precedence: `--vault` / `--project`, then `MEMORY_WATCH_DIR`, `PLAESY_MEMORY_VAU
 | `serve` | Long-running JSON or MCP service | index |
 | `schedule <once\|run\|list\|install\|uninstall>` | Scheduled jobs from config; OS timer every 30 minutes | OS scheduler |
 | `config [mcp]` | Effective config; MCP client snippets | no |
+| `token add\|rotate\|revoke\|list` | Per-client bearer tokens for the MCP HTTP server | token file |
 
 `plaesy memory onboard` moved to `plaesy onboard` (see `onboard.md`).
 
@@ -139,6 +140,17 @@ plaesy memory --vault <V> serve --mcp --transport http --port 9123 --auth-token 
 plaesy memory --vault <V> serve --mcp --read-only           # read a vault another daemon owns
 plaesy memory config mcp --app claude-code                  # print a client snippet
 ```
+
+Give each HTTP client its own token instead of one shared value:
+
+```sh
+plaesy memory token add laptop                    # printed once; store it in the client's secret config
+plaesy memory token rotate laptop --grace-hours 24
+plaesy memory token revoke laptop
+plaesy memory token list                          # labels and state only, never tokens
+```
+
+The server keeps only salted hashes in `~/.config/plaesy/mcp-tokens.toml` (or `PLAESY_MCP_TOKENS_FILE`), which must stay outside the synced vault, and re-reads it without a restart. `PLAESY_MCP_TOKEN` still works as the single token labelled `default`. Never paste a token into a note, log, or commit.
 
 For a background shared server use `plaesy mcp memory start|status|stop` (see `mcp.md`). MCP tools include `memory_search`, `memory_remember`, `memory_fingerprint`, `memory_update`, `memory_archive`, `memory_curate`, `memory_hygiene`, `memory_missing`, `memory_resolve_gap`, `memory_stats`, and `memory_backlinks`. Only one writer daemon owns a vault; use `--read-only` for a second reader.
 

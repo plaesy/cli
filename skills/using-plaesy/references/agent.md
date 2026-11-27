@@ -21,7 +21,8 @@ Set `PLAESY_AGENT_TOKEN` to require `Authorization: Bearer <token>` on every req
 
 | Method and path | Effect |
 |---|---|
-| `POST /message:send` | Body `{"id","from","to","text"}`; opens a task and queues the message |
+| `GET /.well-known/agent.json` | Agent Card: name, version, capabilities, and the three skills below; never includes the token or paths |
+| `POST /message:send` | Body `{"id","from","to","text"}`; opens a task and queues the message in one transaction. Repeating the same id and content returns the task's current state instead of an error |
 | `GET /tasks/{from}/{id}` | Returns the task state as JSON |
 | `GET /tasks/{from}/{id}/events` | Server-sent events stream of task state changes (closed after 10 minutes) |
 | `POST /tasks/{from}/{id}:cancel` | Moves the task to `canceled` when its state allows it |

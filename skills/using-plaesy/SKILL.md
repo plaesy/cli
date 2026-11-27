@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires the plaesy executable on PATH or a build from this repository. Some commands need git, Bash, network access, or configured providers.
 metadata:
   cli-version: "0.0.1"
-  command-tree: "plaesy --help at 17ed2a0"
+  command-tree: "plaesy --help at 6560894"
 ---
 
 # Using Plaesy
