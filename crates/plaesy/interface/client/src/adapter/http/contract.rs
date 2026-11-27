@@ -156,6 +156,33 @@ pub fn map_unauthorized(error_code: Option<&str>) -> ContractError {
     }
 }
 
+/// Galat kontrak dari balasan lengkap: status, ETag, Retry-After, dan body. `None` untuk 2xx dan 3xx.
+#[must_use]
+pub fn classify(
+    status: u16,
+    etag: Option<&str>,
+    retry_after: Option<&str>,
+    body: &str,
+) -> Option<ContractError> {
+    let parsed: Option<Value> = serde_json::from_str(body).ok();
+    let code = parsed
+        .as_ref()
+        .and_then(|value| value.get("error"))
+        .and_then(Value::as_str);
+    match status {
+        401 => Some(map_unauthorized(code)),
+        412 => {
+            let latest = parsed.as_ref().and_then(conflict_from_body);
+            Some(ContractError::Conflict {
+                current_etag: latest
+                    .map(|conflict| conflict.current_etag)
+                    .or_else(|| etag.map(str::to_owned)),
+            })
+        }
+        other => map_status(other, etag, retry_after),
+    }
+}
+
 /// Galat kontrak yang bisa ditampilkan ke pengguna.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ContractError {
@@ -177,6 +204,8 @@ pub enum ContractError {
     RateLimited { retry_after_secs: Option<u64> },
     /// Status lain yang tidak dipetakan.
     Other { status: u16 },
+    /// Tidak sampai ke server (jaringan, CORS, atau balasan yang bukan JSON).
+    Network(String),
 }
 
 impl fmt::Display for ContractError {
@@ -199,6 +228,7 @@ impl fmt::Display for ContractError {
                 None => write!(f, "terlalu sering; coba lagi nanti"),
             },
             Self::Other { status } => write!(f, "server mengembalikan status {status}"),
+            Self::Network(message) => write!(f, "tidak tersambung ke server: {message}"),
         }
     }
 }
