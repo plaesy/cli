@@ -5410,6 +5410,7 @@ dependencies = [
  "plaesy-common",
  "plaesy-designlint",
  "plaesy-domain-api",
+ "plaesy-domain-identity",
  "plaesy-domain-workflow",
  "plaesy-interface-acp",
  "plaesy-loop",

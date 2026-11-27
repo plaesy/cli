@@ -61,6 +61,7 @@ pub mod tasks_label;
 pub mod tasks_run;
 pub mod tasks_validate;
 pub mod telemetry;
+pub mod triage;
 pub mod trim;
 pub mod validate;
 pub mod voice;
@@ -134,6 +135,8 @@ pub enum Command {
     Acp(acp::Args),
     /// Check health of reach platforms and delegate providers
     Doctor(doctor::Args),
+    /// Redacted local diagnostics bundle for a bug report; nothing is sent
+    Triage(triage::Args),
     /// Token/context compression for command output, memory and instruction files
     Trim(trim::Args),
     /// List and copy skills between agent providers (claude, codex, agents, hermes)
@@ -192,6 +195,7 @@ impl Command {
             Self::Reach(_) => "reach",
             Self::Delegate(_) => "delegate",
             Self::Doctor(_) => "doctor",
+            Self::Triage(_) => "triage",
             Self::Trim(_) => "trim",
             Self::Skills(_) => "skills",
             Self::Chat(_) => "chat",
@@ -297,6 +301,7 @@ fn dispatch(command: Command) -> CliResult {
         Command::Openapi(args) => openapi_cmd::run(&args),
         Command::Acp(args) => acp::run(&args),
         Command::Doctor(args) => doctor::run(&args),
+        Command::Triage(args) => triage::run(&args),
         Command::Trim(args) => trim::run(&args),
         Command::Skills(args) => skills::run(&args),
         Command::Chat(args) => chat::run(&args),
