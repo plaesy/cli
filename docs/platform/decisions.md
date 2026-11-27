@@ -134,7 +134,7 @@ The owner delegated these choices to the assistant, revocable at any time. Recor
 | Support model | Delegated, revocable | Business hours, one named owner; Sev 1 response within 4 working hours; Sev 2 next business day | Owner revokes or changes support model |
 | Exact DeepSeek Harness and Orca identity/version | Delegated, revocable in section below | DeepSeek Harness `deepseek-ai/deepseek-harness`, npm `@deepseek-ai/dsh`, `v0.2.2-rc.5`; Orca `stablyai/orca`, desktop `v1.4.263` | Evidence contradicts identity/version or owner revokes |
 | Legal/compliance retention | UNKNOWN | No delegated choice | Counsel input required |
-| UI and Rust boundary beyond decided Dioxus web surface | UNKNOWN | No delegated choice | Before desktop/mobile planning |
+| UI and Rust boundary beyond decided Dioxus web surface | Decided by the owner on 2026-11-27: Dioxus for desktop and mobile too (see the section "Keputusan klien (2026-11-27)") | Owner decision, not delegated | Revisit only if the owner changes the renderer |
 
 Decided by the owner on 2026-11-19: first workflow, deployment profile, runtime strategy, and identity direction (section above). The delegated choices do not authorize incumbent shutdown, production cutover, or irreversible data migration; those remain gated by the cutover criteria and explicit authorization.
 
@@ -235,3 +235,13 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Default: pesan antar agent tetap lewat relay lokal (`plaesy relay`) dengan listener di `plaesy chat` (mode line dan `--tui`). Relay dan listener sudah diuji dengan dua sesi chat dan dengan pseudo-terminal.
 - Plaesy tidak menjadi server A2A untuk sekarang. A2A (Agent Card, JSON-RPC/REST, task streaming) dicatat sebagai opsi untuk jalur antar-mesin. Belum ada keputusan untuk mengadopsinya.
 - Pemilik dapat mencabut default ini. Pembukaan A2A mengubah endpoint, autentikasi, dan Agent Card, jadi perlu keputusan terpisah.
+
+## Keputusan klien (2026-11-27, keputusan pemilik)
+
+Keputusan ini diambil pemilik lewat orkestrator. Ini keputusan pemilik, bukan delegasi.
+
+- **Renderer desktop dan mobile: Dioxus.** Sama dengan web. Fitur Cargo `desktop` dan `mobile` di `plaesy-interface-client` dipakai untuk platform masing-masing. Ini menutup UNKNOWN "UI and Rust boundary" di tabel di atas.
+- **Backend di server.** Klien web berjalan di browser dan memanggil backend yang berjalan di server, bukan loopback. Backend dibangun di luar crate klien (cli-137, branch `ao/backend-server/root`). Klien tidak membuat server dokumen sendiri dan tidak mengubah `interface/http`.
+- **Autentikasi: token per perangkat.** Klien mengirim `Authorization: Bearer <token>`. Token datang dari pairing dan disimpan sebagai konfigurasi, tidak di-hard-code. Base URL juga dapat diatur.
+- **Kontrak API.** Klien mengikuti kontrak `/v1` (OpenAPI di `/v1/spec`), termasuk rute tenant `/v1/projects/{project}/documents/...`, ETag dan If-Match, dan kode galat 401, 403, 412, 413, 422, 429, serta `/v1/ready`. Kontrak masih usulan sampai disetujui pemilik.
+- **Urutan kerja.** Desktop dan mobile dikerjakan setelah slice web S1 sampai S5 dan kontrak backend final.

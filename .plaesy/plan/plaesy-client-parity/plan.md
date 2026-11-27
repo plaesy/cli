@@ -1,109 +1,105 @@
 # Rencana: paritas klien Plaesy (web dulu, desktop dan mobile menyusul)
 
-Sumber: ADR 0011 (`docs/adr/0011-client-structure.md`), `docs/platform/product.md` (Web dan Desktop), `docs/platform/remaining-gaps.md`, `docs/platform/decisions.md` (bagian keputusan teknis 2026-11-22), `docs/platform/feature-inventory/cross-product-priorities.md` (baris 16, 21), dan kode `crates/plaesy/interface/client`.
+Status: draf. Sumber: ADR 0011 (`docs/adr/0011-client-structure.md`), `docs/platform/product.md`, `docs/platform/remaining-gaps.md`, `docs/platform/decisions.md` (bagian "Keputusan klien (2026-11-27)"), `docs/platform/feature-inventory/cross-product-priorities.md`, dan kode `crates/plaesy/interface/client`.
 
-Status per slice dicatat di bagian Status. Satu slice = satu area berkas, satu atau beberapa commit kecil, dan satu bullet CHANGELOG. Setiap slice diverifikasi oleh cli-113 per SHA. Sesi cli-125 tidak menjalankan Cargo, dx, build wasm, atau Playwright.
+Satu slice = satu area berkas, satu atau beberapa commit kecil, tes murni di `<nama>_test.rs`, dan satu bullet CHANGELOG. Verifikasi dijalankan cli-113 per SHA, digabung per beberapa slice. Sesi cli-125 tidak menjalankan Cargo, dx, build wasm, atau Playwright.
+
+## Keputusan yang dipakai (pemilik, 2026-11-27)
+
+1. **Renderer desktop dan mobile: Dioxus.** Sama dengan web. Tercatat di `decisions.md`.
+2. **Backend di server, bukan loopback.** Dibangun oleh cli-137 (`ao/backend-server/root`). Klien tidak membuat server dokumen dan tidak mengubah `interface/http`.
+3. **Autentikasi token per perangkat.** `Authorization: Bearer <token>`. Token dan base URL adalah konfigurasi, tidak di-hard-code.
+
+Kontrak dari cli-137 (usulan, aditif, belum final menunggu persetujuan pemilik): rute tenant `/v1/projects/{project}/documents/{kind}/{id}` (D1 disetujui; rute lama mati saat autentikasi aktif), ETag dan If-Match (412 konflik, 428 bila If-Match wajib), galat 401, 403, 412, 413 (body > 1 MiB), 422 (IR tidak valid), 429 (Retry-After), `GET /v1/ready`, spec OpenAPI di `/v1/spec`, pairing kode sekali pakai (TTL 5 menit) menjadi token, dan CORS hanya untuk origin di allowlist. WebSocket ditunda sampai setelah slice 7 backend.
 
 ## Inventaris (terverifikasi ke kode kecuali ditandai dugaan)
 
 | Area | Item | Status | Bukti |
 |---|---|---|---|
-| Shell | Route dan guard (murni) | ada, belum terhubung ke sesi | `shell/mod.rs` |
+| Shell | Route dan guard (murni) | ada; guard belum terhubung ke sesi | `shell/mod.rs` |
 | Shell | Layout, sidebar, breadcrumb | sebagian (topbar dan tab Flow/Data) | `platform/web/mod.rs` |
 | Shell | Error boundary | belum | - |
-| State | Session (login) | ada murni, belum ada UI | `state/session.rs` |
-| State | Preferences (tema, bahasa, layout) | ada murni, belum ada UI | `state/preferences.rs` |
-| State | Realtime bus | ada murni, belum ada transport web | `state/realtime.rs`, `adapter/ws/port.rs` |
-| State | Notifikasi | ada murni, belum ada UI | `state/notifications.rs` |
-| Adapter | HTTP (builder, execute) | ada; transport web belum | `adapter/http/mod.rs` |
-| Adapter | WS (protokol) | ada; transport web dan native belum | `adapter/ws/protocol/mod.rs` |
-| Flow | Model, layout, reducer, document | ada | `features/flow/*` |
-| Flow | Editor visual | sebagian: edit lokal di memori sesi | `platform/web/mod.rs` |
-| Flow | Hubungkan input (Connect) di inspector | belum (reducer ada) | `features/flow/reducer.rs` |
-| Flow | Validasi lokal | ada; tampil di panel Masalah | `features/flow/model.rs` |
-| Flow | Validasi lewat server (`/v1/validate`) | belum | `interface/http` |
-| Flow | Riwayat run dan codegen | belum (server `/v1/codegen` ada) | `interface/http` |
+| State | Session (login, pairing) | ada murni; UI belum | `state/session.rs` |
+| State | Preferences (tema, bahasa, layout) | ada murni; UI belum | `state/preferences.rs` |
+| State | Realtime bus | ada murni; transport web belum | `state/realtime.rs`, `adapter/ws/port.rs` |
+| State | Notifikasi | ada murni; UI belum | `state/notifications.rs` |
+| Adapter | HTTP (builder, execute) | ada; belum mengikuti kontrak cli-137 (rute tenant, ETag, galat) | `adapter/http/mod.rs` |
+| Adapter | WS (protokol) | ada; transport web belum | `adapter/ws/protocol/mod.rs` |
+| Flow | Model, layout, reducer, document, inspect, changes | ada | `features/flow/*` |
+| Flow | Editor visual (lokal, memori sesi) | sebagian | `platform/web/mod.rs` |
+| Flow | Connect input di inspector | ada (S1) | `features/flow/inspect.rs` |
+| Flow | Validasi lokal dan tanda di kanvas | ada (S1) | `features/flow/inspect.rs` |
+| Flow | Validasi lewat server (`/v1/validate`) | belum | - |
+| Flow | Riwayat run dan codegen | belum | - |
 | Dokumen | Store sesi (`MemoryStore`) | ada; tidak persisten | `features/store.rs` |
-| Dokumen | Simpan dan muat lewat `/v1/documents` | belum (server belum dijalankan oleh perintah apa pun) | `interface/http/src/lib.rs`, `adapter/sqlite` |
-| Data | Model dan reducer | ada; UI belum | `features/data/*` |
-| Design | Editor atau daftar | belum (validator ada di `adapter/design-ir`) | - |
-| App | Editor atau daftar | belum (IR ada di `domain/app`) | - |
-| Workflow | Daftar run, kebijakan | belum (runstore ada di `domain/workflow`) | - |
+| Dokumen | Simpan dan muat lewat server | belum (menunggu kontrak dan server) | - |
+| Data | Baca dokumen `data-ir/1`, daftar, editor baca-saja | ada (S5) | `features/data/document.rs`, `platform/web/mod.rs` |
+| Data | Edit tabel, kolom, relasi lewat reducer; simpan | belum | `features/data/reducer.rs` |
+| Design | Daftar atau editor | belum (validator ada di `adapter/design-ir`) | - |
+| App | Daftar atau editor | belum (IR di `domain/app`) | - |
+| Workflow | Daftar run, kebijakan | belum (`domain/workflow`) | - |
 | Memori | Pencarian dan catatan | belum UI (`adapter/memory`, MCP) | - |
 | Kolaborasi | Presence, lease | belum | - |
-| Identity | Peran, persetujuan | belum (domain ada) | - |
-| Messaging | Pesan antar-agen | belum (relay ada) | - |
+| Identity | Peran, persetujuan | belum (`domain/identity`) | - |
+| Messaging | Pesan antar-agen | belum (`adapter/relay`) | - |
 | Automation | Jadwal | belum (`adapter/memory/schedule`) | - |
 | Canvas | Graf, viewport, history, layout | ada murni; editor belum memakainya | `shared/canvas/*` |
-| Diff | Diff JSON, teks, changeset | ada murni; UI belum | `shared/diff/*` |
+| Diff | Perubahan lokal (S8) | ada | `features/flow/changes.rs` |
 | UI | Komponen FigCraft | ada; belum dipakai halaman | `ui/components.rs` |
-| UI | `flow_view` (HTML string) | ada; hanya dipakai tes | `ui/flow_view.rs` |
 | Platform | Web | sebagian | `platform/web/mod.rs` |
-| Platform | Desktop | belum (fitur `desktop` kosong, tidak ada folder) | `Cargo.toml` |
-| Platform | Mobile | belum (fitur `mobile` kosong, tidak ada folder) | `Cargo.toml` |
+| Platform | Desktop | belum (fitur `desktop` kosong, tanpa folder) | `Cargo.toml` |
+| Platform | Mobile | belum (fitur `mobile` kosong, tanpa folder) | `Cargo.toml` |
 
-Dugaan (tidak diverifikasi di kode): fitur mobile dan remote butuh keputusan arsitektur dan jalur jaringan (`remaining-gaps.md`), dan editor kanvas butuh keputusan interaksi (drag, koneksi, panel properti).
+Dugaan (tidak diverifikasi di kode): editor kanvas belum punya interaksi drag dan panel properti (`remaining-gaps.md`). Plan ini memakai interaksi yang sudah ada.
 
-## Keputusan yang masih terbuka (perlu pemilik)
+## Slice (urutan kerja)
 
-1. **Renderer desktop**: `decisions.md` mencatat "UI and Rust boundary beyond decided Dioxus web surface" sebagai UNKNOWN tanpa pilihan yang didelegasikan. Slice desktop menunggu pilihan ini.
-2. **Renderer dan jalur jaringan mobile**: `remaining-gaps.md` menyatakan fitur mobile dan remote melanggar aturan offline kecuali disetujui. CLAUDE.md sudah mengizinkan jaringan dengan opt-in per jalur, dicatat di `decisions.md`. Slice mobile menunggu pilihan renderer dan jalur.
-3. **Interaksi editor kanvas**: drag, koneksi, dan panel properti belum didefinisikan (`remaining-gaps.md`). Slice S1 memakai interaksi yang sudah ada (palette, inspector, reducer) dan tidak menambah drag.
+**S0. Verifikasi.** Cli-113 memverifikasi HEAD terbaru per SHA (gabungan). Kriteria: fmt, clippy `--all-targets`, test client, check dan clippy `--features web`, dan `dx build`. Menunggu hasil untuk `bb271b0`, `60dcb56`, dan `53de09c` (perbaikan E0503). Tidak ada area berkas.
 
-## Slice (berurutan)
+**S1. Editor di sesi.** Selesai secara kode: Connect, tanda kanvas, panel perubahan (S8), perbaikan E0503 (`53de09c`). Menunggu S0.
 
-**S0. Verifikasi commit yang sudah ada.** Area: tidak ada. Kriteria: cli-113 melaporkan fmt, clippy `--all-targets`, test, check dan clippy dengan `--features web`, dan `dx build` untuk HEAD. Status: menunggu hasil untuk `3ffa70e` dan turunannya.
+**S4a. Shell dan layout tanpa jaringan.** Area: `platform/web/mod.rs`, `shell/`. Kriteria: sidebar navigasi, breadcrumb, halaman error boundary untuk panic tampilan, dan halaman "Akses ditolak" memakai `Guard`. Tes: `shell_test.rs` untuk breadcrumb murni. Tidak butuh backend.
 
-**S1. Editor lengkap di sesi (tanpa jaringan).** Area: `platform/web/mod.rs`, `features/flow/model.rs`, `features/flow/reducer.rs`.
+**S7. Notifikasi dan preferensi (UI).** Area: `state/`, `ui/`, `platform/web/mod.rs`. Kriteria: toast dari `state/notifications`, pengaturan tema dan bahasa lewat `state/preferences::reduce`. Tes: reducer tema dan bahasa sudah ada; tambah tes untuk pemetaan toast. Sesi (login) hanya formulir kode pairing dan token, belum memanggil server.
 
-- Tambah Connect di inspector: pilih input dan sumber, lalu `Action::Connect`. Selesai bila dua input bisa disambung dan validasi melaporkan sumber yang tidak ada.
-- Tanda di kanvas untuk modul yang bermasalah dari `validate`.
-- Tes murni untuk pilihan input dan tanda masalah, di `features/flow/connect_test.rs` (atau `model_test.rs`).
-- Cek: `cargo test -p plaesy-interface-client --locked`, clippy `--features web`, fmt.
+**S2c. Adapter HTTP sesuai kontrak (murni).** Area: `adapter/http/` (berkas baru `contract.rs`, `contract_test.rs`). Kriteria: konfigurasi klien (base URL, project, token) sebagai nilai biasa; pembentuk path `/v1/projects/{project}/documents/{kind}/{id}`; header Authorization dan If-Match; pemetaan galat 401, 403, 412, 413, 422, 429 (dengan Retry-After), dan 428. Tes tanpa jaringan. Nama rute final mengikuti persetujuan cli-137; sampai itu, ditandai provisional.
 
-**S2a. Server dokumen (worker terpisah, bisa di-spawn).** Area: `interface/cli` (perintah `plaesy serve http` atau nama yang disetujui), `interface/http` (CORS untuk origin loopback). Kriteria: perintah menjalankan router `plaesy-interface-http` dengan `SqliteStore` di path data lokal, bind hanya ke loopback secara default, CORS hanya untuk origin yang dikonfigurasi, dan tes menyentuh `/v1/health` dan `PUT/GET /v1/documents/flow-ir%2F1/{id}`. Catatan: perubahan jaringan butuh entri di `decisions.md`.
+**S2b. Transport HTTP web dan simpan/muat.** Area: `adapter/http/` (transport web), `platform/web/mod.rs`. Kriteria: Save draft dan buka flow lewat server dengan `fetch` async, dengan fallback `MemoryStore` dan status yang jelas bila server tidak ada. Catatan: butuh dependensi baru (`web-sys` atau `gloo-net`); `Cargo.lock` diperbarui oleh cli-113. Bergantung pada S2c dan server cli-137 slice autentikasi (sebelum itu, hanya fallback).
 
-**S2b. Transport HTTP web dan simpan/muat.** Area: `adapter/http` (transport web), `platform/web/mod.rs`. Kriteria: Save draft dan buka flow lewat `/v1/documents`, dengan fallback ke `MemoryStore` bila server tidak ada dan pesan status yang jelas. Catatan: transport butuh `fetch`, yaitu dependensi baru (`web-sys` atau `gloo-net`). Perubahan `Cargo.lock` hanya bisa dibuat oleh cli-113 (tanpa `--locked`). Trait `Transport` yang sinkron tidak cocok dengan fetch yang async, jadi perlu jalur async terpisah di platform web.
+**S5b. Edit data lewat reducer dan simpan.** Area: `features/data/` (document, reducer), `platform/web/mod.rs`. Kriteria: tambah tabel, kolom, dan relasi lewat `reducer::apply`; simpan dokumen data dengan If-Match. Bergantung pada S2b.
 
-**S3. Validasi lewat server.** Area: `adapter/http`, `platform/web`. Kriteria: tombol Validate memanggil `/v1/validate` bila server ada, dan memakai validasi lokal bila tidak. Bergantung pada S2b.
+**S3. Validasi lewat server.** Area: `adapter/http/`, `platform/web/`. Kriteria: Validate memanggil `/v1/validate` bila server dapat dijangkau, dan memakai validasi lokal bila tidak. Bergantung pada S2b.
 
-**S4. Shell dan layout.** Area: `shell/`, `platform/web/mod.rs`. Kriteria: sidebar navigasi, breadcrumb, halaman error boundary, halaman "Akses ditolak" dari guard, dan URL browser yang sinkron dengan `shell::route`. Sinkron URL butuh `web-sys` (lihat S2b).
+**S4b. URL browser sinkron dengan shell.** Area: `shell/`, `platform/web/`. Kriteria: `shell::route` dipakai untuk membaca dan menulis URL. Butuh `web-sys`, jadi dikerjakan bersama S2b (lewat cli-113).
 
-**S5. Halaman data.** Area: `features/data/` (pages, services), `platform/web`. Kriteria: daftar dan editor data memakai `features/data/reducer` dan store. Tes murni untuk reducer yang belum ada.
+**S6. Realtime web.** Area: `adapter/ws/transport/web`, `state/realtime`. Kriteria: transport WebSocket lewat trait `Transport`, dengan tes reconnect memakai transport palsu. Bergantung pada server ws cli-137 yang dijadwalkan setelah slice 7 backend. Menunggu jadwal.
 
-**S6. Realtime web.** Area: `adapter/ws/transport/web`, `state/realtime`. Kriteria: koneksi WebSocket ke `interface/ws` lewat trait `Transport`, dengan tes uji reconnect lewat transport palsu. Server `interface/ws` belum dijalankan perintah apa pun, jadi butuh perintah server seperti S2a.
+**S9. Fitur domain (satu slice per fitur).** Design, App, Workflow, Memori, Kolaborasi, Identity, Messaging, Automation. Kriteria per fitur: daftar read-only dari API atau dokumen yang sudah tersedia. Fitur tanpa API ditunda. Bergantung pada kontrak cli-137 untuk tiap domain.
 
-**S7. Notifikasi, preferensi, dan sesi.** Area: `state/`, `ui/`, `platform/web`. Kriteria: toast dari `notifications`, pengaturan tema dan bahasa dari `preferences`, dan layar masuk sederhana untuk `session`.
+**S10. Desktop (Dioxus).** Area: `platform/desktop/`, fitur `desktop` di `Cargo.toml`. Dikerjakan setelah S1 sampai S5 dan kontrak final. Token per perangkat dan base URL dikonfigurasi, tidak di-hard-code.
 
-**S8. Tampilan diff.** Area: `shared/diff`, `ui/`. Kriteria: panel "Lihat perubahan" yang menampilkan changeset antara dokumen yang dimuat dan hasil edit. Riwayat versi di server belum ada, jadi cakupannya hanya perubahan lokal.
+**S11. Mobile (Dioxus).** Area: `platform/mobile/`, fitur `mobile`. Sama dengan S10.
 
-**S9. Fitur domain lainnya (satu slice per fitur, bergantung pada server).** Design, App, Workflow, Memori, Kolaborasi, Identity, Messaging, Automation. Kriteria per fitur: daftar read-only dari dokumen atau API yang sudah ada. Fitur yang tidak punya API atau dokumen (misalnya kolaborasi, presence) ditunda dan dicatat di `remaining-gaps.md`.
+## Slice yang independen dari backend
 
-**S10. Desktop.** Area: `platform/desktop/`, fitur `desktop` di `Cargo.toml`. Blokir: keputusan renderer (lihat Keputusan 1). Tidak dimulai sebelum pemilik memutuskan.
+- Bisa dikerjakan sekarang: S4a, S7, S2c (murni). Semuanya sebelum S2b.
+- Bergantung backend: S2b, S3, S4b, S5b, S6, S9, S10, S11.
+- Di luar klien (cli-137, bukan worker dari sini): server dokumen, CORS allowlist, perintah `plaesy serve`, autentikasi, WS server, dan `GET /v1/ready`.
 
-**S11. Mobile.** Area: `platform/mobile/`, fitur `mobile`. Blokir: keputusan renderer dan jalur jaringan (lihat Keputusan 2). Tidak dimulai sebelum pemilik memutuskan.
-
-## Urutan dan paralelisme
-
-- S0 → S1 → S2b (di satu berkas `platform/web`, dikerjakan berurutan oleh cli-125).
-- S2a independen (interface/cli dan interface/http), bisa di-spawn ke worker.
-- S4 dan S5 menyentuh `platform/web` dan `shell`, jadi berurutan setelah S2b.
-- S6 bergantung pada S2a-like server ws.
-- S10 dan S11 menunggu keputusan pemilik.
-
-## Verifikasi per slice (dijalankan cli-113)
+## Verifikasi per slice (cli-113)
 
 - `cargo fmt --all --check`
 - `cargo clippy -p plaesy-interface-client --all-targets --locked -- -D warnings`
 - `cargo test -p plaesy-interface-client --locked`
-- `cargo clippy -p plaesy-interface-client --lib --features web --locked -- -D warnings`
+- `cargo check -p plaesy-interface-client --features web --locked` dan `cargo clippy -p plaesy-interface-client --lib --features web --locked -- -D warnings`
 - `dx build --platform web --package plaesy-interface-client --example web --features web` bila disk dan RAM cukup
-- Tes visual `tests/web_visual_test.rs` dengan `PLAESY_WEB_URL` (dijalankan cli-113), bila server dev hidup
+- Tes visual `tests/web_visual_test.rs` dengan `PLAESY_WEB_URL` bila server dev hidup. Halaman editor harus punya tepat 3 `section`.
 
 ## Status
 
-- S0: menunggu hasil cli-113 untuk `3ffa70e` (`235a789` dan `a1e2d80` adalah perbaikan format).
-- S1: kode selesai (Connect di inspector, tanda modul di kanvas lewat `features/flow/inspect.rs`, tes di `inspect_test.rs`). Menunggu verifikasi cli-113.
-- S5 (baca-saja): kode selesai. `features/data/document.rs` membaca dokumen `data-ir/1` jadi tabel dan relasi, dengan tes di `document_test.rs`. Platform web menambah halaman daftar data dan editor baca-saja, dengan `crm.json` sebagai seed. Penyuntingan data lewat reducer dan penyimpanan dokumen data belum ada (S5b). Menunggu verifikasi cli-113.
-- S8 (dimajukan, tanpa server): kode selesai (`features/flow/changes.rs`, tes di `changes_test.rs`, panel "Perubahan belum disimpan" di inspector). Dibatasi pada perubahan lokal terhadap dokumen yang dimuat. Menunggu verifikasi cli-113.
-- S2a–S11: belum dimulai. S10 dan S11 menunggu keputusan pemilik.
+- S0: menunggu hasil cli-113 untuk `bb271b0` (permintaan terkirim) dan `60dcb56`. `53de09c` adalah perbaikan E0503 dari `3ffa70e` dan belum diminta.
+- S1: kode selesai, menunggu verifikasi.
+- S5 (baca-saja): kode selesai, menunggu verifikasi.
+- S8 (perubahan lokal): kode selesai, menunggu verifikasi.
+- S2c, S4a, S7: belum dimulai.
+- S2b, S3, S4b, S5b, S6, S9, S10, S11: menunggu kontrak final dan server cli-137.

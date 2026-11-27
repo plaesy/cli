@@ -435,8 +435,11 @@ impl Editor {
         });
     }
 
+    // Guard `write()` diambil ke `let` dulu. Di dalam `match` ia hidup sampai akhir arm, dan
+    // `self.restore` memakai `self` saat masih dipinjam (E0503).
     fn undo_step(mut self) {
-        match self.history.write().pop() {
+        let previous = self.history.write().pop();
+        match previous {
             Some(snapshot) => {
                 let current = (self.modules)();
                 self.redo.write().push(current);
@@ -447,7 +450,8 @@ impl Editor {
     }
 
     fn redo_step(mut self) {
-        match self.redo.write().pop() {
+        let next = self.redo.write().pop();
+        match next {
             Some(snapshot) => {
                 let current = (self.modules)();
                 self.history.write().push(current);
