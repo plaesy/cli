@@ -9,7 +9,7 @@ use crate::tasks::{
 use std::fs;
 
 fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(root.path());
     for status in crate::tasks::STATUSES {
         fs::create_dir_all(tasks.join(status.as_str())).unwrap();
