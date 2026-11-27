@@ -58,7 +58,11 @@ pub fn format_line(item: &Notification) -> String {
         "{} [{}] {} session={} created={} {}",
         item.id,
         item.kind.as_str(),
-        if item.read_at.is_some() { "read" } else { "unread" },
+        if item.read_at.is_some() {
+            "read"
+        } else {
+            "unread"
+        },
         item.session,
         item.created_at,
         item.message
