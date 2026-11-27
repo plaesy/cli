@@ -750,5 +750,7 @@ fn bare_collection_checks_only_its_final_component() {
     let outside = real.path().join("outside");
     fs::create_dir_all(&outside).unwrap();
     symlink(&outside, real.path().join("linked-tasks")).unwrap();
-    assert!(path_has_symlink_component(&real.path().join("linked-tasks")));
+    assert!(path_has_symlink_component(
+        &real.path().join("linked-tasks")
+    ));
 }

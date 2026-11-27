@@ -120,7 +120,10 @@ pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
         // No project root to anchor on (for example a bare collection directory). Check only the
         // final component, below its canonical parent, so OS-level ancestors such as macOS `/var`
         // are not refused. A path with no parent is checked in full, as before.
-        let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) else {
+        let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        else {
             return Ok(all_prefixes());
         };
         let Some(name) = path.file_name() else {
