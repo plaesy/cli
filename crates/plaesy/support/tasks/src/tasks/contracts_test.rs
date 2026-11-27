@@ -9,7 +9,7 @@ use crate::tasks::{add_task, tasks_dir};
 fn symlinked_task_directory_does_not_expose_external_contract() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     let status_dir = tasks.join("backlog");
@@ -32,7 +32,7 @@ fn symlinked_task_directory_does_not_expose_external_contract() {
 fn symlinked_contract_is_not_listed() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     let name = add_task(&tasks, "auth", "low", "symlink", "Symlink").unwrap();
@@ -50,7 +50,7 @@ fn symlinked_contract_is_not_listed() {
 fn symlinked_task_metadata_does_not_supply_contract_spec() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     let name = add_task(&tasks, "auth", "low", "metadata", "Metadata").unwrap();
@@ -66,7 +66,7 @@ fn symlinked_task_metadata_does_not_supply_contract_spec() {
 
 #[test]
 fn ignores_non_regular_contract_and_task_entries() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     let status_dir = tasks.join("backlog");
@@ -87,7 +87,7 @@ fn ignores_non_regular_contract_and_task_entries() {
 
 #[test]
 fn lists_only_tasks_with_a_contract_and_filters_by_spec() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     std::fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     add_task(&tasks, "auth", "low", "a", "A").unwrap();
