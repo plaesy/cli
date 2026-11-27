@@ -1,7 +1,7 @@
 ---
 name: using-plaesy
 description: Runs the Plaesy CLI (`plaesy`) correctly for Markdown memory, the `.plaesy/` task lifecycle, inter-agent relay, MCP servers, delegate providers, validation, and install health. Use when running any `plaesy` command, searching or writing Plaesy memory notes, creating, starting, validating, or completing `.plaesy/tasks`, messaging other agents through the relay, claiming files or reporting sessions, serving Plaesy over MCP, ACP, or HTTP, delegating a prompt to a model provider, linting Markdown with `plaesy validate`, or diagnosing an installed `plaesy.exe` that lags behind the source.
-license: Proprietary
+license: MIT
 compatibility: Requires the plaesy executable on PATH or a build from this repository. Some commands need git, Bash, network access, or configured providers.
 metadata:
   cli-version: "0.0.1"

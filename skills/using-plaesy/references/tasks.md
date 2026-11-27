@@ -69,24 +69,36 @@ plaesy tasks issues --label relay --dependencies
 
 ## contracts.json
 
+This example was run through `validate` and `complete` in a disposable project:
+
 ```json
 {
-  "id": "<task-folder-name>",
+  "id": "high_feature-relay-ack-works",
   "checklist": [
     {
-      "id": "relay-ack-works",
-      "check": "Ack removes the message from the inbox",
-      "run": "plaesy relay inbox --agent test | tail -1",
-      "expected": "none",
+      "id": "task-file-present",
+      "check": "Task file exists",
+      "run": "test -s .plaesy/tasks/*/high_feature-relay-ack-works/task.md",
+      "expected": "pass",
       "status": "pending",
-      "evidence": "build"
+      "evidence": "doc"
+    },
+    {
+      "id": "inbox-empty",
+      "check": "The test agent has no pending messages",
+      "run": "plaesy relay inbox --agent test | tr -d '[]' | wc -w",
+      "expected": "zero",
+      "status": "pending"
     }
   ]
 }
 ```
 
+`tasks create` writes an empty checklist; fill it in before validating. Avoid backslash escapes in `run` strings where a simpler pipeline works.
+
 - **Trust boundary.** `validate` runs every `run` string through Bash in the project root with your permissions. It is not a sandbox. Read the file before validating a task you did not write, and use disposable fixtures for destructive checks.
-- A command must exit 0. For `pass`, `yes`, `true`, or `present` that is enough. Otherwise the last non-empty output line is compared with `expected`: `zero`/`none` need `0` or `none`; `no`/`false`/`absent` accept `0`, `none`, `no`, `false`, or `absent`; `all`/`every` need `pass` or a non-zero `N of N`; comparisons such as `>= 9` or `<= 2 s` need a matching number (ms, s, min, h convert).
+- `run` executes with the `plaesy` found on PATH; `validate` warns when that differs from the binary running the validation.
+- A command must exit 0. For `pass`, `yes`, `true`, or `present` that is enough. Otherwise the last non-empty output line is compared with `expected`, and only these forms are accepted (a literal such as `"[]"` never passes): `zero`/`none` need `0` or `none`; `no`/`false`/`absent` accept `0`, `none`, `no`, `false`, or `absent`; `all`/`every` need `pass` or a non-zero `N of N`; comparisons such as `>= 9` or `<= 2 s` need a matching number (ms, s, min, h convert).
 - **Behaviour evidence.** An item without `"evidence": "build"` or `"doc"` must run `plaesy`, `plaesy.exe`, or `cargo test` in one of its `&&`, `;`, or `|` segments. Otherwise validation fails with "lacks behaviour-level evidence".
 - Each passing item keeps a receipt; a receipt that does not replay counts as not passed. Done tasks are skipped.
 - `plaesy validate contracts` checks that every `contracts.json` loads, without running anything.
