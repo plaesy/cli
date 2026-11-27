@@ -5,6 +5,7 @@
 //! project, dan token adalah konfigurasi, tidak di-hard-code.
 
 use super::encode_segment;
+use serde_json::{json, Value};
 use std::fmt;
 
 /// Konfigurasi koneksi ke satu backend untuk satu project.
@@ -75,11 +76,93 @@ pub fn if_match_value(etag: &str) -> String {
     }
 }
 
+/// Path penukaran kode pairing menjadi token (kode `PAIR-...`, sekali pakai, berlaku 5 menit).
+pub const PAIRING_EXCHANGE_PATH: &str = "/v1/pairing/exchange";
+
+/// Path rotasi token perangkat. Token lama tetap berlaku 5 menit (grace window).
+pub const ROTATE_PATH: &str = "/v1/devices/self/rotate";
+
+/// Body penukaran kode pairing.
+#[must_use]
+pub fn pairing_body(code: &str) -> Value {
+    json!({ "code": code.trim() })
+}
+
+/// Token dari balasan pairing atau rotasi. Token berlaku 90 hari.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pairing {
+    pub token: String,
+    pub expires_at: String,
+}
+
+/// Membaca balasan `{"token", "expires_at"}`.
+///
+/// # Errors
+///
+/// Bila salah satu field tidak ada atau bukan teks.
+pub fn parse_pairing(body: &Value) -> Result<Pairing, String> {
+    let field = |key: &str| {
+        body.get(key)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| format!("balasan pairing tidak punya `{key}`"))
+    };
+    Ok(Pairing {
+        token: field("token")?,
+        expires_at: field("expires_at")?,
+    })
+}
+
+/// Id project: `prj_` lalu 1 sampai 58 karakter `[a-z0-9]`.
+#[must_use]
+pub fn valid_project_id(id: &str) -> bool {
+    match id.strip_prefix("prj_") {
+        Some(rest) => {
+            (1..=58).contains(&rest.len())
+                && rest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        }
+        None => false,
+    }
+}
+
+/// Isi 412 `revision_conflict`: ETag terbaru dan dokumen terbaru di server.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RevisionConflict {
+    pub current_etag: String,
+    pub document: Value,
+}
+
+/// Membaca body 412 `{"error":"revision_conflict","current":{"etag","document"}}`.
+#[must_use]
+pub fn conflict_from_body(body: &Value) -> Option<RevisionConflict> {
+    if body.get("error").and_then(Value::as_str) != Some("revision_conflict") {
+        return None;
+    }
+    let current = body.get("current")?;
+    Some(RevisionConflict {
+        current_etag: current.get("etag").and_then(Value::as_str)?.to_owned(),
+        document: current.get("document")?.clone(),
+    })
+}
+
+/// Pemetaan 401 dengan kode dari body. `token_expired` dibedakan dari token yang salah.
+#[must_use]
+pub fn map_unauthorized(error_code: Option<&str>) -> ContractError {
+    match error_code {
+        Some("token_expired") => ContractError::TokenExpired,
+        _ => ContractError::Unauthorized,
+    }
+}
+
 /// Galat kontrak yang bisa ditampilkan ke pengguna.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ContractError {
     /// 401: token tidak ada, salah, atau sudah dicabut.
     Unauthorized,
+    /// 401 dengan `token_expired`: rotasi atau pairing ulang diperlukan.
+    TokenExpired,
     /// 403: token sah tetapi tidak punya izin.
     Forbidden,
     /// 412: dokumen sudah berubah sejak dimuat. `current_etag` dari header ETag bila ada.
@@ -100,6 +183,7 @@ impl fmt::Display for ContractError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Unauthorized => write!(f, "token tidak sah; pasangkan ulang perangkat"),
+            Self::TokenExpired => write!(f, "token sudah kedaluwarsa; rotasi atau pasangkan ulang"),
             Self::Forbidden => write!(f, "tidak punya izin untuk tindakan ini"),
             Self::Conflict { .. } => {
                 write!(
