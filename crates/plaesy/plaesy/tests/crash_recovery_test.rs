@@ -57,7 +57,10 @@ fn memory_command(bin: &Path, config: &Path) -> Command {
 fn write_minimal_config(dir: &Path, watch_dir: &Path, db: &Path) -> PathBuf {
     let literal = |path: &Path| {
         let text = path.display().to_string();
-        assert!(!text.contains('\''), "temp path must not contain a quote: {text}");
+        assert!(
+            !text.contains('\''),
+            "temp path must not contain a quote: {text}"
+        );
         format!("'{text}'")
     };
     let cfg = dir.join("config.toml");
