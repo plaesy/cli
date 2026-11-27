@@ -249,8 +249,9 @@ impl Editor {
         match services::save(store, flow_id, &body) {
             Ok(_) => {
                 self.original.set(document);
-                self.status
-                    .set("Tersimpan di penyimpanan sesi (hilang saat halaman dimuat ulang)".to_owned());
+                self.status.set(
+                    "Tersimpan di penyimpanan sesi (hilang saat halaman dimuat ulang)".to_owned(),
+                );
             }
             Err(error) => self.status.set(format!("Gagal menyimpan: {error}")),
         }
