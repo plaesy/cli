@@ -85,6 +85,7 @@ Keputusan ini didelegasikan user dan bisa dicabut. Bentuk final berlaku untuk sl
 - **Body 412.** `{"error": "revision_conflict", "current": {"etag": "\"rev-4\"", "document": {...}}}`. Body menyertakan dokumen terbaru supaya klien bisa menggabungkan perubahan tanpa GET tambahan.
 - **Galat lain.** 401 `{"error": "unauthorized"}` dengan `WWW-Authenticate: Bearer`. 403 `{"error": "forbidden"}` untuk aksi yang tidak diizinkan pada project yang diberikan. 413 body terlalu besar. 422 `{"errors": [...]}` untuk IR tidak valid. 429 dengan `Retry-After`.
 - **Rute lama.** `/v1/documents/...` tanpa project dimatikan begitu autentikasi aktif (slice 4). Sebelum itu tetap ada untuk pengujian lokal.
+- **Rute tanpa data tenant.** `POST /v1/validate` tetap di `/v1/validate`, tanpa project, karena hanya memeriksa body IR dan tidak membaca atau menulis dokumen. Setelah autentikasi aktif (slice 4), rute ini tetap butuh Bearer token yang valid, supaya pemanggil anonim tidak bisa membebani CPU. Balasan `{valid, errors}` tidak berubah. Rute `POST /v1/codegen/flow/{lang}` dan `POST /v1/openapi` diperlakukan sama. Hanya `/v1/health`, `/v1/ready`, dan `/v1/pairing/exchange` yang tanpa autentikasi.
 - **Config klien.** Base URL dan token dikonfigurasi di klien, tidak di-hard-code. Nama provisional S2c di sisi klien boleh dipakai sampai nama final ditetapkan di sini.
 
 ## Cek lintas slice
