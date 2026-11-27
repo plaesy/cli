@@ -11,6 +11,7 @@ pub mod files;
 pub mod imagegen;
 pub mod installer;
 pub mod mcpserver;
+pub mod notify;
 pub mod projects;
 pub mod sessions;
 pub mod sse;
