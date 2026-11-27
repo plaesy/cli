@@ -43,6 +43,45 @@ use definitions::*;
 use dispatch::dispatch;
 use output::*;
 
+/// Runs `memory token`. A token is printed to stdout once; every other message goes to stderr.
+fn run_token(sub: TokenSubcommand, watch_dir: &std::path::Path) -> Result<()> {
+    use crate::memory::mcp::tokens;
+    let path = tokens::default_path().ok_or_else(|| {
+        MemoryError::ConfigError("no home folder; set PLAESY_MCP_TOKENS_FILE".into())
+    })?;
+    tokens::ensure_outside(&path, watch_dir)?;
+    let mut file = tokens::load(&path)?.unwrap_or_default();
+    let now = tokens::now_unix();
+    match sub {
+        TokenSubcommand::Add { label } => {
+            let token = file.add(&label, now)?;
+            tokens::save(&path, &file)?;
+            eprintln!(
+                "added token '{label}' to {}; it is shown once below",
+                path.display()
+            );
+            println!("{token}");
+        }
+        TokenSubcommand::Rotate { label, grace_hours } => {
+            let token = file.rotate(&label, now, grace_hours.saturating_mul(3600))?;
+            tokens::save(&path, &file)?;
+            eprintln!("rotated '{label}'; the old token works for {grace_hours} more hour(s)");
+            println!("{token}");
+        }
+        TokenSubcommand::Revoke { label } => {
+            file.revoke(&label)?;
+            tokens::save(&path, &file)?;
+            eprintln!("revoked '{label}'");
+        }
+        TokenSubcommand::List => {
+            for line in file.summary() {
+                println!("{line}");
+            }
+        }
+    }
+    Ok(())
+}
+
 pub async fn run_args(args: Vec<String>) -> Result<()> {
     use clap::error::ErrorKind;
     use std::ffi::OsString;
@@ -122,7 +161,10 @@ async fn run(cli: Cli) -> Result<()> {
     }
     if !matches!(
         cli.command,
-        Command::Config { .. } | Command::Serve { .. } | Command::Schedule { .. }
+        Command::Config { .. }
+            | Command::Serve { .. }
+            | Command::Schedule { .. }
+            | Command::Token { .. }
     ) && settings::default_path().is_some_and(|p| !p.is_file())
     {
         eprintln!(
@@ -143,6 +185,9 @@ async fn run(cli: Cli) -> Result<()> {
         }
         println!("{}", config.to_diagnostic_string());
         return Ok(());
+    }
+    if let Command::Token { sub } = cli.command {
+        return run_token(sub, &config.watch_dir);
     }
     if let Command::Serve {
         mcp,

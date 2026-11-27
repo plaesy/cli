@@ -48,6 +48,15 @@ plaesy memory serve --mcp --transport http --port 9123
 The server binds to `127.0.0.1`. To require bearer authentication, set `PLAESY_MCP_TOKEN` in the
 server environment or pass `--auth-token`; tokens must be at least 32 bytes. Clients send
 `Authorization: Bearer <token>`. Keep the token out of shell history and public configuration.
+
+For one token per client, use named tokens instead of a single shared value. Create one per client
+with `plaesy memory token add laptop`, and the token is printed once. Rotate with
+`plaesy memory token rotate laptop` (the old token keeps working for `--grace-hours`, default 24) and
+cut off one client with `plaesy memory token revoke laptop`. The server stores only salted SHA-256
+hashes, in `~/.config/plaesy/mcp-tokens.toml` (or `PLAESY_MCP_TOKENS_FILE`), which must not be inside
+the synced vault. The file is re-read when it changes, so no restart is needed. `PLAESY_MCP_TOKEN`
+still works as the single token labelled `default`. See
+[the multi-token design](../platform/mcp-multi-token.md) for the failure rules.
 Authentication is checked before the MCP route. The SDK validates the request host and rejects
 non-loopback browser origins. For remote access, use a reverse proxy or secure tunnel that runs on
 the same machine and forwards requests to `127.0.0.1:9123/mcp`. Ensure the upstream `Host` header

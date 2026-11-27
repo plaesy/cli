@@ -235,3 +235,11 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Default: pesan antar agent tetap lewat relay lokal (`plaesy relay`) dengan listener di `plaesy chat` (mode line dan `--tui`). Relay dan listener sudah diuji dengan dua sesi chat dan dengan pseudo-terminal.
 - Plaesy tidak menjadi server A2A untuk sekarang. A2A (Agent Card, JSON-RPC/REST, task streaming) dicatat sebagai opsi untuk jalur antar-mesin. Belum ada keputusan untuk mengadopsinya.
 - Pemilik dapat mencabut default ini. Pembukaan A2A mengubah endpoint, autentikasi, dan Agent Card, jadi perlu keputusan terpisah.
+
+## Token MCP per klien (didelegasikan, 2026-11-27, bisa dicabut pemilik)
+
+- Desain di `docs/platform/mcp-multi-token.md`. Satu token per label (`plsy_<id>_<secret>`), disimpan sebagai `sha256(salt || token)`, tidak pernah plaintext. Berkas di `~/.config/plaesy/mcp-tokens.toml`, di luar vault.
+- Muat ulang saat mtime atau ukuran berubah, dicek paling sering tiap 2 detik. Tanpa restart. Tidak memakai SIGHUP karena klien laptop berjalan di Windows.
+- Masa tenggang rotasi default 24 jam. Berkas yang gagal diurai mempertahankan himpunan token terakhir. Berkas yang hilang atau kosong setelah pernah terlihat menolak semua permintaan.
+- Tanpa penguncian global, karena server berada di belakang tunnel loopback dan semua klien terlihat dari alamat yang sama.
+- Pilihan yang dapat dibalik: perintah berada di `plaesy memory token`, bukan `plaesy mcp token`, karena `plaesy mcp` sudah dipakai server proyek.

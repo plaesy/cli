@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The memory MCP HTTP server accepts one bearer token per client: `plaesy memory token add|rotate|revoke|list` manages named tokens stored as salted hashes in `~/.config/plaesy/mcp-tokens.toml`. Changes take effect without a restart, a rotated token keeps working for a grace period, and `PLAESY_MCP_TOKEN` still works as before.
 - The agent protocol's `POST /message:send` accepts `parts` (text and data kinds) in place of `text`, up to 16 parts, with a text part required. The stored envelope keeps `text`, so existing readers are unaffected, and a `text` send stores the same bytes as before.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.
 - `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
