@@ -9,7 +9,7 @@ use crate::tasks::tasks_dir;
 fn guarded_metadata_write_does_not_follow_task_path_replacement() {
     use std::os::unix::fs::symlink;
 
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(root.path());
     let task = tasks.join("todo/item");
     fs::create_dir_all(&task).unwrap();
@@ -33,7 +33,7 @@ fn issue_graph_lock_serializes_independent_threads() {
     use std::sync::{mpsc, Arc, Barrier};
     use std::thread;
 
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(root.path());
     fs::create_dir_all(&tasks).unwrap();
     let tasks = Arc::new(tasks);
@@ -56,8 +56,9 @@ fn issue_graph_lock_serializes_independent_threads() {
 
 #[test]
 fn graph_lock_rejects_metadata_write_to_another_collection() {
-    let first = tempfile::tempdir().unwrap();
-    let second = tempfile::tempdir().unwrap();
+    let first = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
+    let second =
+        tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let first_tasks = tasks_dir(first.path());
     let second_tasks = tasks_dir(second.path());
     let foreign_task = second_tasks.join("todo/foreign");
@@ -146,7 +147,7 @@ fn has_labels_requires_every_requested_label() {
 
 #[test]
 fn collection_validation_reports_labels_that_break_the_rule() {
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(root.path());
     for status in crate::tasks::STATUSES {
         fs::create_dir_all(tasks.join(status.as_str())).unwrap();
@@ -227,7 +228,7 @@ fn cycle_detection_handles_shared_children_self_edges_and_disconnected_nodes() {
 
 #[test]
 fn metadata_write_never_overwrites_a_colliding_temporary_file() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let candidate = dir
         .path()
         .join(format!(".issue.json.tmp-{}-0", std::process::id()));
@@ -246,8 +247,9 @@ fn metadata_write_never_overwrites_a_colliding_temporary_file() {
 fn metadata_write_rejects_symlinked_task_directory() {
     use std::os::unix::fs::symlink;
 
-    let root = tempfile::tempdir().unwrap();
-    let outside = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
+    let outside =
+        tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     symlink(outside.path(), root.path().join("task-link")).unwrap();
 
     let result = write_metadata_unlocked(&root.path().join("task-link"), &issue("item", None, &[]));
@@ -261,7 +263,7 @@ fn metadata_write_rejects_symlinked_task_directory() {
 fn metadata_write_replaces_symlink_without_modifying_target() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let target = dir.path().join("outside.json");
     let link = dir.path().join("issue.json");
     fs::write(&target, "outside sentinel").unwrap();
@@ -277,7 +279,7 @@ fn metadata_write_replaces_symlink_without_modifying_target() {
 #[test]
 fn metadata_write_preserves_existing_file_permissions() {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("issue.json");
     fs::write(&path, "old metadata").unwrap();
     fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).unwrap();
@@ -292,7 +294,7 @@ fn metadata_write_preserves_existing_file_permissions() {
 fn metadata_snapshot_rejects_symlinked_issue_json() {
     use std::os::unix::fs::symlink;
 
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = root.path().join("task");
     fs::create_dir_all(&task).unwrap();
     let outside = root.path().join("outside.json");
@@ -312,7 +314,7 @@ fn metadata_snapshot_rejects_symlinked_issue_json() {
 fn issue_read_rejects_symlinked_metadata() {
     use std::os::unix::fs::symlink;
 
-    let root = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = root.path().join("todo/task");
     fs::create_dir_all(&task).unwrap();
     let outside = root.path().join("outside.json");
@@ -329,7 +331,7 @@ fn issue_read_rejects_symlinked_metadata() {
 
 #[test]
 fn reads_legacy_tasks_with_defaults() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = dir.path().join("todo").join("high_legacy");
     fs::create_dir_all(&task).unwrap();
     fs::write(task.join(TASK_FILE), "---\ntitle: Legacy\n---\n").unwrap();
@@ -340,7 +342,7 @@ fn reads_legacy_tasks_with_defaults() {
 
 #[test]
 fn task_move_preserves_issue_id_and_relationships_without_cascade() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     for status in STATUSES {
         fs::create_dir_all(tasks.join(status.as_str())).unwrap();
@@ -361,7 +363,7 @@ fn task_move_preserves_issue_id_and_relationships_without_cascade() {
 
 #[test]
 fn duplicate_folder_names_across_statuses_report_both_statuses() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     for status in STATUSES {
         fs::create_dir_all(tasks.join(status.as_str()).join("duplicate")).unwrap();
@@ -384,7 +386,7 @@ fn duplicate_folder_names_across_statuses_report_both_statuses() {
 fn issue_read_rejects_symlinked_task_file() {
     use std::os::unix::fs::symlink;
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = dir.path().join(Status::Todo.as_str()).join("task");
     fs::create_dir_all(&task).unwrap();
     let outside = dir.path().join("outside-task.md");
@@ -397,14 +399,14 @@ fn issue_read_rejects_symlinked_task_file() {
 
 #[test]
 fn issue_read_rejects_path_traversal_name() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let error = Issue::read(dir.path(), Status::Todo, "../outside").unwrap_err();
     assert!(error.contains("invalid task slug"));
 }
 
 #[test]
 fn rejects_metadata_id_that_differs_from_folder_name() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task = dir.path().join("todo").join("canonical");
     fs::create_dir_all(&task).unwrap();
     fs::write(task.join(TASK_FILE), "---\ntitle: Task\n---\n").unwrap();
@@ -416,7 +418,7 @@ fn rejects_metadata_id_that_differs_from_folder_name() {
 
 #[test]
 fn rejects_unknown_types_and_duplicate_metadata() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     fs::create_dir_all(tasks.join("todo")).unwrap();
     let folder = tasks.join("todo").join("item");
@@ -439,7 +441,7 @@ fn rejects_unknown_types_and_duplicate_metadata() {
 
 #[test]
 fn detects_missing_references_and_cycles() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks = tasks_dir(dir.path());
     for status in STATUSES {
         fs::create_dir_all(tasks.join(status.as_str())).unwrap();

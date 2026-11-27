@@ -4,7 +4,7 @@
 use super::*;
 
 fn project() -> (tempfile::TempDir, PathBuf) {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     fs::create_dir_all(dir.path().join(".plaesy")).unwrap();
     let tasks = tasks_dir(dir.path());
     (dir, tasks)
@@ -12,7 +12,7 @@ fn project() -> (tempfile::TempDir, PathBuf) {
 
 #[test]
 fn write_task_files_failure_removes_the_already_written_task_file() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let dir = temp.path().join("task");
     fs::create_dir(&dir).unwrap();
     fs::create_dir(dir.join(CONTRACT_FILE)).unwrap();
@@ -235,7 +235,7 @@ fn spec_and_plan_doc_keep_invalid_topics_inside_plaesy() {
 
 #[test]
 fn read_frontmatter_does_not_strip_unmatched_quotes() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("task.md");
     fs::write(&path, "---\ntitle: \"keep opening quote\n---\n").unwrap();
     assert_eq!(read_frontmatter(&path)["title"], "\"keep opening quote");
@@ -243,7 +243,7 @@ fn read_frontmatter_does_not_strip_unmatched_quotes() {
 
 #[test]
 fn read_frontmatter_uses_last_colon_in_value() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("task.md");
     fs::write(&path, "---\ntitle: https://example.test/a:b\n---\n").unwrap();
     assert_eq!(read_frontmatter(&path)["title"], "https://example.test/a:b");
@@ -306,7 +306,7 @@ fn spec_and_topic_helpers_reject_symlinked_task_file() {
 
 #[test]
 fn read_frontmatter_parses_top_level_keys_only() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let path = dir.path().join("spec.md");
     fs::write(
         &path,
@@ -323,7 +323,7 @@ fn read_frontmatter_parses_top_level_keys_only() {
 #[cfg(unix)]
 #[test]
 fn task_status_save_failure_preserves_original_and_cleans_temporary_file() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let task_dir = temp.path().join("task");
     fs::create_dir(&task_dir).unwrap();
     fs::create_dir(task_dir.join(TASK_FILE)).unwrap();
@@ -646,7 +646,8 @@ fn concurrent_add_task_creates_one_folder_without_overwriting() {
     use std::thread;
 
     for round in 0..25 {
-        let root = tempfile::tempdir().unwrap();
+        let root =
+            tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
         let tasks = tasks_dir(root.path());
         let backlog = tasks.join(Status::Backlog.as_str());
         fs::create_dir_all(&backlog).unwrap();
@@ -705,8 +706,8 @@ fn invalid_slug_and_duplicate_are_rejected() {
 fn symlink_above_project_root_is_accepted_but_inside_project_is_rejected() {
     use std::os::unix::fs::symlink;
 
-    let real = tempfile::tempdir().unwrap();
-    let alias = tempfile::tempdir().unwrap();
+    let real = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
+    let alias = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let alias_root = alias.path().join("link-to-real");
     symlink(real.path(), &alias_root).unwrap();
 
