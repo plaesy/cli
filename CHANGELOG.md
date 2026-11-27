@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The web client checks a flow on the server (`POST /v1/validate`) when a server is paired and falls back to the local check with a warning when it cannot be reached. The data page lets you add tables and columns and save the data document, with `If-Match` when a server is paired. The address bar follows the page, and the page opens at the address it was loaded with. The Back button is not handled yet.
 - The web client can pair with a server (pairing code to a token), load a flow from the server, and save it with `If-Match`; a save with a stale ETag reports the conflict instead of overwriting. Without a server, saving stays in the session store. The token lives only in the page.
 - The web client has a settings panel for theme, density, and locale (kept in the session through the preferences reducer), and the flow editor shows its save and warning messages as toasts that can be closed.
 - The web client's HTTP adapter has the contract for the backend's per-project routes: a bearer token and base URL from configuration, the `If-Match` value from an ETag, and the mapping of 401, 403, 412, 413, 422, 428, and 429 (with `Retry-After`) to typed errors. It is pure code and is not wired to a transport yet.
