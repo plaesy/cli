@@ -1,4 +1,5 @@
 use super::*;
+use serde_json::json;
 
 #[test]
 fn document_url_trims_the_base_and_encodes_the_kind() {
@@ -76,6 +77,60 @@ fn rate_limit_reads_retry_after_seconds_and_ignores_dates() {
             retry_after_secs: None
         })
     );
+}
+
+#[test]
+fn token_expired_is_told_apart_from_a_wrong_token() {
+    assert_eq!(
+        map_unauthorized(Some("token_expired")),
+        ContractError::TokenExpired
+    );
+    assert_eq!(map_unauthorized(None), ContractError::Unauthorized);
+    assert_eq!(
+        map_unauthorized(Some("unauthorized")),
+        ContractError::Unauthorized
+    );
+}
+
+#[test]
+fn project_ids_follow_the_prj_prefix_and_length_rule() {
+    assert!(valid_project_id("prj_abc123"));
+    assert!(valid_project_id(&format!("prj_{}", "a".repeat(58))));
+    assert!(!valid_project_id("prj_"));
+    assert!(!valid_project_id(&format!("prj_{}", "a".repeat(59))));
+    assert!(!valid_project_id("prj_ABC"));
+    assert!(!valid_project_id("proj_abc"));
+}
+
+#[test]
+fn pairing_exchange_sends_the_code_and_reads_token_and_expiry() {
+    assert_eq!(PAIRING_EXCHANGE_PATH, "/v1/pairing/exchange");
+    assert_eq!(pairing_body(" PAIR-AB12 "), json!({ "code": "PAIR-AB12" }));
+    let reply = json!({ "token": "tok_1", "expires_at": "2027-02-25T00:00:00Z" });
+    assert_eq!(
+        parse_pairing(&reply),
+        Ok(Pairing {
+            token: "tok_1".to_owned(),
+            expires_at: "2027-02-25T00:00:00Z".to_owned()
+        })
+    );
+    assert!(parse_pairing(&json!({ "token": "tok_1" })).is_err());
+}
+
+#[test]
+fn revision_conflict_body_carries_the_latest_etag_and_document() {
+    let body = json!({
+        "error": "revision_conflict",
+        "current": { "etag": "\"rev-4\"", "document": { "name": "crm" } }
+    });
+    assert_eq!(
+        conflict_from_body(&body),
+        Some(RevisionConflict {
+            current_etag: "\"rev-4\"".to_owned(),
+            document: json!({ "name": "crm" })
+        })
+    );
+    assert_eq!(conflict_from_body(&json!({ "error": "other" })), None);
 }
 
 #[test]
