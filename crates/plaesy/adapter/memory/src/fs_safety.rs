@@ -20,7 +20,7 @@
 
 use std::io;
 use std::path::Path;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 use std::{
     ffi::CString,
     os::{
@@ -31,19 +31,19 @@ use std::{
 
 /// An open directory descriptor used as the base for `*at` operations.
 pub struct DirHandle {
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     fd: OwnedFd,
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     path: std::path::PathBuf,
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 fn to_cstring(path: &Path) -> io::Result<CString> {
     CString::new(path.as_os_str().as_bytes())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "path contains a NUL byte"))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 fn to_component_cstring(path: &Path) -> io::Result<CString> {
     use std::path::Component;
     if path.components().count() != 1
@@ -60,13 +60,13 @@ fn to_component_cstring(path: &Path) -> io::Result<CString> {
 impl DirHandle {
     /// Clone this directory capability while keeping it anchored to the same inode.
     pub fn try_clone(&self) -> io::Result<Self> {
-        #[cfg(target_os = "linux")]
+        #[cfg(unix)]
         {
             Ok(Self {
                 fd: self.fd.try_clone()?,
             })
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(unix))]
         {
             Ok(Self {
                 path: self.path.clone(),
@@ -75,18 +75,18 @@ impl DirHandle {
     }
 
     /// Read metadata for the directory represented by this handle.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn metadata(&self) -> io::Result<std::fs::Metadata> {
         std::fs::File::from(self.fd.try_clone()?).metadata()
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn metadata(&self) -> io::Result<std::fs::Metadata> {
         std::fs::metadata(&self.path)
     }
 
     /// Restrict permissions on the directory represented by this handle.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn set_permissions(&self, mode: u32) -> io::Result<()> {
         // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe { libc::fchmod(self.fd.as_raw_fd(), mode as libc::mode_t) };
@@ -96,19 +96,13 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(all(unix, not(target_os = "linux")))]
-    pub fn set_permissions(&self, mode: u32) -> io::Result<()> {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(mode))
-    }
-
     #[cfg(windows)]
     pub fn set_permissions(&self, _mode: u32) -> io::Result<()> {
         Ok(())
     }
 
     /// Create a single directory relative to this directory handle.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn create_dir(&self, name: &Path, mode: u32) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
         let rc =
@@ -120,13 +114,13 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn create_dir(&self, name: &Path, _mode: u32) -> io::Result<()> {
         std::fs::create_dir(self.child_path_fallback(name)?)
     }
 
     /// Open a directory beneath this handle, rejecting symlinks and escape paths atomically.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn open_dir_beneath(&self, relative: &Path) -> io::Result<Self> {
         use std::path::Component;
 
@@ -140,46 +134,50 @@ impl DirHandle {
                 "path must contain only normal relative components",
             ));
         }
-        #[repr(C)]
-        struct OpenHow {
-            flags: u64,
-            mode: u64,
-            resolve: u64,
-        }
-        const RESOLVE_NO_MAGICLINKS: u64 = 0x02;
-        const RESOLVE_NO_SYMLINKS: u64 = 0x04;
-        const RESOLVE_BENEATH: u64 = 0x08;
-        let path = to_cstring(relative)?;
-        let how = OpenHow {
-            flags: (libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC) as u64,
-            mode: 0,
-            resolve: RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS | RESOLVE_NO_MAGICLINKS,
-        };
-        // SAFETY: `how` is a `repr(C)` struct matching the kernel's `open_how` layout and outlives the call; `path` is NUL-terminated; the size passed is `size_of::<OpenHow>()`.
-        let fd = unsafe {
-            libc::syscall(
-                libc::SYS_openat2,
-                self.fd.as_raw_fd(),
-                path.as_ptr(),
-                &how as *const OpenHow,
-                std::mem::size_of::<OpenHow>(),
-            ) as libc::c_int
-        };
-        if fd >= 0 {
-            return Ok(Self {
-                // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
-                fd: unsafe { OwnedFd::from_raw_fd(fd) },
-            });
-        }
-        let error = io::Error::last_os_error();
-        if !matches!(
-            error.raw_os_error(),
-            Some(libc::ENOSYS) | Some(libc::EINVAL) | Some(libc::E2BIG)
-        ) {
-            return Err(error);
+        #[cfg(target_os = "linux")]
+        {
+            #[repr(C)]
+            struct OpenHow {
+                flags: u64,
+                mode: u64,
+                resolve: u64,
+            }
+            const RESOLVE_NO_MAGICLINKS: u64 = 0x02;
+            const RESOLVE_NO_SYMLINKS: u64 = 0x04;
+            const RESOLVE_BENEATH: u64 = 0x08;
+            let path = to_cstring(relative)?;
+            let how = OpenHow {
+                flags: (libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC) as u64,
+                mode: 0,
+                resolve: RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS | RESOLVE_NO_MAGICLINKS,
+            };
+            // SAFETY: `how` is a `repr(C)` struct matching the kernel's `open_how` layout and outlives the call; `path` is NUL-terminated; the size passed is `size_of::<OpenHow>()`.
+            let fd = unsafe {
+                libc::syscall(
+                    libc::SYS_openat2,
+                    self.fd.as_raw_fd(),
+                    path.as_ptr(),
+                    &how as *const OpenHow,
+                    std::mem::size_of::<OpenHow>(),
+                ) as libc::c_int
+            };
+            if fd >= 0 {
+                return Ok(Self {
+                    // SAFETY: `fd` is a freshly opened descriptor that no other owner holds; taking it here makes this value its sole owner.
+                    fd: unsafe { OwnedFd::from_raw_fd(fd) },
+                });
+            }
+            let error = io::Error::last_os_error();
+            if !matches!(
+                error.raw_os_error(),
+                Some(libc::ENOSYS) | Some(libc::EINVAL) | Some(libc::E2BIG)
+            ) {
+                return Err(error);
+            }
         }
 
-        // Older Linux kernels may not provide openat2; walk each component with openat and
+        // Older Linux kernels may not provide openat2, and other Unix targets (macOS, BSD)
+        // never do; walk each component with openat and
         // O_NOFOLLOW so the fallback retains the same symlink/escape protections.
         let mut current = self.fd.try_clone()?;
         for component in relative.components() {
@@ -211,7 +209,7 @@ impl DirHandle {
 
     /// Open a directory beneath this handle. Non-Linux fallback: path-based, rejecting symlinks
     /// and parent-escape components, without the atomic guarantee of `openat2`.
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn open_dir_beneath(&self, relative: &Path) -> io::Result<Self> {
         let full = self.child_path_fallback(relative)?;
         if relative.as_os_str().is_empty() {
@@ -233,7 +231,7 @@ impl DirHandle {
     }
 
     /// Open `dir` without following symlinks in any path component.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
         use std::path::Component;
 
@@ -281,7 +279,7 @@ impl DirHandle {
         Ok(Self { fd: current })
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
         // Non-Linux fallback: still reject a symlinked directory, just without the atomic
         // guarantee that a path-based open provides on Linux via O_NOFOLLOW + O_DIRECTORY.
@@ -298,7 +296,7 @@ impl DirHandle {
     }
 
     /// Open a regular file at a relative path, refusing symlinks in every component on Linux.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn open_file_read_relative_nofollow(&self, path: &Path) -> io::Result<std::fs::File> {
         use std::path::Component;
 
@@ -359,7 +357,7 @@ impl DirHandle {
         ))
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn open_file_read_relative_nofollow(&self, path: &Path) -> io::Result<std::fs::File> {
         use std::path::Component;
         if path
@@ -399,7 +397,7 @@ impl DirHandle {
     }
 
     /// Open a regular file directly inside this directory, refusing a symlink at the final component.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn open_file_read_nofollow(&self, name: &Path) -> io::Result<std::fs::File> {
         use std::path::Component;
 
@@ -434,7 +432,7 @@ impl DirHandle {
         Ok(file)
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn open_file_read_nofollow(&self, name: &Path) -> io::Result<std::fs::File> {
         use std::path::Component;
 
@@ -458,7 +456,7 @@ impl DirHandle {
     }
 
     /// Open or create a regular file directly inside this directory without following symlinks.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn open_or_create_file(&self, name: &Path, mode: u32) -> io::Result<std::fs::File> {
         let c_name = to_component_cstring(name)?;
         // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
@@ -489,17 +487,6 @@ impl DirHandle {
         Ok(file)
     }
 
-    #[cfg(all(unix, not(target_os = "linux")))]
-    pub fn open_or_create_file(&self, name: &Path, _mode: u32) -> io::Result<std::fs::File> {
-        use std::os::unix::fs::OpenOptionsExt;
-        std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .custom_flags(libc::O_NOFOLLOW)
-            .open(self.child_component_fallback(name)?)
-    }
-
     #[cfg(windows)]
     pub fn open_or_create_file(&self, name: &Path, _mode: u32) -> io::Result<std::fs::File> {
         std::fs::OpenOptions::new()
@@ -521,7 +508,7 @@ impl DirHandle {
 
     /// Create a regular file named `name` directly inside this directory, failing if it already
     /// exists (`O_EXCL`), without ever re-resolving the directory path.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn create_new_file(&self, name: &Path) -> io::Result<std::fs::File> {
         let c_name = to_component_cstring(name)?;
         // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
@@ -540,7 +527,7 @@ impl DirHandle {
         Ok(unsafe { std::fs::File::from_raw_fd(fd) })
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn create_new_file(&self, name: &Path) -> io::Result<std::fs::File> {
         // Read access too: model pull hashes the same handle after writing it.
         std::fs::OpenOptions::new()
@@ -552,7 +539,7 @@ impl DirHandle {
 
     /// Hard-link `old_name` (inside this directory) to `new_name` (inside this directory),
     /// resolved relative to the held descriptor rather than by re-walking the path.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn link_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         let c_old = to_component_cstring(old_name)?;
         let c_new = to_component_cstring(new_name)?;
@@ -573,7 +560,7 @@ impl DirHandle {
     }
 
     /// Atomically replace `new_name` with `old_name` inside this directory.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn replace_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         let c_old = to_component_cstring(old_name)?;
         let c_new = to_component_cstring(new_name)?;
@@ -592,7 +579,7 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn link_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         std::fs::hard_link(
             self.child_path_fallback(old_name)?,
@@ -601,7 +588,7 @@ impl DirHandle {
     }
 
     /// Atomically replace `new_name` with `old_name` inside this directory.
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn replace_within(&self, old_name: &Path, new_name: &Path) -> io::Result<()> {
         std::fs::rename(
             self.child_path_fallback(old_name)?,
@@ -610,7 +597,7 @@ impl DirHandle {
     }
 
     /// Remove an empty directory named `name` directly inside this directory.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn remove_dir(&self, name: &Path) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
         let rc =
@@ -622,13 +609,13 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn remove_dir(&self, name: &Path) -> io::Result<()> {
         std::fs::remove_dir(self.child_component_fallback(name)?)
     }
 
     /// Remove a regular file named `name` directly inside this directory.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn remove_file(&self, name: &Path) -> io::Result<()> {
         let c_name = to_component_cstring(name)?;
         // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
@@ -639,13 +626,13 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn remove_file(&self, name: &Path) -> io::Result<()> {
         std::fs::remove_file(self.child_path_fallback(name)?)
     }
 
     /// Flush this directory's own metadata/entries to durable storage.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     pub fn sync(&self) -> io::Result<()> {
         // SAFETY: `self.fd` is an open descriptor owned by this handle, and the C string argument is NUL-terminated and alive for the call.
         let rc = unsafe { libc::fsync(self.fd.as_raw_fd()) };
@@ -655,13 +642,13 @@ impl DirHandle {
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     pub fn sync(&self) -> io::Result<()> {
         // File contents are synced before publication. Rust has no portable directory fsync API.
         Ok(())
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     fn child_component_fallback(&self, name: &Path) -> std::io::Result<std::path::PathBuf> {
         use std::path::Component;
         if name.components().count() != 1
@@ -675,7 +662,7 @@ impl DirHandle {
         Ok(self.path.join(name))
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     fn child_path_fallback(&self, name: &Path) -> std::io::Result<std::path::PathBuf> {
         use std::path::Component;
 
