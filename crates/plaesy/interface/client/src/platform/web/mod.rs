@@ -25,6 +25,10 @@ use crate::features::store::MemoryStore;
 use crate::features::ApiClient;
 use crate::shared::canvas::viewport::Viewport;
 use crate::shell::{breadcrumb, Guard, Page};
+use crate::state::notifications::{Level, Queue};
+use crate::state::preferences::{
+    reduce as reduce_prefs, Action as PrefAction, Layout, Preferences, Theme,
+};
 use dioxus::prelude::*;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -44,6 +48,18 @@ fn App() -> Element {
     let guard = Guard::new(&["flow:read", "data:read", "documents:read"]);
     let current = page();
     let crumbs = breadcrumb(&current);
+    let mut prefs = use_signal(Preferences::default);
+    let mut show_settings = use_signal(|| false);
+    let mut prefs_error = use_signal(String::new);
+    let shell_class = format!(
+        "app-shell theme-{} layout-{}",
+        theme_class(prefs().theme),
+        layout_class(prefs().layout)
+    );
+    let current_prefs = prefs();
+    let locale_value = current_prefs.locale.clone();
+    let theme_value = theme_class(current_prefs.theme);
+    let layout_value = layout_class(current_prefs.layout);
     let content = if guard.allows(&current) {
         match current {
             Page::FlowList => rsx! {
@@ -79,7 +95,7 @@ fn App() -> Element {
     };
 
     rsx! { style { {STYLE} } style { {EXTRA_STYLE} }
-        div { class: "app-shell",
+        div { class: "{shell_class}",
             header { class: "topbar",
                 div { class: "brand-lockup", span { class: "brand-mark", "aria-hidden": "true" }, strong { "Plaesy" } }
                 span { class: "topbar-divider", "aria-hidden": "true" }
@@ -91,9 +107,44 @@ fn App() -> Element {
                 nav { class: "nav-tabs", "aria-label": "Navigasi utama",
                     button { class: "nav-tab", onclick: move |_| page.set(Page::FlowList), "Flow" }
                     button { class: "nav-tab", onclick: move |_| page.set(Page::DataList), "Data" }
+                    button { class: "nav-tab", "aria-expanded": "{show_settings()}", onclick: move |_| show_settings.set(!show_settings()), "Pengaturan" }
                 }
             }
             {content}
+            if show_settings() {
+                aside { class: "settings-panel", "aria-label": "Pengaturan",
+                    h2 { "Pengaturan" }
+                    label { class: "field-label", "for": "pref-theme", "Tema" }
+                    select { id: "pref-theme", class: "field-input", value: "{theme_value}",
+                        onchange: move |event| match reduce_prefs(&prefs(), PrefAction::SetTheme(parse_theme(&event.value()))) {
+                            Ok(next) => { prefs.set(next); prefs_error.set(String::new()); }
+                            Err(_) => prefs_error.set("Tema tidak dikenal".to_owned()),
+                        },
+                        option { value: "system", "Sistem" }
+                        option { value: "light", "Terang" }
+                        option { value: "dark", "Gelap" }
+                    }
+                    label { class: "field-label", "for": "pref-layout", "Kepadatan" }
+                    select { id: "pref-layout", class: "field-input", value: "{layout_value}",
+                        onchange: move |event| match reduce_prefs(&prefs(), PrefAction::SetLayout(parse_layout(&event.value()))) {
+                            Ok(next) => { prefs.set(next); prefs_error.set(String::new()); }
+                            Err(_) => prefs_error.set("Kepadatan tidak dikenal".to_owned()),
+                        },
+                        option { value: "comfortable", "Lapang" }
+                        option { value: "compact", "Rapat" }
+                    }
+                    label { class: "field-label", "for": "pref-locale", "Locale" }
+                    input { id: "pref-locale", class: "field-input", value: "{locale_value}",
+                        onchange: move |event| match reduce_prefs(&prefs(), PrefAction::SetLocale(event.value())) {
+                            Ok(next) => { prefs.set(next); prefs_error.set(String::new()); }
+                            Err(_) => prefs_error.set("Locale: 2 sampai 35 karakter huruf, angka, atau tanda hubung".to_owned()),
+                        },
+                    }
+                    if !prefs_error().is_empty() {
+                        p { class: "empty-inspector", "{prefs_error()}" }
+                    }
+                }
+            }
         }
     }
 }
@@ -375,6 +426,7 @@ struct Editor {
     connect_input: Signal<String>,
     connect_module: Signal<String>,
     connect_path: Signal<String>,
+    notes: Signal<Queue>,
 }
 
 impl Editor {
@@ -389,7 +441,10 @@ impl Editor {
                 self.selected.set(selection);
                 self.status.set(action_message(&action));
             }
-            Err(error) => self.status.set(error_message(&error)),
+            Err(error) => {
+                self.note(Level::Warning, &error_message(&error));
+                self.status.set(error_message(&error));
+            }
         }
     }
 
@@ -401,6 +456,15 @@ impl Editor {
             operation: String::new(),
             inputs: Vec::new(),
         }));
+    }
+
+    /// Menambah notifikasi ke antrean toast. Tanpa jam di klien ini, `created_at` diisi 0.
+    fn note(mut self, level: Level, message: &str) {
+        let _ = self.notes.write().push(level, message, 0);
+    }
+
+    fn dismiss(mut self, id: u64) {
+        let _ = self.notes.write().dismiss(id);
     }
 
     fn select(mut self, id: String) {
@@ -494,11 +558,16 @@ impl Editor {
         match services::save(store, flow_id, &body) {
             Ok(_) => {
                 self.original.set(document);
+                self.note(Level::Info, "Tersimpan di penyimpanan sesi");
                 self.status.set(
                     "Tersimpan di penyimpanan sesi (hilang saat halaman dimuat ulang)".to_owned(),
                 );
             }
-            Err(error) => self.status.set(format!("Gagal menyimpan: {error}")),
+            Err(error) => {
+                let message = format!("Gagal menyimpan: {error}");
+                self.note(Level::Error, &message);
+                self.status.set(message);
+            }
         }
     }
 }
@@ -516,6 +585,7 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
         connect_input: use_signal(String::new),
         connect_module: use_signal(String::new),
         connect_path: use_signal(String::new),
+        notes: use_signal(|| Queue::new(5)),
     };
 
     let modules = (editor.modules)();
@@ -547,6 +617,11 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
         "transform:translate({}px,{}px) scale({});transform-origin:top left;",
         viewport.pan_x, viewport.pan_y, viewport.zoom
     );
+    let toasts: Vec<(u64, String, &'static str)> = (editor.notes)()
+        .list()
+        .iter()
+        .map(|note| (note.id, note.message.clone(), level_class(note.level)))
+        .collect();
     let module_count = modules.len();
     let edge_count = edge_list.len();
     let title = flow.name.clone();
@@ -615,6 +690,14 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
                 }
             }
             div { class: "status-line", "{status}" }
+            div { class: "toasts", "aria-live": "polite",
+                for (id, message, class) in toasts {
+                    div { class: "toast {class}",
+                        span { "{message}" }
+                        button { class: "toast-close", "aria-label": "Tutup notifikasi", onclick: move |_| editor.dismiss(id), "×" }
+                    }
+                }
+            }
         }
         aside { class: "inspector",
             h2 { "Inspector" }
@@ -803,6 +886,40 @@ fn describe(issue: &LocalIssue) -> String {
     }
 }
 
+fn theme_class(theme: Theme) -> &'static str {
+    match theme {
+        Theme::Light => "light",
+        Theme::Dark => "dark",
+        Theme::System => "system",
+    }
+}
+fn layout_class(layout: Layout) -> &'static str {
+    match layout {
+        Layout::Compact => "compact",
+        Layout::Comfortable => "comfortable",
+    }
+}
+fn parse_theme(value: &str) -> Theme {
+    match value {
+        "light" => Theme::Light,
+        "dark" => Theme::Dark,
+        _ => Theme::System,
+    }
+}
+fn parse_layout(value: &str) -> Layout {
+    match value {
+        "compact" => Layout::Compact,
+        _ => Layout::Comfortable,
+    }
+}
+fn level_class(level: Level) -> &'static str {
+    match level {
+        Level::Info => "toast-info",
+        Level::Warning => "toast-warning",
+        Level::Error => "toast-error",
+    }
+}
+
 const EXTRA_STYLE: &str = r#"
 .nav-tabs{display:flex;gap:8px}.nav-tab{height:34px;padding:0 14px;border-radius:7px;background:#202E43;font-size:13px}.nav-tab:hover{background:#293A4C}
 .list-page .list-body{padding:24px 26px}.flow-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:520px}.flow-list .palette-item{height:auto;padding:12px 14px;flex-direction:column;align-items:flex-start;gap:4px}
@@ -815,6 +932,10 @@ const EXTRA_STYLE: &str = r#"
 .module-card.flagged{outline:2px solid #F26D6D;outline-offset:2px}
 .connect-form{display:grid;gap:8px;margin:18px 0}
 .data-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}.data-table{padding:16px;border-radius:9px;background:#273646}.data-table h2{margin:0 0 6px;font-size:15px;font-weight:600;color:#E9EEF7}.data-side{grid-column:1/-1}.data-side h3{margin:16px 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
+.theme-light.app-shell{background:#F3F6FB;color:#111827}.theme-light{color-scheme:light}
+.layout-compact .palette-item{height:40px}.layout-compact .module-card{height:76px}
+.settings-panel{position:fixed;top:84px;right:20px;width:300px;padding:18px;background:#172438;border:1px solid #2E3D4F;border-radius:10px;z-index:9}.settings-panel h2{margin:0 0 14px;font-size:16px;font-weight:600}.settings-panel .field-label{margin-top:12px}
+.toasts{position:fixed;right:20px;bottom:20px;display:grid;gap:8px;z-index:10;max-width:360px}.toast{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:8px;background:#273646;font-size:13px;border-left:4px solid #7BA7FF}.toast-warning{border-left-color:#F7C879}.toast-error{border-left-color:#F26D6D}.toast-close{background:transparent;color:#9EB0C1;font-size:16px}
 .breadcrumb{display:flex;gap:8px;list-style:none;margin:0;padding:0;font-size:13px;color:#9EB0C1}.breadcrumb li+li::before{content:"/";margin-right:8px;color:#5B6E82}
 .changes-panel{margin-top:24px}.changes-panel h3{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
 "#;
