@@ -91,7 +91,10 @@ fn ensure_private_model_directories_at(
             use std::os::unix::fs::MetadataExt;
             let metadata = current.metadata().map_err(|e| e.to_string())?;
             let uid = unsafe { libc::geteuid() };
-            let root_sticky = metadata.uid() == 0 && metadata.mode() & libc::S_ISVTX != 0;
+            // Sticky bit (S_ISVTX) as a fixed u32 mask: libc declares it as u16 on macOS and u32
+            // on Linux, so the libc constant does not type-check against `mode()` on both.
+            const STICKY_BIT: u32 = 0o1000;
+            let root_sticky = metadata.uid() == 0 && metadata.mode() & STICKY_BIT != 0;
             if metadata.uid() != 0 && metadata.uid() != uid {
                 return Err(format!(
                     "cache ancestor {} is not owned by root or the current user",
