@@ -156,6 +156,42 @@ pub fn map_unauthorized(error_code: Option<&str>) -> ContractError {
     }
 }
 
+/// Path validasi dokumen IR. Belum diproyeksikan ke project; minta konfirmasi cli-137.
+pub const VALIDATE_PATH: &str = "/v1/validate";
+
+/// Hasil validasi dari server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidationReport {
+    pub valid: bool,
+    pub errors: Vec<String>,
+}
+
+/// Membaca balasan `{"valid": bool, "errors": [...]}`. Galat yang bukan teks ditampilkan apa adanya.
+///
+/// # Errors
+///
+/// Bila field `valid` tidak ada atau bukan boolean.
+pub fn parse_validation(body: &Value) -> Result<ValidationReport, String> {
+    let valid = body
+        .get("valid")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| "balasan validasi tidak punya `valid`".to_owned())?;
+    let errors = body
+        .get("errors")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| {
+                    item.as_str()
+                        .map_or_else(|| item.to_string(), str::to_owned)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(ValidationReport { valid, errors })
+}
+
 /// Galat kontrak dari balasan lengkap: status, ETag, Retry-After, dan body. `None` untuk 2xx dan 3xx.
 #[must_use]
 pub fn classify(
