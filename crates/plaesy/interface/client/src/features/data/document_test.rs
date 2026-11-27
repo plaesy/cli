@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::data::model::{ColumnView, TableView};
 use serde_json::json;
 
 fn crm_like() -> Value {
@@ -61,6 +62,38 @@ fn many_to_many_uses_left_and_right_as_endpoints() {
         relations[1].child,
         ("products".to_owned(), vec!["id".to_owned()])
     );
+}
+
+#[test]
+fn patch_tables_keeps_the_original_document_when_nothing_changed() {
+    let doc = crm_like();
+    let (tables, _) = tables_from_document(&doc).expect("dokumen valid");
+    assert_eq!(patch_tables(&doc, &tables), doc);
+}
+
+#[test]
+fn patch_tables_keeps_column_types_and_adds_text_columns() {
+    let doc = crm_like();
+    let (mut tables, _) = tables_from_document(&doc).expect("dokumen valid");
+    tables[0].columns.push(ColumnView {
+        name: "catatan".to_owned(),
+        data_type: "text".to_owned(),
+        nullable: true,
+    });
+    tables.push(TableView {
+        name: "produk".to_owned(),
+        columns: Vec::new(),
+        primary_key: Vec::new(),
+    });
+    let patched = patch_tables(&doc, &tables);
+    let columns = &patched["tables"][0]["columns"];
+    assert_eq!(columns[1]["type"], json!({ "enum": ["basic", "pro"] }));
+    assert_eq!(
+        columns[3],
+        json!({ "name": "catatan", "type": "text", "nullable": true })
+    );
+    assert_eq!(patched["tables"][1]["name"], "produk");
+    assert_eq!(patched["relations"], doc["relations"]);
 }
 
 #[test]
