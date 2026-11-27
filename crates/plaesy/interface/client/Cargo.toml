@@ -24,7 +24,7 @@ dioxus-signals = { version = "0.7", optional = true }
 # shadcn/ui-style components for Dioxus (diaktifkan dengan fitur `web`).
 dioxus-shadcn = { workspace = true, optional = true }
 # Transport fetch (fitur `web`). Ketiganya sudah ada di Cargo.lock lewat Dioxus web.
-web-sys = { version = "0.3", optional = true, features = ["Window", "Request", "RequestInit", "Response", "Headers"] }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Request", "RequestInit", "Response", "Headers", "Location", "History"] }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 

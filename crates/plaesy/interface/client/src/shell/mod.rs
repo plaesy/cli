@@ -26,7 +26,8 @@ impl Page {
     }
 }
 
-/// Memetakan path ke halaman. `/documents/{kind}/{id}` menerima `%2F` atau `%2f` di `kind`.
+/// Memetakan path ke halaman. Setiap segmen didekode dari percent-encoding, sehingga `%2F`
+/// (atau `%2f`) di id atau kind menjadi `/`.
 #[must_use]
 pub fn route(path: &str) -> Page {
     let segments: Vec<&str> = path
@@ -36,15 +37,54 @@ pub fn route(path: &str) -> Page {
         .collect();
     match segments.as_slice() {
         [] | ["flows"] => Page::FlowList,
-        ["flows", id] => Page::FlowEditor((*id).to_owned()),
+        ["flows", id] => Page::FlowEditor(decode_part(id)),
         ["data"] => Page::DataList,
-        ["data", id] => Page::DataEditor((*id).to_owned()),
+        ["data", id] => Page::DataEditor(decode_part(id)),
         ["documents", kind, id] => Page::Document {
-            kind: kind.replace("%2F", "/").replace("%2f", "/"),
-            id: (*id).to_owned(),
+            kind: decode_part(kind),
+            id: decode_part(id),
         },
         _ => Page::NotFound,
     }
+}
+
+/// Mengenkode satu segmen path. Huruf, angka, dan `-._~` tetap; byte lain di-percent-encode.
+#[must_use]
+pub fn encode_part(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(char::from(byte));
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+/// Membalik [`encode_part`]. `%` yang tidak diikuti dua digit hex dibiarkan apa adanya.
+#[must_use]
+pub fn decode_part(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            if let Some(value) = hex_pair(bytes[index + 1], bytes[index + 2]) {
+                out.push(value);
+                index += 3;
+                continue;
+            }
+        }
+        out.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn hex_pair(high: u8, low: u8) -> Option<u8> {
+    let digit = |byte: u8| char::from(byte).to_digit(16).map(|value| value as u8);
+    Some(digit(high)? * 16 + digit(low)?)
 }
 
 /// Guard izin: halaman dengan izin hanya boleh dibuka bila izin itu ada di daftar.
@@ -79,6 +119,21 @@ pub fn nav(guard: &Guard) -> Vec<Page> {
         .into_iter()
         .filter(|page| guard.allows(page))
         .collect()
+}
+
+/// Path URL untuk halaman; kebalikan dari [`route`]. Setiap id dan kind di-percent-encode.
+#[must_use]
+pub fn path_for(page: &Page) -> String {
+    match page {
+        Page::FlowList => "/flows".to_owned(),
+        Page::FlowEditor(id) => format!("/flows/{}", encode_part(id)),
+        Page::DataList => "/data".to_owned(),
+        Page::DataEditor(id) => format!("/data/{}", encode_part(id)),
+        Page::Document { kind, id } => {
+            format!("/documents/{}/{}", encode_part(kind), encode_part(id))
+        }
+        Page::NotFound => "/".to_owned(),
+    }
 }
 
 /// Jejak navigasi untuk halaman: nama bagian, lalu id halaman bila ada.
