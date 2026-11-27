@@ -190,7 +190,7 @@ Semua rute memerlukan token pada mode `token`. Penerima selalu label. Pengirim w
 - Pengikatan ke label lewat store: server memanggil dengan `recipient = label`, dan store mencocokkan `recipient`, `sender`, `id`, dan `lease_owner` (`relay.rs:564-587`).
 - Token dikembalikan sekali di respons klaim. Tidak ada di `GET`, SSE, Agent Card, inbox, log, atau respons error.
 - Jaminan kebocoran:
-  - Respons HTTP selain klaim tidak memuat `lease_owner`. `find_for_recipient` dan `task_view` mengembalikan `Message` lengkap, jadi server membuang field itu sendiri.
+  - Respons HTTP selain klaim tidak memuat `lease_owner`. `find_for_recipient` mengembalikan `Message` lengkap, jadi server membuang `lease_owner` sendiri. `task_view` mengembalikan `TaskView { state, prompt }` (`relay.rs:405`) dan tidak memuat `lease_owner`.
   - Log `agent serve` tidak mencetak header `Authorization`, body permintaan, atau token lease.
   - Tes: token tidak muncul di `GET /claims/...`, `GET /tasks/...`, SSE, Agent Card, stderr saat klaim, atau body error.
 - CLI lokal `plaesy relay claim` tetap mencetak `lease_owner` (keputusan default, lihat §11).
@@ -217,7 +217,7 @@ Semua rute memerlukan token pada mode `token`. Penerima selalu label. Pengirim w
 
 ### Pemetaan dari store
 
-- `acknowledge_claim`, `release_claim`, dan `request_input` mengikuti urutan cek di §3 P2. `LeaseConflict` dari langkah 1 (pesan tidak milik penerima) dipetakan ke `404`. `LeaseConflict` dari langkah 3 (lease tidak cocok) dipetakan ke `409 lease_conflict`.
+- `acknowledge_claim`, `release_claim`, dan `request_input` mengikuti urutan cek di §3 P2. Langkah 1 (pesan tidak milik penerima) sudah ditangani `find_for_recipient` di server, yang membalas `404` sebelum memanggil store. Karena itu setiap `LeaseConflict` dari store dipetakan ke `409 lease_conflict`, termasuk kasus langka ketika pesan berpindah pemilik di antara dua panggilan.
 - `acknowledge_claim` dan `release_claim` yang mengembalikan `Ok(false)` atau `Ok(None)` (lease tidak cocok) dipetakan sama dengan `LeaseConflict` langkah 3.
 - `TaskTransition`: `409 task_transition`.
 - `TaskNotFound`: `404 not_found`. Pada `request_input`, ini terjadi untuk pesan tanpa baris task.
@@ -233,7 +233,7 @@ Body error tetap memuat `error` (teks) untuk kompatibilitas. `code` adalah tamba
 
 - **Send:** replay dengan id dan isi yang sama mengembalikan state task saat ini. Isi berbeda: `409 idempotency_conflict`.
 - **Klaim (`:next`):** tidak idempoten. Setiap klaim yang berhasil menambah satu percobaan. Respons klaim yang hilang di jalan membuat lease tak diketahui, yang habis dan memakan satu percobaan. Ini didokumentasikan.
-- **`:complete`, `:request-input` yang diulang setelah sukses:** task sudah tidak `working`, jadi balasan kedua `409 task_transition`. Klien memeriksa hasilnya lewat `GET /claims/{from}/{id}`, lalu membaca `status` dan `state`.
+- **`:complete`, `:request-input` yang diulang setelah sukses:** untuk pesan yang punya baris task, task sudah tidak `working`, jadi balasan kedua `409 task_transition`. Untuk pesan tanpa baris task (dari `relay send`), langkah 2 dilewati, sehingga balasan kedua `409 lease_conflict` untuk `:complete`. Klien memeriksa hasilnya lewat `GET /claims/{from}/{id}`, lalu membaca `status` dan `state`.
 - **`:release` yang diulang setelah release non-final:** task masih `working`, lease sudah dilepas, jadi balasan kedua `409 lease_conflict`. Setelah release final, balasan kedua `409 task_transition`.
 - **Lease habis sebelum selesai:** pesan kembali ke `menunggu`, atau `gagal` bila percobaan sudah `MAX_ATTEMPTS`. Lihat §9.
 
@@ -302,8 +302,10 @@ Store (P1 sampai P3, boleh dikerjakan sebelum PR #30 merge), `-p plaesy-adapter-
 - P3: basis data versi sebelumnya dibuka dan dimigrasikan (rebuild tabel), dan semua baris tersalin.
 - P3: setiap query id-only di tabel §3 sudah memakai `sender` atau `recipient`.
 - Tes `relay_test.rs` (`:519`, `:600`, `:698`, `:747`) diperbarui sesuai P2 dan tetap bermakna.
+- Pesan tanpa baris task: replay `:complete` mengembalikan `lease_conflict`, bukan `task_transition`.
+- Migrasi P3: indeks `relay_messages_inbox` (`relay.rs:176`) dibuat ulang setelah rename tabel, dan tes memeriksa keberadaannya.
 
-CLI, `-p plaesy-interface-cli --locked`:
+CLI, `-p plaesy --test relay_cli --locked` (berkas tes ada di paket `plaesy`, bukan `plaesy-interface-cli`):
 
 - `relay ack` tanpa `--from` ditolak. Dengan `--from` yang benar, berhasil.
 - `relay_claim_is_exclusive_and_ack_requires_owner_token` (`relay_cli.rs`): ack yang berhasil diberi `--from`. Tes negatif (token salah) tetap menguji token, bukan kelengkapan flag.
@@ -335,7 +337,7 @@ HTTP (setelah PR #30 merge), `-p plaesy-interface-cli --locked`:
 Keputusan: **implementasi boleh dimulai sebelum PR #30 merge, tetapi hanya untuk P1 sampai P3 di `relay` dan CLI `relay ack`.** P1 sampai P3 tidak menyentuh `tokens.rs`. Semua kode autentikasi, loader berkas, pemeriksaan label, dan rute HTTP menunggu merge PR #30, karena memakai `TokenSet` dan `load` dari sana.
 
 1. Opus 5.5 menyetujui revisi 6.
-2. P1 sampai P3 di `main` terbaru, dengan tes `-p plaesy-adapter-relay --locked` dan `-p plaesy-interface-cli --locked`. Migrasi P3 diuji dengan basis data versi sebelumnya.
+2. P1 sampai P3, dengan tes `-p plaesy-adapter-relay --locked` dan `-p plaesy --test relay_cli --locked`. Migrasi P3 diuji dengan basis data versi sebelumnya. P2 dan P3 dikerjakan bersama, karena cek recipient di P2 memakai `sender` dari P3.
 3. Merge PR #30.
 4. Loader token agen, validasi label saat load, pemeriksaan label untuk SSE dan rute, dan rute `/claims`, dengan tes `-p plaesy-interface-cli --locked`.
 5. Perbarui `agent-protocol-design.md` (§11 butir 2 dan 3) dan `agent_http.rs:11-12`.
