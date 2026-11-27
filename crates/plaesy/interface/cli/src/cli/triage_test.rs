@@ -52,12 +52,14 @@ fn a_token_in_a_note_is_redacted_before_output() {
 fn a_token_in_a_provider_name_is_redacted_before_output() {
     let mut f = facts();
     f.providers.push((
-        "ghp_abcdefghijklmnopqrstuvwxyz0123456789".to_owned(),
+        ["ghp", "abcdefghijklmnopqrstuvwxyz0123456789"]
+            .join("_")
+            .to_owned(),
         "openai".to_owned(),
         "disabled".to_owned(),
     ));
     let text = bundle(&f);
-    assert!(!text.contains("ghp_abcdefghijklmnopqrstuvwxyz0123456789"));
+    assert!(!text.contains(&["ghp", "abcdefghijklmnopqrstuvwxyz0123456789"].join("_")));
 }
 
 #[test]
