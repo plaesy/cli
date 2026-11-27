@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The web client's HTTP adapter has the contract for the backend's per-project routes: a bearer token and base URL from configuration, the `If-Match` value from an ETag, and the mapping of 401, 403, 412, 413, 422, 428, and 429 (with `Retry-After`) to typed errors. It is pure code and is not wired to a transport yet.
 - The web client has a read-only data page: it lists the `data-ir/1` documents in the session, and each one shows its tables, columns and types, primary keys, relations, and local validation issues. Editing data is not built yet.
 - The web client's flow editor lists the changes not yet saved (a JSON diff from the loaded document to the edited one), with each value shortened to 40 characters.
 - The web client's flow inspector connects an input to another module's output (`mID.path`), and a module with a duplicate id or an unknown source is outlined on the canvas.
