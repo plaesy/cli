@@ -12,6 +12,7 @@ Local Markdown memory: an index (SQLite FTS5 plus HNSW embeddings) over a vault 
 - [Note rules](#note-rules)
 - [Maintenance](#maintenance)
 - [Services and MCP](#services-and-mcp)
+- [Memory through MCP tools](#memory-through-mcp-tools)
 - [Verify](#verify)
 
 ## Vault selection
@@ -152,7 +153,49 @@ plaesy memory token list                          # labels and state only, never
 
 The server keeps only salted hashes in `~/.config/plaesy/mcp-tokens.toml` (or `PLAESY_MCP_TOKENS_FILE`), which must stay outside the synced vault, and re-reads it without a restart. `PLAESY_MCP_TOKEN` still works as the single token labelled `default`. Never paste a token into a note, log, or commit.
 
-For a background shared server use `plaesy mcp memory start|status|stop` (see `mcp.md`). MCP tools include `memory_search`, `memory_remember`, `memory_fingerprint`, `memory_update`, `memory_archive`, `memory_curate`, `memory_hygiene`, `memory_missing`, `memory_resolve_gap`, `memory_stats`, and `memory_backlinks`. Only one writer daemon owns a vault; use `--read-only` for a second reader.
+For a background shared server use `plaesy mcp memory start|status|stop` (see `mcp.md`). Only one writer daemon owns a vault; use `--read-only` for a second reader.
+
+## Memory through MCP tools
+
+When the client is connected to a Plaesy memory server, call its tools instead of shelling out. The vault is the one the server was started with, so no `--vault` is needed. Clients prefix the names with the server name, for example `mcp__plaesy__memory_search` in Claude Code. If the server is not connected, fall back to the CLI and say so.
+
+| MCP tool | Required parameters | Optional parameters | CLI equivalent |
+|---|---|---|---|
+| `memory_search` | `query` | `limit` (1–50, default 5), `mode`, `tier`, `path_prefix`, `min_trust`, `include_inactive`, `as_of`, `expand_links`, `explain` | `search` |
+| `memory_backlinks` | `path` | `direction`: `incoming` (default) or `outgoing` | `links [--outgoing]` |
+| `memory_stats` | none | none | `stats` |
+| `memory_hygiene` | none | none | `hygiene` |
+| `memory_missing` | none | `limit` (default 20) | `missing` |
+| `memory_curate` | none | `limit` (default 20) | `curate` |
+| `memory_remember` | `title`, `body` | `folder`, `tier`, `confidence`, `note_type` (needs `id`), `id`, `status`, `project`, `scope[]`, `supersedes[]` | `remember` |
+| `memory_remember_session` | `title`, `date` (YYYY-MM-DD), `summary` | `links[]` of `{label, url}`, http or https only, at most 20 | none |
+| `memory_resolve_gap` | `id` (integer from `memory_missing`) | none | `missing --resolve <id>` |
+| `memory_fingerprint` | `path` | none | `fingerprint` |
+| `memory_update` | `path`, `expected_sha256`, `content`, `reason` | none | `update --if-match ... --yes < file` |
+| `memory_archive` | `path`, `expected_sha256`, `reason` | none | `archive --if-match ... --yes` |
+
+`memory_search` results carry `confidence` (`FACT`, `INFERRED`, `SPECULATIVE`) and a `citation` with `file_path`, `line_range`, `revision`, and `timestamp`. Cite `file_path:line_range` when using a passage.
+
+How MCP differs from the CLI:
+
+- **Read-only tools** are search, backlinks, stats, hygiene, missing, curate, and fingerprint. `memory_missing` does not record a query gap itself.
+- **Write tools** are `memory_remember`, `memory_remember_session`, and `memory_resolve_gap`. They only create or close; they never overwrite. Notes are marked `source: agent`, and `high` confidence is stored as `medium`.
+- **Replace tools** are `memory_update` and `memory_archive`, flagged `destructiveHint`. Call `memory_fingerprint` first, read the note, and pass that hash as `expected_sha256`. `memory_update` takes the complete file text, front matter included, in `content`; there is no `--yes`, so show the user the change before calling it.
+- **CLI only:** `forget`, `--template`/`--set`, `list`, `projects`/`decisions`/`contexts`, `history`, `index`/`watch`, `code-find`/`code-audit`, `schedule`, `config`, and `token`. For a templated note, use the CLI; or read the template and pass the filled text as `body`.
+- `memory_remember_session` writes an episodic note to the sessions folder: use it for a session checkpoint, and `memory_remember` for knowledge or decisions.
+
+Write through MCP:
+
+```text
+memory_search        {"query": "relay lease renewal", "limit": 5}
+memory_remember      {"title": "Relay lease is not renewed", "body": "...", "folder": "knowledges/plaesy",
+                      "note_type": "knowledge", "id": "<uuid>", "project": "plaesy-cli"}
+memory_fingerprint   {"path": "knowledges/plaesy/relay-lease-is-not-renewed.md"}
+memory_update        {"path": "knowledges/plaesy/relay-lease-is-not-renewed.md",
+                      "expected_sha256": "<from fingerprint>", "content": "<full file>", "reason": "new-evidence"}
+```
+
+The project MCP server (`plaesy mcp project`) is a different server: it exposes `plaesy_list`, `plaesy_read`, and `plaesy_write` over the project's `.plaesy/` folder, not the vault (see `mcp.md`).
 
 ## Verify
 

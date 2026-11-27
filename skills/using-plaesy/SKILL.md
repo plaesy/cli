@@ -1,6 +1,6 @@
 ---
 name: using-plaesy
-description: Runs the Plaesy CLI (`plaesy`) correctly for Markdown memory, the `.plaesy/` task lifecycle, inter-agent relay, MCP servers, delegate providers, validation, and install health. Use when running any `plaesy` command, searching or writing Plaesy memory notes, creating, starting, validating, or completing `.plaesy/tasks`, messaging other agents through the relay, claiming files or reporting sessions, serving Plaesy over MCP, ACP, or HTTP, delegating a prompt to a model provider, linting Markdown with `plaesy validate`, or diagnosing an installed `plaesy.exe` that lags behind the source.
+description: Runs the Plaesy CLI (`plaesy`) correctly for Markdown memory, the `.plaesy/` task lifecycle, inter-agent relay, MCP servers, delegate providers, validation, and install health. Use when running any `plaesy` command, searching or writing Plaesy memory notes through the CLI or the memory MCP tools (memory_search, memory_remember, memory_update), creating, starting, validating, or completing `.plaesy/tasks`, messaging other agents through the relay, claiming files or reporting sessions, serving Plaesy over MCP, ACP, or HTTP, delegating a prompt to a model provider, linting Markdown with `plaesy validate`, or diagnosing an installed `plaesy.exe` that lags behind the source.
 license: MIT
 compatibility: Requires the plaesy executable on PATH or a build from this repository. Some commands need git, Bash, network access, or configured providers.
 metadata:
@@ -116,7 +116,7 @@ plaesy memory --vault <VAULT> search "<topic>" -n 5    # cite path and line rang
 plaesy memory --vault <VAULT> projects <project-id> decisions
 ```
 
-An MCP client can call `memory_search` instead. Treat hits marked `INFERRED` or `STALE` as leads, and confirm consequential claims in the project's own files.
+When a Plaesy memory MCP server is connected, prefer its tools (`memory_search` with `query`, `limit`, `path_prefix`) over the CLI; the server already knows its vault. Treat hits marked `INFERRED` or `STALE` as leads, and confirm consequential claims in the project's own files.
 
 ### Write or change a memory note
 
@@ -125,7 +125,9 @@ An MCP client can call `memory_search` instead. Treat hits marked `INFERRED` or 
 3. Existing note: `plaesy memory --vault <VAULT> fingerprint <path>`, edit the full text, then pipe it to `plaesy memory --vault <VAULT> update <path> --if-match <sha256> --reason <reason> --yes`.
 4. Read it back with `search` or `list --path <prefix>`.
 
-Details, templates, and decision supersession rules: [references/memory.md](references/memory.md).
+Through MCP the same steps are `memory_search`, then `memory_remember` (`title`, `body`, optional `folder`, `note_type` with `id`), or `memory_fingerprint` followed by `memory_update` (`path`, `expected_sha256`, full `content`, `reason`). `memory_remember_session` saves a session checkpoint. `forget` and templates exist only in the CLI.
+
+Details, the full MCP tool table, templates, and decision supersession rules: [references/memory.md](references/memory.md).
 
 ### Move a task through its lifecycle
 
