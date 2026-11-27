@@ -92,6 +92,7 @@ mod tests {
         ModuleView {
             id: id.to_owned(),
             kind: "action".to_owned(),
+            operation: String::new(),
             inputs: Vec::new(),
         }
     }

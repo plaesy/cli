@@ -4,6 +4,7 @@ fn module(id: &str, kind: &str, inputs: &[(&str, &str)]) -> ModuleView {
     ModuleView {
         id: id.to_owned(),
         kind: kind.to_owned(),
+        operation: String::new(),
         inputs: inputs
             .iter()
             .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
