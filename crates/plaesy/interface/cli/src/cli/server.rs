@@ -112,7 +112,9 @@ pub struct ServerConfig {
 pub fn layer_from_env(get: impl Fn(&str) -> Option<String>) -> Result<Layer, ConfigError> {
     let read = |suffix: &str| {
         let name = format!("{ENV_PREFIX}{suffix}");
-        get(&name).filter(|value| !value.is_empty()).map(|value| (name, value))
+        get(&name)
+            .filter(|value| !value.is_empty())
+            .map(|value| (name, value))
     };
     Ok(Layer {
         bind: read("BIND").map(|(_, value)| value),

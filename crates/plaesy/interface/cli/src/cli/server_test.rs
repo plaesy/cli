@@ -55,7 +55,9 @@ fn environment_reads_prefixed_keys_and_skips_empty_values() {
         "PLAESY_SERVER_DB" => Some(String::new()),
         "PLAESY_SERVER_ALLOW_NON_LOOPBACK" => Some("true".to_owned()),
         "PLAESY_SERVER_TLS_TERMINATED_UPSTREAM" => Some("0".to_owned()),
-        "PLAESY_SERVER_CORS_ORIGINS" => Some("https://a.example, http://localhost:5173 ,".to_owned()),
+        "PLAESY_SERVER_CORS_ORIGINS" => {
+            Some("https://a.example, http://localhost:5173 ,".to_owned())
+        }
         _ => None,
     })
     .expect("env");
@@ -89,14 +91,20 @@ fn non_loopback_bind_is_refused_without_opt_in() {
         bind_layer("0.0.0.0:8790"),
     )
     .expect("parses");
-    assert_eq!(check_bind(&config, false), Err(ConfigError::NonLoopbackRefused));
-    assert_eq!(check_bind(&config, true), Err(ConfigError::NonLoopbackRefused));
+    assert_eq!(
+        check_bind(&config, false),
+        Err(ConfigError::NonLoopbackRefused)
+    );
+    assert_eq!(
+        check_bind(&config, true),
+        Err(ConfigError::NonLoopbackRefused)
+    );
 }
 
 #[test]
 fn non_loopback_bind_needs_authentication_even_with_both_opt_ins() {
-    let config = resolve(Layer::default(), Layer::default(), opted_in("0.0.0.0:8790"))
-        .expect("parses");
+    let config =
+        resolve(Layer::default(), Layer::default(), opted_in("0.0.0.0:8790")).expect("parses");
     assert_eq!(check_bind(&config, false), Err(ConfigError::AuthRequired));
     assert!(check_bind(&config, true).is_ok());
 }
@@ -108,7 +116,10 @@ fn only_one_opt_in_is_not_enough() {
         ..bind_layer("0.0.0.0:8790")
     };
     let config = resolve(Layer::default(), Layer::default(), only_flag).expect("parses");
-    assert_eq!(check_bind(&config, true), Err(ConfigError::NonLoopbackRefused));
+    assert_eq!(
+        check_bind(&config, true),
+        Err(ConfigError::NonLoopbackRefused)
+    );
 }
 
 #[test]
@@ -122,7 +133,13 @@ fn cors_origins_must_be_exact_origins() {
         }
     )
     .is_ok());
-    for bad in ["*", "https://app.example/x", "app.example", "https://*.example", "https://"] {
+    for bad in [
+        "*",
+        "https://app.example/x",
+        "app.example",
+        "https://*.example",
+        "https://",
+    ] {
         let result = resolve(
             Layer::default(),
             Layer::default(),
