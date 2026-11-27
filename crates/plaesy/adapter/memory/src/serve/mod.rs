@@ -8,9 +8,10 @@
 use crate::memory::config::MemoryConfig;
 use crate::memory::error::{MemoryError, Result};
 use crate::memory::indexer::Watcher;
+use crate::memory::mcp::{self, tokens};
 use crate::memory::notes::WriteLock;
 use crate::memory::search::SearchEngine;
-use crate::memory::{mcp, service};
+use crate::memory::service;
 use clap::ValueEnum;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -63,9 +64,10 @@ pub async fn run(
         }
     }
 
-    if mcp && transport == Transport::Http && auth_token.is_none() {
+    let token_file_exists = tokens::default_path().is_some_and(|path| path.is_file());
+    if mcp && transport == Transport::Http && auth_token.is_none() && !token_file_exists {
         tracing::warn!(
-            "MCP HTTP server has no bearer authentication; use --auth-token or PLAESY_MCP_TOKEN before exposing it"
+            "MCP HTTP server has no bearer authentication; create a token with `plaesy memory token add` or set PLAESY_MCP_TOKEN before exposing it"
         );
     }
 
@@ -142,7 +144,9 @@ pub async fn run(
             let addr: SocketAddr = format!("127.0.0.1:{port}")
                 .parse()
                 .map_err(|e| MemoryError::ConfigError(format!("bad port {port}: {e}")))?;
-            mcp::serve_http(engine, addr, auth_token).await
+            let auth =
+                tokens::TokenAuth::new(auth_token, tokens::default_path(), &config.watch_dir)?;
+            mcp::serve_http(engine, addr, auth).await
         }
     }
 }
