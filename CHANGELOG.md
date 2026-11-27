@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- The web client's flow editor lists the changes not yet saved (a JSON diff from the loaded document to the edited one), with each value shortened to 40 characters.
 - The web client's flow inspector connects an input to another module's output (`mID.path`), and a module with a duplicate id or an unknown source is outlined on the canvas.
 - The web client's flow editor (`plaesy-interface-client`, feature `web`) works on the loaded flow: add, remove, and rename modules through the flow reducer, undo and redo, validate, and save the draft to the in-memory session store. Saving keeps the fields the editor does not show (retry, timeout, branch). Changes are lost when the page reloads, and connecting inputs from the inspector is not built yet.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.

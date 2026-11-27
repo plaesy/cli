@@ -5,6 +5,7 @@
 //! penyimpanan sesi di `features::store`.
 
 use crate::adapter::http::document_path;
+use crate::features::flow::changes::{describe_change, document_changes};
 use crate::features::flow::document::patch_document;
 use crate::features::flow::inspect::{connect_candidates, flagged_modules, source_expression};
 use crate::features::flow::layout::{layout, Position};
@@ -317,6 +318,10 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
     let edge_list = edges(&modules);
     let issues = validate(&modules);
     let flagged = flagged_modules(&issues);
+    let change_lines: Vec<String> = document_changes(&(editor.original)(), &modules)
+        .iter()
+        .map(describe_change)
+        .collect();
     let ids: Vec<String> = modules.iter().map(|m| m.id.clone()).collect();
     let edge_pairs: Vec<(String, String)> = edge_list
         .iter()
@@ -412,6 +417,18 @@ fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> E
                 {inspector(module, editor, &candidates)}
             } else {
                 p { class: "empty-inspector", "Pilih modul untuk melihat operasi dan input." }
+            }
+            div { class: "changes-panel", "aria-label": "Perubahan belum disimpan",
+                h3 { "Perubahan belum disimpan" }
+                if change_lines.is_empty() {
+                    p { class: "empty-inspector", "Tidak ada perubahan dari dokumen yang tersimpan." }
+                } else {
+                    ul { class: "edge-list",
+                        for line in change_lines.iter() {
+                            li { "{line}" }
+                        }
+                    }
+                }
             }
             section { class: "validation-card", "aria-label": "Masalah",
                 h2 { "Masalah" }
@@ -590,6 +607,7 @@ const EXTRA_STYLE: &str = r#"
 .validation-card h2{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#A9E2D2;font-weight:600}
 .module-card.flagged{outline:2px solid #F26D6D;outline-offset:2px}
 .connect-form{display:grid;gap:8px;margin:18px 0}
+.changes-panel{margin-top:24px}.changes-panel h3{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
 "#;
 
 const STYLE: &str = r#"
