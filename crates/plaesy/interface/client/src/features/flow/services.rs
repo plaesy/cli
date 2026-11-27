@@ -1,13 +1,23 @@
 //! Services flow: hanya membangun request. Pelaksanaannya lewat `ApiClient`.
 
 use super::super::{ApiClient, ApiRequest};
+use crate::adapter::http::document_path;
+
+/// Kind dokumen flow di server (`flow-ir/1`, `/` di-encode menjadi `%2F` pada path).
+pub const FLOW_KIND: &str = "flow-ir/1";
+
+/// Path dokumen flow dengan id tertentu.
+#[must_use]
+pub fn flow_path(flow_id: &str) -> String {
+    document_path(FLOW_KIND, flow_id)
+}
 
 /// Request untuk menyimpan flow dengan id tertentu.
 #[must_use]
 pub fn save_request(flow_id: &str, body: &str) -> ApiRequest {
     ApiRequest {
         method: "PUT",
-        path: format!("/v1/flows/{flow_id}"),
+        path: flow_path(flow_id),
         body: Some(body.to_owned()),
     }
 }
@@ -17,7 +27,7 @@ pub fn save_request(flow_id: &str, body: &str) -> ApiRequest {
 pub fn load_request(flow_id: &str) -> ApiRequest {
     ApiRequest {
         method: "GET",
-        path: format!("/v1/flows/{flow_id}"),
+        path: flow_path(flow_id),
         body: None,
     }
 }
@@ -51,7 +61,7 @@ mod tests {
         assert_eq!(save(&client, "flw_1", "{}"), Ok("ok".to_owned()));
         let sent = client.0.borrow();
         assert_eq!(sent[0].method, "PUT");
-        assert_eq!(sent[0].path, "/v1/flows/flw_1");
+        assert_eq!(sent[0].path, "/v1/documents/flow-ir%2F1/flw_1");
     }
 
     #[test]

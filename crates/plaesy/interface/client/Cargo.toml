@@ -7,14 +7,17 @@ description = "Permukaan klien (ADR 0011): adapter HTTP/WS, router shell, dan gu
 
 [features]
 default = []
-web = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
+# Komponen rsx! yang dipakai semua platform (ADR 0011). Tanpa renderer tertentu.
+ui = ["dep:dioxus", "dep:dioxus-signals", "dep:dioxus-shadcn"]
+# Renderer web: fitur `ui` plus peluncuran dan logger browser.
+web = ["ui", "dioxus/web", "dioxus/launch", "dioxus/logger"]
 desktop = []
 mobile = []
 
 [dependencies]
 serde_json = { workspace = true }
-# Renderer web (ADR 0011, delegasi owner: Dioxus). Hanya aktif dengan fitur `web`.
-dioxus = { version = "0.7", optional = true, default-features = false, features = ["web", "launch", "logger", "macro", "html", "hooks"] }
+# Renderer Dioxus (ADR 0011, delegasi owner). Hanya aktif dengan fitur `ui`.
+dioxus = { version = "0.7", optional = true, default-features = false, features = ["macro", "html", "hooks"] }
 # Dipakai langsung oleh makro rsx! yang dihasilkan Dioxus.
 dioxus-signals = { version = "0.7", optional = true }
 # shadcn/ui-style components for Dioxus (diaktifkan dengan fitur `web`).

@@ -5,6 +5,8 @@
 pub struct ModuleView {
     pub id: String,
     pub kind: String,
+    /// Nama operasi dari dokumen (mis. `billing.get_invoice`). Kosong bila tidak ada.
+    pub operation: String,
     /// Pasangan (nama input, ekspresi sumber).
     pub inputs: Vec<(String, String)>,
 }
@@ -108,6 +110,11 @@ pub fn modules_from_flow_json(text: &str) -> Result<(String, Vec<ModuleView>), S
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("")
                 .to_owned();
+            let operation = m
+                .get("operation")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("")
+                .to_owned();
             let inputs = m
                 .get("inputs")
                 .and_then(serde_json::Value::as_object)
@@ -117,10 +124,26 @@ pub fn modules_from_flow_json(text: &str) -> Result<(String, Vec<ModuleView>), S
                         .collect()
                 })
                 .unwrap_or_default();
-            ModuleView { id, kind, inputs }
+            ModuleView {
+                id,
+                kind,
+                operation,
+                inputs,
+            }
         })
         .collect();
     Ok((name, views))
+}
+
+/// Id modul berikutnya berbentuk `mN`, dengan N lebih besar dari setiap N yang sudah dipakai.
+#[must_use]
+pub fn next_module_id(modules: &[ModuleView]) -> String {
+    let highest = modules
+        .iter()
+        .filter_map(|m| m.id.strip_prefix('m')?.parse::<u64>().ok())
+        .max()
+        .unwrap_or(0);
+    format!("m{}", highest + 1)
 }
 
 #[cfg(test)]
@@ -149,6 +172,7 @@ mod tests {
         ModuleView {
             id: id.to_owned(),
             kind: "action".to_owned(),
+            operation: String::new(),
             inputs: inputs
                 .iter()
                 .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
@@ -185,6 +209,13 @@ mod tests {
             module: "m1".into(),
             source: "m9".into()
         }));
+    }
+
+    #[test]
+    fn next_module_id_follows_the_highest_free_number() {
+        assert_eq!(next_module_id(&[]), "m1");
+        let modules = vec![module("m1", &[]), module("m3", &[]), module("x", &[])];
+        assert_eq!(next_module_id(&modules), "m4");
     }
 
     #[test]

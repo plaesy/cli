@@ -3,6 +3,7 @@
 
 pub mod data;
 pub mod flow;
+pub mod store;
 
 /// Permintaan HTTP yang dibangun services. Tanpa tipe JSON agar crate ini tidak perlu dependensi.
 #[derive(Debug, Clone, PartialEq, Eq)]

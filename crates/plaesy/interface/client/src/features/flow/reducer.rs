@@ -76,6 +76,18 @@ pub fn apply(modules: &[ModuleView], action: &Action) -> Result<Vec<ModuleView>,
     Ok(next)
 }
 
+/// Modul yang dipilih setelah `action` dijalankan. Seleksi ikut pindah saat modul diganti nama
+/// dan hilang saat modul yang dipilih dihapus.
+#[must_use]
+pub fn selection_after(selected: Option<&str>, action: &Action) -> Option<String> {
+    match action {
+        Action::AddModule(module) => Some(module.id.clone()),
+        Action::RemoveModule(id) if selected == Some(id.as_str()) => None,
+        Action::RenameModule { from, to } if selected == Some(from.as_str()) => Some(to.clone()),
+        _ => selected.map(str::to_owned),
+    }
+}
+
 fn rename_reference(expr: &str, from: &str, to: &str) -> String {
     match expr.split_once('.') {
         Some((head, rest)) if head == from => format!("{to}.{rest}"),
@@ -92,6 +104,7 @@ mod tests {
         ModuleView {
             id: id.to_owned(),
             kind: "action".to_owned(),
+            operation: String::new(),
             inputs: Vec::new(),
         }
     }
@@ -165,5 +178,23 @@ mod tests {
         let original = vec![module("m1")];
         let _ = apply(&original, &Action::RemoveModule("m1".into())).unwrap();
         assert_eq!(original.len(), 1);
+    }
+
+    #[test]
+    fn selection_follows_rename_and_clears_on_remove() {
+        let rename = Action::RenameModule {
+            from: "m1".into(),
+            to: "m2".into(),
+        };
+        assert_eq!(selection_after(Some("m1"), &rename), Some("m2".to_owned()));
+        assert_eq!(selection_after(Some("m3"), &rename), Some("m3".to_owned()));
+        assert_eq!(
+            selection_after(Some("m1"), &Action::RemoveModule("m1".into())),
+            None
+        );
+        assert_eq!(
+            selection_after(Some("m1"), &Action::AddModule(module("m4"))),
+            Some("m4".to_owned())
+        );
     }
 }
