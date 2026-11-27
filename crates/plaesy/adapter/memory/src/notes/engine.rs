@@ -193,7 +193,9 @@ impl SearchEngine {
         let dest_name = format!("{}.md", slugify(title));
         let tmp = dir.join(&tmp_name);
         let result = (|| -> std::io::Result<()> {
-            let handle = crate::memory::fs_safety::DirHandle::open_nofollow(&dir)?;
+            // Open from the canonical directory: on macOS, the temp root (e.g. /var/folders/...)
+            // is itself a symlink, and an O_NOFOLLOW walk from / refuses it with ENOTDIR.
+            let handle = crate::memory::fs_safety::DirHandle::open_nofollow(&real_dir)?;
             let mut file = handle.create_new_file(Path::new(&tmp_name))?;
             file.write_all(text.as_bytes())?;
             file.sync_all()?;
