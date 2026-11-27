@@ -113,3 +113,49 @@ fn clear_removes_every_saved_session_and_counts_them() {
     assert!(temp.path().join("lain.txt").exists());
     assert_eq!(clear(&temp.path().join("tidak-ada")), Ok(0));
 }
+
+fn three_sessions(dir: &std::path::Path) {
+    save(dir, "chat-1.jsonl", &turns()).expect("save");
+    save(dir, "chat-2.jsonl", &turns()).expect("save");
+    save(dir, "chat-3.jsonl", &turns()).expect("save");
+}
+
+#[test]
+fn pages_run_newest_first_and_the_last_page_is_short() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    three_sessions(temp.path());
+    let first = page(temp.path(), 1, 2).expect("page 1");
+    assert_eq!(first.total, 3);
+    let names: Vec<&str> = first.items.iter().map(|s| s.name.as_str()).collect();
+    assert_eq!(names, ["chat-3.jsonl", "chat-2.jsonl"]);
+    let last = page(temp.path(), 2, 2).expect("page 2");
+    assert_eq!(last.items.len(), 1);
+    assert_eq!(last.items[0].name, "chat-1.jsonl");
+}
+
+#[test]
+fn a_page_past_the_end_is_empty_and_huge_numbers_do_not_overflow() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    three_sessions(temp.path());
+    let past = page(temp.path(), 9, 2).expect("page 9");
+    assert!(past.items.is_empty());
+    let huge = page(temp.path(), usize::MAX, 50).expect("huge");
+    assert!(huge.items.is_empty());
+}
+
+#[test]
+fn a_missing_folder_is_an_empty_first_page() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shown = page(&temp.path().join("tidak-ada"), 1, 20).expect("page");
+    assert_eq!(shown.total, 0);
+    assert!(shown.items.is_empty());
+}
+
+#[test]
+fn page_zero_and_bad_sizes_are_refused() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    assert!(page(temp.path(), 0, 20).is_err());
+    assert!(page(temp.path(), 1, 0).is_err());
+    assert!(page(temp.path(), 1, MAX_PAGE_SIZE + 1).is_err());
+    assert!(page(temp.path(), 1, MAX_PAGE_SIZE).is_ok());
+}
