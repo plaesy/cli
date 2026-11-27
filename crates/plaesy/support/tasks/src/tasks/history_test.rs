@@ -9,7 +9,7 @@ const TASK_V2: &str = "---\nstatus: doing\n---\nnew body\n";
 
 /// Project with one task in `doing`. `issue` is written as `issue.json` when given.
 fn project(task_md: &str, issue: Option<&str>) -> (tempfile::TempDir, PathBuf) {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let root = temp.path().to_path_buf();
     let dir = tasks_dir(&root).join("doing").join(TASK);
     fs::create_dir_all(&dir).unwrap();

@@ -29,7 +29,10 @@ fn config_defaults_to_supported_model_and_rejects_unknown() {
 fn model_directories_are_created_private_and_existing_modes_restricted() {
     use std::os::unix::fs::{symlink, PermissionsExt};
 
-    let temp = tempfile::tempdir_in("/tmp").unwrap();
+    // Canonicalize first: on macOS /tmp is a symlink to /private/tmp, and the cache-path walk
+    // rejects symlinked components by design.
+    let base = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+    let temp = tempfile::tempdir_in(&base).unwrap();
     fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o700)).unwrap();
     let cache = temp.path().join("cache");
     fs::create_dir(&cache).unwrap();
@@ -66,7 +69,10 @@ fn model_directories_are_created_private_and_existing_modes_restricted() {
 fn model_path_rejects_symlink_and_dangling_symlink() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    // Canonicalize the temp root: on macOS `/var` is a symlink to `/private/var`, which the
+    // component-wise O_NOFOLLOW walk would otherwise reject before reaching the case under test.
+    let base = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+    let temp = tempfile::tempdir_in(&base).unwrap();
     let actual_dir = temp.path().join("actual");
     fs::create_dir(&actual_dir).unwrap();
     let symlink_dir = temp.path().join("linked-dir");
@@ -89,7 +95,9 @@ fn model_path_rejects_symlink_and_dangling_symlink() {
 fn validation_rejects_symlinked_artifact_directory() {
     use std::os::unix::fs::symlink;
 
-    let temp = tempfile::tempdir().unwrap();
+    // Canonicalize the temp root for the same macOS `/var` reason as above.
+    let base = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+    let temp = tempfile::tempdir_in(&base).unwrap();
     let model = temp.path().join("model");
     let outside = temp.path().join("outside");
     fs::create_dir(&model).unwrap();

@@ -348,6 +348,7 @@ fn unregister(spec: &ScheduleSpec) -> Result<(), String> {
     }
 }
 
+// macOS writes its own ProgramArguments in the plist, so this is only used on Windows and Linux.
 #[cfg(any(windows, target_os = "linux"))]
 fn scheduled_command(schedule: &Path) -> String {
     format!(
@@ -447,13 +448,6 @@ fn systemd_quote(value: &str) -> String {
 }
 
 #[cfg(target_os = "macos")]
-extern "C" {
-    /// POSIX `getuid`: the real user id of the calling process. Declared here so this crate does
-    /// not need a `libc` dependency, which would change `Cargo.lock`.
-    fn getuid() -> u32;
-}
-
-#[cfg(target_os = "macos")]
 fn register_macos(schedule: &Path, spec: &ScheduleSpec) -> Result<(), String> {
     let home = dirs::home_dir().ok_or_else(|| "could not resolve home directory".to_owned())?;
     let agents = home.join("Library").join("LaunchAgents");
@@ -467,7 +461,7 @@ fn register_macos(schedule: &Path, spec: &ScheduleSpec) -> Result<(), String> {
     );
     let path = agents.join(format!("{label}.plist"));
     fs::write(&path, plist).map_err(|error| error.to_string())?;
-    let domain = format!("gui/{}", unsafe { getuid() });
+    let domain = format!("gui/{}", unsafe { libc::getuid() });
     let qualified = format!("{domain}/{label}");
     let _ = Command::new("launchctl")
         .args(["bootout", &qualified])
@@ -487,7 +481,7 @@ fn register_macos(schedule: &Path, spec: &ScheduleSpec) -> Result<(), String> {
 fn unregister_macos(spec: &ScheduleSpec) -> Result<(), String> {
     let home = dirs::home_dir().ok_or_else(|| "could not resolve home directory".to_owned())?;
     let label = format!("com.plaesy.goal-{}", spec.id);
-    let domain = format!("gui/{}", unsafe { getuid() });
+    let domain = format!("gui/{}", unsafe { libc::getuid() });
     let qualified = format!("{domain}/{label}");
     let _ = Command::new("launchctl")
         .args(["bootout", &qualified])

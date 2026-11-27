@@ -27,8 +27,9 @@ fn available_bytes_impl(path: &Path) -> std::io::Result<u64> {
     if rc != 0 {
         return Err(std::io::Error::last_os_error());
     }
+    // `f_bavail` is u32 on some Unix targets (macOS) and u64 on others; `u64::from` is lossless for both.
     let blocks = u64::from(stats.f_bavail);
-    let block_size = u64::try_from(stats.f_frsize).unwrap_or(u64::MAX);
+    let block_size = u64::from(stats.f_frsize);
     Ok(blocks.saturating_mul(block_size))
 }
 
