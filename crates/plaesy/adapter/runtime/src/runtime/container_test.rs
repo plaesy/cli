@@ -1,5 +1,6 @@
 use super::*;
 use std::process::Stdio;
+use std::sync::OnceLock;
 
 fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
@@ -286,16 +287,34 @@ fn bounded_runtime_container_cancel_before_start_spawns_nothing() {
 }
 
 fn docker_available() -> bool {
-    let ok = Command::new("docker")
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(docker_available_uncached)
+}
+
+fn docker_available_uncached() -> bool {
+    let daemon_ok = Command::new("docker")
         .arg("info")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
         .is_ok_and(|status| status.success());
-    if !ok {
+    if !daemon_ok {
         eprintln!("skipping bounded_runtime_container live test: `docker info` failed or docker is not installed");
+        return false;
     }
-    ok
+    let image = test_image();
+    let image_ok = Command::new("docker")
+        .args(["run", "--rm", &image, "true"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if !image_ok {
+        eprintln!(
+            "skipping bounded_runtime_container live test: docker cannot run test image {image}"
+        );
+    }
+    image_ok
 }
 
 fn test_image() -> String {

@@ -93,13 +93,54 @@ pub fn topic_of(tasks_dir: &Path, status: Status, task: &str) -> Option<String> 
         .filter(|topic| validate_task_name(topic).is_ok())
 }
 
-pub(super) fn path_has_symlink_component(path: &Path) -> bool {
-    let mut current = PathBuf::new();
-    for component in path.components() {
-        current.push(component.as_os_str());
-        if fs::symlink_metadata(&current).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
-            return true;
-        }
+/// The paths whose symlink status matters for `path`, each one a prefix of the path below its
+/// project root. The root is the part before the last `.plaesy` component, canonicalized, so a
+/// symlink above the project (macOS `/var` and `/tmp`, a home directory behind a link) is the
+/// user's choice and is not checked. Everything from `.plaesy` down is checked. A path without a
+/// usable root (no `.plaesy`, or relative) is checked in full, as before.
+///
+/// Returns an empty list when the root does not exist yet, because nothing below it can exist.
+pub(super) fn checked_prefixes(path: &Path) -> io::Result<Vec<PathBuf>> {
+    let components: Vec<_> = path.components().collect();
+    let all_prefixes = || {
+        let mut current = PathBuf::new();
+        components
+            .iter()
+            .map(|component| {
+                current.push(component.as_os_str());
+                current.clone()
+            })
+            .collect::<Vec<_>>()
+    };
+    let Some(index) = components
+        .iter()
+        .rposition(|component| component.as_os_str() == ".plaesy")
+    else {
+        return Ok(all_prefixes());
+    };
+    if index == 0 {
+        return Ok(all_prefixes());
     }
-    false
+    let root: PathBuf = components[..index].iter().collect();
+    let mut current = match fs::canonicalize(&root) {
+        Ok(canonical) => canonical,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error),
+    };
+    let mut prefixes = Vec::new();
+    for component in &components[index..] {
+        current.push(component.as_os_str());
+        prefixes.push(current.clone());
+    }
+    Ok(prefixes)
+}
+
+pub(super) fn path_has_symlink_component(path: &Path) -> bool {
+    match checked_prefixes(path) {
+        Ok(prefixes) => prefixes
+            .iter()
+            .any(|prefix| fs::symlink_metadata(prefix).is_ok_and(|m| m.file_type().is_symlink())),
+        // An unreadable root cannot be vouched for, so refuse it.
+        Err(_) => true,
+    }
 }

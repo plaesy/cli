@@ -288,8 +288,8 @@ impl MemoryConfig {
     ///
     /// # Errors
     ///
-    /// - `ConfigError` if the file is unreadable, invalid TOML, has mistyped
-    ///   values, or fails validation (unknown keys are ignored)
+    /// - `ConfigError` if the file is unreadable, invalid TOML (`.toml`) or JSON (any other
+    ///   extension), has mistyped values, or fails validation (unknown keys are ignored)
     pub async fn load_from_file(path: &std::path::Path) -> Result<Self> {
         let mut value = Self::defaults_as_json()?;
         merge_json(&mut value, read_json(path)?);
@@ -437,20 +437,32 @@ impl MemoryConfig {
 }
 
 /// Settings files, lowest precedence first: the user file, then the project file in `.plaesy/`.
-/// All use the same schema (see [`MemoryConfig`]).
+/// All use the same schema (see [`MemoryConfig`]). Each folder uses `config.toml` when it exists
+/// and falls back to `settings.json` otherwise, as before the TOML migration in `5d2986d`.
 pub fn standard_config_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Some(folder) = crate::memory::settings::default_path()
         .as_deref()
         .and_then(std::path::Path::parent)
     {
-        paths.push(folder.join("config.toml"));
+        paths.push(config_file_in(folder.to_path_buf()));
     }
-    paths.push(PathBuf::from(".plaesy").join("config.toml"));
+    paths.push(config_file_in(PathBuf::from(".plaesy")));
     paths
 }
 
-/// Reads a TOML settings file as a JSON value for layered merging.
+/// The file to read in a `.plaesy` folder: `config.toml` when it exists, otherwise `settings.json`.
+fn config_file_in(folder: PathBuf) -> PathBuf {
+    let toml = folder.join("config.toml");
+    if toml.is_file() {
+        toml
+    } else {
+        folder.join("settings.json")
+    }
+}
+
+/// Reads a settings file as a JSON value for layered merging. A `.toml` file is parsed as TOML and
+/// converted; any other file is parsed as JSON.
 fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
     let raw = std::fs::read_to_string(path).map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
@@ -458,14 +470,22 @@ fn read_json(path: &std::path::Path) -> Result<serde_json::Value> {
             path.display()
         ))
     })?;
-    let table: toml::Table = raw.parse().map_err(|e| {
+    if path.extension().is_some_and(|ext| ext == "toml") {
+        let table: toml::Table = raw.parse().map_err(|e| {
+            crate::memory::error::MemoryError::ConfigError(format!(
+                "invalid TOML in {}: {e}",
+                path.display()
+            ))
+        })?;
+        return serde_json::to_value(table)
+            .map_err(|e| crate::memory::error::MemoryError::ConfigError(e.to_string()));
+    }
+    serde_json::from_str(&raw).map_err(|e| {
         crate::memory::error::MemoryError::ConfigError(format!(
-            "invalid TOML in {}: {e}",
+            "invalid JSON in {}: {e}",
             path.display()
         ))
-    })?;
-    serde_json::to_value(table)
-        .map_err(|e| crate::memory::error::MemoryError::ConfigError(e.to_string()))
+    })
 }
 
 /// Recursively merge `over` into `base` (objects merge key-by-key, other values replace).

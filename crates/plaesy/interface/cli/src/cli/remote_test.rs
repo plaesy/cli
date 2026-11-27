@@ -233,7 +233,7 @@ fn sse_comment_stays_on_one_line() {
 
 #[test]
 fn board_summary_reads_task_folders() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir_in(std::fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
     let tasks_dir = temp.path().join(".plaesy").join("tasks");
     let task_dir = tasks_dir.join("todo").join("sample_task");
     fs::create_dir_all(&task_dir).unwrap();

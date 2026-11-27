@@ -193,7 +193,9 @@ impl SearchEngine {
         let dest_name = format!("{}.md", slugify(title));
         let tmp = dir.join(&tmp_name);
         let result = (|| -> std::io::Result<()> {
-            let handle = crate::memory::fs_safety::DirHandle::open_nofollow(&dir)?;
+            // Open from the canonical directory: on macOS, the temp root (e.g. /var/folders/...)
+            // is itself a symlink, and an O_NOFOLLOW walk from / refuses it with ENOTDIR.
+            let handle = crate::memory::fs_safety::DirHandle::open_nofollow(&real_dir)?;
             let mut file = handle.create_new_file(Path::new(&tmp_name))?;
             file.write_all(text.as_bytes())?;
             file.sync_all()?;
@@ -204,6 +206,9 @@ impl SearchEngine {
             // is never set in production, so this has zero effect outside tests.
             #[cfg(debug_assertions)]
             if std::env::var_os("PLAESY_MEMORY_TEST_SLOW_PUBLISH").is_some() {
+                // Readiness signal for crash_recovery_test: the temp file is complete and the
+                // crash window is open. Diagnostics go to stderr; stdout is protocol in JSON mode.
+                eprintln!("plaesy-test: publish window open");
                 std::thread::sleep(std::time::Duration::from_secs(2));
             }
             handle.link_within(Path::new(&tmp_name), Path::new(&dest_name))?;

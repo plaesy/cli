@@ -17,17 +17,22 @@ fn tasks_complete_warns_that_manual_completion_is_unverified() {
     };
 
     assert!(run(&["init"]).status.success());
-    assert!(run(&[
+    let created = run(&[
         "tasks",
         "--spec",
         "complete-test",
         "create",
         "high",
         "qa",
-        "Manual completion"
-    ])
-    .status
-    .success());
+        "Manual completion",
+    ]);
+    assert!(
+        created.status.success(),
+        "task creation failed: status {:?}\nstdout:\n{}\nstderr:\n{}",
+        created.status,
+        String::from_utf8_lossy(&created.stdout),
+        String::from_utf8_lossy(&created.stderr)
+    );
     assert!(run(&["tasks", "--spec", "complete-test", "next"])
         .status
         .success());
