@@ -101,6 +101,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Changed
 
+- `plaesy relay ack` needs `--from <sender>`. Message IDs are now unique per sender instead of globally, so an acknowledgment must name the sender. The local database moves to the new key on open.
+- Canceling or failing a task closes its unfinished relay message as `gagal`, so it leaves the inbox and is no longer claimable. A claim skips messages whose task is canceled, failed, completed, or waiting for input. Acknowledging or releasing a message whose task is not `working` is refused with `TaskTransition`.
+
 - Move first-run setup to `plaesy onboard`; `plaesy memory onboard` now points to the new command.
 - Replace the memory TOML config with `settings.json`: user settings at `~/.plaesy/settings.json` (the same on every OS)
   (written by `plaesy onboard`) and project settings at `.plaesy/settings.json`. Both use the same

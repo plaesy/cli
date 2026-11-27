@@ -141,7 +141,9 @@ fn send_claim_get_ack_get_walks_the_task_to_completed() {
     let (_, working) = route(&mut store, "GET", "/tasks/alpha/t-5", b"");
     assert_eq!(json(&working)["state"], "working");
     let token = claimed.lease_owner.expect("lease");
-    assert!(store.acknowledge_claim("t-5", "beta", &token).expect("ack"));
+    assert!(store
+        .acknowledge_claim("alpha", "t-5", "beta", &token)
+        .expect("ack"));
     let (_, completed) = route(&mut store, "GET", "/tasks/alpha/t-5", b"");
     assert_eq!(json(&completed)["state"], "completed");
 }
@@ -156,7 +158,7 @@ fn input_round_trip_shows_the_question_and_resumes_on_answer() {
         .expect("message");
     let token = claimed.lease_owner.expect("lease");
     store
-        .request_input("t-in-1", "beta", &token, "which branch?")
+        .request_input("alpha", "t-in-1", "beta", &token, "which branch?")
         .expect("ask");
 
     let (status, body) = route(&mut store, "GET", "/tasks/alpha/t-in-1", b"");
@@ -221,7 +223,7 @@ fn stale_lease_on_request_input_maps_to_conflict() {
         .claim_next("beta", 60)
         .expect("claim")
         .expect("message");
-    let refused = store.request_input("t-in-3", "beta", "stale", "why?");
+    let refused = store.request_input("alpha", "t-in-3", "beta", "stale", "why?");
     let (status, _) = match refused {
         Err(err) => super::map_error(err),
         Ok(()) => panic!("stale lease must not park the task"),

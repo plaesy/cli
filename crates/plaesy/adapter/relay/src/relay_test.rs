@@ -17,9 +17,9 @@ fn idempotent_send_and_explicit_ack_preserve_queue_semantics() {
         Err(MessageError::IdempotencyConflict)
     ));
     assert_eq!(store.inbox("agent-b", 10).unwrap().len(), 1);
-    assert!(!store.acknowledge("m-1", "agent-a").unwrap());
-    assert!(store.acknowledge("m-1", "agent-b").unwrap());
-    assert!(!store.acknowledge("m-1", "agent-b").unwrap());
+    assert!(!store.acknowledge("agent-a", "m-1", "agent-a").unwrap());
+    assert!(store.acknowledge("agent-a", "m-1", "agent-b").unwrap());
+    assert!(!store.acknowledge("agent-a", "m-1", "agent-b").unwrap());
     assert!(store.inbox("agent-b", 10).unwrap().is_empty());
 }
 
@@ -63,12 +63,12 @@ fn claim_excludes_other_consumers_and_ack_requires_current_token() {
     let first_token = first.lease_owner.clone().unwrap();
     assert!(first.lease_expiry_epoch_ms.is_some());
     assert!(store.claim_next("b", 60).unwrap().is_none());
-    assert!(!store.acknowledge("lease-1", "b").unwrap());
+    assert!(!store.acknowledge("a", "lease-1", "b").unwrap());
     assert!(!store
-        .acknowledge_claim("lease-1", "b", "stale-token")
+        .acknowledge_claim("a", "lease-1", "b", "stale-token")
         .unwrap());
     assert!(store
-        .acknowledge_claim("lease-1", "b", &first_token)
+        .acknowledge_claim("a", "lease-1", "b", &first_token)
         .unwrap());
     assert!(store.inbox("b", 10).unwrap().is_empty());
 }
@@ -86,12 +86,17 @@ fn expired_claim_is_reclaimed_with_a_new_token() {
         )
         .unwrap();
     assert!(!store
-        .acknowledge_claim("lease-expire", "b", first.lease_owner.as_deref().unwrap())
+        .acknowledge_claim(
+            "a",
+            "lease-expire",
+            "b",
+            first.lease_owner.as_deref().unwrap()
+        )
         .unwrap());
-    assert!(!store.acknowledge("lease-expire", "b").unwrap());
+    assert!(!store.acknowledge("a", "lease-expire", "b").unwrap());
     let next = store.claim_next("b", 60).unwrap().unwrap();
     assert_ne!(first.lease_owner, next.lease_owner);
-    assert!(!store.acknowledge("lease-expire", "b").unwrap());
+    assert!(!store.acknowledge("a", "lease-expire", "b").unwrap());
 }
 
 #[test]
@@ -110,7 +115,7 @@ fn concurrent_acknowledgments_have_exactly_one_winner() {
             std::thread::spawn(move || {
                 let mut store = MessageStore::open(path).unwrap();
                 barrier.wait();
-                store.acknowledge("ack-race", "b").unwrap()
+                store.acknowledge("a", "ack-race", "b").unwrap()
             })
         })
         .collect();
@@ -205,7 +210,7 @@ fn idempotent_resend_after_ack_keeps_message_acknowledged() {
     {
         let mut store = MessageStore::open(&path).unwrap();
         store.send("m-3", "a", "b", "done").unwrap();
-        assert!(store.acknowledge("m-3", "b").unwrap());
+        assert!(store.acknowledge("a", "m-3", "b").unwrap());
     }
     let mut reopened = MessageStore::open(&path).unwrap();
     let resent = reopened.send("m-3", "a", "b", "done").unwrap();
@@ -242,15 +247,15 @@ fn status_follows_claim_and_acknowledgment() {
     let mut store = MessageStore::in_memory().unwrap();
     store.send("st-1", "a", "b", "payload").unwrap();
     assert_eq!(
-        store.find("st-1").unwrap().unwrap().status,
+        store.find("a", "st-1").unwrap().unwrap().status,
         MessageStatus::Pending
     );
     let claimed = store.claim_next("b", 60).unwrap().unwrap();
     assert_eq!(claimed.status, MessageStatus::Claimed);
     assert_eq!(claimed.attempts, 1);
     let token = claimed.lease_owner.unwrap();
-    assert!(store.acknowledge_claim("st-1", "b", &token).unwrap());
-    let done = store.find("st-1").unwrap().unwrap();
+    assert!(store.acknowledge_claim("a", "st-1", "b", &token).unwrap());
+    let done = store.find("a", "st-1").unwrap().unwrap();
     assert_eq!(done.status, MessageStatus::Done);
     assert_eq!(done.attempts, 1);
     assert!(done.acknowledged_at.is_some());
@@ -265,11 +270,13 @@ fn released_claims_retry_until_attempt_limit_then_fail() {
         assert_eq!(claimed.attempts, attempt);
         let token = claimed.lease_owner.unwrap();
         assert_eq!(
-            store.release_claim("retry-1", "b", &token, "boom").unwrap(),
+            store
+                .release_claim("a", "retry-1", "b", &token, "boom")
+                .unwrap(),
             Some(MessageStatus::Pending)
         );
         assert_eq!(
-            store.find("retry-1").unwrap().unwrap().status,
+            store.find("a", "retry-1").unwrap().unwrap().status,
             MessageStatus::Pending
         );
     }
@@ -278,11 +285,11 @@ fn released_claims_retry_until_attempt_limit_then_fail() {
     let token = last.lease_owner.unwrap();
     assert_eq!(
         store
-            .release_claim("retry-1", "b", &token, "boom again")
+            .release_claim("a", "retry-1", "b", &token, "boom again")
             .unwrap(),
         Some(MessageStatus::Failed)
     );
-    let failed = store.find("retry-1").unwrap().unwrap();
+    let failed = store.find("a", "retry-1").unwrap().unwrap();
     assert_eq!(failed.status, MessageStatus::Failed);
     assert_eq!(failed.last_error.as_deref(), Some("boom again"));
     assert!(store.claim_next("b", 60).unwrap().is_none());
@@ -297,16 +304,22 @@ fn stale_release_token_is_ignored_and_oversized_error_is_rejected() {
     let token = claimed.lease_owner.unwrap();
     assert_eq!(
         store
-            .release_claim("stale-1", "b", "other-token", "x")
+            .release_claim("a", "stale-1", "b", "other-token", "x")
             .unwrap(),
         None
     );
     assert!(matches!(
-        store.release_claim("stale-1", "b", &token, &"e".repeat(MAX_ERROR_BYTES + 1)),
+        store.release_claim(
+            "a",
+            "stale-1",
+            "b",
+            &token,
+            &"e".repeat(MAX_ERROR_BYTES + 1)
+        ),
         Err(MessageError::Invalid(_))
     ));
     assert_eq!(
-        store.find("stale-1").unwrap().unwrap().status,
+        store.find("a", "stale-1").unwrap().unwrap().status,
         MessageStatus::Claimed
     );
 }
@@ -324,7 +337,10 @@ fn expired_final_attempt_becomes_failed_without_release() {
         } else {
             MessageStatus::Failed
         };
-        assert_eq!(store.find("expire-1").unwrap().unwrap().status, expected);
+        assert_eq!(
+            store.find("a", "expire-1").unwrap().unwrap().status,
+            expected
+        );
     }
     assert!(store.claim_next("b", 60).unwrap().is_none());
     assert!(store.inbox("b", 10).unwrap().is_empty());
@@ -336,8 +352,8 @@ fn purge_removes_only_done_messages_older_than_limit() {
     store.send("old-done", "a", "b", "x").unwrap();
     store.send("new-done", "a", "b", "y").unwrap();
     store.send("pending", "a", "b", "z").unwrap();
-    assert!(store.acknowledge("old-done", "b").unwrap());
-    assert!(store.acknowledge("new-done", "b").unwrap());
+    assert!(store.acknowledge("a", "old-done", "b").unwrap());
+    assert!(store.acknowledge("a", "new-done", "b").unwrap());
     let three_days_ms = 3 * 86_400_000_i64;
     store
         .connection
@@ -352,13 +368,13 @@ fn purge_removes_only_done_messages_older_than_limit() {
             .unwrap(),
         1
     );
-    assert!(store.find("old-done").unwrap().is_none());
+    assert!(store.find("a", "old-done").unwrap().is_none());
     assert_eq!(
-        store.find("new-done").unwrap().unwrap().status,
+        store.find("a", "new-done").unwrap().unwrap().status,
         MessageStatus::Done
     );
     assert_eq!(
-        store.find("pending").unwrap().unwrap().status,
+        store.find("a", "pending").unwrap().unwrap().status,
         MessageStatus::Pending
     );
 }
@@ -391,14 +407,14 @@ fn opening_database_with_lease_schema_migrates_attempts_and_ack_times() {
 
     let mut store = MessageStore::open(&path).unwrap();
     assert_eq!(
-        store.find("old-acked").unwrap().unwrap().status,
+        store.find("a", "old-acked").unwrap().unwrap().status,
         MessageStatus::Done
     );
-    let leased = store.find("old-leased").unwrap().unwrap();
+    let leased = store.find("a", "old-leased").unwrap().unwrap();
     assert_eq!(leased.status, MessageStatus::Claimed);
     assert_eq!(leased.attempts, 1);
     assert!(store
-        .acknowledge_claim("old-leased", "b", "old-token")
+        .acknowledge_claim("a", "old-leased", "b", "old-token")
         .unwrap());
     // The legacy RFC 3339 acknowledgment time was converted, so only the old row is purged.
     assert_eq!(
@@ -407,8 +423,8 @@ fn opening_database_with_lease_schema_migrates_attempts_and_ack_times() {
             .unwrap(),
         1
     );
-    assert!(store.find("old-acked").unwrap().is_none());
-    assert!(store.find("old-leased").unwrap().is_some());
+    assert!(store.find("a", "old-acked").unwrap().is_none());
+    assert!(store.find("a", "old-leased").unwrap().is_some());
 }
 
 #[test]
@@ -469,7 +485,9 @@ fn send_task_claim_and_ack_walk_submitted_working_completed() {
         Some(TaskState::Working)
     );
     let token = claimed.lease_owner.clone().expect("lease");
-    assert!(store.acknowledge_claim("k-1", "beta", &token).expect("ack"));
+    assert!(store
+        .acknowledge_claim("alpha", "k-1", "beta", &token)
+        .expect("ack"));
     assert_eq!(
         store.task_state("alpha", "k-1").expect("read"),
         Some(TaskState::Completed)
@@ -480,7 +498,7 @@ fn send_task_claim_and_ack_walk_submitted_working_completed() {
 fn legacy_ack_of_never_claimed_task_completes_it_through_working() {
     let mut store = MessageStore::in_memory().expect("store");
     store.send_task("k-2", "alpha", "beta", "hi").expect("send");
-    assert!(store.acknowledge("k-2", "beta").expect("ack"));
+    assert!(store.acknowledge("alpha", "k-2", "beta").expect("ack"));
     assert_eq!(
         store.task_state("alpha", "k-2").expect("read"),
         Some(TaskState::Completed)
@@ -499,7 +517,7 @@ fn non_final_release_keeps_working_and_final_release_fails_the_task() {
             .expect("message");
         let token = claimed.lease_owner.clone().expect("lease");
         status = store
-            .release_claim("k-3", "beta", &token, "boom")
+            .release_claim("alpha", "k-3", "beta", &token, "boom")
             .expect("release");
         if status == Some(MessageStatus::Pending) {
             assert_eq!(
@@ -516,18 +534,27 @@ fn non_final_release_keeps_working_and_final_release_fails_the_task() {
 }
 
 #[test]
-fn canceled_task_stays_canceled_when_its_message_is_claimed_and_acked() {
+fn canceled_task_closes_its_message_and_refuses_the_held_claim() {
     let mut store = MessageStore::in_memory().expect("store");
     store.send_task("k-4", "alpha", "beta", "hi").expect("send");
-    store
-        .set_task_state("alpha", "k-4", TaskState::Canceled)
-        .expect("cancel");
     let claimed = store
         .claim_next("beta", 60)
         .expect("claim")
         .expect("message");
     let token = claimed.lease_owner.clone().expect("lease");
-    assert!(store.acknowledge_claim("k-4", "beta", &token).expect("ack"));
+    store
+        .set_task_state("alpha", "k-4", TaskState::Canceled)
+        .expect("cancel");
+    // The message is closed as failed with its reason, and it is no longer claimable.
+    let closed = store.find("alpha", "k-4").expect("find").expect("message");
+    assert_eq!(closed.status, MessageStatus::Failed);
+    assert_eq!(closed.last_error.as_deref(), Some("task canceled"));
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    // The held lease is refused because the task is no longer working; the task stays canceled.
+    assert!(matches!(
+        store.acknowledge_claim("alpha", "k-4", "beta", &token),
+        Err(MessageError::TaskTransition(_))
+    ));
     assert_eq!(
         store.task_state("alpha", "k-4").expect("read"),
         Some(TaskState::Canceled)
@@ -543,7 +570,9 @@ fn message_without_task_still_claims_and_acks() {
         .expect("claim")
         .expect("message");
     let token = claimed.lease_owner.clone().expect("lease");
-    assert!(store.acknowledge_claim("k-5", "beta", &token).expect("ack"));
+    assert!(store
+        .acknowledge_claim("alpha", "k-5", "beta", &token)
+        .expect("ack"));
     assert_eq!(store.task_state("alpha", "k-5").expect("read"), None);
 }
 
@@ -604,7 +633,7 @@ fn request_input_parks_the_message_until_the_sender_answers() {
         .expect("send");
     let token = claim_for_beta(&mut store);
     store
-        .request_input("q-1", "beta", &token, "which branch?")
+        .request_input("alpha", "q-1", "beta", &token, "which branch?")
         .expect("request input");
 
     assert_eq!(
@@ -617,17 +646,21 @@ fn request_input_parks_the_message_until_the_sender_answers() {
         .expect("task");
     assert_eq!(view.state, TaskState::InputRequired);
     assert_eq!(view.prompt.as_deref(), Some("which branch?"));
-    let parked = store.find("q-1").expect("find").expect("message");
+    let parked = store.find("alpha", "q-1").expect("find").expect("message");
     assert_eq!(parked.status, MessageStatus::AwaitingInput);
     assert_eq!(parked.lease_owner, None);
     // A question is not a failed attempt, so the attempt is refunded.
     assert_eq!(parked.attempts, 0);
     // A parked message is not claimable, and neither ack path accepts it.
     assert!(store.claim_next("beta", 60).expect("claim").is_none());
-    assert!(!store.acknowledge("q-1", "beta").expect("legacy ack"));
     assert!(!store
-        .acknowledge_claim("q-1", "beta", &token)
-        .expect("stale ack"));
+        .acknowledge("alpha", "q-1", "beta")
+        .expect("legacy ack"));
+    // A parked task is not `working`, so the claim ack is refused with `TaskTransition`.
+    assert!(matches!(
+        store.acknowledge_claim("alpha", "q-1", "beta", &token),
+        Err(MessageError::TaskTransition(_))
+    ));
 }
 
 #[test]
@@ -638,7 +671,7 @@ fn provide_input_resumes_the_task_and_the_answer_arrives_with_the_next_claim() {
         .expect("send");
     let token = claim_for_beta(&mut store);
     store
-        .request_input("q-2", "beta", &token, "which branch?")
+        .request_input("alpha", "q-2", "beta", &token, "which branch?")
         .expect("ask");
 
     assert_eq!(
@@ -665,7 +698,9 @@ fn provide_input_resumes_the_task_and_the_answer_arrives_with_the_next_claim() {
     assert_eq!(resumed.input_reply.as_deref(), Some("use main"));
     assert_eq!(resumed.attempts, 1);
     let token = resumed.lease_owner.expect("lease");
-    assert!(store.acknowledge_claim("q-2", "beta", &token).expect("ack"));
+    assert!(store
+        .acknowledge_claim("alpha", "q-2", "beta", &token)
+        .expect("ack"));
     assert_eq!(
         store.task_state("alpha", "q-2").expect("read"),
         Some(TaskState::Completed)
@@ -678,11 +713,11 @@ fn request_input_needs_the_live_lease_and_changes_nothing_on_refusal() {
     store.send_task("q-3", "alpha", "beta", "hi").expect("send");
     let token = claim_for_beta(&mut store);
     assert!(matches!(
-        store.request_input("q-3", "beta", "wrong-token", "why?"),
+        store.request_input("alpha", "q-3", "beta", "wrong-token", "why?"),
         Err(MessageError::LeaseConflict)
     ));
     assert!(matches!(
-        store.request_input("q-3", "gamma", &token, "why?"),
+        store.request_input("alpha", "q-3", "gamma", &token, "why?"),
         Err(MessageError::LeaseConflict)
     ));
     assert_eq!(
@@ -690,12 +725,12 @@ fn request_input_needs_the_live_lease_and_changes_nothing_on_refusal() {
         Some(TaskState::Working)
     );
     store
-        .request_input("q-3", "beta", &token, "why?")
+        .request_input("alpha", "q-3", "beta", &token, "why?")
         .expect("ask");
 }
 
 #[test]
-fn request_input_is_refused_for_a_canceled_task_and_keeps_the_lease() {
+fn request_input_is_refused_for_a_canceled_task_and_the_message_stays_closed() {
     let mut store = MessageStore::in_memory().expect("store");
     store.send_task("q-4", "alpha", "beta", "hi").expect("send");
     let token = claim_for_beta(&mut store);
@@ -703,15 +738,18 @@ fn request_input_is_refused_for_a_canceled_task_and_keeps_the_lease() {
         .set_task_state("alpha", "q-4", TaskState::Canceled)
         .expect("cancel");
     assert!(matches!(
-        store.request_input("q-4", "beta", &token, "why?"),
+        store.request_input("alpha", "q-4", "beta", &token, "why?"),
         Err(MessageError::TaskTransition(_))
     ));
     assert_eq!(
         store.task_state("alpha", "q-4").expect("read"),
         Some(TaskState::Canceled)
     );
-    // The refused request rolled back, so the lease still owns the message.
-    assert!(store.acknowledge_claim("q-4", "beta", &token).expect("ack"));
+    // Cancellation closed the message, so the held token no longer acknowledges it.
+    assert!(matches!(
+        store.acknowledge_claim("alpha", "q-4", "beta", &token),
+        Err(MessageError::TaskTransition(_))
+    ));
 }
 
 #[test]
@@ -732,7 +770,7 @@ fn provide_input_is_refused_unless_the_task_is_input_required() {
     ));
     let token = claim_for_beta(&mut store);
     store
-        .request_input("q-5", "beta", &token, "ok?")
+        .request_input("alpha", "q-5", "beta", &token, "ok?")
         .expect("ask");
     store
         .set_task_state("alpha", "q-5", TaskState::Canceled)
@@ -744,12 +782,12 @@ fn provide_input_is_refused_unless_the_task_is_input_required() {
 }
 
 #[test]
-fn canceling_an_input_required_task_drops_the_question_and_blocks_working_by_hand() {
+fn canceling_an_input_required_task_closes_the_message_and_drops_the_question() {
     let mut store = MessageStore::in_memory().expect("store");
     store.send_task("q-6", "alpha", "beta", "hi").expect("send");
     let token = claim_for_beta(&mut store);
     store
-        .request_input("q-6", "beta", &token, "ok?")
+        .request_input("alpha", "q-6", "beta", &token, "ok?")
         .expect("ask");
     assert!(matches!(
         store.set_task_state("alpha", "q-6", TaskState::Working),
@@ -758,13 +796,11 @@ fn canceling_an_input_required_task_drops_the_question_and_blocks_working_by_han
     store
         .set_task_state("alpha", "q-6", TaskState::Canceled)
         .expect("cancel");
-    // Like any canceled task, its message is still delivered; the question is dropped.
-    let released = store
-        .claim_next("beta", 60)
-        .expect("claim")
-        .expect("message");
-    assert_eq!(released.input_prompt, None);
-    assert_eq!(released.input_reply, None);
+    // Cancellation closes the message: it is failed, not claimable, and the question is dropped.
+    let closed = store.find("alpha", "q-6").expect("find").expect("message");
+    assert_eq!(closed.status, MessageStatus::Failed);
+    assert_eq!(closed.input_prompt, None);
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
     assert_eq!(
         store.task_state("alpha", "q-6").expect("read"),
         Some(TaskState::Canceled)
@@ -777,7 +813,7 @@ fn parked_message_stays_parked_and_unclaimable() {
     store.send_task("q-7", "alpha", "beta", "hi").expect("send");
     let token = claim_for_beta(&mut store);
     store
-        .request_input("q-7", "beta", &token, "ok?")
+        .request_input("alpha", "q-7", "beta", &token, "ok?")
         .expect("ask");
     assert!(store.claim_next("beta", 60).expect("claim").is_none());
     assert_eq!(
@@ -785,7 +821,11 @@ fn parked_message_stays_parked_and_unclaimable() {
         Some(TaskState::InputRequired)
     );
     assert_eq!(
-        store.find("q-7").expect("find").expect("message").status,
+        store
+            .find("alpha", "q-7")
+            .expect("find")
+            .expect("message")
+            .status,
         MessageStatus::AwaitingInput
     );
 }
@@ -817,10 +857,154 @@ fn legacy_schema_message_without_a_task_refuses_input_and_keeps_its_lease() {
     let mut store = MessageStore::open(&path).unwrap();
     // No task row exists for this message, so the request is refused and the lease is kept.
     assert!(matches!(
-        store.request_input("old-leased", "b", "old-token", "why?"),
+        store.request_input("a", "old-leased", "b", "old-token", "why?"),
         Err(MessageError::TaskNotFound(_))
     ));
     assert!(store
-        .acknowledge_claim("old-leased", "b", "old-token")
+        .acknowledge_claim("a", "old-leased", "b", "old-token")
         .expect("ack"));
+}
+
+#[test]
+fn message_without_task_row_is_claimable_and_its_replay_reports_lease_conflict() {
+    // P1(b): a message sent without a task (through `send`) keeps working through the LEFT JOIN.
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send("p-1", "alpha", "beta", "plain").expect("send");
+    let token = claim_for_beta(&mut store);
+    assert!(store
+        .acknowledge_claim("alpha", "p-1", "beta", &token)
+        .expect("ack"));
+    // Replaying the completion without a task row has no state to refuse, so the lease decides.
+    assert!(!store
+        .acknowledge_claim("alpha", "p-1", "beta", &token)
+        .expect("replay"));
+}
+
+#[test]
+fn completed_task_replay_is_refused_with_task_transition() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("p-2", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    assert!(store
+        .acknowledge_claim("alpha", "p-2", "beta", &token)
+        .expect("ack"));
+    assert!(matches!(
+        store.acknowledge_claim("alpha", "p-2", "beta", &token),
+        Err(MessageError::TaskTransition(_))
+    ));
+}
+
+#[test]
+fn non_final_release_replay_is_refused_as_lease_conflict() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("p-3", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    assert_eq!(
+        store
+            .release_claim("alpha", "p-3", "beta", &token, "boom")
+            .expect("release"),
+        Some(MessageStatus::Pending)
+    );
+    // The task is still working, so the replay fails on the lease, not on the state.
+    assert_eq!(
+        store
+            .release_claim("alpha", "p-3", "beta", &token, "boom")
+            .expect("replay"),
+        None
+    );
+}
+
+#[test]
+fn other_recipient_learns_nothing_about_the_task_state() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("p-4", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .set_task_state("alpha", "p-4", TaskState::Canceled)
+        .expect("cancel");
+    // `gamma` is not the recipient: the refusal is `LeaseConflict`, never a state-revealing error.
+    assert!(matches!(
+        store.request_input("alpha", "p-4", "gamma", &token, "why?"),
+        Err(MessageError::LeaseConflict)
+    ));
+    assert!(matches!(
+        store.acknowledge_claim("alpha", "p-4", "gamma", &token),
+        Ok(false)
+    ));
+    assert!(matches!(
+        store.release_claim("alpha", "p-4", "gamma", &token, "x"),
+        Ok(None)
+    ));
+}
+
+#[test]
+fn same_id_from_two_senders_is_two_messages() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store
+        .send("dup-1", "alpha", "beta", "from alpha")
+        .expect("alpha");
+    // Another sender may use the same id without seeing a conflict, and the two stay separate.
+    let other = store
+        .send("dup-1", "gamma", "beta", "from gamma")
+        .expect("gamma");
+    assert_eq!(other.sender, "gamma");
+    assert_eq!(
+        store
+            .find("alpha", "dup-1")
+            .expect("find")
+            .expect("alpha")
+            .body,
+        "from alpha"
+    );
+    assert_eq!(
+        store
+            .find("gamma", "dup-1")
+            .expect("find")
+            .expect("gamma")
+            .body,
+        "from gamma"
+    );
+}
+
+#[test]
+fn opening_a_database_with_the_old_id_key_moves_to_sender_and_id_keys() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("old-key.sqlite");
+    {
+        let connection = Connection::open(&path).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE relay_messages (
+                   id TEXT PRIMARY KEY, sender TEXT NOT NULL, recipient TEXT NOT NULL,
+                   body TEXT NOT NULL, created_at TEXT NOT NULL, acknowledged_at TEXT,
+                   UNIQUE(sender, id)
+                 );
+                 CREATE INDEX relay_messages_inbox
+                   ON relay_messages(recipient, acknowledged_at, created_at);
+                 INSERT INTO relay_messages(id,sender,recipient,body,created_at)
+                   VALUES ('old-1','alpha','beta','kept','2000-01-01T00:00:00Z');",
+            )
+            .unwrap();
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let store = MessageStore::open(&path).unwrap();
+    // Rows survive the rebuild, and the inbox index is recreated.
+    assert_eq!(store.find("alpha", "old-1").unwrap().unwrap().body, "kept");
+    let index_count: i64 = store
+        .connection
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='relay_messages_inbox'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(index_count, 1);
+    // The new key allows the same id from another sender.
+    drop(store);
+    let mut store = MessageStore::open(&path).unwrap();
+    store.send("old-1", "gamma", "beta", "new").unwrap();
 }

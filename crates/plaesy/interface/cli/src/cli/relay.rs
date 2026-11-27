@@ -56,6 +56,9 @@ enum Action {
     Ack {
         #[arg(long)]
         id: String,
+        /// Sender of the message. IDs are unique per sender, so it is required.
+        #[arg(long)]
+        from: String,
         #[arg(long)]
         agent: String,
         /// Opaque lease token returned by `claim`; required for claimed messages.
@@ -122,13 +125,14 @@ pub fn run(args: &Args) -> CliResult {
         }
         Action::Ack {
             id,
+            from,
             agent,
             lease_token,
         } => {
             let acknowledged = if let Some(token) = lease_token {
-                store.acknowledge_claim(id, agent, token)?
+                store.acknowledge_claim(from, id, agent, token)?
             } else {
-                store.acknowledge(id, agent)?
+                store.acknowledge(from, id, agent)?
             };
             if !acknowledged {
                 return Err(

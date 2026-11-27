@@ -165,13 +165,13 @@ impl MessageStore {
         connection.execute_batch(
             "PRAGMA foreign_keys=ON;
              CREATE TABLE IF NOT EXISTS relay_messages (
-               id TEXT PRIMARY KEY,
+               id TEXT NOT NULL,
                sender TEXT NOT NULL,
                recipient TEXT NOT NULL,
                body TEXT NOT NULL,
                created_at TEXT NOT NULL,
                acknowledged_at TEXT,
-               UNIQUE(sender, id)
+               PRIMARY KEY(sender, id)
              );
              CREATE INDEX IF NOT EXISTS relay_messages_inbox
                ON relay_messages(recipient, acknowledged_at, created_at);
@@ -186,6 +186,7 @@ impl MessageStore {
              );",
         )?;
         migrate_columns(&mut connection)?;
+        migrate_primary_key(&mut connection)?;
         Ok(Self { connection })
     }
 
@@ -233,8 +234,8 @@ impl MessageStore {
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let existing: Option<(String, String, String)> = tx
             .query_row(
-                "SELECT sender, recipient, body FROM relay_messages WHERE id=?1",
-                [id],
+                "SELECT sender, recipient, body FROM relay_messages WHERE sender=?1 AND id=?2",
+                params![sender, id],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .optional()?;
@@ -307,6 +308,22 @@ impl MessageStore {
                 params![sender, id],
             )?;
         }
+        // A canceled or failed task has no further work, so its unacknowledged message is closed
+        // as `gagal`. Otherwise it would stay claimable-looking in the inbox and `relay wait`.
+        let reason = match target {
+            TaskState::Canceled => Some("task canceled"),
+            TaskState::Failed => Some("task failed"),
+            _ => None,
+        };
+        if let Some(reason) = reason {
+            close_pending_message(
+                &tx,
+                sender,
+                id,
+                reason,
+                chrono::Utc::now().timestamp_millis(),
+            )?;
+        }
         tx.commit()?;
         Ok(target)
     }
@@ -318,12 +335,14 @@ impl MessageStore {
     /// `input-required` (canceled, failed, completed) refuses the request, and the lease is kept.
     pub fn request_input(
         &mut self,
+        sender: &str,
         id: &str,
         recipient: &str,
         owner: &str,
         question: &str,
     ) -> Result<(), MessageError> {
         validate_id(id)?;
+        validate_agent(sender)?;
         validate_agent(recipient)?;
         validate_id(owner)?;
         if question.is_empty() || question.len() > MAX_BODY_BYTES {
@@ -335,21 +354,27 @@ impl MessageStore {
         let tx = self
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        // Step 1: the message must belong to this recipient. Other recipients learn nothing about
+        // the task, not even its state.
+        if !message_belongs_to(&tx, sender, id, recipient)? {
+            return Err(MessageError::LeaseConflict);
+        }
+        // Step 2: the task must be `working`. A message without a task row is refused as before.
+        let current = task_state_in(&tx, sender, id)?
+            .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
+        if current != TaskState::Working {
+            return Err(MessageError::TaskTransition(format!(
+                "task in state {current} cannot ask for input"
+            )));
+        }
+        // Step 3: the lease. Any error below drops `tx` without a commit, so the lease is kept.
         let changed = tx.execute(
-            "UPDATE relay_messages SET lease_owner=NULL,lease_expiry_epoch_ms=NULL,attempts=attempts-1,awaiting_input=1,input_prompt=?1,input_reply=NULL WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND lease_owner=?4 AND lease_expiry_epoch_ms>?5",
-            params![question, id, recipient, owner, now_ms],
+            "UPDATE relay_messages SET lease_owner=NULL,lease_expiry_epoch_ms=NULL,attempts=attempts-1,awaiting_input=1,input_prompt=?1,input_reply=NULL WHERE sender=?6 AND id=?2 AND recipient=?3 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND lease_owner=?4 AND lease_expiry_epoch_ms>?5",
+            params![question, id, recipient, owner, now_ms, sender],
         )?;
         if changed != 1 {
             return Err(MessageError::LeaseConflict);
         }
-        // Any error below drops `tx` without a commit, so the lease is kept.
-        let sender: String = tx.query_row(
-            "SELECT sender FROM relay_messages WHERE id=?1",
-            [id],
-            |row| row.get(0),
-        )?;
-        let current = task_state_in(&tx, &sender, id)?
-            .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
         task::transition(current, TaskState::InputRequired)
             .map_err(MessageError::TaskTransition)?;
         tx.execute(
@@ -438,8 +463,8 @@ impl MessageStore {
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let existing: Option<Message> = tx
             .query_row(
-                &format!("{} WHERE id=?1", select_messages(now_ms)),
-                [id],
+                &format!("{} WHERE sender=?1 AND id=?2", select_messages(now_ms)),
+                params![sender, id],
                 row_to_message,
             )
             .optional()?;
@@ -490,19 +515,34 @@ impl MessageStore {
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
-    /// Returns one message by ID with its current status, or `None` when it does not exist.
-    pub fn find(&self, id: &str) -> Result<Option<Message>, MessageError> {
+    /// Returns one message by its sender and ID with its current status, or `None` when it does
+    /// not exist. IDs are unique per sender only, so the sender is always part of the key.
+    pub fn find(&self, sender: &str, id: &str) -> Result<Option<Message>, MessageError> {
         validate_id(id)?;
+        validate_agent(sender)?;
         let now_ms = chrono::Utc::now().timestamp_millis();
         let message = self
             .connection
             .query_row(
-                &format!("{} WHERE id=?1", select_messages(now_ms)),
-                [id],
+                &format!("{} WHERE sender=?1 AND id=?2", select_messages(now_ms)),
+                params![sender, id],
                 row_to_message,
             )
             .optional()?;
         Ok(message)
+    }
+
+    /// Returns the message `(sender, id)` only when it is addressed to `recipient`, so a caller
+    /// cannot read or probe messages of other recipients.
+    pub fn find_for_recipient(
+        &self,
+        recipient: &str,
+        sender: &str,
+        id: &str,
+    ) -> Result<Option<Message>, MessageError> {
+        validate_agent(recipient)?;
+        let message = self.find(sender, id)?;
+        Ok(message.filter(|message| message.recipient == recipient))
     }
 
     /// Atomically claim the oldest available message for a consumer until a bounded expiry.
@@ -522,31 +562,39 @@ impl MessageStore {
         let tx = self
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        let next: Option<String> = tx
+        // A message whose task is canceled, failed, completed, or waiting for input is skipped.
+        // A message with no task row (from `send`) is still claimable.
+        let next: Option<(String, String)> = tx
             .query_row(
                 &format!(
-                    "SELECT id FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?2) ORDER BY created_at,id LIMIT 1"
+                    "SELECT m.id, m.sender FROM relay_messages m \
+                     LEFT JOIN relay_tasks t ON t.sender = m.sender AND t.id = m.id \
+                     WHERE m.recipient=?1 AND m.acknowledged_at IS NULL AND m.failed_at_epoch_ms IS NULL \
+                     AND m.awaiting_input=0 AND m.attempts<{MAX_ATTEMPTS} \
+                     AND (m.lease_expiry_epoch_ms IS NULL OR m.lease_expiry_epoch_ms<=?2) \
+                     AND (t.state IS NULL OR t.state IN ('submitted','working')) \
+                     ORDER BY m.created_at,m.id LIMIT 1"
                 ),
                 params![recipient, now_ms],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .optional()?;
-        let Some(id) = next else {
+        let Some((id, sender)) = next else {
             tx.commit()?;
             return Ok(None);
         };
         let changed = tx.execute(
             &format!(
-                "UPDATE relay_messages SET lease_owner=?1,lease_expiry_epoch_ms=?2,attempts=attempts+1 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?5)"
+                "UPDATE relay_messages SET lease_owner=?1,lease_expiry_epoch_ms=?2,attempts=attempts+1 WHERE sender=?6 AND id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?5)"
             ),
-            params![token, expiry_ms, id, recipient, now_ms],
+            params![token, expiry_ms, id, recipient, now_ms, sender],
         )?;
         if changed != 1 {
             return Err(MessageError::LeaseConflict);
         }
         let message = tx.query_row(
-            &format!("{} WHERE id=?1", select_messages(now_ms)),
-            [&id],
+            &format!("{} WHERE sender=?1 AND id=?2", select_messages(now_ms)),
+            params![sender, id],
             row_to_message,
         )?;
         advance_task(
@@ -563,11 +611,13 @@ impl MessageStore {
     /// Acknowledge a claimed message only when the caller still owns its lease.
     pub fn acknowledge_claim(
         &mut self,
+        sender: &str,
         id: &str,
         recipient: &str,
         owner: &str,
     ) -> Result<bool, MessageError> {
         validate_id(id)?;
+        validate_agent(sender)?;
         validate_agent(recipient)?;
         validate_id(owner)?;
         let now = chrono::Utc::now();
@@ -576,12 +626,19 @@ impl MessageStore {
         let tx = self
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        // A message that is not this recipient's is reported as not acknowledged, with no state.
+        if !message_belongs_to(&tx, sender, id, recipient)? {
+            return Ok(false);
+        }
+        // Task state is checked before the lease, so a task that is no longer `working` is
+        // refused with `TaskTransition` even when the lease is still held.
+        require_working(&tx, sender, id)?;
         let changed = tx.execute(
-            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2,lease_owner=NULL,lease_expiry_epoch_ms=NULL WHERE id=?3 AND recipient=?4 AND lease_owner=?5 AND lease_expiry_epoch_ms>?6 AND acknowledged_at IS NULL",
-            params![now_text, now_ms, id, recipient, owner, now_ms],
+            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2,lease_owner=NULL,lease_expiry_epoch_ms=NULL WHERE sender=?7 AND id=?3 AND recipient=?4 AND lease_owner=?5 AND lease_expiry_epoch_ms>?6 AND acknowledged_at IS NULL",
+            params![now_text, now_ms, id, recipient, owner, now_ms, sender],
         )?;
         if changed == 1 {
-            complete_task(&tx, id, &now_text)?;
+            complete_task(&tx, sender, id, &now_text)?;
         }
         tx.commit()?;
         Ok(changed == 1)
@@ -592,12 +649,14 @@ impl MessageStore {
     /// Returns the resulting status, or `None` when the lease token is stale.
     pub fn release_claim(
         &mut self,
+        sender: &str,
         id: &str,
         recipient: &str,
         owner: &str,
         error: &str,
     ) -> Result<Option<MessageStatus>, MessageError> {
         validate_id(id)?;
+        validate_agent(sender)?;
         validate_agent(recipient)?;
         validate_id(owner)?;
         if error.len() > MAX_ERROR_BYTES {
@@ -609,25 +668,29 @@ impl MessageStore {
         let tx = self
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        if !message_belongs_to(&tx, sender, id, recipient)? {
+            return Ok(None);
+        }
+        require_working(&tx, sender, id)?;
         let changed = tx.execute(
             &format!(
-                "UPDATE relay_messages SET lease_owner=NULL,lease_expiry_epoch_ms=NULL,last_error=?1,failed_at_epoch_ms=CASE WHEN attempts>={MAX_ATTEMPTS} THEN ?2 ELSE NULL END WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND lease_owner=?5 AND lease_expiry_epoch_ms>?2"
+                "UPDATE relay_messages SET lease_owner=NULL,lease_expiry_epoch_ms=NULL,last_error=?1,failed_at_epoch_ms=CASE WHEN attempts>={MAX_ATTEMPTS} THEN ?2 ELSE NULL END WHERE sender=?6 AND id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND lease_owner=?5 AND lease_expiry_epoch_ms>?2"
             ),
-            params![error, now_ms, id, recipient, owner],
+            params![error, now_ms, id, recipient, owner, sender],
         )?;
         if changed != 1 {
             tx.commit()?;
             return Ok(None);
         }
-        let (sender, failed): (String, bool) = tx.query_row(
-            "SELECT sender, failed_at_epoch_ms IS NOT NULL FROM relay_messages WHERE id=?1",
-            [id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+        let failed: bool = tx.query_row(
+            "SELECT failed_at_epoch_ms IS NOT NULL FROM relay_messages WHERE sender=?1 AND id=?2",
+            params![sender, id],
+            |row| row.get(0),
         )?;
         if failed {
             advance_task(
                 &tx,
-                &sender,
+                sender,
                 id,
                 TaskState::Failed,
                 &chrono::Utc::now().to_rfc3339(),
@@ -642,20 +705,27 @@ impl MessageStore {
     }
 
     /// Acknowledge only never-claimed messages for legacy callers; lease tokens cannot be bypassed.
-    pub fn acknowledge(&mut self, id: &str, recipient: &str) -> Result<bool, MessageError> {
+    pub fn acknowledge(
+        &mut self,
+        sender: &str,
+        id: &str,
+        recipient: &str,
+    ) -> Result<bool, MessageError> {
         validate_id(id)?;
+        validate_agent(sender)?;
         validate_agent(recipient)?;
         let now = chrono::Utc::now();
         let now_text = now.to_rfc3339();
         let tx = self
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        // A message closed as `gagal` (its task was canceled or failed) is never acknowledged here.
         let changed = tx.execute(
-            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND attempts=0 AND awaiting_input=0",
-            params![now_text, now.timestamp_millis(), id, recipient],
+            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2 WHERE sender=?5 AND id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND attempts=0 AND awaiting_input=0",
+            params![now_text, now.timestamp_millis(), id, recipient, sender],
         )?;
         if changed == 1 {
-            complete_task(&tx, id, &now_text)?;
+            complete_task(&tx, sender, id, &now_text)?;
         }
         tx.commit()?;
         Ok(changed == 1)
@@ -718,22 +788,87 @@ fn missing_columns(
 /// Sets the numeric acknowledgment time for legacy rows from their RFC 3339 text.
 /// Rows whose text cannot be parsed keep NULL and are never purged.
 fn backfill_acked_at_epoch(connection: &Connection) -> Result<(), MessageError> {
-    let legacy: Vec<(String, String)> = connection
+    let legacy: Vec<(String, String, String)> = connection
         .prepare(
-            "SELECT id,acknowledged_at FROM relay_messages WHERE acknowledged_at IS NOT NULL AND acked_at_epoch_ms IS NULL",
+            "SELECT sender,id,acknowledged_at FROM relay_messages WHERE acknowledged_at IS NOT NULL AND acked_at_epoch_ms IS NULL",
         )?
         .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
         })?
-        .collect::<Result<Vec<(String, String)>, rusqlite::Error>>()?;
-    for (id, acknowledged_at) in legacy {
+        .collect::<Result<Vec<(String, String, String)>, rusqlite::Error>>()?;
+    for (sender, id, acknowledged_at) in legacy {
         if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(&acknowledged_at) {
             connection.execute(
-                "UPDATE relay_messages SET acked_at_epoch_ms=?1 WHERE id=?2",
-                params![parsed.timestamp_millis(), id],
+                "UPDATE relay_messages SET acked_at_epoch_ms=?1 WHERE sender=?2 AND id=?3",
+                params![parsed.timestamp_millis(), sender, id],
             )?;
         }
     }
+    Ok(())
+}
+
+/// Moves the primary key of `relay_messages` from `(id)` to `(sender, id)`, which is needed for
+/// IDs to be unique per sender. SQLite cannot alter a key in place, so the table is rebuilt in one
+/// transaction: rename, create with the new key, copy every row, drop the old table, and recreate
+/// the inbox index. Runs after `migrate_columns`, so every column is present. A table that already
+/// has the composite key is left alone.
+fn migrate_primary_key(connection: &mut Connection) -> Result<(), MessageError> {
+    let key_columns: Vec<(String, i64)> = connection
+        .prepare("PRAGMA table_info(relay_messages)")?
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(1)?, row.get::<_, i64>(5)?))
+        })?
+        .collect::<Result<Vec<_>, rusqlite::Error>>()?;
+    let sender_position = key_columns
+        .iter()
+        .find(|(name, _)| name == "sender")
+        .map(|c| c.1);
+    let id_position = key_columns
+        .iter()
+        .find(|(name, _)| name == "id")
+        .map(|c| c.1);
+    if sender_position == Some(1) && id_position == Some(2) {
+        return Ok(());
+    }
+    let tx = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    tx.execute_batch(
+        "DROP INDEX IF EXISTS relay_messages_inbox;
+         ALTER TABLE relay_messages RENAME TO relay_messages_old;
+         CREATE TABLE relay_messages (
+           id TEXT NOT NULL,
+           sender TEXT NOT NULL,
+           recipient TEXT NOT NULL,
+           body TEXT NOT NULL,
+           created_at TEXT NOT NULL,
+           acknowledged_at TEXT,
+           lease_owner TEXT,
+           lease_expiry_epoch_ms INTEGER,
+           attempts INTEGER NOT NULL DEFAULT 0,
+           failed_at_epoch_ms INTEGER,
+           acked_at_epoch_ms INTEGER,
+           last_error TEXT,
+           awaiting_input INTEGER NOT NULL DEFAULT 0,
+           input_prompt TEXT,
+           input_reply TEXT,
+           PRIMARY KEY(sender, id)
+         );
+         INSERT INTO relay_messages (
+           id, sender, recipient, body, created_at, acknowledged_at, lease_owner,
+           lease_expiry_epoch_ms, attempts, failed_at_epoch_ms, acked_at_epoch_ms,
+           last_error, awaiting_input, input_prompt, input_reply
+         ) SELECT
+           id, sender, recipient, body, created_at, acknowledged_at, lease_owner,
+           lease_expiry_epoch_ms, attempts, failed_at_epoch_ms, acked_at_epoch_ms,
+           last_error, awaiting_input, input_prompt, input_reply
+         FROM relay_messages_old;
+         DROP TABLE relay_messages_old;
+         CREATE INDEX relay_messages_inbox ON relay_messages(recipient, acknowledged_at, created_at);",
+    )?;
+    tx.commit()?;
     Ok(())
 }
 
@@ -825,14 +960,57 @@ fn advance_task(
 
 /// Completes the task of an acknowledged message. Acknowledging implies delivery, so a task that is
 /// still `submitted` passes through `working` first.
-fn complete_task(conn: &Connection, id: &str, now: &str) -> Result<(), rusqlite::Error> {
-    let sender: String = conn.query_row(
-        "SELECT sender FROM relay_messages WHERE id=?1",
-        [id],
-        |row| row.get(0),
+fn complete_task(
+    conn: &Connection,
+    sender: &str,
+    id: &str,
+    now: &str,
+) -> Result<(), rusqlite::Error> {
+    advance_task(conn, sender, id, TaskState::Working, now)?;
+    advance_task(conn, sender, id, TaskState::Completed, now)
+}
+
+/// True when message `(sender, id)` exists and is addressed to `recipient`.
+fn message_belongs_to(
+    conn: &Connection,
+    sender: &str,
+    id: &str,
+    recipient: &str,
+) -> Result<bool, rusqlite::Error> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM relay_messages WHERE sender=?1 AND id=?2 AND recipient=?3",
+            params![sender, id, recipient],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
+}
+
+/// Refuses a task that is not `working`. A message without a task row has no state to check.
+fn require_working(conn: &Connection, sender: &str, id: &str) -> Result<(), MessageError> {
+    match task_state_in(conn, sender, id)? {
+        Some(state) if state != TaskState::Working => Err(MessageError::TaskTransition(format!(
+            "task in state {state} is not working"
+        ))),
+        _ => Ok(()),
+    }
+}
+
+/// Closes an unfinished message of a task that was canceled or failed: it becomes `gagal`, its
+/// lease and any pending question are dropped, and it leaves the inbox.
+fn close_pending_message(
+    conn: &Connection,
+    sender: &str,
+    id: &str,
+    reason: &str,
+    now_ms: i64,
+) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "UPDATE relay_messages SET failed_at_epoch_ms=?1,last_error=?2,lease_owner=NULL,lease_expiry_epoch_ms=NULL,awaiting_input=0,input_prompt=NULL WHERE sender=?3 AND id=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL",
+        params![now_ms, reason, sender, id],
     )?;
-    advance_task(conn, &sender, id, TaskState::Working, now)?;
-    advance_task(conn, &sender, id, TaskState::Completed, now)
+    Ok(())
 }
 
 fn validate_id(id: &str) -> Result<(), MessageError> {

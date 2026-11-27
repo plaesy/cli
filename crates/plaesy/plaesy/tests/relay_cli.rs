@@ -133,6 +133,8 @@ fn relay_claim_is_exclusive_and_ack_requires_owner_token() {
         "ack",
         "--id",
         "claim-1",
+        "--from",
+        "a",
         "--agent",
         "b",
         "--lease-token",
@@ -140,7 +142,7 @@ fn relay_claim_is_exclusive_and_ack_requires_owner_token() {
     ]);
     assert!(!stale_ack.status.success());
     let obsolete_flag = run(&[
-        "relay", "ack", "--id", "claim-1", "--agent", "b", "--owner", token,
+        "relay", "ack", "--id", "claim-1", "--from", "a", "--agent", "b", "--owner", token,
     ]);
     assert!(!obsolete_flag.status.success());
     let ack = run(&[
@@ -148,6 +150,8 @@ fn relay_claim_is_exclusive_and_ack_requires_owner_token() {
         "ack",
         "--id",
         "claim-1",
+        "--from",
+        "a",
         "--agent",
         "b",
         "--lease-token",
