@@ -24,19 +24,25 @@ fn put_then_get_returns_the_stored_body() {
 #[test]
 fn get_of_missing_document_is_an_error() {
     let store = MemoryStore::default();
-    assert!(store.send(request("GET", "/v1/documents/x/none", None)).is_err());
+    assert!(store
+        .send(request("GET", "/v1/documents/x/none", None))
+        .is_err());
 }
 
 #[test]
 fn put_without_body_is_rejected() {
     let store = MemoryStore::default();
-    assert!(store.send(request("PUT", "/v1/documents/x/a", None)).is_err());
+    assert!(store
+        .send(request("PUT", "/v1/documents/x/a", None))
+        .is_err());
 }
 
 #[test]
 fn unsupported_method_is_rejected() {
     let store = MemoryStore::default();
-    assert!(store.send(request("DELETE", "/v1/documents/x/a", None)).is_err());
+    assert!(store
+        .send(request("DELETE", "/v1/documents/x/a", None))
+        .is_err());
 }
 
 #[test]
