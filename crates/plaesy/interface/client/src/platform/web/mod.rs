@@ -5,6 +5,13 @@
 //! penyimpanan sesi di `features::store`.
 
 use crate::adapter::http::document_path;
+use crate::features::data::document::{
+    document_name, load_request as data_load_request, save_request as data_save_request,
+    tables_from_document, DATA_KIND,
+};
+use crate::features::data::model::{
+    validate as validate_data, LocalIssue as DataIssue, RelationView, TableView,
+};
 use crate::features::flow::changes::{describe_change, document_changes};
 use crate::features::flow::document::patch_document;
 use crate::features::flow::inspect::{connect_candidates, flagged_modules, source_expression};
@@ -50,9 +57,18 @@ fn App() -> Element {
                     FlowEditor { key: "{key_text}", store: store.clone(), flow_id: id }
                 }
             }
-            Page::DataList | Page::DataEditor(_) => rsx! {
-                main { class: "error-page", h1 { "Data" }, p { "Belum tersedia di klien web." } }
+            Page::DataList => rsx! {
+                DataList {
+                    store: store.clone(),
+                    on_open: move |id: String| page.set(Page::DataEditor(id)),
+                }
             },
+            Page::DataEditor(id) => {
+                let key_text = id.clone();
+                rsx! {
+                    DataEditor { key: "{key_text}", store: store.clone(), doc_id: id }
+                }
+            }
             Page::Document { .. } | Page::NotFound => rsx! {
                 main { class: "error-page", h1 { "Halaman tidak ditemukan" } }
             },
@@ -87,7 +103,16 @@ fn seed_flow_id() -> String {
 fn seeded_store() -> MemoryStore {
     let store = MemoryStore::default();
     let _ = services::save(&store, &seed_flow_id(), FIXTURE);
+    let _ = store.send(data_save_request(&seed_data_id(), DATA_FIXTURE));
     store
+}
+
+/// Id dokumen data contoh (`crm.json`).
+fn seed_data_id() -> String {
+    serde_json::from_str::<Value>(DATA_FIXTURE)
+        .ok()
+        .and_then(|doc| doc.get("id").and_then(Value::as_str).map(str::to_owned))
+        .unwrap_or_else(|| "dat_seed".to_owned())
 }
 
 #[component]
@@ -137,6 +162,178 @@ fn FlowEditor(store: Rc<MemoryStore>, flow_id: String) -> Element {
         Err(message) => rsx! {
             main { class: "error-page", h1 { "Gagal memuat flow" }, p { "{message}" } }
         },
+    }
+}
+
+const DATA_FIXTURE: &str = include_str!("crm.json");
+
+#[component]
+fn DataList(store: Rc<MemoryStore>, on_open: EventHandler<String>) -> Element {
+    let prefix = document_path(DATA_KIND, "");
+    let documents: Vec<(String, String)> = store
+        .paths_with_prefix(&prefix)
+        .iter()
+        .filter_map(|path| {
+            let id = path.strip_prefix(prefix.as_str())?.to_owned();
+            let text = store.send(data_load_request(&id)).ok()?;
+            let doc: Value = serde_json::from_str(&text).ok()?;
+            let (_, name) = document_name(&doc)?;
+            Some((id, name))
+        })
+        .collect();
+    let count = documents.len();
+    rsx! {
+        main { class: "canvas-panel list-page",
+            div { class: "canvas-header", div { h1 { "Data" }, p { "{count} dokumen data tersimpan di sesi ini · baca saja" } } }
+            div { class: "list-body",
+                if documents.is_empty() {
+                    p { class: "empty-inspector", "Belum ada dokumen data." }
+                } else {
+                    ul { class: "flow-list", "aria-label": "Daftar dokumen data",
+                        for (id, name) in documents {
+                            li {
+                                button { class: "palette-item", onclick: move |_| on_open.call(id.clone()),
+                                    span { "{name}" }
+                                    small { class: "library-path", "{id}" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn DataEditor(store: Rc<MemoryStore>, doc_id: String) -> Element {
+    let loaded = use_hook(|| load_data(&store, &doc_id));
+    match loaded {
+        Ok(view) => rsx! { DataDocumentView { view } },
+        Err(message) => rsx! {
+            main { class: "error-page", h1 { "Gagal memuat data" }, p { "{message}" } }
+        },
+    }
+}
+
+/// Dokumen data yang sudah dibaca: tabel, relasi, dan masalah validasi lokal.
+#[derive(Debug, Clone, PartialEq)]
+struct LoadedData {
+    name: String,
+    tables: Vec<TableView>,
+    relations: Vec<RelationView>,
+    issues: Vec<String>,
+}
+
+fn load_data(store: &MemoryStore, doc_id: &str) -> Result<LoadedData, String> {
+    let text = store.send(data_load_request(doc_id))?;
+    let doc: Value = serde_json::from_str(&text).map_err(|error| error.to_string())?;
+    let (tables, relations) = tables_from_document(&doc)?;
+    let name = document_name(&doc).map_or_else(|| doc_id.to_owned(), |(_, name)| name);
+    let issues = validate_data(&tables, &relations)
+        .iter()
+        .map(describe_data_issue)
+        .collect();
+    Ok(LoadedData {
+        name,
+        tables,
+        relations,
+        issues,
+    })
+}
+
+#[component]
+fn DataDocumentView(view: LoadedData) -> Element {
+    let table_count = view.tables.len();
+    let relation_count = view.relations.len();
+    let relation_lines: Vec<String> = view.relations.iter().map(relation_line).collect();
+    rsx! {
+        main { class: "canvas-panel data-page",
+            div { class: "canvas-header",
+                div { h1 { "{view.name}" }, p { "{table_count} tabel · {relation_count} relasi · baca saja" } }
+            }
+            div { class: "list-body data-body",
+                for table in view.tables.iter() {
+                    {table_card(table)}
+                }
+                div { class: "data-side",
+                    h3 { "Relasi" }
+                    if relation_lines.is_empty() {
+                        p { class: "empty-inspector", "Tidak ada relasi." }
+                    } else {
+                        ul { class: "edge-list",
+                            for line in relation_lines.iter() {
+                                li { "{line}" }
+                            }
+                        }
+                    }
+                    h3 { "Masalah" }
+                    if view.issues.is_empty() {
+                        p { class: "empty-inspector", "Tidak ada masalah lokal." }
+                    } else {
+                        ul { class: "edge-list",
+                            for issue in view.issues.iter() {
+                                li { "{issue}" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn table_card(table: &TableView) -> Element {
+    let name = table.name.clone();
+    let key = if table.primary_key.is_empty() {
+        "tanpa kunci utama".to_owned()
+    } else {
+        table.primary_key.join(", ")
+    };
+    let columns: Vec<String> = table
+        .columns
+        .iter()
+        .map(|c| {
+            let nullable = if c.nullable { " · nullable" } else { "" };
+            format!("{} · {}{nullable}", c.name, c.data_type)
+        })
+        .collect();
+    rsx! {
+        article { class: "data-table",
+            h2 { "{name}" }
+            p { class: "library-path", "Kunci utama: {key}" }
+            ul { class: "edge-list",
+                for line in columns.iter() {
+                    li { "{line}" }
+                }
+            }
+        }
+    }
+}
+
+fn relation_line(relation: &RelationView) -> String {
+    let (parent, parent_cols) = &relation.parent;
+    let (child, child_cols) = &relation.child;
+    format!(
+        "{}: {parent}({}) → {child}({})",
+        relation.id,
+        parent_cols.join(", "),
+        child_cols.join(", ")
+    )
+}
+
+fn describe_data_issue(issue: &DataIssue) -> String {
+    match issue {
+        DataIssue::DuplicateTable(table) => format!("Tabel {table} dobel"),
+        DataIssue::DuplicateColumn { table, column } => {
+            format!("Kolom {column} dobel di {table}")
+        }
+        DataIssue::UnknownPrimaryKey { table, column } => {
+            format!("Kunci utama {column} di {table} tidak ada")
+        }
+        DataIssue::UnknownRelationTable(table) => {
+            format!("Relasi merujuk tabel {table} yang tidak ada")
+        }
     }
 }
 
@@ -607,6 +804,7 @@ const EXTRA_STYLE: &str = r#"
 .validation-card h2{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#A9E2D2;font-weight:600}
 .module-card.flagged{outline:2px solid #F26D6D;outline-offset:2px}
 .connect-form{display:grid;gap:8px;margin:18px 0}
+.data-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}.data-table{padding:16px;border-radius:9px;background:#273646}.data-table h2{margin:0 0 6px;font-size:15px;font-weight:600;color:#E9EEF7}.data-side{grid-column:1/-1}.data-side h3{margin:16px 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
 .changes-panel{margin-top:24px}.changes-panel h3{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
 "#;
 
