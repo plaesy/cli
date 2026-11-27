@@ -24,7 +24,7 @@ use crate::features::flow::services::{self, load_request, FLOW_KIND};
 use crate::features::store::MemoryStore;
 use crate::features::ApiClient;
 use crate::shared::canvas::viewport::Viewport;
-use crate::shell::{Guard, Page};
+use crate::shell::{breadcrumb, Guard, Page};
 use dioxus::prelude::*;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -43,6 +43,7 @@ fn App() -> Element {
     let mut page = use_signal(|| Page::FlowEditor(seed_flow_id()));
     let guard = Guard::new(&["flow:read", "data:read", "documents:read"]);
     let current = page();
+    let crumbs = breadcrumb(&current);
     let content = if guard.allows(&current) {
         match current {
             Page::FlowList => rsx! {
@@ -82,6 +83,11 @@ fn App() -> Element {
             header { class: "topbar",
                 div { class: "brand-lockup", span { class: "brand-mark", "aria-hidden": "true" }, strong { "Plaesy" } }
                 span { class: "topbar-divider", "aria-hidden": "true" }
+                ol { class: "breadcrumb", "aria-label": "Jejak navigasi",
+                    for crumb in crumbs.iter() {
+                        li { "{crumb}" }
+                    }
+                }
                 nav { class: "nav-tabs", "aria-label": "Navigasi utama",
                     button { class: "nav-tab", onclick: move |_| page.set(Page::FlowList), "Flow" }
                     button { class: "nav-tab", onclick: move |_| page.set(Page::DataList), "Data" }
@@ -809,6 +815,7 @@ const EXTRA_STYLE: &str = r#"
 .module-card.flagged{outline:2px solid #F26D6D;outline-offset:2px}
 .connect-form{display:grid;gap:8px;margin:18px 0}
 .data-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}.data-table{padding:16px;border-radius:9px;background:#273646}.data-table h2{margin:0 0 6px;font-size:15px;font-weight:600;color:#E9EEF7}.data-side{grid-column:1/-1}.data-side h3{margin:16px 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
+.breadcrumb{display:flex;gap:8px;list-style:none;margin:0;padding:0;font-size:13px;color:#9EB0C1}.breadcrumb li+li::before{content:"/";margin-right:8px;color:#5B6E82}
 .changes-panel{margin-top:24px}.changes-panel h3{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
 "#;
 
