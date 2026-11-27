@@ -258,10 +258,6 @@ Status: keputusan default teknis yang didelegasikan user ("keputusan enterprise-
 - Rute tanpa project (didelegasikan, 2026-11-27, bisa dicabut): `POST /v1/validate`, `POST /v1/codegen/flow/{lang}`, dan `POST /v1/openapi` tetap tanpa project, tetapi setelah autentikasi aktif wajib Bearer token. Hanya `/v1/health`, `/v1/ready`, dan `/v1/pairing/exchange` yang anonim.
 - Aturan bind (lebih ketat dari usulan awal): non-loopback ditolak sampai autentikasi aktif (slice 4). Dua opt-in `allow_non_loopback` dan `tls_terminated_upstream` diperlukan dan dicek, tetapi tidak cukup tanpa autentikasi.
 
-- Default bind `127.0.0.1:8790` (D6). Bind non-loopback hanya bila config memuat `allow_non_loopback = true` DAN `tls_terminated_upstream = true`. Tanpa keduanya, server menolak start. Pola ini sama dengan relay.
-- TLS dihentikan di Caddy (D3). Caddy juga mengirim HSTS. Rustls di dalam proses ditunda.
 - CORS default kosong. Origin hanya masuk allowlist eksplisit di config. Wildcard `*` tidak diizinkan bersama kredensial.
 - `X-Forwarded-For` hanya dipercaya bila peer adalah loopback dan terdaftar di `trusted_proxies`.
-- Autentikasi: token perangkat (bearer di header), disimpan sebagai hash SHA-256. OIDC ditunda. Secret dibaca dari `$CREDENTIALS_DIRECTORY`, bukan dari config.
 - Deployment: unit systemd dengan `DynamicUser` dan `StateDirectory`. Unit dan snippet Caddy hanya dibuat di repo. Tidak dipasang di server tanpa persetujuan pemilik.
-- Keputusan D1 sampai D5 di `plan.md` belum disetujui. Entri ini diperbarui setelah pemilik memutuskan.
