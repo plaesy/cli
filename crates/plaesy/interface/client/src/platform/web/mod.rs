@@ -1,15 +1,27 @@
-//! Renderer web untuk editor flow Plaesy.
+//! Renderer web untuk klien Plaesy.
 //!
-//! Layar ini memakai model dan layout flow yang sama dengan domain editor. UI-nya sengaja
-//! tetap lokal dan ringan: tidak ada jaringan atau state global, tetapi canvas, palette,
-//! inspector, validasi, pemilihan node, dan kontrol zoom sudah menjadi permukaan editor nyata.
+//! Di sini hanya glue browser dan state Dioxus: shell (navigasi dan guard), daftar flow, dan
+//! editor. Aturan editor ada di `features::flow` (reducer, validasi, dokumen) dan penyimpanan
+//! sesi di `features::store`.
 
+use crate::adapter::http::document_path;
+use crate::features::flow::document::patch_document;
 use crate::features::flow::layout::{layout, Position};
 use crate::features::flow::model::{
-    edges, modules_from_flow_json, validate, LocalIssue, ModuleView,
+    edges, modules_from_flow_json, next_module_id, validate, LocalIssue, ModuleView,
 };
+use crate::features::flow::reducer::{apply as apply_action, selection_after, Action, ActionError};
+use crate::features::flow::services::{self, load_request, FLOW_KIND};
+use crate::features::store::MemoryStore;
+use crate::features::ApiClient;
+use crate::shared::canvas::viewport::Viewport;
+use crate::shell::{Guard, Page};
 use dioxus::prelude::*;
+use serde_json::Value;
 use std::collections::BTreeMap;
+use std::rc::Rc;
+
+const FIXTURE: &str = include_str!("kirim-faktur.json");
 
 pub fn run() {
     dioxus::launch(App);
@@ -17,95 +29,401 @@ pub fn run() {
 
 #[component]
 fn App() -> Element {
-    let loaded = modules_from_flow_json(include_str!("kirim-faktur.json"));
-    rsx! { style { {STYLE} } match loaded {
-        Ok((name, modules)) => rsx! { FlowEditor { name, modules } },
-        Err(message) => rsx! { main { class: "error-page", h1 { "Gagal memuat flow" }, p { "{message}" } } },
-    } }
+    // Penyimpanan sesi diisi dengan dokumen contoh sekali saat aplikasi dimuat.
+    let store = use_hook(|| Rc::new(seeded_store()));
+    let mut page = use_signal(|| Page::FlowEditor(seed_flow_id()));
+    let guard = Guard::new(&["flow:read", "data:read", "documents:read"]);
+    let current = page();
+    let content = if guard.allows(&current) {
+        match current {
+            Page::FlowList => rsx! {
+                FlowList {
+                    store: store.clone(),
+                    on_open: move |id: String| page.set(Page::FlowEditor(id)),
+                }
+            },
+            Page::FlowEditor(id) => {
+                let key_text = id.clone();
+                rsx! {
+                    FlowEditor { key: "{key_text}", store: store.clone(), flow_id: id }
+                }
+            }
+            Page::DataList | Page::DataEditor(_) => rsx! {
+                main { class: "error-page", h1 { "Data" }, p { "Belum tersedia di klien web." } }
+            },
+            Page::Document { .. } | Page::NotFound => rsx! {
+                main { class: "error-page", h1 { "Halaman tidak ditemukan" } }
+            },
+        }
+    } else {
+        rsx! { main { class: "error-page", h1 { "Akses ditolak" } } }
+    };
+
+    rsx! { style { {STYLE} } style { {EXTRA_STYLE} }
+        div { class: "app-shell",
+            header { class: "topbar",
+                div { class: "brand-lockup", span { class: "brand-mark", "aria-hidden": "true" }, strong { "Plaesy" } }
+                span { class: "topbar-divider", "aria-hidden": "true" }
+                nav { class: "nav-tabs", "aria-label": "Navigasi utama",
+                    button { class: "nav-tab", onclick: move |_| page.set(Page::FlowList), "Flow" }
+                    button { class: "nav-tab", onclick: move |_| page.set(Page::DataList), "Data" }
+                }
+            }
+            {content}
+        }
+    }
 }
 
-#[derive(Props, Clone, PartialEq)]
-struct FlowEditorProps {
-    name: String,
-    modules: Vec<ModuleView>,
+/// Id flow dari dokumen contoh. Dipakai sebagai halaman pertama.
+fn seed_flow_id() -> String {
+    serde_json::from_str::<Value>(FIXTURE)
+        .ok()
+        .and_then(|doc| doc.get("id").and_then(Value::as_str).map(str::to_owned))
+        .unwrap_or_else(|| "flw_seed".to_owned())
+}
+
+fn seeded_store() -> MemoryStore {
+    let store = MemoryStore::default();
+    let _ = services::save(&store, &seed_flow_id(), FIXTURE);
+    store
 }
 
 #[component]
-fn FlowEditor(props: FlowEditorProps) -> Element {
-    let edge_list = edges(&props.modules);
-    let issues = validate(&props.modules);
-    let ids: Vec<String> = props.modules.iter().map(|m| m.id.clone()).collect();
+fn FlowList(store: Rc<MemoryStore>, on_open: EventHandler<String>) -> Element {
+    let prefix = document_path(FLOW_KIND, "");
+    let flows: Vec<(String, String)> = store
+        .paths_with_prefix(&prefix)
+        .iter()
+        .filter_map(|path| {
+            let id = path.strip_prefix(prefix.as_str())?.to_owned();
+            let text = store.send(load_request(&id)).ok()?;
+            let name = modules_from_flow_json(&text).map_or_else(|_| id.clone(), |(name, _)| name);
+            Some((id, name))
+        })
+        .collect();
+    let count = flows.len();
+    rsx! {
+        main { class: "canvas-panel list-page",
+            div { class: "canvas-header", div { h1 { "Flow" }, p { "{count} flow tersimpan di sesi ini" } } }
+            div { class: "list-body",
+                if flows.is_empty() {
+                    p { class: "empty-inspector", "Belum ada flow." }
+                } else {
+                    ul { class: "flow-list", "aria-label": "Daftar flow",
+                        for (id, name) in flows {
+                            li {
+                                button { class: "palette-item", onclick: move |_| on_open.call(id.clone()),
+                                    span { "{name}" }
+                                    small { class: "library-path", "{id}" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn FlowEditor(store: Rc<MemoryStore>, flow_id: String) -> Element {
+    let loaded = use_hook(|| load_flow(&store, &flow_id));
+    match loaded {
+        Ok(flow) => rsx! {
+            FlowWorkspace { store: store.clone(), flow_id: flow_id.clone(), flow }
+        },
+        Err(message) => rsx! {
+            main { class: "error-page", h1 { "Gagal memuat flow" }, p { "{message}" } }
+        },
+    }
+}
+
+/// Dokumen flow yang sudah dibaca dari penyimpanan.
+#[derive(Debug, Clone, PartialEq)]
+struct LoadedFlow {
+    name: String,
+    original: Value,
+    modules: Vec<ModuleView>,
+}
+
+fn load_flow(store: &MemoryStore, flow_id: &str) -> Result<LoadedFlow, String> {
+    let text = store.send(load_request(flow_id))?;
+    let original: Value = serde_json::from_str(&text).map_err(|error| error.to_string())?;
+    let (name, modules) = modules_from_flow_json(&text)?;
+    Ok(LoadedFlow {
+        name,
+        original,
+        modules,
+    })
+}
+
+/// Keadaan editor. Setiap field adalah signal sehingga struct ini bisa disalin ke handler.
+#[derive(Clone, Copy)]
+struct Editor {
+    modules: Signal<Vec<ModuleView>>,
+    original: Signal<Value>,
+    selected: Signal<Option<String>>,
+    viewport: Signal<Viewport>,
+    history: Signal<Vec<Vec<ModuleView>>>,
+    redo: Signal<Vec<Vec<ModuleView>>>,
+    status: Signal<String>,
+}
+
+impl Editor {
+    fn apply(mut self, action: Action) {
+        let current = (self.modules)();
+        match apply_action(&current, &action) {
+            Ok(next) => {
+                let selection = selection_after((self.selected)().as_deref(), &action);
+                self.history.write().push(current);
+                self.redo.write().clear();
+                self.modules.set(next);
+                self.selected.set(selection);
+                self.status.set(action_message(&action));
+            }
+            Err(error) => self.status.set(error_message(&error)),
+        }
+    }
+
+    fn add_module(self, kind: &str) {
+        let id = next_module_id(&(self.modules)());
+        self.apply(Action::AddModule(ModuleView {
+            id,
+            kind: kind.to_owned(),
+            operation: String::new(),
+            inputs: Vec::new(),
+        }));
+    }
+
+    fn select(mut self, id: String) {
+        self.status.set(format!("Dipilih {id}"));
+        self.selected.set(Some(id));
+    }
+
+    fn undo_step(mut self) {
+        match self.history.write().pop() {
+            Some(snapshot) => {
+                let current = (self.modules)();
+                self.redo.write().push(current);
+                self.restore(snapshot, "Undo");
+            }
+            None => self.status.set("Tidak ada yang bisa di-undo".to_owned()),
+        }
+    }
+
+    fn redo_step(mut self) {
+        match self.redo.write().pop() {
+            Some(snapshot) => {
+                let current = (self.modules)();
+                self.history.write().push(current);
+                self.restore(snapshot, "Redo");
+            }
+            None => self.status.set("Tidak ada yang bisa di-redo".to_owned()),
+        }
+    }
+
+    fn restore(mut self, snapshot: Vec<ModuleView>, label: &str) {
+        let selection = (self.selected)().filter(|id| snapshot.iter().any(|m| &m.id == id));
+        self.modules.set(snapshot);
+        self.selected.set(selection);
+        self.status.set(format!("{label} berhasil"));
+    }
+
+    fn zoom_by(mut self, factor: f64) {
+        self.viewport.write().zoom_at(0.0, 0.0, factor);
+    }
+
+    fn check(mut self) {
+        let issues = validate(&(self.modules)());
+        let message = if issues.is_empty() {
+            "Validasi lolos: tidak ada masalah lokal"
+        } else {
+            "Validasi menemukan masalah, lihat panel Masalah"
+        };
+        self.status.set(message.to_owned());
+    }
+
+    fn save(mut self, store: &MemoryStore, flow_id: &str) {
+        let document = patch_document(&(self.original)(), &(self.modules)());
+        let body = document.to_string();
+        match services::save(store, flow_id, &body) {
+            Ok(_) => {
+                self.original.set(document);
+                self.status
+                    .set("Tersimpan di penyimpanan sesi (hilang saat halaman dimuat ulang)".to_owned());
+            }
+            Err(error) => self.status.set(format!("Gagal menyimpan: {error}")),
+        }
+    }
+}
+
+#[component]
+fn FlowWorkspace(store: Rc<MemoryStore>, flow_id: String, flow: LoadedFlow) -> Element {
+    let editor = Editor {
+        modules: use_signal(|| flow.modules.clone()),
+        original: use_signal(|| flow.original.clone()),
+        selected: use_signal(|| flow.modules.first().map(|m| m.id.clone())),
+        viewport: use_signal(Viewport::default),
+        history: use_signal(Vec::new),
+        redo: use_signal(Vec::new),
+        status: use_signal(|| "Perubahan baru tersimpan setelah Save draft".to_owned()),
+    };
+
+    let modules = (editor.modules)();
+    let selected = (editor.selected)();
+    let viewport = (editor.viewport)();
+    let status = (editor.status)();
+    let edge_list = edges(&modules);
+    let issues = validate(&modules);
+    let ids: Vec<String> = modules.iter().map(|m| m.id.clone()).collect();
     let edge_pairs: Vec<(String, String)> = edge_list
         .iter()
         .map(|e| (e.from.clone(), e.to.clone()))
         .collect();
     let positions = layout(&ids, &edge_pairs).unwrap_or_else(|_| fallback_positions(&ids));
-    let selected = use_signal(|| Some("m3".to_owned()));
-    let mut zoom = use_signal(|| 0.8_f64);
-    let mut status = use_signal(|| "Draft changes are local to this editor".to_owned());
-    let selected_module = selected()
+    let selected_module = selected
         .as_deref()
-        .and_then(|id| props.modules.iter().find(|m| m.id == id));
+        .and_then(|id| modules.iter().find(|m| m.id == id));
+    let zoom_percent = (viewport.zoom * 100.0).round() as i64;
+    let stage_style = format!(
+        "transform:translate({}px,{}px) scale({});transform-origin:top left;",
+        viewport.pan_x, viewport.pan_y, viewport.zoom
+    );
+    let module_count = modules.len();
+    let edge_count = edge_list.len();
+    let title = flow.name.clone();
+    let save_store = store.clone();
+    let save_id = flow_id.clone();
 
-    rsx! { div { class: "app-shell",
-        header { class: "topbar",
-            div { class: "brand-lockup", span { class: "brand-mark", "aria-hidden": "true" }, strong { "Plaesy" } }
-            span { class: "topbar-divider", "aria-hidden": "true" }
-            span { class: "breadcrumb", "Flows  /  {props.name}" }
-            span { class: "version", "flow-ir/1 · version 3" }
-            div { class: "top-actions",
-                button { class: "button button-validate", onclick: move |_| status.set(if issues.is_empty() { "Validation passed · no local issues" } else { "Validation found local issues" }.to_owned()), "Validate" }
-                button { class: "button button-save", onclick: move |_| status.set("Draft saved locally · ready for review".to_owned()), "Save draft" }
-                span { class: "concept-badge", "CONCEPT" }
+    rsx! { div { class: "workspace",
+        aside { class: "palette",
+            div { class: "eyebrow", "NODE PALETTE" }
+            for (label, kind, color) in [
+                ("Action", "action", "#7BA7FF"),
+                ("Branch", "branch_one", "#C6A9FF"),
+                ("Approval", "approval", "#F7C879"),
+                ("For each", "for_each", "#71E6C1"),
+                ("Subflow", "subflow", "#F29D9D"),
+            ] {
+                button { class: "palette-item", onclick: move |_| editor.add_module(kind),
+                    span { class: "palette-dot", style: "background:{color}" }
+                    span { "{label}" }
+                }
             }
+            div { class: "palette-separator" }
+            div { class: "eyebrow", "FLOW" }
+            div { class: "library-name", "{title}" }
+            div { class: "library-path", "{flow_id}" }
         }
-        div { class: "workspace",
-            aside { class: "palette",
-                div { class: "eyebrow", "NODE PALETTE" }
-                for (label, color) in [("Action", "#7BA7FF"), ("Branch", "#C6A9FF"), ("Approval", "#F7C879"), ("For each", "#71E6C1"), ("Subflow", "#F29D9D")] {
-                    button { class: "palette-item", onclick: move |_| status.set(format!("{label} node selected · drop it on the canvas to add")), span { class: "palette-dot", style: "background:{color}" }, span { "{label}" } }
+        main { class: "canvas-panel",
+            div { class: "canvas-header",
+                div { h1 { "{title}" }, p { "{module_count} modul · {edge_count} alur" } }
+                div { class: "top-actions",
+                    div { class: "zoom-controls",
+                        button { "aria-label": "Zoom out", onclick: move |_| editor.zoom_by(1.0 / 1.1), "−" }
+                        span { "{zoom_percent}%" }
+                        button { "aria-label": "Zoom in", onclick: move |_| editor.zoom_by(1.1), "+" }
+                    }
+                    button { class: "button button-save", onclick: move |_| editor.undo_step(), "Undo" }
+                    button { class: "button button-save", onclick: move |_| editor.redo_step(), "Redo" }
+                    button { class: "button button-validate", onclick: move |_| editor.check(), "Validate" }
+                    button { class: "button button-save", onclick: move |_| editor.save(&save_store, &save_id), "Save draft" }
                 }
-                div { class: "palette-separator" }
-                div { class: "eyebrow", "EXAMPLE FLOW" }
-                div { class: "library-name", "kirim-faktur.json" }
-                div { class: "library-path", "client / platform / web" }
-                p { class: "palette-note", "Graph preview uses a repository fixture." }
             }
-            main { class: "canvas-panel",
-                div { class: "canvas-header",
-                    div { h1 { "Send invoice" }, p { "10 modules · approval and failure path" } }
-                    div { class: "zoom-controls", button { aria_label: "Zoom out", onclick: move |_| zoom.set((zoom() - 0.1).max(0.5)), "−" }, span { "{(zoom() * 100.0) as i32}%" }, button { aria_label: "Zoom in", onclick: move |_| zoom.set((zoom() + 0.1).min(1.2)), "+" } }
-                }
+            section { class: "canvas-section", "aria-label": "Modul",
+                h2 { "Modul" }
                 div { class: "canvas-viewport",
-                    div { class: "canvas-stage", style: "transform:scale({zoom()}); transform-origin:top left;",
+                    div { class: "canvas-stage", style: "{stage_style}",
                         svg { class: "edge-layer", width: "760", height: "620", view_box: "0 0 760 620", "aria-hidden": "true",
                             defs { marker { id: "arrow", marker_width: "8", marker_height: "8", ref_x: "6", ref_y: "3", orient: "auto", marker_units: "strokeWidth", path { d: "M0,0 L0,6 L6,3 z", fill: "#718CA0" } } }
                             for edge in edge_list.iter() { if let (Some(from), Some(to)) = (positions.get(&edge.from), positions.get(&edge.to)) {
                                 line { x1: "{node_x(from) + 176}", y1: "{node_y(from) + 44}", x2: "{node_x(to)}", y2: "{node_y(to) + 44}", stroke: "#718CA0", stroke_width: "2", marker_end: "url(#arrow)" }
                             } }
                         }
-                        for module in props.modules.iter() { {module_card(module, positions.get(&module.id), selected, status)} }
+                        for module in modules.iter() { {module_card(module, positions.get(&module.id), editor, selected.as_deref())} }
                     }
                 }
-                div { class: "status-line", "{status()}" }
             }
-            aside { class: "inspector",
-                h2 { "Inspector" }
-                div { class: "inspector-divider" }
-                div { class: "eyebrow", "SELECTED MODULE" }
-                if let Some(module) = selected_module {
-                    div { class: "selected-module", span { class: "selected-dot", style: "background:{kind_color(&module.kind)}" }, strong { "{module.id} · {module.kind}" } }
-                    Field { label: "Operation", value: operation_label(module) }
-                    Field { label: "Inputs", value: if module.inputs.is_empty() { "None".to_owned() } else { format!("{} mapped", module.inputs.len()) } }
-                    Field { label: "On error", value: "fail".to_owned() }
-                } else { p { class: "empty-inspector", "Select a module to inspect its inputs and runtime policy." } }
-                div { class: "validation-card", div { class: "validation-title", "LOCAL VALIDATION" }, if issues.is_empty() {
-                    p { "✓ IDs unique" } p { "✓ Input sources resolve" } p { "✓ No local issues found" }
-                } else { for issue in issues.iter() { p { "• {describe(issue)}" } } } }
-                small { class: "inspector-foot", "Editor concept · no release claim" }
+            section { class: "flow-edges", "aria-label": "Alur",
+                h2 { "Alur" }
+                if edge_list.is_empty() {
+                    p { class: "empty-inspector", "Belum ada alur antar modul." }
+                } else {
+                    ul { class: "edge-list",
+                        for edge in edge_list.iter() {
+                            li { "{edge.from} → {edge.to}" }
+                        }
+                    }
+                }
+            }
+            div { class: "status-line", "{status}" }
+        }
+        aside { class: "inspector",
+            h2 { "Inspector" }
+            div { class: "inspector-divider" }
+            div { class: "eyebrow", "SELECTED MODULE" }
+            if let Some(module) = selected_module {
+                {inspector(module, editor)}
+            } else {
+                p { class: "empty-inspector", "Pilih modul untuk melihat operasi dan input." }
+            }
+            section { class: "validation-card", "aria-label": "Masalah",
+                h2 { "Masalah" }
+                if issues.is_empty() {
+                    p { "✓ Tidak ada masalah lokal" }
+                } else {
+                    for issue in issues.iter() { p { "• {describe(issue)}" } }
+                }
             }
         }
     } }
+}
+
+fn module_card(
+    module: &ModuleView,
+    position: Option<&Position>,
+    editor: Editor,
+    selected: Option<&str>,
+) -> Element {
+    let position = position.copied().unwrap_or(Position { x: 0, y: 0 });
+    let module_id = module.id.clone();
+    let is_selected = selected == Some(module.id.as_str());
+    let style = format!(
+        "left:{}px;top:{}px;border-top-color:{}",
+        node_x(&position),
+        node_y(&position),
+        kind_color(&module.kind)
+    );
+    let title = operation_label(module);
+    let detail = input_summary(module);
+    rsx! { button { class: if is_selected { "module-card selected" } else { "module-card" }, style: "{style}", onclick: move |_| editor.select(module_id.clone()),
+        span { class: "module-kind", style: "color:{kind_color(&module.kind)}", "{module.id} · {module.kind}" }
+        strong { "{title}" }
+        small { "{detail}" }
+    } }
+}
+
+fn inspector(module: &ModuleView, editor: Editor) -> Element {
+    let module_id = module.id.clone();
+    let rename_from = module_id.clone();
+    let remove_id = module_id.clone();
+    let operation = operation_label(module);
+    let inputs = input_summary(module);
+    rsx! {
+        div { class: "selected-module",
+            span { class: "selected-dot", style: "background:{kind_color(&module.kind)}" }
+            strong { "{module.id} · {module.kind}" }
+        }
+        div { class: "field",
+            label { class: "field-label", "for": "module-id", "Id modul" }
+            input { id: "module-id", class: "field-input", value: "{module_id}",
+                onchange: move |event| editor.apply(Action::RenameModule { from: rename_from.clone(), to: event.value() }),
+            }
+        }
+        Field { label: "Operasi", value: operation }
+        Field { label: "Input", value: inputs }
+        button { class: "button button-danger", onclick: move |_| editor.apply(Action::RemoveModule(remove_id.clone())), "Hapus modul" }
+    }
 }
 
 #[component]
@@ -113,25 +431,20 @@ fn Field(label: &'static str, value: String) -> Element {
     rsx! { div { class: "field", span { class: "field-label", "{label}" }, div { class: "field-value", "{value}" } } }
 }
 
-fn module_card(
-    module: &ModuleView,
-    position: Option<&Position>,
-    mut selected: Signal<Option<String>>,
-    mut status: Signal<String>,
-) -> Element {
-    let position = position.copied().unwrap_or(Position { x: 0, y: 0 });
-    let module_id = module.id.clone();
-    let kind = module.kind.clone();
-    let style = format!(
-        "left:{}px;top:{}px;border-top-color:{}",
-        node_x(&position),
-        node_y(&position),
-        kind_color(&kind)
-    );
-    rsx! { button { class: if selected().as_deref() == Some(module.id.as_str()) { "module-card selected" } else { "module-card" }, style: "{style}", onclick: move |_| { selected.set(Some(module_id.clone())); status.set(format!("Selected {module_id}")); },
-        span { class: "module-kind", style: "color:{kind_color(&module.kind)}", "{module.id} · {module.kind}" }
-        strong { "{operation_label(module)}" } small { "{input_summary(module)}" }
-    } }
+fn action_message(action: &Action) -> String {
+    match action {
+        Action::AddModule(module) => format!("Modul {} ditambahkan", module.id),
+        Action::RemoveModule(id) => format!("Modul {id} dihapus"),
+        Action::RenameModule { from, to } => format!("Modul {from} diganti menjadi {to}"),
+        Action::Connect { to, input, .. } => format!("Input {input} di {to} diubah"),
+    }
+}
+
+fn error_message(error: &ActionError) -> String {
+    match error {
+        ActionError::NotFound(id) => format!("Modul {id} tidak ditemukan"),
+        ActionError::AlreadyExists(id) => format!("Id {id} sudah dipakai"),
+    }
 }
 
 fn fallback_positions(ids: &[String]) -> BTreeMap<String, Position> {
@@ -154,27 +467,24 @@ fn node_x(p: &Position) -> i64 {
 fn node_y(p: &Position) -> i64 {
     52 + p.y * 3 / 5
 }
+/// Label operasi dari dokumen. Bila dokumen tidak punya `operation`, pakai `kind`.
 fn operation_label(m: &ModuleView) -> String {
-    match m.kind.as_str() {
-        "action" if m.id == "m1" => "Get invoice",
-        "action" if m.id == "m5" => "Check lines",
-        "action" if m.id == "m9" => "Send invoice",
-        "action" if m.id == "m10" => "Notify failure",
-        "branch_one" => "Invoice status",
-        "approval" => "Human review",
-        "for_each" => "Check lines",
-        "pass" => "Skip",
-        "subflow" => "Finalize billing",
-        "while" => "Wait for result",
-        _ => m.kind.as_str(),
+    if m.operation.is_empty() {
+        m.kind.clone()
+    } else {
+        m.operation.clone()
     }
-    .to_owned()
 }
 fn input_summary(m: &ModuleView) -> String {
-    m.inputs
-        .first()
-        .map(|(_, s)| s.clone())
-        .unwrap_or_else(|| "No inputs configured".to_owned())
+    if m.inputs.is_empty() {
+        "Tanpa input".to_owned()
+    } else {
+        m.inputs
+            .iter()
+            .map(|(name, source)| format!("{name} ← {source}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }
 fn kind_color(kind: &str) -> &'static str {
     match kind {
@@ -195,6 +505,17 @@ fn describe(issue: &LocalIssue) -> String {
         }
     }
 }
+
+const EXTRA_STYLE: &str = r#"
+.nav-tabs{display:flex;gap:8px}.nav-tab{height:34px;padding:0 14px;border-radius:7px;background:#202E43;font-size:13px}.nav-tab:hover{background:#293A4C}
+.list-page .list-body{padding:24px 26px}.flow-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:520px}.flow-list .palette-item{height:auto;padding:12px 14px;flex-direction:column;align-items:flex-start;gap:4px}
+.canvas-section h2{margin:0;padding:14px 26px 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
+.flow-edges{padding:14px 26px 18px;border-top:1px solid #344254}.flow-edges h2{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#9EB0C1;font-weight:600}
+.edge-list{margin:10px 0 0;padding-left:18px;font-size:12px;color:#CFDBEA;line-height:1.7}
+.button-danger{background:#4A2A2F;color:#F6C9CE;margin-top:8px}
+.field-input{width:100%;height:42px;padding:0 15px;border-radius:6px;background:#233247;color:#E9EEF7;border:1px solid #344254;font:inherit;font-size:13px}
+.validation-card h2{margin:0 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#A9E2D2;font-weight:600}
+"#;
 
 const STYLE: &str = r#"
 :root { color-scheme:dark; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:#111B2B; color:#E9EEF7 } *{box-sizing:border-box} body{margin:0;min-width:980px;background:#111B2B} button{font:inherit;color:inherit;border:0;cursor:pointer}.app-shell{min-height:100vh;background:#111B2B}.topbar{height:72px;display:flex;align-items:center;gap:22px;padding:0 22px;background:#11192A;border-bottom:1px solid #2C3B4E}.brand-lockup{display:flex;align-items:center;gap:12px;font-size:22px;min-width:126px}.brand-mark{width:8px;height:29px;border-radius:4px;background:#69D9BA;display:inline-block}.topbar-divider{width:1px;height:38px;background:#2C3B4E}.breadcrumb{font-size:15px}.version{margin-left:8px;color:#8DA2B7;font-size:11px}.top-actions{margin-left:auto;display:flex;gap:12px;align-items:center}.button,.concept-badge{height:38px;padding:0 20px;border-radius:7px;font-size:13px}.button-validate{background:#27483D;color:#C9F3E0}.button-save{background:#263F60;color:#D3E7FC}.concept-badge{display:flex;align-items:center;background:#343248;color:#DCCCF7;font-size:11px;letter-spacing:.06em}.workspace{display:grid;grid-template-columns:226px minmax(600px,1fr) 307px;min-height:calc(100vh - 72px)}.palette,.inspector{background:#172438;padding:30px 20px}.palette{border-right:1px solid #2E3D4F}.inspector{border-left:1px solid #2E3D4F;padding:28px 24px}.eyebrow{color:#7D92A7;font-size:10px;letter-spacing:.08em;margin-bottom:16px}.palette-item{width:100%;height:51px;display:flex;align-items:center;gap:11px;padding:0 14px;margin-bottom:13px;border-radius:8px;background:#202E43;text-align:left;font-size:14px}.palette-item:hover{background:#293A4C}.palette-dot,.selected-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}.palette-separator,.inspector-divider{height:1px;background:#293A4C;margin:22px 0}.library-name{font-size:13px;margin-top:28px}.library-path,.palette-note{color:#8DA3B9;font-size:11px}.palette-note{margin-top:45px;line-height:1.45}.canvas-panel{background:#202A37;min-width:0}.canvas-header{height:92px;display:flex;justify-content:space-between;align-items:center;padding:18px 26px;border-bottom:1px solid #344254}h1{margin:0;font-size:20px;font-weight:600}.canvas-header p{color:#9EB0C1;font-size:12px;margin:8px 0 0}.zoom-controls{display:flex;align-items:center;gap:12px;padding:7px 12px;border-radius:7px;background:#334456;font-size:12px}.zoom-controls button{width:22px;height:22px;border-radius:4px;background:#415367}.canvas-viewport{overflow:auto;height:calc(100vh - 214px);min-height:560px;padding:24px}.canvas-stage{position:relative;width:760px;height:620px;background-image:radial-gradient(#526273 1px,transparent 1px);background-size:22px 22px}.edge-layer{position:absolute;inset:0;overflow:visible;pointer-events:none}.module-card{position:absolute;z-index:1;width:176px;height:88px;padding:15px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;border-radius:9px;border-top:4px solid #7BA7FF;background:#273646;text-align:left;box-shadow:0 4px 10px #0b111b55}.module-card:hover,.module-card.selected{outline:2px solid #69D9BA;outline-offset:2px}.module-kind{font-size:10px;letter-spacing:.04em;text-transform:uppercase}.module-card strong{font-size:15px;font-weight:600}.module-card small{color:#A9B9CB;font-size:10px;max-width:148px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status-line{height:50px;padding:16px 26px;color:#8DA3B9;font-size:11px;border-top:1px solid #344254}.inspector h2{margin:0;font-size:19px;font-weight:600}.selected-module{display:flex;align-items:center;gap:10px;min-height:61px;padding:0 15px;margin:14px 0 25px;border-radius:8px;background:#333B44;font-size:14px}.field{margin:0 0 18px}.field-label{display:block;color:#9FB1C3;font-size:12px;margin-bottom:8px}.field-value{padding:11px 15px;border-radius:6px;background:#233247;font-size:13px;min-height:42px}.validation-card{margin-top:30px;padding:16px 15px;border-radius:8px;background:#203B39;color:#CBE9DC;font-size:12px;line-height:1.45}.validation-card p{margin:3px 0}.validation-title{color:#A9E2D2;font-size:10px;letter-spacing:.06em;margin-bottom:8px}.empty-inspector{color:#9FB1C3;font-size:13px;line-height:1.5}.inspector-foot{display:block;color:#7F92A5;font-size:10px;margin-top:110px}.error-page{padding:48px}@media(max-width:1100px){.workspace{grid-template-columns:200px minmax(560px,1fr) 260px}.palette{padding-left:14px;padding-right:14px}.inspector{padding-left:18px;padding-right:18px}}
