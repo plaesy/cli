@@ -11,10 +11,12 @@
 //! the same inode for the rest of the operation regardless of what happens to the path later,
 //! which is the actual guarantee `openat`-style APIs provide over path-based ones.
 //!
-//! Scope: Linux rejects symlinks while walking every root component. Other Unix systems allow
-//! ancestor resolution (needed for trusted system links such as macOS `/var`) but reject a symlink
-//! at the final root component. All Unix operations after that initial open are descriptor-relative
-//! and refuse symlinks in child components. Non-Unix platforms use path-based fallbacks.
+//! Scope: this protects the *final* directory component used for note/lock publication on
+//! Linux. It does not re-verify every ancestor component on every call (that would need a
+//! `resolve_beneath`-style walk); `write_note`'s existing `canonicalize` + `starts_with` check
+//! is still responsible for rejecting a root that has already been redirected before the first
+//! `open_dir_nofollow` call. On non-Linux platforms these helpers fall back to the path-based
+//! `std::fs` equivalents, which keep today's (slightly weaker but still real) protection.
 
 use std::io;
 use std::path::Path;
@@ -228,7 +230,7 @@ impl DirHandle {
         })
     }
 
-    /// Open `dir` as a pinned directory capability without following its final component.
+    /// Open `dir` without following symlinks in any path component.
     #[cfg(target_os = "linux")]
     pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
         use std::path::Component;
@@ -277,31 +279,7 @@ impl DirHandle {
         Ok(Self { fd: current })
     }
 
-    #[cfg(all(unix, not(target_os = "linux")))]
-    pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
-        let path = to_cstring(dir)?;
-        // Non-Linux Unix systems can have trusted system symlinks above a project root (macOS
-        // `/var` -> `/private/var`). Open the requested root in one operation so ancestors resolve
-        // normally, while O_NOFOLLOW still rejects a symlink at the final component. Subsequent
-        // operations stay pinned to this descriptor and use component-wise openat with O_NOFOLLOW.
-        // SAFETY: `path` is NUL-terminated and alive for the call; a successful descriptor is new
-        // and becomes owned by the returned handle.
-        let fd = unsafe {
-            libc::open(
-                path.as_ptr(),
-                libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
-            )
-        };
-        if fd < 0 {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(Self {
-            // SAFETY: `fd` is a freshly opened descriptor with no other owner.
-            fd: unsafe { OwnedFd::from_raw_fd(fd) },
-        })
-    }
-
-    #[cfg(not(unix))]
+    #[cfg(not(target_os = "linux"))]
     pub fn open_nofollow(dir: &Path) -> io::Result<Self> {
         // Non-Linux fallback: still reject a symlinked directory, just without the atomic
         // guarantee that a path-based open provides on Linux via O_NOFOLLOW + O_DIRECTORY.
