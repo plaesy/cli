@@ -243,3 +243,15 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Masa tenggang rotasi default 24 jam. Berkas yang gagal diurai mempertahankan himpunan token terakhir. Berkas yang hilang atau kosong setelah pernah terlihat menolak semua permintaan.
 - Tanpa penguncian global, karena server berada di belakang tunnel loopback dan semua klien terlihat dari alamat yang sama.
 - Pilihan yang dapat dibalik: perintah berada di `plaesy memory token`, bukan `plaesy mcp token`, karena `plaesy mcp` sudah dipakai server proyek.
+
+## Backend server: jalur jaringan (usulan, menunggu persetujuan pemilik)
+
+Status: usulan. Rencana dan threat model ada di `.plaesy/plan/plaesy-backend-server/`. Belum ada kode yang membuka listener.
+
+- Default bind `127.0.0.1:8790` (D6). Bind non-loopback hanya bila config memuat `allow_non_loopback = true` DAN `tls_terminated_upstream = true`. Tanpa keduanya, server menolak start. Pola ini sama dengan relay.
+- TLS dihentikan di Caddy (D3). Caddy juga mengirim HSTS. Rustls di dalam proses ditunda.
+- CORS default kosong. Origin hanya masuk allowlist eksplisit di config. Wildcard `*` tidak diizinkan bersama kredensial.
+- `X-Forwarded-For` hanya dipercaya bila peer adalah loopback dan terdaftar di `trusted_proxies`.
+- Autentikasi: token perangkat (bearer di header), disimpan sebagai hash SHA-256. OIDC ditunda. Secret dibaca dari `$CREDENTIALS_DIRECTORY`, bukan dari config.
+- Deployment: unit systemd dengan `DynamicUser` dan `StateDirectory`. Unit dan snippet Caddy hanya dibuat di repo. Tidak dipasang di server tanpa persetujuan pemilik.
+- Keputusan D1 sampai D5 di `plan.md` belum disetujui. Entri ini diperbarui setelah pemilik memutuskan.
