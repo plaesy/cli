@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn breadcrumb_names_the_section_then_the_item() {
+    assert_eq!(breadcrumb(&Page::FlowList), vec!["Flow".to_owned()]);
+    assert_eq!(
+        breadcrumb(&Page::FlowEditor("f1".to_owned())),
+        vec!["Flow".to_owned(), "f1".to_owned()]
+    );
+    assert_eq!(
+        breadcrumb(&Page::DataEditor("crm".to_owned())),
+        vec!["Data".to_owned(), "crm".to_owned()]
+    );
+    assert_eq!(
+        breadcrumb(&Page::NotFound),
+        vec!["Tidak ditemukan".to_owned()]
+    );
+}
+
+#[test]
 fn shell_routes_known_paths() {
     assert_eq!(route("/flows"), Page::FlowList);
     assert_eq!(route("/flows/f1"), Page::FlowEditor("f1".to_owned()));

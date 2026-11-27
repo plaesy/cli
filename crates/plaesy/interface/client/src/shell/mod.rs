@@ -81,6 +81,19 @@ pub fn nav(guard: &Guard) -> Vec<Page> {
         .collect()
 }
 
+/// Jejak navigasi untuk halaman: nama bagian, lalu id halaman bila ada.
+#[must_use]
+pub fn breadcrumb(page: &Page) -> Vec<String> {
+    match page {
+        Page::FlowList => vec!["Flow".to_owned()],
+        Page::FlowEditor(id) => vec!["Flow".to_owned(), id.clone()],
+        Page::DataList => vec!["Data".to_owned()],
+        Page::DataEditor(id) => vec!["Data".to_owned(), id.clone()],
+        Page::Document { kind, id } => vec!["Dokumen".to_owned(), kind.clone(), id.clone()],
+        Page::NotFound => vec!["Tidak ditemukan".to_owned()],
+    }
+}
+
 #[cfg(test)]
 #[path = "shell_test.rs"]
 mod shell_test;
