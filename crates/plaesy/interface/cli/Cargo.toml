@@ -17,6 +17,7 @@ plaesy-adapter-import-sql = { path = "../../adapter/import-sql" }
 plaesy-adapter-import-code-rust = { path = "../../adapter/import-code-rust" }
 plaesy-adapter-import-code-python = { path = "../../adapter/import-code-python" }
 plaesy-domain-api = { path = "../../domain/api" }
+plaesy-domain-identity = { path = "../../domain/identity" }
 rusqlite = { workspace = true }
 notify = { workspace = true }
 plaesy-interface-acp = { path = "../acp" }
