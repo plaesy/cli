@@ -302,7 +302,8 @@ fn open_or_create_directory_path(
     Ok(handle)
 }
 
-#[cfg(all(test, unix))]
+// Only the Linux symlink and atomic-publish tests call this helper.
+#[cfg(all(test, target_os = "linux"))]
 fn save_config_at(config: &DecisionsConfig, path: &Path) -> Result<(), String> {
     save_config_with_path(config, path)
 }
