@@ -110,6 +110,30 @@ fn classify_reads_the_error_code_and_the_conflict_body() {
 }
 
 #[test]
+fn validation_reply_reads_validity_and_errors() {
+    assert_eq!(VALIDATE_PATH, "/v1/validate");
+    let ok = parse_validation(&json!({ "ir": "flow-ir/1", "valid": true, "errors": [] }));
+    assert_eq!(
+        ok,
+        Ok(ValidationReport {
+            valid: true,
+            errors: Vec::new()
+        })
+    );
+    let bad = parse_validation(
+        &json!({ "valid": false, "errors": ["m2: sumber tidak ada", { "code": 7 }] }),
+    );
+    assert_eq!(
+        bad,
+        Ok(ValidationReport {
+            valid: false,
+            errors: vec!["m2: sumber tidak ada".to_owned(), "{\"code\":7}".to_owned()]
+        })
+    );
+    assert!(parse_validation(&json!({ "errors": [] })).is_err());
+}
+
+#[test]
 fn token_expired_is_told_apart_from_a_wrong_token() {
     assert_eq!(
         map_unauthorized(Some("token_expired")),

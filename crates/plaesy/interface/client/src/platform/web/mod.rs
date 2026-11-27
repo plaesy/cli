@@ -6,7 +6,9 @@
 
 use crate::adapter::http::contract::{valid_project_id, ClientConfig};
 use crate::adapter::http::document_path;
-use crate::adapter::http::web::{exchange_pairing, load_document, save_document};
+use crate::adapter::http::web::{
+    exchange_pairing, load_document, save_document, validate_document,
+};
 use crate::features::data::document::{
     document_name, load_request as data_load_request, save_request as data_save_request,
     tables_from_document, DATA_KIND,
@@ -589,6 +591,37 @@ impl Editor {
         self.viewport.write().zoom_at(0.0, 0.0, factor);
     }
 
+    /// Validasi di server bila terpasang; bila server tidak terjangkau, pakai validasi lokal.
+    fn validate_flow(mut self, remote: Option<ClientConfig>) {
+        let Some(config) = remote else {
+            self.check();
+            return;
+        };
+        let document = patch_document(&(self.original)(), &(self.modules)());
+        self.status.set("Memvalidasi di server…".to_owned());
+        spawn(async move {
+            let result = validate_document(&config, &document).await;
+            match result {
+                Ok(report) if report.valid => {
+                    self.note(Level::Info, "Validasi server lolos");
+                    self.status.set("Validasi server lolos".to_owned());
+                }
+                Ok(report) => {
+                    let message = format!("Validasi server: {}", report.errors.join("; "));
+                    self.note(Level::Warning, &message);
+                    self.status.set(message);
+                }
+                Err(error) => {
+                    let message =
+                        format!("Server tidak dapat memvalidasi ({error}); validasi lokal dipakai");
+                    self.note(Level::Warning, &message);
+                    self.status.set(message);
+                    self.check();
+                }
+            }
+        });
+    }
+
     fn check(mut self) {
         let issues = validate(&(self.modules)());
         let message = if issues.is_empty() {
@@ -746,6 +779,7 @@ fn FlowWorkspace(
     let save_id = flow_id.clone();
     let load_id = flow_id.clone();
     let load_config = remote.clone();
+    let validate_config = remote.clone();
 
     rsx! { div { class: "workspace",
         aside { class: "palette",
@@ -778,7 +812,7 @@ fn FlowWorkspace(
                     }
                     button { class: "button button-save", onclick: move |_| editor.undo_step(), "Undo" }
                     button { class: "button button-save", onclick: move |_| editor.redo_step(), "Redo" }
-                    button { class: "button button-validate", onclick: move |_| editor.check(), "Validate" }
+                    button { class: "button button-validate", onclick: move |_| editor.validate_flow(validate_config.clone()), "Validate" }
                     if let Some(config) = load_config {
                         button { class: "button button-save", onclick: move |_| editor.load_remote(config.clone(), load_id.clone()), "Muat dari server" }
                     }

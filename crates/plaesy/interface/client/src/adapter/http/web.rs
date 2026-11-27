@@ -5,8 +5,8 @@
 //! lewat Dioxus web). Tidak ada penyimpanan di sini: token dan ETag dipegang pemanggil.
 
 use super::contract::{
-    classify, if_match_value, pairing_body, parse_pairing, ClientConfig, ContractError, Pairing,
-    PAIRING_EXCHANGE_PATH,
+    classify, if_match_value, pairing_body, parse_pairing, parse_validation, ClientConfig,
+    ContractError, Pairing, ValidationReport, PAIRING_EXCHANGE_PATH, VALIDATE_PATH,
 };
 use serde_json::Value;
 use wasm_bindgen::{JsCast, JsValue};
@@ -86,6 +86,26 @@ fn failure(reply: &Reply) -> Option<ContractError> {
         reply.retry_after.as_deref(),
         &reply.body,
     )
+}
+
+/// Memvalidasi dokumen IR di server. Token ikut dikirim bila ada.
+///
+/// # Errors
+///
+/// Galat jaringan, galat kontrak, atau balasan yang tidak sesuai bentuk validasi.
+pub async fn validate_document(
+    config: &ClientConfig,
+    document: &Value,
+) -> Result<ValidationReport, ContractError> {
+    let url = format!("{}{}", config.base_url, VALIDATE_PATH);
+    let body = document.to_string();
+    let reply = send("POST", &url, &config.headers(), Some(&body)).await?;
+    if let Some(error) = failure(&reply) {
+        return Err(error);
+    }
+    let value: Value = serde_json::from_str(&reply.body)
+        .map_err(|error| ContractError::Network(format!("balasan bukan JSON: {error}")))?;
+    parse_validation(&value).map_err(ContractError::Network)
 }
 
 /// Menukar kode pairing (`PAIR-...`) menjadi token perangkat.
