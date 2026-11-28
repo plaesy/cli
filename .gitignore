@@ -76,3 +76,12 @@ memory.exe
 
 # Runtime lock for the issue graph; never committed
 .plaesy/tasks/.issue-graph.lock
+
+capture
+inbox
+investigation.cany
+craft.json
+feed.json
+questions.json
+transcript.json
+usage.json

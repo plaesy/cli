@@ -138,6 +138,10 @@ The owner delegated these choices to the assistant, revocable at any time. Recor
 
 Decided by the owner on 2026-11-19: first workflow, deployment profile, runtime strategy, and identity direction (section above). The delegated choices do not authorize incumbent shutdown, production cutover, or irreversible data migration; those remain gated by the cutover criteria and explicit authorization.
 
+**Catatan pencatatan (2026-11-26):** Item berstatus "Delegated, revocable" di atas dipakai berdasarkan delegasi pemilik yang tercatat di bagian "Delegated architecture decisions" dan "Delegated decisions". Gerbang pencatatan di "Open decisions" (baris 64) meminta pemilik, pilihan, alasan, komponen terdampak, bukti tes, dan tanggal. Kolom-kolom itu belum lengkap untuk setiap item; melengkapinya adalah pekerjaan berikutnya, bukan syarat untuk memakai nilai delegasi.
+
+Item yang masih UNKNOWN (baris 133, 136, 137) tidak diisi oleh assistant. Butuh keputusan pemilik atau masukan legal.
+
 ## Comparison identity evidence (2026-11-19, evidence only, not a decision)
 
 Gathered for spec open question "exact DeepSeek Harness and Orca product/version". The owner still picks the comparison target.
@@ -235,3 +239,19 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Default: pesan antar agent tetap lewat relay lokal (`plaesy relay`) dengan listener di `plaesy chat` (mode line dan `--tui`). Relay dan listener sudah diuji dengan dua sesi chat dan dengan pseudo-terminal.
 - Plaesy tidak menjadi server A2A untuk sekarang. A2A (Agent Card, JSON-RPC/REST, task streaming) dicatat sebagai opsi untuk jalur antar-mesin. Belum ada keputusan untuk mengadopsinya.
 - Pemilik dapat mencabut default ini. Pembukaan A2A mengubah endpoint, autentikasi, dan Agent Card, jadi perlu keputusan terpisah.
+
+## Slice fitur manajemen kerja (keputusan default, didelegasikan, bisa dicabut, 2026-11-27)
+
+- Permintaan "fitur seperti OpenProject, Jira, ClickUp" belum punya cakupan dari pemilik. Tugas kanonik `high_feature-deliver-selected-project-portfolio-management-workflow` tetap di `backlog/` dan tidak ditutup oleh slice ini. Slice ini hanya mengisi celah yang sudah diverifikasi `belum` di `docs/platform/feature-inventory/openproject.md` dan berjalan di atas sistem tugas lokal yang ada (`.plaesy/tasks`, `issue.json`).
+- Cakupan yang dipilih: (1) tanggal mulai dan selesai, (2) estimasi dan log waktu, (3) pencarian teks pada `tasks issues`. Yang tidak dipilih: relasi selain dependensi, watcher, tampilan tersimpan, Gantt, penjadwalan, dan rollup induk. Semuanya tetap `belum`.
+- Format data: field baru di `issue.json` bersifat opsional dan dibaca dengan `serde(default)`. File lama tetap terbaca dan tidak ditulis ulang kecuali perintah yang mengubahnya dijalankan.
+- Pembatasan waktu: nilai nol ditolak. Durasi hanya menerima satuan `h` dan `m`, dengan urutan `1h30m`, tanpa spasi, tanpa tanda `+`.
+- Pemilik dapat mengubah cakupan atau format ini. Jika `issue.json` perlu pindah ke format lain, itu keputusan terpisah.
+
+## Token MCP per klien (didelegasikan, 2026-11-27, bisa dicabut pemilik)
+
+- Desain di `docs/platform/mcp-multi-token.md`. Satu token per label (`plsy_<id>_<secret>`), disimpan sebagai `sha256(salt || token)`, tidak pernah plaintext. Berkas di `~/.config/plaesy/mcp-tokens.toml`, di luar vault.
+- Muat ulang saat mtime atau ukuran berubah, dicek paling sering tiap 2 detik. Tanpa restart. Tidak memakai SIGHUP karena klien laptop berjalan di Windows.
+- Masa tenggang rotasi default 24 jam. Berkas yang gagal diurai mempertahankan himpunan token terakhir. Berkas yang hilang atau kosong setelah pernah terlihat menolak semua permintaan.
+- Tanpa penguncian global, karena server berada di belakang tunnel loopback dan semua klien terlihat dari alamat yang sama.
+- Pilihan yang dapat dibalik: perintah berada di `plaesy memory token`, bukan `plaesy mcp token`, karena `plaesy mcp` sudah dipakai server proyek.

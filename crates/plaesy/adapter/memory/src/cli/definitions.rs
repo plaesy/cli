@@ -238,6 +238,11 @@ pub(super) enum Command {
         #[arg(long)]
         read_only: bool,
     },
+    /// Manage per-client bearer tokens for the MCP HTTP server. A token is printed once.
+    Token {
+        #[command(subcommand)]
+        sub: TokenSubcommand,
+    },
     /// First-run setup: vault folder, config.toml, model download, first index.
     Onboard {
         /// Accept every default (needs --vault unless settings already exist).
@@ -462,6 +467,24 @@ pub(super) enum ConfigSubcommand {
         #[arg(long)]
         http_url: Option<String>,
     },
+}
+
+/// Subcommands of `memory token`.
+#[derive(Subcommand, Debug, Clone)]
+pub(super) enum TokenSubcommand {
+    /// Create a token for a new label. The token is printed to stdout once and never stored.
+    Add { label: String },
+    /// Replace a label's token. The old token keeps working until the grace period ends.
+    Rotate {
+        label: String,
+        /// Hours the previous token stays valid.
+        #[arg(long, default_value_t = 24)]
+        grace_hours: u64,
+    },
+    /// Disable a label's token at once. Other labels are not affected.
+    Revoke { label: String },
+    /// List labels and their state. Prints no tokens or hashes.
+    List,
 }
 
 #[derive(Clone, Copy, ValueEnum)]

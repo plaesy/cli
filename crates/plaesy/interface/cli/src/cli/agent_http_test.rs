@@ -1,5 +1,5 @@
 use plaesy_adapter_relay::relay::MessageStore;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use super::route;
 
@@ -237,4 +237,100 @@ fn agent_card_advertises_input_required_and_the_answer_skill() {
     assert_eq!(card["capabilities"]["inputRequired"], true);
     let skills = card["skills"].as_array().expect("skills");
     assert!(skills.iter().any(|skill| skill["id"] == "task.input"));
+}
+
+fn a_text_send_stores_the_same_envelope_as_before_parts_existed() {
+    let mut store = MessageStore::in_memory().expect("store");
+    assert_eq!(send(&mut store, "p-1").0, 201);
+    let inbox = store.inbox("beta", 10).expect("inbox");
+    assert_eq!(inbox[0].body, r#"{"depth":0,"text":"halo"}"#);
+}
+
+#[test]
+fn a_parts_send_queues_the_joined_text_and_keeps_the_parts() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let body = br#"{"id":"p-2","from":"alpha","to":"beta","parts":[
+        {"kind":"text","text":"first"},
+        {"kind":"data","data":{"b":1,"a":{"y":2,"x":[3]}}},
+        {"kind":"text","text":"second"}]}"#;
+    let (status, reply) = route(&mut store, "POST", "/message:send", body);
+    assert_eq!(status, 201);
+    assert_eq!(json(&reply)["state"], "submitted");
+    let inbox = store.inbox("beta", 10).expect("inbox");
+    let stored = json(&inbox[0].body);
+    assert_eq!(stored["depth"], 0);
+    assert_eq!(stored["text"], "first\nsecond");
+    assert_eq!(stored["parts"][0], json!({"kind":"text","text":"first"}));
+    assert_eq!(
+        stored["parts"][1]["data"],
+        json!({"a":{"x":[3],"y":2},"b":1})
+    );
+    assert_eq!(stored["parts"].as_array().map(Vec::len), Some(3));
+}
+
+#[test]
+fn a_parts_resend_with_reordered_data_keys_is_idempotent() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let first = br#"{"id":"p-3","from":"alpha","to":"beta","parts":[{"kind":"text","text":"hi"},{"kind":"data","data":{"a":1,"b":2}}]}"#;
+    let second = br#"{"id":"p-3","from":"alpha","to":"beta","parts":[{"kind":"text","text":"hi"},{"kind":"data","data":{"b":2,"a":1}}]}"#;
+    assert_eq!(route(&mut store, "POST", "/message:send", first).0, 201);
+    assert_eq!(route(&mut store, "POST", "/message:send", second).0, 201);
+    assert_eq!(store.inbox("beta", 10).expect("inbox").len(), 1);
+}
+
+#[test]
+fn a_parts_send_is_readable_by_the_chat_envelope_decoder() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let body = br#"{"id":"p-4","from":"alpha","to":"beta","parts":[{"kind":"text","text":"hello"},{"kind":"data","data":{"k":true}}]}"#;
+    assert_eq!(route(&mut store, "POST", "/message:send", body).0, 201);
+    let inbox = store.inbox("beta", 10).expect("inbox");
+    let envelope = crate::cli::chat_agents::decode(&inbox[0].body);
+    assert_eq!(envelope.depth, 0);
+    assert_eq!(envelope.text, "hello");
+}
+
+#[test]
+fn invalid_parts_are_rejected_with_400() {
+    let cases: [&[u8]; 9] = [
+        br#"{"id":"x","from":"a","to":"b","parts":[]}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":"hi"}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":[{"kind":"file","file":"x"}]}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":[{"kind":"text"}]}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":[{"kind":"text","text":"  "}]}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":[{"kind":"data","data":"no"}]}"#,
+        br#"{"id":"x","from":"a","to":"b","parts":[{"kind":"data","data":{"k":1}}]}"#,
+        br#"{"id":"x","from":"a","to":"b","text":"hi","parts":[{"kind":"text","text":"hi"}]}"#,
+        br#"{"id":"x","from":"a","to":"b"}"#,
+    ];
+    let mut store = MessageStore::in_memory().expect("store");
+    for body in cases {
+        let (status, _) = route(&mut store, "POST", "/message:send", body);
+        assert_eq!(status, 400, "{}", String::from_utf8_lossy(body));
+    }
+    let too_many: Vec<Value> = (0..=super::MAX_PARTS)
+        .map(|_| json!({"kind": "text", "text": "a"}))
+        .collect();
+    let body = json!({"id": "x", "from": "a", "to": "b", "parts": too_many}).to_string();
+    assert_eq!(
+        route(&mut store, "POST", "/message:send", body.as_bytes()).0,
+        400
+    );
+}
+
+#[test]
+fn a_parts_send_past_the_stored_body_limit_is_400_not_500() {
+    let mut store = MessageStore::in_memory().expect("store");
+    // The text is stored twice (as `text` and inside `parts`), so this fits the request
+    // limit but not the stored envelope.
+    let text = "a".repeat(40 * 1024);
+    let body = json!({
+        "id": "big",
+        "from": "alpha",
+        "to": "beta",
+        "parts": [{"kind": "text", "text": text}]
+    })
+    .to_string();
+    assert!(body.len() <= super::MAX_BODY_BYTES);
+    let (status, _) = route(&mut store, "POST", "/message:send", body.as_bytes());
+    assert_eq!(status, 400);
 }

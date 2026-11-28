@@ -14,6 +14,8 @@
 //! - `stdio` (default): `memory serve --mcp`
 //! - `http`: `memory serve --mcp --transport http --port 9123`
 
+pub mod tokens;
+
 use crate::memory::error::{MemoryError, Result};
 use crate::memory::hygiene::HygieneOptions;
 use crate::memory::search::{SearchEngine, SearchMode};
@@ -771,23 +773,21 @@ pub async fn serve_stdio(engine: Arc<SearchEngine>) -> Result<()> {
 }
 
 async fn require_bearer_token(
-    axum::extract::State(expected_token): axum::extract::State<String>,
+    axum::extract::State(auth): axum::extract::State<Arc<tokens::TokenAuth>>,
     request: axum::http::Request<axum::body::Body>,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     use axum::http::header::AUTHORIZATION;
     use axum::response::IntoResponse;
 
-    let authorized = request
+    let presented = request
         .headers()
         .get(AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .is_some_and(|provided| constant_time_eq(provided.as_bytes(), expected_token.as_bytes()));
-    if authorized {
-        next.run(request).await
-    } else {
-        axum::http::StatusCode::UNAUTHORIZED.into_response()
+        .and_then(|value| value.strip_prefix("Bearer "));
+    match auth.check(presented) {
+        tokens::Verdict::Denied => axum::http::StatusCode::UNAUTHORIZED.into_response(),
+        tokens::Verdict::Allowed(_) | tokens::Verdict::Open => next.run(request).await,
     }
 }
 
@@ -819,7 +819,7 @@ fn bearer_token_comparison_requires_exact_bytes() {
 pub async fn serve_http(
     engine: Arc<SearchEngine>,
     addr: SocketAddr,
-    auth_token: Option<String>,
+    auth: Option<Arc<tokens::TokenAuth>>,
 ) -> Result<()> {
     use rmcp::transport::streamable_http_server::{
         session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
@@ -847,9 +847,9 @@ pub async fn serve_http(
         config,
     );
     let app = axum::Router::new().nest_service("/mcp", service);
-    let app = if let Some(expected_token) = auth_token {
+    let app = if let Some(auth) = auth {
         app.route_layer(axum::middleware::from_fn_with_state(
-            expected_token,
+            auth,
             require_bearer_token,
         ))
     } else {

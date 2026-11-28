@@ -43,6 +43,8 @@ pub enum TasksCommand {
     },
     /// Add or remove labels on one issue (lowercase, no spaces, at most 32 characters)
     Label(super::tasks_label::Args),
+    /// Log work on an issue, or show its estimate against logged time
+    Time(super::tasks_time::Args),
     /// List tasks across every status (or --all for the board, --sync-context for context.md)
     List {
         /// Show every spec's tasks as one board, with title and phase, and report integrity problems
@@ -296,6 +298,7 @@ pub fn run(args: &Args) -> CliResult {
             super::tasks_issue::update(update, &dir)
         }
         TasksCommand::Label(label) => super::tasks_label::run(label, &tasks_dir()?),
+        TasksCommand::Time(time) => super::tasks_time::run(time, &tasks_dir()?),
         TasksCommand::List { all, sync_context } => {
             if *sync_context {
                 return sync_in_flight();
