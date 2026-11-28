@@ -17,12 +17,12 @@ Agent di Plaesy mengirim pesan dan menerima hasil secara realtime, tanpa menungg
 Nama dan bentuk mengikuti pola yang sama dengan A2A supaya pemetaan nanti mudah. Ini bukan klaim kepatuhan terhadap A2A.
 
 - **Agent Card**: `GET /.well-known/agent.json`, berisi `name`, `description`, `version`, `capabilities`, dan daftar `skills`.
-- **Pesan**: `POST /message:send`. Bentuk yang diimplementasikan: `{ "id", "from", "to", "text" }`, bukan `parts` seperti rancangan awal. Balasan `201` berisi `{ "id", "from", "to", "state" }`.
+- **Pesan**: `POST /message:send`. Bentuk utama: `{ "id", "from", "to", "text" }`. Bentuk alternatif: `{ "id", "from", "to", "parts" }` dengan `parts` berisi item `{ "kind": "text", "text" }` atau `{ "kind": "data", "data": {...} }`. Balasan `201` berisi `{ "id", "from", "to", "state" }`.
 - **Tugas**: `GET /tasks/{from}/{id}` mengembalikan `{ "id", "from", "state" }`. Tugas diidentifikasi oleh pengirim dan ID, bukan ID saja, karena ID hanya unik per pengirim.
 - **Push**: `GET /tasks/{from}/{id}/events` sebagai SSE, dengan event `task` setiap state berubah. Stream ditutup saat state terminal, dan `event: error` dikirim jika tugas tidak ada.
 - **Batal**: `POST /tasks/{from}/{id}:cancel`. Mengembalikan `409` jika state tidak boleh berpindah ke `canceled`.
 
-Yang masih desain, belum ada di kode: artefak pada balasan tugas, dan bagian `parts`.
+Yang masih desain, belum ada di kode: artefak pada balasan tugas, dan part `file`.
 
 ## Status implementasi
 
@@ -30,6 +30,7 @@ Yang sudah ada dan teruji:
 
 - Server: `plaesy agent serve` (default port 8765, hanya loopback). Jika `PLAESY_AGENT_TOKEN` diisi, setiap permintaan wajib `Authorization: Bearer <token>`.
 - Tugas disimpan di tabel `relay_tasks` di database relay yang sama dengan pesan. Pesan dan tugas dibuat dalam satu transaksi, sehingga pesan tidak pernah ada tanpa tugasnya.
+- `parts` (paling banyak 16 item) diterima sebagai alternatif `text`, tidak boleh keduanya. Pesan wajib punya minimal satu part `text` yang tidak kosong, supaya pembaca lama tetap bisa menampilkannya. Isi yang disimpan adalah `{"depth":0,"text":<gabungan part text dipisah baris baru>,"parts":[...]}`. Kunci objek `data` diurutkan, sehingga pengiriman ulang dengan urutan kunci berbeda tetap idempoten. Pengiriman `text` menyimpan byte yang sama seperti sebelumnya.
 - Pengiriman ulang dengan ID dan isi yang sama bersifat idempoten: tidak ada pesan ganda, dan balasannya berisi state tugas saat ini (`201`). Isi yang berbeda untuk ID yang sama ditolak dengan `409`.
 - Agent Card di `GET /.well-known/agent.json` berisi `name`, `description`, `version` (dari `CARGO_PKG_VERSION`), `capabilities`, dan `skills`. Kartu tidak memuat token, path database, atau path repositori. Kartu berada di balik aturan token yang sama dengan route lain: bila `PLAESY_AGENT_TOKEN` diisi, permintaan tanpa token yang benar ditolak `401`. Kapabilitas yang belum ada (`pushNotifications`, `inputRequired`, `artifacts`) dinyatakan `false`.
 
@@ -85,6 +86,10 @@ Batasan yang perlu diketahui:
 Yang masih terbuka: artefak, `input-required`, dan retensi (`plaesy agent gc`).
 
 ## Keputusan default (didelegasikan, bisa dicabut pemilik)
+
+- Bentuk `parts` hanya `text` dan `data`. Part `file` belum ada, karena cara membawa berkas (inline atau URI) dan batas ukurannya belum diputuskan.
+- Pesan dengan `parts` wajib punya minimal satu part `text` non-kosong. Pesan yang hanya `data` ditolak.
+- Artefak pada balasan tugas belum dibangun. Siapa yang boleh menghasilkan artefak, lewat route mana, dan disimpan di mana belum diputuskan, jadi `artifacts` pada Agent Card tetap `false`.
 
 1. Server berjalan satu per repo, bukan per sesi chat.
 2. Pesan dan riwayat tugas disimpan 30 hari, lalu dihapus saat `plaesy agent gc`.

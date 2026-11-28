@@ -2,7 +2,8 @@
 //!
 //! The socket layer is separate, so each route can be tested without a network. Routes:
 //!
-//! - `POST /message:send` with `{"id","from","to","text"}` opens a task and queues the message.
+//! - `POST /message:send` with `{"id","from","to","text"}`, or with `"parts"` instead of `text`,
+//!   opens a task and queues the message.
 //! - `GET /tasks/{from}/{id}` returns the task state.
 //! - `POST /tasks/{from}/{id}:cancel` moves the task to `canceled` when the state allows it.
 //! - `GET /.well-known/agent.json` returns the Agent Card: name, description, version, capabilities, skills.
@@ -16,6 +17,8 @@ use serde_json::{json, Value};
 
 /// Largest accepted request body, in bytes.
 pub const MAX_BODY_BYTES: usize = 64 * 1024;
+/// Most parts one message may carry.
+pub const MAX_PARTS: usize = 16;
 
 /// Routes one request. Returns the HTTP status and a JSON body.
 pub fn route(store: &mut MessageStore, method: &str, path: &str, body: &[u8]) -> (u16, String) {
@@ -57,7 +60,7 @@ fn agent_card() -> (u16, String) {
                 "id": "message.send",
                 "name": "Send message",
                 "description": "Open a task and queue a text message for another agent. POST /message:send.",
-                "inputModes": ["text"],
+                "inputModes": ["text", "data"],
                 "outputModes": ["text"]
             },
             {
@@ -84,15 +87,13 @@ fn send_message(store: &mut MessageStore, body: &[u8]) -> (u16, String) {
         return error(400, "body must be JSON");
     };
     let field = |key: &str| value.get(key).and_then(Value::as_str).map(str::to_owned);
-    let (Some(id), Some(from), Some(to), Some(text)) =
-        (field("id"), field("from"), field("to"), field("text"))
-    else {
-        return error(400, "id, from, to, and text are required strings");
+    let (Some(id), Some(from), Some(to)) = (field("id"), field("from"), field("to")) else {
+        return error(400, "id, from, and to are required strings");
     };
-    if text.trim().is_empty() {
-        return error(400, "text must not be empty");
-    }
-    let body_json = json!({ "depth": 0, "text": text }).to_string();
+    let body_json = match message_body(&value) {
+        Ok(body_json) => body_json,
+        Err(reason) => return error(400, &reason),
+    };
     // One transaction opens the task and queues the message. A repeat with the same content returns
     // the task's current state, not an error.
     match store.send_task(&id, &from, &to, &body_json) {
@@ -101,6 +102,86 @@ fn send_message(store: &mut MessageStore, body: &[u8]) -> (u16, String) {
             json!({ "id": id, "from": from, "to": to, "state": state.as_str() }).to_string(),
         ),
         Err(err) => map_error(err),
+    }
+}
+
+/// The stored envelope for a send. A `text` send stores exactly the bytes it always has, so an
+/// idempotent resend across an upgrade still matches. A `parts` send stores the joined text under
+/// `text` as well, so readers that only know the envelope still see the message.
+fn message_body(value: &Value) -> Result<String, String> {
+    match (value.get("text"), value.get("parts")) {
+        (Some(_), Some(_)) => Err("send either text or parts, not both".to_owned()),
+        (Some(text), None) => {
+            let text = text
+                .as_str()
+                .filter(|text| !text.trim().is_empty())
+                .ok_or_else(|| "text must be a non-empty string".to_owned())?;
+            Ok(json!({ "depth": 0, "text": text }).to_string())
+        }
+        (None, Some(parts)) => {
+            let (text, parts) = parse_parts(parts)?;
+            Ok(json!({ "depth": 0, "text": text, "parts": parts }).to_string())
+        }
+        (None, None) => Err("either text or parts is required".to_owned()),
+    }
+}
+
+/// Validates `parts` and returns the joined text of its text parts, plus the parts in canonical
+/// form. Each part is `{"kind":"text","text":"..."}` or `{"kind":"data","data":{...}}`. A message
+/// needs at least one non-blank text part, so every reader can show it.
+fn parse_parts(parts: &Value) -> Result<(String, Value), String> {
+    let items = parts
+        .as_array()
+        .filter(|items| !items.is_empty())
+        .ok_or_else(|| "parts must be a non-empty array".to_owned())?;
+    if items.len() > MAX_PARTS {
+        return Err(format!("parts may hold at most {MAX_PARTS} items"));
+    }
+    let mut texts = Vec::new();
+    let mut canonical = Vec::with_capacity(items.len());
+    for item in items {
+        match item.get("kind").and_then(Value::as_str) {
+            Some("text") => {
+                let text = item
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| "a text part needs a string text".to_owned())?;
+                texts.push(text);
+                canonical.push(json!({ "kind": "text", "text": text }));
+            }
+            Some("data") => {
+                let data = item
+                    .get("data")
+                    .filter(|data| data.is_object())
+                    .ok_or_else(|| "a data part needs an object data".to_owned())?;
+                canonical.push(json!({ "kind": "data", "data": canonical_json(data) }));
+            }
+            _ => return Err("part kind must be text or data".to_owned()),
+        }
+    }
+    let text = texts.join("\n");
+    if text.trim().is_empty() {
+        return Err("parts need at least one non-empty text part".to_owned());
+    }
+    Ok((text, Value::Array(canonical)))
+}
+
+/// Sorts object keys at every depth. The relay compares stored bodies to detect a changed resend,
+/// and this keeps a resend with the same data in a different key order from looking changed.
+fn canonical_json(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut entries: Vec<(&String, &Value)> = map.iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(b.0));
+            Value::Object(
+                entries
+                    .into_iter()
+                    .map(|(key, item)| (key.clone(), canonical_json(item)))
+                    .collect(),
+            )
+        }
+        Value::Array(items) => Value::Array(items.iter().map(canonical_json).collect()),
+        other => other.clone(),
     }
 }
 
