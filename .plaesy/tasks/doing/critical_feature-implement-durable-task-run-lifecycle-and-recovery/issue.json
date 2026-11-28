@@ -1,0 +1,14 @@
+{
+  "id": "critical_feature-implement-durable-task-run-lifecycle-and-recovery",
+  "type": "task",
+  "depends_on": [
+    "high_feature-define-runtime-adapter-and-fake-conformance-suite",
+    "critical_feature-implement-authenticated-agent-identity-and-policy-boundary",
+    "high_feature-implement-durable-run-append-retry-torn-tail-recovery-and-shutdown-drain"
+  ],
+  "labels": [
+    "phase-2",
+    "execution",
+    "lane-D"
+  ]
+}

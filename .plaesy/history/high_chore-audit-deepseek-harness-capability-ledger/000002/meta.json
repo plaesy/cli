@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "status": "backlog",
+  "label": "move",
+  "created_unix": 1795897823,
+  "files": [
+    "task.md",
+    "issue.json"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "high_chore-audit-craft-anything-capability-ledger",
+  "status": "backlog",
+  "type": "subtask",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "craft-anything"
+  ],
+  "parent": "high_chore-audit-creative-authoring-products",
+  "depends_on": [
+    "high_chore-audit-creative-authoring-products",
+    "high_chore-verify-feature-baseline-across-repositories"
+  ]
+}

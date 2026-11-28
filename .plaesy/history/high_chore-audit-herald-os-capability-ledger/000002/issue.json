@@ -1,0 +1,15 @@
+{
+  "id": "high_chore-audit-herald-os-capability-ledger",
+  "status": "backlog",
+  "type": "subtask",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "herald-os"
+  ],
+  "parent": "high_chore-audit-work-management-and-os-products",
+  "depends_on": [
+    "high_chore-audit-work-management-and-os-products",
+    "high_chore-verify-feature-baseline-across-repositories"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "status": "backlog",
+  "label": "before restore of v1",
+  "created_unix": 1795897573,
+  "files": [
+    "task.md",
+    "issue.json"
+  ]
+}

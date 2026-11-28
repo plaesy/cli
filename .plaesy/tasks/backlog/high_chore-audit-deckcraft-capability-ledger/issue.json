@@ -1,0 +1,15 @@
+{
+  "id": "high_chore-audit-deckcraft-capability-ledger",
+  "status": "backlog",
+  "type": "subtask",
+  "labels": [
+    "phase-0",
+    "incumbent-audit",
+    "deckcraft"
+  ],
+  "parent": "high_chore-audit-creative-authoring-products",
+  "depends_on": [
+    "high_chore-audit-creative-authoring-products",
+    "high_chore-verify-feature-baseline-across-repositories"
+  ]
+}
