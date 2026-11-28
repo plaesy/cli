@@ -147,6 +147,99 @@ fn send_claim_get_ack_get_walks_the_task_to_completed() {
 }
 
 #[test]
+fn input_round_trip_shows_the_question_and_resumes_on_answer() {
+    let mut store = MessageStore::in_memory().expect("store");
+    send(&mut store, "t-in-1");
+    let claimed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    let token = claimed.lease_owner.expect("lease");
+    store
+        .request_input("t-in-1", "beta", &token, "which branch?")
+        .expect("ask");
+
+    let (status, body) = route(&mut store, "GET", "/tasks/alpha/t-in-1", b"");
+    assert_eq!(status, 200);
+    assert_eq!(json(&body)["state"], "input-required");
+    assert_eq!(json(&body)["prompt"], "which branch?");
+
+    let (answered, body) = route(
+        &mut store,
+        "POST",
+        "/tasks/alpha/t-in-1:input",
+        br#"{"text":"use main"}"#,
+    );
+    assert_eq!(answered, 200);
+    assert_eq!(json(&body)["state"], "working");
+
+    let (_, body) = route(&mut store, "GET", "/tasks/alpha/t-in-1", b"");
+    assert!(json(&body).get("prompt").is_none(), "{body}");
+    let resumed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    assert_eq!(resumed.input_reply.as_deref(), Some("use main"));
+}
+
+#[test]
+fn input_route_refuses_wrong_state_missing_text_and_unknown_tasks() {
+    let mut store = MessageStore::in_memory().expect("store");
+    send(&mut store, "t-in-2");
+    let (not_waiting, _) = route(
+        &mut store,
+        "POST",
+        "/tasks/alpha/t-in-2:input",
+        br#"{"text":"early"}"#,
+    );
+    assert_eq!(not_waiting, 409);
+    let (missing_text, _) = route(&mut store, "POST", "/tasks/alpha/t-in-2:input", b"{}");
+    assert_eq!(missing_text, 400);
+    let (blank, _) = route(
+        &mut store,
+        "POST",
+        "/tasks/alpha/t-in-2:input",
+        br#"{"text":"   "}"#,
+    );
+    assert_eq!(blank, 400);
+    let (not_json, _) = route(&mut store, "POST", "/tasks/alpha/t-in-2:input", b"nope");
+    assert_eq!(not_json, 400);
+    let (unknown, _) = route(
+        &mut store,
+        "POST",
+        "/tasks/alpha/nope:input",
+        br#"{"text":"x"}"#,
+    );
+    assert_eq!(unknown, 404);
+}
+
+#[test]
+fn stale_lease_on_request_input_maps_to_conflict() {
+    let mut store = MessageStore::in_memory().expect("store");
+    send(&mut store, "t-in-3");
+    store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    let refused = store.request_input("t-in-3", "beta", "stale", "why?");
+    let (status, _) = match refused {
+        Err(err) => super::map_error(err),
+        Ok(()) => panic!("stale lease must not park the task"),
+    };
+    assert_eq!(status, 409);
+}
+
+#[test]
+fn agent_card_advertises_input_required_and_the_answer_skill() {
+    let mut store = MessageStore::in_memory().expect("store");
+    let (_, body) = route(&mut store, "GET", "/.well-known/agent.json", b"");
+    let card = json(&body);
+    assert_eq!(card["capabilities"]["inputRequired"], true);
+    let skills = card["skills"].as_array().expect("skills");
+    assert!(skills.iter().any(|skill| skill["id"] == "task.input"));
+}
+
+#[test]
 fn a_text_send_stores_the_same_envelope_as_before_parts_existed() {
     let mut store = MessageStore::in_memory().expect("store");
     assert_eq!(send(&mut store, "p-1").0, 201);

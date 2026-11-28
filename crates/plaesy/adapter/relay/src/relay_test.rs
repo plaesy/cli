@@ -585,3 +585,264 @@ fn send_task_reuses_an_orphan_task_row_only_when_it_is_still_submitted_to_the_sa
     ));
     assert!(store.inbox("gamma", 10).expect("inbox").is_empty());
 }
+
+/// Claims the next message for `beta` and returns its lease token.
+fn claim_for_beta(store: &mut MessageStore) -> String {
+    store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message")
+        .lease_owner
+        .expect("lease")
+}
+
+#[test]
+fn request_input_parks_the_message_until_the_sender_answers() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store
+        .send_task("q-1", "alpha", "beta", "plan it")
+        .expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-1", "beta", &token, "which branch?")
+        .expect("request input");
+
+    assert_eq!(
+        store.task_state("alpha", "q-1").expect("read"),
+        Some(TaskState::InputRequired)
+    );
+    let view = store
+        .task_view("alpha", "q-1")
+        .expect("view")
+        .expect("task");
+    assert_eq!(view.state, TaskState::InputRequired);
+    assert_eq!(view.prompt.as_deref(), Some("which branch?"));
+    let parked = store.find("q-1").expect("find").expect("message");
+    assert_eq!(parked.status, MessageStatus::AwaitingInput);
+    assert_eq!(parked.lease_owner, None);
+    // A question is not a failed attempt, so the attempt is refunded.
+    assert_eq!(parked.attempts, 0);
+    // A parked message is not claimable, and neither ack path accepts it.
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert!(!store.acknowledge("q-1", "beta").expect("legacy ack"));
+    assert!(!store
+        .acknowledge_claim("q-1", "beta", &token)
+        .expect("stale ack"));
+}
+
+#[test]
+fn provide_input_resumes_the_task_and_the_answer_arrives_with_the_next_claim() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store
+        .send_task("q-2", "alpha", "beta", "plan it")
+        .expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-2", "beta", &token, "which branch?")
+        .expect("ask");
+
+    assert_eq!(
+        store
+            .provide_input("alpha", "q-2", "use main")
+            .expect("answer"),
+        TaskState::Working
+    );
+    assert_eq!(
+        store.task_state("alpha", "q-2").expect("read"),
+        Some(TaskState::Working)
+    );
+    assert!(store
+        .task_view("alpha", "q-2")
+        .expect("view")
+        .expect("task")
+        .prompt
+        .is_none());
+
+    let resumed = store
+        .claim_next("beta", 60)
+        .expect("claim")
+        .expect("message");
+    assert_eq!(resumed.input_reply.as_deref(), Some("use main"));
+    assert_eq!(resumed.attempts, 1);
+    let token = resumed.lease_owner.expect("lease");
+    assert!(store.acknowledge_claim("q-2", "beta", &token).expect("ack"));
+    assert_eq!(
+        store.task_state("alpha", "q-2").expect("read"),
+        Some(TaskState::Completed)
+    );
+}
+
+#[test]
+fn request_input_needs_the_live_lease_and_changes_nothing_on_refusal() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-3", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    assert!(matches!(
+        store.request_input("q-3", "beta", "wrong-token", "why?"),
+        Err(MessageError::LeaseConflict)
+    ));
+    assert!(matches!(
+        store.request_input("q-3", "gamma", &token, "why?"),
+        Err(MessageError::LeaseConflict)
+    ));
+    assert_eq!(
+        store.task_state("alpha", "q-3").expect("read"),
+        Some(TaskState::Working)
+    );
+    store
+        .request_input("q-3", "beta", &token, "why?")
+        .expect("ask");
+}
+
+#[test]
+fn request_input_is_refused_for_a_canceled_task_and_keeps_the_lease() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-4", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .set_task_state("alpha", "q-4", TaskState::Canceled)
+        .expect("cancel");
+    assert!(matches!(
+        store.request_input("q-4", "beta", &token, "why?"),
+        Err(MessageError::TaskTransition(_))
+    ));
+    assert_eq!(
+        store.task_state("alpha", "q-4").expect("read"),
+        Some(TaskState::Canceled)
+    );
+    // The refused request rolled back, so the lease still owns the message.
+    assert!(store.acknowledge_claim("q-4", "beta", &token).expect("ack"));
+}
+
+#[test]
+fn provide_input_is_refused_unless_the_task_is_input_required() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-5", "alpha", "beta", "hi").expect("send");
+    assert!(matches!(
+        store.provide_input("alpha", "q-5", "early"),
+        Err(MessageError::TaskTransition(_))
+    ));
+    assert!(matches!(
+        store.provide_input("alpha", "missing", "x"),
+        Err(MessageError::TaskNotFound(_))
+    ));
+    assert!(matches!(
+        store.provide_input("alpha", "q-5", ""),
+        Err(MessageError::Invalid(_))
+    ));
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-5", "beta", &token, "ok?")
+        .expect("ask");
+    store
+        .set_task_state("alpha", "q-5", TaskState::Canceled)
+        .expect("cancel");
+    assert!(matches!(
+        store.provide_input("alpha", "q-5", "late"),
+        Err(MessageError::TaskTransition(_))
+    ));
+}
+
+#[test]
+fn canceled_task_after_input_required_is_never_claimed_or_acked() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-6", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-6", "beta", &token, "ok?")
+        .expect("ask");
+    assert!(matches!(
+        store.set_task_state("alpha", "q-6", TaskState::Working),
+        Err(MessageError::TaskTransition(_))
+    ));
+    store
+        .set_task_state("alpha", "q-6", TaskState::Canceled)
+        .expect("cancel");
+    // The parked message stays parked: no claim, and the legacy ack is refused.
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert!(!store.acknowledge("q-6", "beta").expect("legacy ack"));
+    assert_eq!(
+        store.find("q-6").expect("find").expect("message").status,
+        MessageStatus::AwaitingInput
+    );
+    assert_eq!(
+        store.task_state("alpha", "q-6").expect("read"),
+        Some(TaskState::Canceled)
+    );
+}
+
+#[test]
+fn failed_task_after_input_required_is_never_claimed() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-8", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-8", "beta", &token, "ok?")
+        .expect("ask");
+    store
+        .set_task_state("alpha", "q-8", TaskState::Failed)
+        .expect("fail");
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert_eq!(
+        store.task_state("alpha", "q-8").expect("read"),
+        Some(TaskState::Failed)
+    );
+    assert_eq!(
+        store.find("q-8").expect("find").expect("message").status,
+        MessageStatus::AwaitingInput
+    );
+}
+
+#[test]
+fn parked_message_stays_parked_and_unclaimable() {
+    let mut store = MessageStore::in_memory().expect("store");
+    store.send_task("q-7", "alpha", "beta", "hi").expect("send");
+    let token = claim_for_beta(&mut store);
+    store
+        .request_input("q-7", "beta", &token, "ok?")
+        .expect("ask");
+    assert!(store.claim_next("beta", 60).expect("claim").is_none());
+    assert_eq!(
+        store.task_state("alpha", "q-7").expect("read"),
+        Some(TaskState::InputRequired)
+    );
+    assert_eq!(
+        store.find("q-7").expect("find").expect("message").status,
+        MessageStatus::AwaitingInput
+    );
+}
+
+#[test]
+fn legacy_schema_message_without_a_task_refuses_input_and_keeps_its_lease() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("lease-era-no-input.sqlite");
+    let future_ms = chrono::Utc::now().timestamp_millis() + 60_000;
+    let connection = Connection::open(&path).unwrap();
+    connection
+        .execute_batch(&format!(
+            "CREATE TABLE relay_messages (
+               id TEXT PRIMARY KEY, sender TEXT NOT NULL, recipient TEXT NOT NULL,
+               body TEXT NOT NULL, created_at TEXT NOT NULL, acknowledged_at TEXT,
+               lease_owner TEXT, lease_expiry_epoch_ms INTEGER, UNIQUE(sender, id)
+             );
+             INSERT INTO relay_messages(id,sender,recipient,body,created_at,lease_owner,lease_expiry_epoch_ms)
+             VALUES ('old-leased','a','b','y','2000-01-01T00:00:01Z','old-token',{future_ms});"
+        ))
+        .unwrap();
+    drop(connection);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+
+    let mut store = MessageStore::open(&path).unwrap();
+    // No task row exists for this message, so the request is refused and the lease is kept.
+    assert!(matches!(
+        store.request_input("old-leased", "b", "old-token", "why?"),
+        Err(MessageError::TaskNotFound(_))
+    ));
+    assert!(store
+        .acknowledge_claim("old-leased", "b", "old-token")
+        .expect("ack"));
+}

@@ -21,13 +21,16 @@ const MAX_ERROR_BYTES: usize = 1024;
 pub const MAX_ATTEMPTS: u32 = 5;
 
 /// Columns added after the first schema. Each one is added on open when missing.
-const MIGRATED_COLUMNS: [(&str, &str); 6] = [
+const MIGRATED_COLUMNS: [(&str, &str); 9] = [
     ("lease_owner", "TEXT"),
     ("lease_expiry_epoch_ms", "INTEGER"),
     ("attempts", "INTEGER NOT NULL DEFAULT 0"),
     ("failed_at_epoch_ms", "INTEGER"),
     ("acked_at_epoch_ms", "INTEGER"),
     ("last_error", "TEXT"),
+    ("awaiting_input", "INTEGER NOT NULL DEFAULT 0"),
+    ("input_prompt", "TEXT"),
+    ("input_reply", "TEXT"),
 ];
 
 /// Delivery state of a message. The state is derived from stored columns and the
@@ -46,6 +49,9 @@ pub enum MessageStatus {
     /// Failed: released after the last attempt, or its last lease expired.
     #[serde(rename = "gagal")]
     Failed,
+    /// The recipient asked for input and is waiting for an answer. Not claimable until answered.
+    #[serde(rename = "menunggu-input")]
+    AwaitingInput,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,6 +71,19 @@ pub struct Message {
     pub attempts: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_error: Option<String>,
+    /// Question the recipient asked while the task is `input-required`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_prompt: Option<String>,
+    /// Answer given by the sender; set when the task resumes, and delivered with the next claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_reply: Option<String>,
+}
+
+/// A task's state, plus the question when it is `input-required`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskView {
+    pub state: TaskState,
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -258,22 +277,143 @@ impl MessageStore {
     }
 
     /// Moves a task to `next` when the transition is allowed; the rules are in `task.rs`.
+    /// A message waiting for input stays parked when its task is canceled or failed: it is not
+    /// claimable, so the question cannot reach a worker after the task has ended. Resuming needs
+    /// [`provide_input`], not this method.
     pub fn set_task_state(
         &mut self,
         sender: &str,
         id: &str,
         next: TaskState,
     ) -> Result<TaskState, MessageError> {
-        let current = self
-            .task_state(sender, id)?
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let current = task_state_in(&tx, sender, id)?
             .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
+        if current == TaskState::InputRequired && next == TaskState::Working {
+            return Err(MessageError::TaskTransition(
+                "use provide_input to resume an input-required task".to_owned(),
+            ));
+        }
         let target = task::transition(current, next).map_err(MessageError::TaskTransition)?;
         let now = chrono::Utc::now().to_rfc3339();
-        self.connection.execute(
+        tx.execute(
             "UPDATE relay_tasks SET state = ?1, updated_at = ?2 WHERE sender = ?3 AND id = ?4",
             rusqlite::params![target.as_str(), now, sender, id],
         )?;
+        tx.commit()?;
         Ok(target)
+    }
+
+    /// The recipient asks the sender for input and gives up its lease, so the task moves from
+    /// `working` to `input-required`. The attempt is not counted: a question is not a failure.
+    /// The message is not claimable until [`provide_input`] answers it. Requires the live lease
+    /// `owner`; a stale or missing lease returns `LeaseConflict`. A task that cannot move to
+    /// `input-required` (canceled, failed, completed) refuses the request, and the lease is kept.
+    pub fn request_input(
+        &mut self,
+        id: &str,
+        recipient: &str,
+        owner: &str,
+        question: &str,
+    ) -> Result<(), MessageError> {
+        validate_id(id)?;
+        validate_agent(recipient)?;
+        validate_id(owner)?;
+        if question.is_empty() || question.len() > MAX_BODY_BYTES {
+            return Err(MessageError::Invalid(
+                "question must be 1..=65536 UTF-8 bytes",
+            ));
+        }
+        let now_ms = chrono::Utc::now().timestamp_millis();
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let changed = tx.execute(
+            "UPDATE relay_messages SET lease_owner=NULL,lease_expiry_epoch_ms=NULL,attempts=attempts-1,awaiting_input=1,input_prompt=?1,input_reply=NULL WHERE id=?2 AND recipient=?3 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND lease_owner=?4 AND lease_expiry_epoch_ms>?5",
+            params![question, id, recipient, owner, now_ms],
+        )?;
+        if changed != 1 {
+            return Err(MessageError::LeaseConflict);
+        }
+        // Any error below drops `tx` without a commit, so the lease is kept.
+        let sender: String = tx.query_row(
+            "SELECT sender FROM relay_messages WHERE id=?1",
+            [id],
+            |row| row.get(0),
+        )?;
+        let current = task_state_in(&tx, &sender, id)?
+            .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
+        task::transition(current, TaskState::InputRequired)
+            .map_err(MessageError::TaskTransition)?;
+        tx.execute(
+            "UPDATE relay_tasks SET state='input-required', updated_at=?1 WHERE sender=?2 AND id=?3",
+            params![chrono::Utc::now().to_rfc3339(), sender, id],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// The sender answers a task that is `input-required`. The task moves to `working`, and the
+    /// message becomes claimable again. The answer is delivered in `input_reply` with the next claim.
+    /// Any other state is refused with `TaskTransition`, so a canceled or finished task stays put.
+    pub fn provide_input(
+        &mut self,
+        sender: &str,
+        id: &str,
+        reply: &str,
+    ) -> Result<TaskState, MessageError> {
+        validate_id(id)?;
+        validate_agent(sender)?;
+        if reply.is_empty() || reply.len() > MAX_BODY_BYTES {
+            return Err(MessageError::Invalid("reply must be 1..=65536 UTF-8 bytes"));
+        }
+        let tx = self
+            .connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let current = task_state_in(&tx, sender, id)?
+            .ok_or_else(|| MessageError::TaskNotFound(id.to_owned()))?;
+        if current != TaskState::InputRequired {
+            return Err(MessageError::TaskTransition(format!(
+                "task in state {current} is not waiting for input"
+            )));
+        }
+        let changed = tx.execute(
+            "UPDATE relay_messages SET awaiting_input=0,input_reply=?1 WHERE sender=?2 AND id=?3 AND awaiting_input=1",
+            params![reply, sender, id],
+        )?;
+        if changed != 1 {
+            return Err(MessageError::TaskTransition(
+                "task is input-required but its message is not awaiting input".to_owned(),
+            ));
+        }
+        tx.execute(
+            "UPDATE relay_tasks SET state='working', updated_at=?1 WHERE sender=?2 AND id=?3",
+            params![chrono::Utc::now().to_rfc3339(), sender, id],
+        )?;
+        tx.commit()?;
+        Ok(TaskState::Working)
+    }
+
+    /// State of task `(sender, id)`, with the question when it is `input-required`.
+    pub fn task_view(&self, sender: &str, id: &str) -> Result<Option<TaskView>, MessageError> {
+        let Some(state) = task_state_in(&self.connection, sender, id)? else {
+            return Ok(None);
+        };
+        let prompt = if state == TaskState::InputRequired {
+            self.connection
+                .query_row(
+                    "SELECT input_prompt FROM relay_messages WHERE sender=?1 AND id=?2",
+                    params![sender, id],
+                    |row| row.get::<_, Option<String>>(0),
+                )
+                .optional()?
+                .flatten()
+        } else {
+            None
+        };
+        Ok(Some(TaskView { state, prompt }))
     }
 
     /// Enqueues a message; reusing `id` with identical content is idempotent.
@@ -322,6 +462,8 @@ impl MessageStore {
             status: MessageStatus::Pending,
             attempts: 0,
             last_error: None,
+            input_prompt: None,
+            input_reply: None,
         })
     }
 
@@ -378,7 +520,7 @@ impl MessageStore {
         let next: Option<String> = tx
             .query_row(
                 &format!(
-                    "SELECT id FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?2) ORDER BY created_at,id LIMIT 1"
+                    "SELECT id FROM relay_messages WHERE recipient=?1 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?2) ORDER BY created_at,id LIMIT 1"
                 ),
                 params![recipient, now_ms],
                 |row| row.get(0),
@@ -390,7 +532,7 @@ impl MessageStore {
         };
         let changed = tx.execute(
             &format!(
-                "UPDATE relay_messages SET lease_owner=?1,lease_expiry_epoch_ms=?2,attempts=attempts+1 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?5)"
+                "UPDATE relay_messages SET lease_owner=?1,lease_expiry_epoch_ms=?2,attempts=attempts+1 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND failed_at_epoch_ms IS NULL AND awaiting_input=0 AND attempts<{MAX_ATTEMPTS} AND (lease_expiry_epoch_ms IS NULL OR lease_expiry_epoch_ms<=?5)"
             ),
             params![token, expiry_ms, id, recipient, now_ms],
         )?;
@@ -504,7 +646,7 @@ impl MessageStore {
             .connection
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let changed = tx.execute(
-            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND attempts=0",
+            "UPDATE relay_messages SET acknowledged_at=?1,acked_at_epoch_ms=?2 WHERE id=?3 AND recipient=?4 AND acknowledged_at IS NULL AND attempts=0 AND awaiting_input=0",
             params![now_text, now.timestamp_millis(), id, recipient],
         )?;
         if changed == 1 {
@@ -595,6 +737,7 @@ fn status_sql(now_ms: i64) -> String {
     format!(
         "CASE WHEN acknowledged_at IS NOT NULL THEN 'selesai' \
          WHEN failed_at_epoch_ms IS NOT NULL THEN 'gagal' \
+         WHEN awaiting_input=1 THEN 'menunggu-input' \
          WHEN lease_owner IS NOT NULL AND lease_expiry_epoch_ms>{now_ms} THEN 'diambil' \
          WHEN attempts>={MAX_ATTEMPTS} THEN 'gagal' \
          ELSE 'menunggu' END"
@@ -604,7 +747,7 @@ fn status_sql(now_ms: i64) -> String {
 /// SELECT clause that returns every `Message` column plus the derived status.
 fn select_messages(now_ms: i64) -> String {
     format!(
-        "SELECT id,sender,recipient,body,created_at,acknowledged_at,lease_owner,lease_expiry_epoch_ms,{status},attempts,last_error FROM relay_messages",
+        "SELECT id,sender,recipient,body,created_at,acknowledged_at,lease_owner,lease_expiry_epoch_ms,{status},attempts,last_error,input_prompt,input_reply FROM relay_messages",
         status = status_sql(now_ms)
     )
 }
@@ -714,6 +857,7 @@ fn parse_status(text: &str) -> rusqlite::Result<MessageStatus> {
         "diambil" => Ok(MessageStatus::Claimed),
         "selesai" => Ok(MessageStatus::Done),
         "gagal" => Ok(MessageStatus::Failed),
+        "menunggu-input" => Ok(MessageStatus::AwaitingInput),
         other => Err(rusqlite::Error::FromSqlConversionFailure(
             8,
             rusqlite::types::Type::Text,
@@ -736,6 +880,8 @@ fn row_to_message(row: &rusqlite::Row<'_>) -> rusqlite::Result<Message> {
         status: parse_status(&status)?,
         attempts: row.get(9)?,
         last_error: row.get(10)?,
+        input_prompt: row.get(11)?,
+        input_reply: row.get(12)?,
     })
 }
 
