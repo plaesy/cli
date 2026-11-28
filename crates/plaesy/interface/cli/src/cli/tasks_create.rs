@@ -118,6 +118,10 @@ pub fn run(args: &Args, tasks_dir: &Path, spec: &str) -> CliResult {
         labels: args.labels.clone(),
         assignee: args.assignee.clone(),
         milestone: args.milestone.clone(),
+        start_date: None,
+        due_date: None,
+        estimate_minutes: None,
+        time_entries: Vec::new(),
     };
     if let Err(error) = graph_lock.write_metadata(&folder, &issue) {
         if let Err(cleanup_error) = fs::remove_dir_all(&folder) {

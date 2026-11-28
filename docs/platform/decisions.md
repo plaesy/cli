@@ -236,6 +236,14 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Plaesy tidak menjadi server A2A untuk sekarang. A2A (Agent Card, JSON-RPC/REST, task streaming) dicatat sebagai opsi untuk jalur antar-mesin. Belum ada keputusan untuk mengadopsinya.
 - Pemilik dapat mencabut default ini. Pembukaan A2A mengubah endpoint, autentikasi, dan Agent Card, jadi perlu keputusan terpisah.
 
+## Slice fitur manajemen kerja (keputusan default, didelegasikan, bisa dicabut, 2026-11-27)
+
+- Permintaan "fitur seperti OpenProject, Jira, ClickUp" belum punya cakupan dari pemilik. Tugas kanonik `high_feature-deliver-selected-project-portfolio-management-workflow` tetap di `backlog/` dan tidak ditutup oleh slice ini. Slice ini hanya mengisi celah yang sudah diverifikasi `belum` di `docs/platform/feature-inventory/openproject.md` dan berjalan di atas sistem tugas lokal yang ada (`.plaesy/tasks`, `issue.json`).
+- Cakupan yang dipilih: (1) tanggal mulai dan selesai, (2) estimasi dan log waktu, (3) pencarian teks pada `tasks issues`. Yang tidak dipilih: relasi selain dependensi, watcher, tampilan tersimpan, Gantt, penjadwalan, dan rollup induk. Semuanya tetap `belum`.
+- Format data: field baru di `issue.json` bersifat opsional dan dibaca dengan `serde(default)`. File lama tetap terbaca dan tidak ditulis ulang kecuali perintah yang mengubahnya dijalankan.
+- Pembatasan waktu: nilai nol ditolak. Durasi hanya menerima satuan `h` dan `m`, dengan urutan `1h30m`, tanpa spasi, tanpa tanda `+`.
+- Pemilik dapat mengubah cakupan atau format ini. Jika `issue.json` perlu pindah ke format lain, itu keputusan terpisah.
+
 ## Token MCP per klien (didelegasikan, 2026-11-27, bisa dicabut pemilik)
 
 - Desain di `docs/platform/mcp-multi-token.md`. Satu token per label (`plsy_<id>_<secret>`), disimpan sebagai `sha256(salt || token)`, tidak pernah plaintext. Berkas di `~/.config/plaesy/mcp-tokens.toml`, di luar vault.

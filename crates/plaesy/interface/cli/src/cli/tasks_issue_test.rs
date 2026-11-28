@@ -6,6 +6,7 @@ use crate::tasks::{
     issue::{self, Issue},
     tasks_dir, TASK_FILE,
 };
+use chrono::NaiveDate;
 use std::fs;
 
 fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -29,6 +30,10 @@ fn fixture() -> (tempfile::TempDir, std::path::PathBuf) {
                 labels: vec!["keep".into()],
                 assignee: Some("owner".into()),
                 milestone: Some("M1".into()),
+                start_date: None,
+                due_date: None,
+                estimate_minutes: None,
+                time_entries: Vec::new(),
             },
         )
         .unwrap();
@@ -50,6 +55,12 @@ fn args(id: &str) -> UpdateArgs {
         clear_assignee: false,
         milestone: None,
         clear_milestone: false,
+        start: None,
+        clear_start: false,
+        due: None,
+        clear_due: false,
+        estimate: None,
+        clear_estimate: false,
     }
 }
 
@@ -121,6 +132,9 @@ fn listing_rejects_dangling_relationships_instead_of_reporting_them_as_waiting()
             milestone: None,
             status: None,
             dependencies: true,
+            due_before: None,
+            overdue: false,
+            search: None,
         },
         &tasks,
     );
@@ -146,6 +160,88 @@ fn rejected_parent_cycle_restores_original_json() {
     assert_eq!(fs::read(path).unwrap(), old);
 }
 
+#[test]
+fn update_sets_and_clears_start_and_due_dates() {
+    let (_root, tasks) = fixture();
+    let mut set = args("a");
+    set.start = Some("2026-03-01".into());
+    set.due = Some("2026-03-10".into());
+    update(&set, &tasks).unwrap();
+    let issue = Issue::load_collection(&tasks).unwrap().remove("a").unwrap();
+    assert_eq!(issue.start_date, NaiveDate::from_ymd_opt(2026, 3, 1));
+    assert_eq!(issue.due_date, NaiveDate::from_ymd_opt(2026, 3, 10));
+
+    let mut clear = args("a");
+    clear.clear_due = true;
+    update(&clear, &tasks).unwrap();
+    let issue = Issue::load_collection(&tasks).unwrap().remove("a").unwrap();
+    assert_eq!(issue.start_date, NaiveDate::from_ymd_opt(2026, 3, 1));
+    assert_eq!(issue.due_date, None);
+}
+
+#[test]
+fn update_rejects_malformed_or_reversed_dates_without_changing_metadata() {
+    let (_root, tasks) = fixture();
+    let path = tasks.join("todo/a/issue.json");
+    let original = fs::read(&path).unwrap();
+
+    let mut malformed = args("a");
+    malformed.due = Some("10/03/2026".into());
+    let error = update(&malformed, &tasks).unwrap_err().to_string();
+    assert!(error.contains("due date must be a date in YYYY-MM-DD form"));
+    assert_eq!(fs::read(&path).unwrap(), original);
+
+    let mut reversed = args("a");
+    reversed.start = Some("2026-04-02".into());
+    reversed.due = Some("2026-04-01".into());
+    let error = update(&reversed, &tasks).unwrap_err().to_string();
+    assert!(error.contains("start date 2026-04-02 is after due date 2026-04-01"));
+    assert_eq!(fs::read(&path).unwrap(), original);
+}
+
+#[test]
+fn search_matches_id_or_title_ignoring_case() {
+    assert!(matches_search("high_feature-invoice", "Export", "INVOICE"));
+    assert!(matches_search("a", "Export invoice PDF", "invoice"));
+    assert!(!matches_search("a", "Export", "invoice"));
+}
+
+#[test]
+fn due_filters_select_by_limit_and_overdue_without_done_issues() {
+    let today = NaiveDate::from_ymd_opt(2026, 3, 10).unwrap();
+    let mut issue = Issue {
+        id: "x".into(),
+        status: Status::Todo,
+        kind: "task".into(),
+        parent: None,
+        depends_on: vec![],
+        labels: vec![],
+        assignee: None,
+        milestone: None,
+        start_date: None,
+        due_date: None,
+        estimate_minutes: None,
+        time_entries: Vec::new(),
+    };
+    issue.due_date = NaiveDate::from_ymd_opt(2026, 3, 5);
+    let limit_early = NaiveDate::from_ymd_opt(2026, 3, 4);
+    let limit_late = NaiveDate::from_ymd_opt(2026, 3, 6);
+
+    assert!(!matches_due(
+        &issue,
+        Status::Todo,
+        limit_early,
+        false,
+        today
+    ));
+    assert!(matches_due(&issue, Status::Todo, limit_late, false, today));
+    assert!(matches_due(&issue, Status::Todo, None, true, today));
+    assert!(!matches_due(&issue, Status::Done, None, true, today));
+    issue.due_date = None;
+    assert!(!matches_due(&issue, Status::Todo, limit_late, false, today));
+    assert!(!matches_due(&issue, Status::Todo, None, true, today));
+}
+
 /// Writes a task folder under `todo/` whose metadata has the given parent.
 fn add_issue(tasks: &std::path::Path, id: &str, parent: Option<&str>) {
     let folder = tasks.join("todo").join(id);
@@ -162,6 +258,10 @@ fn add_issue(tasks: &std::path::Path, id: &str, parent: Option<&str>) {
             labels: vec![],
             assignee: None,
             milestone: None,
+            start_date: None,
+            due_date: None,
+            estimate_minutes: None,
+            time_entries: Vec::new(),
         },
     )
     .unwrap();
