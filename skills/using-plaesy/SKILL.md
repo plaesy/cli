@@ -116,7 +116,7 @@ plaesy memory --vault <VAULT> search "<topic>" -n 5    # cite path and line rang
 plaesy memory --vault <VAULT> projects <project-id> decisions
 ```
 
-When a Plaesy memory MCP server is connected, prefer its tools (`memory_search` with `query`, `limit`, `path_prefix`) over the CLI; the server already knows its vault. Treat hits marked `INFERRED` or `STALE` as leads, and confirm consequential claims in the project's own files.
+When a Plaesy memory MCP server is connected, prefer its tools (`memory_search` with `query`, `limit`, `path_prefix`) over the CLI; the server already knows its vault. Treat hits marked `INFERRED` or `STALE` as leads, and confirm consequential claims in the project's own files. When diagnosing a Hermes-registered Plaesy memory tool, treat it as a separate integration path: a successful `plaesy memory search` only verifies the CLI/index path, not Hermes provider registration or initialization. Test the exact failing Hermes tool after checking provider selection and runtime status; report each path's evidence separately.
 
 ### Write or change a memory note
 
@@ -155,6 +155,7 @@ Use `relay send` with a stable `--id` (retries are idempotent), `relay claim` pl
 - Network use is explicit: `reach`, `delegate`, `images`, `decisions model pull`, `advisor --laya-endpoint`, and servers bound beyond loopback. Never send private notes or credentials to a provider without the user's approval.
 - On Windows a running `plaesy mcp` or `plaesy memory serve` keeps `plaesy.exe` locked. Stop it before `install`, `upgrade`, or `repair`.
 - Report failures with the exact error. Do not claim a write, validation, or install succeeded until a read-back or status check shows it.
+- For integration failures in Hermes, Plaesy CLI success is not proof that the Hermes provider is initialized. Do not edit Hermes source code for this user without explicit permission; diagnose the integration boundary and request approval before crossing that ownership boundary.
 
 ## Verify
 
