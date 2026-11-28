@@ -251,3 +251,21 @@ Runtime boleh memakai jaringan jika sebuah fitur membutuhkannya. Aturan offline 
 - Masa tenggang rotasi default 24 jam. Berkas yang gagal diurai mempertahankan himpunan token terakhir. Berkas yang hilang atau kosong setelah pernah terlihat menolak semua permintaan.
 - Tanpa penguncian global, karena server berada di belakang tunnel loopback dan semua klien terlihat dari alamat yang sama.
 - Pilihan yang dapat dibalik: perintah berada di `plaesy memory token`, bukan `plaesy mcp token`, karena `plaesy mcp` sudah dipakai server proyek.
+
+## Backend server: jalur jaringan (didelegasikan, bisa dicabut pemilik, 2026-11-27)
+
+Status: keputusan default teknis yang didelegasikan user ("keputusan enterprise-grade"), dicatat oleh orchestrator pada 2026-11-27. Setiap butir bisa dicabut pemilik. Rencana dan threat model ada di `.plaesy/plan/plaesy-backend-server/`. Slice 1 (listener) sudah mulai.
+
+- D1 (disetujui): rute tenant aditif `/v1/projects/{project}/documents/...`. Rute lama `/v1/documents/...` mati saat autentikasi aktif (slice 4). Dikoordinasikan dengan cli-125.
+- D2 (disetujui, keputusan user): token per perangkat. Hash SHA-256 di DB. OIDC ditunda.
+- D3 (disetujui): TLS dihentikan di Caddy yang sudah aktif di host (mendengarkan :80 dan :443). Caddy tidak diubah oleh repo ini tanpa persetujuan user. HSTS dikirim Caddy.
+- D4 (disetujui): cli-113 meregenerasi `Cargo.lock` per slice atas permintaan; satu commit lock per slice.
+- D5 (disetujui): WebSocket ditunda setelah slice 7.
+- D6 (disetujui): bind default `127.0.0.1:8790`. Port 8787 dipakai layanan lain di loopback; 8790 bebas (dicek read-only).
+- Kontrak klien (didelegasikan, 2026-11-27, bisa dicabut): id project `prj_` plus `[a-z0-9]`; `GET /v1/projects` hanya project yang diberikan, dan project lain 404; pairing `POST /v1/pairing/exchange` dengan kode 5 menit sekali pakai; token 90 hari, rotasi lewat `POST /v1/devices/self/rotate` dengan grace window 5 menit; ETag `"rev-N"`; PUT ke dokumen yang ada wajib `If-Match` (428 bila hilang, 412 bila tidak cocok, body 412 menyertakan dokumen terbaru). Rincian di `plan.md`, bagian "Kontrak klien".
+- Rute tanpa project (didelegasikan, 2026-11-27, bisa dicabut): `POST /v1/validate`, `POST /v1/codegen/flow/{lang}`, dan `POST /v1/openapi` tetap tanpa project, tetapi setelah autentikasi aktif wajib Bearer token. Hanya `/v1/health`, `/v1/ready`, dan `/v1/pairing/exchange` yang anonim.
+- Aturan bind (lebih ketat dari usulan awal): non-loopback ditolak sampai autentikasi aktif (slice 4). Dua opt-in `allow_non_loopback` dan `tls_terminated_upstream` diperlukan dan dicek, tetapi tidak cukup tanpa autentikasi.
+
+- CORS default kosong. Origin hanya masuk allowlist eksplisit di config. Wildcard `*` tidak diizinkan bersama kredensial.
+- `X-Forwarded-For` hanya dipercaya bila peer adalah loopback dan terdaftar di `trusted_proxies`.
+- Deployment: unit systemd dengan `DynamicUser` dan `StateDirectory`. Unit dan snippet Caddy hanya dibuat di repo. Tidak dipasang di server tanpa persetujuan pemilik.
