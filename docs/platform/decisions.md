@@ -138,6 +138,10 @@ The owner delegated these choices to the assistant, revocable at any time. Recor
 
 Decided by the owner on 2026-11-19: first workflow, deployment profile, runtime strategy, and identity direction (section above). The delegated choices do not authorize incumbent shutdown, production cutover, or irreversible data migration; those remain gated by the cutover criteria and explicit authorization.
 
+**Catatan pencatatan (2026-11-26):** Item berstatus "Delegated, revocable" di atas dipakai berdasarkan delegasi pemilik yang tercatat di bagian "Delegated architecture decisions" dan "Delegated decisions". Gerbang pencatatan di "Open decisions" (baris 64) meminta pemilik, pilihan, alasan, komponen terdampak, bukti tes, dan tanggal. Kolom-kolom itu belum lengkap untuk setiap item; melengkapinya adalah pekerjaan berikutnya, bukan syarat untuk memakai nilai delegasi.
+
+Item yang masih UNKNOWN (baris 133, 136, 137) tidak diisi oleh assistant. Butuh keputusan pemilik atau masukan legal.
+
 ## Comparison identity evidence (2026-11-19, evidence only, not a decision)
 
 Gathered for spec open question "exact DeepSeek Harness and Orca product/version". The owner still picks the comparison target.
