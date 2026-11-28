@@ -6,7 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 
 ### Added
 
+- `plaesy tasks update-issue` takes `--start`, `--due`, and `--estimate`, each with a `--clear-*` flag. Dates are `YYYY-MM-DD`; estimates are `90m`, `2h`, or `1h30m`. A start date after the due date is refused. `plaesy tasks issues` gains `--due-before`, `--overdue`, and `--search` (ID or title, ignoring case), and shows a DUE column. Issue files without these fields still load.
+- `plaesy tasks time log <task-id> <duration> [--date YYYY-MM-DD] [--note TEXT]` appends a time entry to an issue, and `plaesy tasks time show <task-id>` prints the estimate, the logged total, and the remaining or overrun effort. Entries are stored in the issue's `issue.json`.
 - The memory MCP HTTP server accepts one bearer token per client: `plaesy memory token add|rotate|revoke|list` manages named tokens stored as salted hashes in `~/.config/plaesy/mcp-tokens.toml`. Changes take effect without a restart, a rotated token keeps working for a grace period, and `PLAESY_MCP_TOKEN` still works as before.
+- The agent protocol's `POST /message:send` accepts `parts` (text and data kinds) in place of `text`, up to 16 parts, with a text part required. The stored envelope keeps `text`, so existing readers are unaffected, and a `text` send stores the same bytes as before.
 - `plaesy agent serve` publishes an Agent Card at `GET /.well-known/agent.json`, with the name, description, version, capabilities, and skills of the agent protocol. It follows the same bearer-token rule as the other routes, and it carries no token or local path.
 - `plaesy chat` `/goal <objective>` sets the goal and sends the objective as the next turn at once, so the provider starts work without another message. The judge after each turn decides whether to continue, as before. `/goal` alone still shows the goal, and `/goal clear` still removes it.
 - The memory MCP server has `memory_fingerprint`, `memory_update`, and `memory_archive`. An agent reads a note's SHA-256 first; an update or archive is refused unless the hash still matches. Updates need a reason of correction, new-evidence, clarification, or other. Archives need completed, obsolete, superseded, consolidated, or other. The change is audited without note content and reindexed at once.
@@ -86,6 +89,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions follow SemVer o
 ### Fixed
 
 - Memory settings files are read again in JSON as well as TOML. Commit `5d2986d` made the memory loader accept only `config.toml`, so an existing `settings.json` (for `--config` or in `.plaesy/`) failed with `invalid TOML`. The loader reads `config.toml` when it exists, falls back to `settings.json`, and still fails on a broken file. This restores the behavior from before `5d2986d`; it is a regression fix, not a new format.
+- `plaesy memory serve` and MCP stdio no longer read HTTP bearer tokens from the environment or `.plaesy/.env`. Configured token lookup applies only to MCP HTTP; an explicit `--auth-token` still requires MCP HTTP.
 - `plaesy chat --tui` no longer counts a line as still pending when a command such as `/compact` with an empty transcript skips the end of the turn loop.
 - A model chain (`fallback_models`) passes streaming and message calls to each model. Before, only `complete` was forwarded, so chat fell back to one flattened, non-streamed call per model.
 - `claude-cli` returns the answer text, not the raw `stream-json` lines, for `delegate`, the goal judge, tool turns, `/compact`, and `/advisor`. Before, those callers received the whole JSON stream as the reply.

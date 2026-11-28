@@ -59,6 +59,7 @@ pub mod tasks_create;
 pub mod tasks_issue;
 pub mod tasks_label;
 pub mod tasks_run;
+pub mod tasks_time;
 pub mod tasks_validate;
 pub mod telemetry;
 pub mod trim;

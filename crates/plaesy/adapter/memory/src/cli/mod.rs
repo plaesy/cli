@@ -205,11 +205,13 @@ async fn run(cli: Cli) -> Result<()> {
                 .expect("validated MCP transport")
         });
         let port = port.unwrap_or(config.mcp.port);
-        let auth_token = match auth_token {
-            Some(token) => Some(token),
-            None if config.mcp.auth_token_env.is_empty() => None,
-            None => crate::memory::settings::env_file::value(&config.mcp.auth_token_env)?,
-        };
+        let auth_token = resolve_serve_auth_token(
+            mcp,
+            transport,
+            auth_token,
+            &config.mcp.auth_token_env,
+            crate::memory::settings::env_file::value,
+        )?;
         let read_only = read_only || config.mcp.read_only;
         return serve::run(config, mcp, transport, port, auth_token, read_only).await;
     }
@@ -374,6 +376,24 @@ async fn run(cli: Cli) -> Result<()> {
     let engine = SearchEngine::from_config(&config).await?;
     engine.set_watch_root(config.watch_dir.clone());
     dispatch(engine, config, cli.command).await
+}
+
+// HTTP credentials may be configured globally while a client uses the JSON or MCP stdio
+// service. Only HTTP reads implicit credentials; explicit flags still reach serve validation.
+fn resolve_serve_auth_token(
+    mcp: bool,
+    transport: serve::Transport,
+    explicit: Option<String>,
+    env_name: &str,
+    lookup: impl FnOnce(&str) -> Result<Option<String>>,
+) -> Result<Option<String>> {
+    match explicit {
+        Some(token) => Ok(Some(token)),
+        None if mcp && transport == serve::Transport::Http && !env_name.is_empty() => {
+            lookup(env_name)
+        }
+        None => Ok(None),
+    }
 }
 
 #[cfg(test)]

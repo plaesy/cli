@@ -25,10 +25,12 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 | `list-status` | `<status>` | List tasks in one status |
 | `create-subtask` | `<parent> <priority> <category> <title>` | Create a backlog task of type `subtask` under an existing parent. A missing parent is refused and no task is created |
 | `children` | `<parent>` | List the direct child issues of a parent with type, status, and title; grandchildren are not included. Refuses an unknown parent or an invalid issue collection |
-| `issues` | `[--spec NAME]`, `[--type TYPE]`, repeatable `[--label LABEL]`, `[--assignee NAME]`, `[--milestone NAME]`, `[--status STATUS]`, `[--dependencies]` | Filter issue metadata and optionally display dependency readiness (derived; does not rewrite lifecycle status) |
-| `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, and cycles |
+| `issues` | `[--spec NAME]`, `[--type TYPE]`, repeatable `[--label LABEL]`, `[--assignee NAME]`, `[--milestone NAME]`, `[--status STATUS]`, `[--search TEXT]`, `[--due-before YYYY-MM-DD]`, `[--overdue]`, `[--dependencies]` | Filter issue metadata and optionally display dependency readiness (derived; does not rewrite lifecycle status). Shows a DUE column. `--search` matches the ID or title, ignoring case |
+| `update-issue` | `<task-id>`, metadata flags, explicit `--clear-*` options | Update issue metadata while preserving fields not supplied; refuses invalid types, missing references, cycles, and start dates after due dates |
 | `label add` | `<task-id> <LABEL>...` | Add labels to one issue; labels it already has are skipped |
 | `label remove` | `<task-id> <LABEL>...` | Remove labels from one issue; labels it lacks are skipped |
+| `time log` | `<task-id> <duration> [--date YYYY-MM-DD] [--note TEXT]` | Append a time entry to one issue. Duration is `90m`, `2h`, or `1h30m`; the date defaults to today |
+| `time show` | `<task-id>` | Print the estimate, total logged time, remaining or overrun effort, and each entry |
 | `next` | — | Move the next backlog task into `todo` and report it |
 | `start` | `<task>` | Move task to `doing` |
 | `complete` | `<task>` | Move a task from `review` to `done`. A reviewer runs this after checking the evidence. Refuses any other status. |
@@ -41,7 +43,9 @@ Every task lives in a folder with `task.md`; its frontmatter identifies the spec
 
 `complete` is the only way to reach `done`, and it is reserved for a reviewer. It refuses a task that is not in `review`. `validate` moves a passing task to `review` and never to `done`.
 
-`update-issue` supports `--type`, `--parent` / `--clear-parent`, repeatable `--dep` / `--clear-deps`, repeatable `--label` / `--clear-labels`, `--assignee` / `--clear-assignee`, and `--milestone` / `--clear-milestone`. Repeated `--dep` and `--label` values replace their respective lists; use `--clear-*` to remove them. Parent types are unrestricted: hierarchy is independent of issue type and dependency edges. Parent references must exist, cannot point to the issue itself, and parent/dependency graphs must remain acyclic.
+`update-issue` supports `--type`, `--parent` / `--clear-parent`, repeatable `--dep` / `--clear-deps`, repeatable `--label` / `--clear-labels`, `--assignee` / `--clear-assignee`, `--milestone` / `--clear-milestone`, `--start` / `--clear-start`, `--due` / `--clear-due` (both `YYYY-MM-DD`), and `--estimate` / `--clear-estimate` (`90m`, `2h`, or `1h30m`). Repeated `--dep` and `--label` values replace their respective lists; use `--clear-*` to remove them. Parent types are unrestricted: hierarchy is independent of issue type and dependency edges. Parent references must exist, cannot point to the issue itself, and parent/dependency graphs must remain acyclic.
+
+Dates and time are stored in `issue.json` and are optional. Older files without these keys load unchanged and are written back without them. A start date after the due date is refused, and so is a zero estimate or a zero-length time entry. `--overdue` lists issues past their due date that are not `done`; it uses the local date when the command runs. `tasks time log` and `update-issue` take the same collection lock as the other metadata writes. Estimates and logged time are not rolled up to parents, and no Gantt or scheduling is computed.
 
 ### Concurrent claims
 
