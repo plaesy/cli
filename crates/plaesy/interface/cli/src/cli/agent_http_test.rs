@@ -239,6 +239,7 @@ fn agent_card_advertises_input_required_and_the_answer_skill() {
     assert!(skills.iter().any(|skill| skill["id"] == "task.input"));
 }
 
+#[test]
 fn a_text_send_stores_the_same_envelope_as_before_parts_existed() {
     let mut store = MessageStore::in_memory().expect("store");
     assert_eq!(send(&mut store, "p-1").0, 201);
